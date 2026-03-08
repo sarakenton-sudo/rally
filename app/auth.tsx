@@ -30,16 +30,16 @@ export default function AuthScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
+    <SafeAreaView className="flex-1 bg-warm-white dark:bg-bark">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1 justify-center px-6"
       >
         {/* Logo area */}
         <View className="items-center mb-10">
-          <Text className="text-5xl font-bold text-rally-600">RALLY</Text>
-          <Text className="text-base text-gray-500 dark:text-gray-400 mt-1">
-            Select Volleyball Family Hub
+          <Text className="text-5xl text-rally-600 font-nunito-black">Rally<Text className="font-nunito-extrabold opacity-55">HQ</Text></Text>
+          <Text className="text-base text-stone dark:text-parchment mt-1">
+            Your season, sorted.
           </Text>
         </View>
 
@@ -69,7 +69,7 @@ export default function AuthScreen() {
           onPress={handleSubmit}
           disabled={loading}
         >
-          <Text className="text-base font-semibold text-white">
+          <Text className="text-base font-semibold text-cream">
             {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Sign In'}
           </Text>
         </Pressable>
@@ -79,7 +79,7 @@ export default function AuthScreen() {
           className="mt-6 items-center"
           onPress={() => setIsSignUp(!isSignUp)}
         >
-          <Text className="text-sm text-gray-500 dark:text-gray-400">
+          <Text className="text-sm text-stone dark:text-parchment">
             {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
             <Text className="text-rally-600 font-semibold">
               {isSignUp ? 'Sign In' : 'Sign Up'}

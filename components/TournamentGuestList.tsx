@@ -11,7 +11,7 @@ const RSVP_CONFIG: Record<RSVPStatus, { label: string; bg: string; text: string;
   yes: { label: 'Yes', bg: 'bg-green-100', text: 'text-green-700', icon: 'checkmark-circle' },
   no: { label: 'No', bg: 'bg-red-100', text: 'text-red-600', icon: 'close-circle' },
   maybe: { label: 'Maybe', bg: 'bg-amber-100', text: 'text-amber-700', icon: 'help-circle' },
-  pending: { label: 'Pending', bg: 'bg-gray-100', text: 'text-gray-500', icon: 'time-outline' },
+  pending: { label: 'Pending', bg: 'bg-cream', text: 'text-stone', icon: 'time-outline' },
 };
 
 export default function TournamentGuestList({ tournamentId }: TournamentGuestListProps) {
@@ -33,8 +33,8 @@ export default function TournamentGuestList({ tournamentId }: TournamentGuestLis
 
   if (invitedGuests.length === 0) {
     return (
-      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-        <Text className="text-sm text-gray-400">
+      <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900">
+        <Text className="text-sm text-stone">
           No guests invited to this tournament yet.
         </Text>
       </View>
@@ -56,15 +56,15 @@ export default function TournamentGuestList({ tournamentId }: TournamentGuestLis
           </View>
         )}
         {pendingCount > 0 && (
-          <View className="bg-gray-50 rounded-lg px-3 py-1.5 flex-row items-center">
-            <Ionicons name="time-outline" size={14} color="#6b7280" />
-            <Text className="text-xs font-semibold text-gray-500 ml-1">{pendingCount} Pending</Text>
+          <View className="bg-cream rounded-lg px-3 py-1.5 flex-row items-center">
+            <Ionicons name="time-outline" size={14} color="#9E8E7E" />
+            <Text className="text-xs font-semibold text-stone ml-1">{pendingCount} Pending</Text>
           </View>
         )}
         {remoteCount > 0 && (
-          <View className="bg-blue-50 rounded-lg px-3 py-1.5 flex-row items-center">
-            <Ionicons name="videocam" size={14} color="#2563eb" />
-            <Text className="text-xs font-semibold text-blue-600 ml-1">{remoteCount} Remote</Text>
+          <View className="bg-rally-50 rounded-lg px-3 py-1.5 flex-row items-center">
+            <Ionicons name="videocam" size={14} color="#C4714A" />
+            <Text className="text-xs font-semibold text-rally-600 ml-1">{remoteCount} Remote</Text>
           </View>
         )}
       </View>
@@ -75,7 +75,7 @@ export default function TournamentGuestList({ tournamentId }: TournamentGuestLis
         return (
           <View
             key={item.guest_id}
-            className="bg-white dark:bg-gray-800 rounded-xl p-3.5 mb-2 border border-gray-100 dark:border-gray-700 flex-row items-center"
+            className="bg-warm-white dark:bg-bark-light rounded-xl p-3.5 mb-2 border border-parchment dark:border-rally-900 flex-row items-center"
           >
             {/* Avatar */}
             <View className="w-9 h-9 rounded-full bg-rally-100 dark:bg-rally-900/30 items-center justify-center mr-3">
@@ -86,15 +86,15 @@ export default function TournamentGuestList({ tournamentId }: TournamentGuestLis
 
             {/* Name + relationship */}
             <View className="flex-1">
-              <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+              <Text className="text-sm font-semibold text-bark dark:text-cream">
                 {item.guest.name}
               </Text>
               <View className="flex-row items-center mt-0.5">
-                <Text className="text-xs text-gray-400">{item.guest.relationship}</Text>
+                <Text className="text-xs text-stone">{item.guest.relationship}</Text>
                 {!item.attending_in_person && item.rsvp_status === 'yes' && (
                   <>
-                    <Text className="text-xs text-gray-300 mx-1">·</Text>
-                    <Text className="text-xs text-blue-500">Watching remotely</Text>
+                    <Text className="text-xs text-parchment mx-1">·</Text>
+                    <Text className="text-xs text-rally-500">Watching remotely</Text>
                   </>
                 )}
               </View>
@@ -102,17 +102,17 @@ export default function TournamentGuestList({ tournamentId }: TournamentGuestLis
 
             {/* RSVP badge */}
             <View className={`flex-row items-center px-2.5 py-1 rounded-full ${rsvp.bg}`}>
-              <Ionicons name={rsvp.icon} size={12} color={rsvp.text.includes('green') ? '#16a34a' : rsvp.text.includes('red') ? '#dc2626' : rsvp.text.includes('amber') ? '#d97706' : '#6b7280'} />
+              <Ionicons name={rsvp.icon} size={12} color={rsvp.text.includes('green') ? '#16a34a' : rsvp.text.includes('red') ? '#dc2626' : rsvp.text.includes('amber') ? '#d97706' : '#9E8E7E'} />
               <Text className={`text-xs font-semibold ml-1 ${rsvp.text}`}>{rsvp.label}</Text>
             </View>
 
             {/* Ticket status for in-person */}
             {item.attending_in_person && item.rsvp_status === 'yes' && (
-              <View className={`ml-2 px-2 py-1 rounded-full ${item.ticket_purchased ? 'bg-green-50' : 'bg-gray-50'}`}>
+              <View className={`ml-2 px-2 py-1 rounded-full ${item.ticket_purchased ? 'bg-green-50' : 'bg-cream'}`}>
                 <Ionicons
                   name={item.ticket_purchased ? 'ticket' : 'ticket-outline'}
                   size={14}
-                  color={item.ticket_purchased ? '#16a34a' : '#9ca3af'}
+                  color={item.ticket_purchased ? '#16a34a' : '#9E8E7E'}
                 />
               </View>
             )}

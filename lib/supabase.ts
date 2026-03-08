@@ -28,6 +28,28 @@ const storage = Platform.OS === 'web'
       removeItem: (key: string) => SecureStore.deleteItemAsync(key),
     };
 
+/** Deep proxy stub that handles chained access like supabase.auth.getSession() */
+function createSupabaseStub(): SupabaseClient<Database> {
+  const noop = { data: { session: null }, error: null };
+  const noopSub = { data: { subscription: { unsubscribe: () => {} } } };
+
+  const handler: ProxyHandler<any> = {
+    get: (_target, prop) => {
+      // auth.onAuthStateChange needs to return a subscription
+      if (prop === 'onAuthStateChange') return () => noopSub;
+      // auth.getSession, auth.signIn, etc. return promises
+      if (prop === 'getSession' || prop === 'signInWithPassword' || prop === 'signUp' || prop === 'signOut')
+        return () => Promise.resolve(noop);
+      // .from().select().order() etc. — return chainable proxy
+      if (typeof prop === 'string') return new Proxy(() => new Proxy({}, handler), handler);
+      return undefined;
+    },
+    apply: () => new Proxy({}, handler),
+  };
+
+  return new Proxy({}, handler) as SupabaseClient<Database>;
+}
+
 // Only create the client if configured — prevents crash in dev without .env
 export const supabase: SupabaseClient<Database> = isSupabaseConfigured
   ? createClient<Database>(supabaseUrl, supabaseAnonKey, {
@@ -38,6 +60,4 @@ export const supabase: SupabaseClient<Database> = isSupabaseConfigured
         detectSessionInUrl: false,
       },
     })
-  : (new Proxy({} as any, {
-      get: () => () => ({ data: null, error: { message: 'Supabase not configured' } }),
-    }) as SupabaseClient<Database>);
+  : createSupabaseStub();

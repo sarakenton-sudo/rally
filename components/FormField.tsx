@@ -9,15 +9,15 @@ export default function FormField({ label, error, ...inputProps }: FormFieldProp
   return (
     <View className={label ? 'mb-4' : 'mb-0'}>
       {label ? (
-        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+        <Text className="text-sm font-medium text-bark dark:text-parchment mb-1.5">
           {label}
         </Text>
       ) : null}
       <TextInput
-        className={`bg-gray-50 dark:bg-gray-800 border rounded-xl px-4 py-3 text-base text-gray-900 dark:text-white ${
-          error ? 'border-red-300' : 'border-gray-200 dark:border-gray-700'
+        className={`bg-cream dark:bg-bark-light border rounded-xl px-4 py-3 text-base text-bark dark:text-cream ${
+          error ? 'border-red-300' : 'border-parchment dark:border-rally-900'
         }`}
-        placeholderTextColor="#9ca3af"
+        placeholderTextColor="#9E8E7E"
         {...inputProps}
       />
       {error && (

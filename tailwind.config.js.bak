@@ -1,0 +1,49 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./app/**/*.{js,jsx,ts,tsx}",
+    "./components/**/*.{js,jsx,ts,tsx}",
+  ],
+  presets: [require("nativewind/preset")],
+  theme: {
+    extend: {
+      colors: {
+        rally: {
+          50: '#FDF5F0',
+          100: '#F9E4D6',
+          200: '#F0C9AD',
+          300: '#E4AC85',
+          400: '#D48E60',
+          500: '#C4714A',
+          600: '#B0613D',
+          700: '#8E4E32',
+          800: '#6D3C27',
+          900: '#5E2F1E',
+        },
+        bark: '#3D2E22',
+        'bark-light': '#4A3829',
+        cream: '#F5EFE6',
+        'warm-white': '#FAF7F3',
+        sage: '#7A8C6E',
+        stone: '#9E8E7E',
+        parchment: '#EDE4D6',
+        gold: '#B8924A',
+      },
+      fontFamily: {
+        'nunito-extrabold': ['Nunito-ExtraBold'],
+        'nunito-black': ['Nunito-Black'],
+        'nunito-sans': ['NunitoSans-Regular'],
+        'nunito-sans-semibold': ['NunitoSans-SemiBold'],
+        'nunito-sans-bold': ['NunitoSans-Bold'],
+      },
+      borderRadius: {
+        xl: '14px',
+        '2xl': '20px',
+      },
+      boxShadow: {
+        card: '0 2px 12px rgba(61, 46, 34, 0.08)',
+      },
+    },
+  },
+  plugins: [],
+};

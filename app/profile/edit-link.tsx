@@ -98,60 +98,41 @@ export default function EditLinkScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['bottom']}>
+    <SafeAreaView className="flex-1 bg-warm-white dark:bg-bark" edges={['bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
         {/* Header */}
-        <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+        <View className="flex-row items-center justify-between px-4 py-3 border-b border-parchment dark:border-bark-light">
           <Pressable onPress={() => router.back()} className="p-1">
             <Ionicons name="close" size={24} color={ic.muted} />
           </Pressable>
-          <Text className="text-lg font-bold text-gray-900 dark:text-white">
+          <Text className="text-lg font-bold text-bark dark:text-cream">
             {editIndex >= 0 ? 'Edit' : 'Add'} Link
           </Text>
           <Pressable
             onPress={handleSave}
             className="bg-rally-600 px-4 py-1.5 rounded-lg active:opacity-80"
           >
-            <Text className="text-sm font-semibold text-white">Save</Text>
+            <Text className="text-sm font-semibold text-cream">Save</Text>
           </Pressable>
         </View>
 
         <ScrollView className="flex-1 px-4 pt-4" keyboardShouldPersistTaps="handled">
-          <FormField
-            label="Label"
-            value={label}
-            onChangeText={setLabel}
-            placeholder="e.g. GroupMe, LeagueApps"
-          />
-
-          <FormField
-            label="URL"
-            value={url}
-            onChangeText={setUrl}
-            placeholder="https://..."
-            keyboardType="url"
-            autoCapitalize="none"
-          />
-
-          <DropdownField
-            label="Icon"
-            value={iconName}
-            options={ICON_OPTIONS}
-            onChange={setIconName}
-          />
+          <FormField label="Label" value={label} onChangeText={setLabel} placeholder="e.g. GroupMe, LeagueApps" />
+          <FormField label="URL" value={url} onChangeText={setUrl} placeholder="https://..." keyboardType="url" autoCapitalize="none" />
+          <DropdownField label="Icon" value={iconName} options={ICON_OPTIONS} onChange={setIconName} />
 
           {/* Icon preview */}
           <View className="items-center my-4">
-            <View className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 items-center">
+            <View className="bg-cream dark:bg-bark-light rounded-xl p-6 items-center">
               <Ionicons
                 name={iconName as keyof typeof Ionicons.glyphMap}
                 size={32}
-                color="#2563eb"
+                color="#C4714A"
               />
-              <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-2">
+              <Text className="text-sm font-medium text-bark dark:text-parchment mt-2">
                 {label || 'Preview'}
               </Text>
             </View>

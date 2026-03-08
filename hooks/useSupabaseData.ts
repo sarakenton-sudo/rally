@@ -207,6 +207,24 @@ export async function deleteHotelBooking(id: string) {
   return supabase.from('hotel_bookings').delete().eq('id', id);
 }
 
+export async function deleteTournament(id: string) {
+  return supabase.from('tournaments').delete().eq('id', id);
+}
+
+export async function updateFlightBooking(id: string, updates: Partial<FlightBooking>) {
+  const { data, error } = await (supabase
+    .from('flight_bookings') as any)
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  return { data: data as FlightBooking | null, error };
+}
+
+export async function deleteFlightBooking(id: string) {
+  return supabase.from('flight_bookings').delete().eq('id', id);
+}
+
 export async function insertFlightBooking(booking: Omit<FlightBooking, 'id' | 'created_at'>) {
   const { data, error } = await supabase
     .from('flight_bookings')

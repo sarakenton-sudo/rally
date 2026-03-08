@@ -10,17 +10,17 @@ export function useIconColors() {
 
   return {
     // Header / navigation icons
-    muted: dark ? '#d1d5db' : '#6b7280',         // gray-300 / gray-500
+    muted: dark ? '#EDE4D6' : '#9E8E7E',           // parchment / stone
     // Secondary / decorative icons
-    subtle: dark ? '#9ca3af' : '#9ca3af',         // gray-400 both
+    subtle: dark ? '#9E8E7E' : '#9E8E7E',           // stone both
     // Placeholder / empty state
-    placeholder: dark ? '#4b5563' : '#d1d5db',    // gray-600 / gray-300
-    // Accent colors (stay the same)
-    rally: '#2563eb',
+    placeholder: dark ? '#5E2F1E' : '#EDE4D6',      // rally-900 / parchment
+    // Accent colors
+    rally: '#C4714A',
     red: '#dc2626',
-    green: '#16a34a',
-    amber: '#d97706',
+    green: '#7A8C6E',
+    amber: '#B8924A',
     purple: '#7c3aed',
-    white: '#ffffff',
+    white: '#FAF7F3',
   };
 }

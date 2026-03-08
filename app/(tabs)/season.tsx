@@ -31,15 +31,15 @@ export default function SeasonScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900 items-center justify-center" edges={['top']}>
-        <ActivityIndicator size="large" color="#2563eb" />
-        <Text className="text-sm text-gray-400 mt-3">Loading season...</Text>
+      <SafeAreaView className="flex-1 bg-cream dark:bg-bark items-center justify-center" edges={['top']}>
+        <ActivityIndicator size="large" color="#C4714A" />
+        <Text className="text-sm text-stone mt-3">Loading season...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['top']}>
       <FlatList
         data={sorted}
         renderItem={renderItem}
@@ -50,28 +50,28 @@ export default function SeasonScreen() {
         ListHeaderComponent={
           <View className="mb-4">
             <View className="flex-row items-center justify-between">
-              <Text className="text-2xl font-bold text-gray-900 dark:text-white">
+              <Text className="text-2xl font-bold text-bark dark:text-cream font-nunito-extrabold">
                 Season
               </Text>
               <Pressable
                 className="flex-row items-center bg-rally-50 dark:bg-rally-900/30 px-3 py-1.5 rounded-lg active:opacity-70"
                 onPress={() => router.push('/import/paste')}
               >
-                <Ionicons name="sparkles" size={14} color="#2563eb" />
+                <Ionicons name="sparkles" size={14} color="#C4714A" />
                 <Text className="text-xs font-semibold text-rally-600 ml-1">Import</Text>
               </Pressable>
             </View>
-            <Text className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <Text className="text-sm text-stone dark:text-parchment mt-1">
               {teamName}{seasonYear ? ` — ${seasonYear}` : ''} — {sorted.length} tournaments
             </Text>
           </View>
         }
         ListEmptyComponent={
           <View className="items-center justify-center py-16">
-            <Text className="text-lg font-semibold text-gray-900 dark:text-white">
+            <Text className="text-lg font-semibold text-bark dark:text-cream">
               No tournaments yet
             </Text>
-            <Text className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-center px-8">
+            <Text className="text-sm text-stone dark:text-parchment mt-1 text-center px-8">
               Import your season schedule from LeagueApps, TeamSnap, or paste it from a coach's message.
             </Text>
           </View>

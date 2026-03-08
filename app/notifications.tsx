@@ -22,11 +22,11 @@ interface NotificationLogEntry {
 }
 
 const TYPE_CONFIG: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string }> = {
-  tournament_reminder: { icon: 'calendar', color: '#2563eb', label: 'Reminder' },
+  tournament_reminder: { icon: 'calendar', color: '#C4714A', label: 'Reminder' },
   rsvp_request: { icon: 'mail', color: '#7c3aed', label: 'RSVP' },
   cancellation_deadline: { icon: 'warning', color: '#dc2626', label: 'Deadline' },
   schedule_change: { icon: 'swap-horizontal', color: '#d97706', label: 'Schedule' },
-  custom: { icon: 'notifications', color: '#6b7280', label: 'Custom' },
+  custom: { icon: 'notifications', color: '#9E8E7E', label: 'Custom' },
 };
 
 const CHANNEL_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -48,7 +48,6 @@ export default function NotificationsScreen() {
     if (isSupabaseConfigured && user) {
       fetchLogs();
     } else {
-      // Dev mode: show local notifications as log entries
       const mockLogs: NotificationLogEntry[] = localNotifications.map((n, i) => ({
         id: `local-${i}`,
         guest_id: null,
@@ -95,7 +94,7 @@ export default function NotificationsScreen() {
     const sentDate = new Date(item.sent_at);
 
     return (
-      <View className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-2 border border-gray-100 dark:border-gray-700">
+      <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900">
         <View className="flex-row items-start">
           {/* Type icon */}
           <View
@@ -109,25 +108,25 @@ export default function NotificationsScreen() {
             {/* Header row */}
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center flex-1">
-                <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+                <Text className="text-sm font-semibold text-bark dark:text-cream">
                   {typeConfig.label}
                 </Text>
                 <View className="flex-row items-center ml-2">
                   <Ionicons
                     name={CHANNEL_ICON[item.channel] ?? 'notifications-outline'}
                     size={12}
-                    color="#9ca3af"
+                    color="#9E8E7E"
                   />
-                  <Text className="text-xs text-gray-400 ml-0.5 uppercase">{item.channel}</Text>
+                  <Text className="text-xs text-stone ml-0.5 uppercase">{item.channel}</Text>
                 </View>
               </View>
               <View className={`px-2 py-0.5 rounded-full ${
                 item.status === 'sent' || item.status === 'delivered' ? 'bg-green-100' :
-                item.status === 'failed' || item.status === 'bounced' ? 'bg-red-100' : 'bg-gray-100'
+                item.status === 'failed' || item.status === 'bounced' ? 'bg-red-100' : 'bg-cream'
               }`}>
                 <Text className={`text-xs font-medium ${
                   item.status === 'sent' || item.status === 'delivered' ? 'text-green-700' :
-                  item.status === 'failed' || item.status === 'bounced' ? 'text-red-600' : 'text-gray-500'
+                  item.status === 'failed' || item.status === 'bounced' ? 'text-red-600' : 'text-stone'
                 }`}>
                   {item.status}
                 </Text>
@@ -135,7 +134,7 @@ export default function NotificationsScreen() {
             </View>
 
             {/* Message */}
-            <Text className="text-sm text-gray-600 dark:text-gray-300 mt-1" numberOfLines={2}>
+            <Text className="text-sm text-stone dark:text-parchment mt-1" numberOfLines={2}>
               {item.message}
             </Text>
 
@@ -143,17 +142,17 @@ export default function NotificationsScreen() {
             <View className="flex-row items-center mt-2 gap-3">
               {guestName && (
                 <View className="flex-row items-center">
-                  <Ionicons name="person-outline" size={12} color="#9ca3af" />
-                  <Text className="text-xs text-gray-400 ml-1">{guestName}</Text>
+                  <Ionicons name="person-outline" size={12} color="#9E8E7E" />
+                  <Text className="text-xs text-stone ml-1">{guestName}</Text>
                 </View>
               )}
               {tournamentName && (
                 <View className="flex-row items-center">
-                  <Ionicons name="trophy-outline" size={12} color="#9ca3af" />
-                  <Text className="text-xs text-gray-400 ml-1">{tournamentName}</Text>
+                  <Ionicons name="trophy-outline" size={12} color="#9E8E7E" />
+                  <Text className="text-xs text-stone ml-1">{tournamentName}</Text>
                 </View>
               )}
-              <Text className="text-xs text-gray-300">
+              <Text className="text-xs text-parchment">
                 {sentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 {' '}
                 {sentDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
@@ -166,25 +165,30 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['bottom']}>
+    <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['bottom']}>
       {/* Header */}
-      <View className="flex-row items-center px-4 py-3 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+      <View className="flex-row items-center px-4 py-3 bg-warm-white dark:bg-bark border-b border-parchment dark:border-bark-light">
         <Pressable onPress={() => router.back()} className="p-1 mr-3">
           <Ionicons name="chevron-back" size={24} color={ic.muted} />
         </Pressable>
-        <Text className="text-lg font-bold text-gray-900 dark:text-white flex-1">
+        <Text className="text-lg font-bold text-bark dark:text-cream flex-1">
           Notifications
         </Text>
-        {isSupabaseConfigured && (
-          <Pressable onPress={fetchLogs} className="p-1">
-            <Ionicons name="refresh" size={20} color={ic.muted} />
+        <View className="flex-row items-center">
+          {isSupabaseConfigured && (
+            <Pressable onPress={fetchLogs} className="p-1 mr-2">
+              <Ionicons name="refresh" size={20} color={ic.muted} />
+            </Pressable>
+          )}
+          <Pressable onPress={() => router.push('/settings/notifications')} className="p-1">
+            <Ionicons name="settings-outline" size={20} color={ic.muted} />
           </Pressable>
-        )}
+        </View>
       </View>
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#2563eb" />
+          <ActivityIndicator size="large" color="#C4714A" />
         </View>
       ) : (
         <FlatList
@@ -195,8 +199,8 @@ export default function NotificationsScreen() {
           ListEmptyComponent={
             <View className="items-center justify-center py-16">
               <Ionicons name="notifications-off-outline" size={48} color={ic.placeholder} />
-              <Text className="text-lg font-semibold text-gray-400 mt-4">No notifications yet</Text>
-              <Text className="text-sm text-gray-400 mt-1 text-center px-8">
+              <Text className="text-lg font-semibold text-stone mt-4">No notifications yet</Text>
+              <Text className="text-sm text-stone mt-1 text-center px-8">
                 Notifications will appear here when you send RSVP requests, reminders, or deadline alerts.
               </Text>
             </View>

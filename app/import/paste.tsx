@@ -63,17 +63,17 @@ export default function PasteImportScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['bottom']}>
+    <SafeAreaView className="flex-1 bg-warm-white dark:bg-bark" edges={['bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
         {/* Header */}
-        <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+        <View className="flex-row items-center justify-between px-4 py-3 border-b border-parchment dark:border-bark-light">
           <Pressable onPress={() => router.back()} className="p-1">
             <Ionicons name="close" size={24} color={ic.muted} />
           </Pressable>
-          <Text className="text-lg font-bold text-gray-900 dark:text-white">
+          <Text className="text-lg font-bold text-bark dark:text-cream">
             Import Schedule
           </Text>
           <View className="w-8" />
@@ -83,7 +83,7 @@ export default function PasteImportScreen() {
           {/* Instructions */}
           <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 mb-4">
             <View className="flex-row items-start">
-              <Ionicons name="sparkles" size={18} color="#2563eb" />
+              <Ionicons name="sparkles" size={18} color="#C4714A" />
               <Text className="text-sm text-rally-700 dark:text-rally-300 ml-2 flex-1">
                 Paste any text containing tournament info — a coach's GroupMe message, forwarded email, or schedule list. AI will extract the details automatically.
               </Text>
@@ -93,7 +93,7 @@ export default function PasteImportScreen() {
           {/* Text input */}
           <View className="flex-1 mb-4">
             <View className="flex-row items-center justify-between mb-2">
-              <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <Text className="text-sm font-medium text-bark dark:text-parchment">
                 Paste schedule text
               </Text>
               <Pressable onPress={handlePasteExample} className="active:opacity-70">
@@ -101,11 +101,11 @@ export default function PasteImportScreen() {
               </Pressable>
             </View>
             <TextInput
-              className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-sm text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700"
+              className="flex-1 bg-cream dark:bg-bark-light rounded-xl p-4 text-sm text-bark dark:text-cream border border-parchment dark:border-rally-900"
               multiline
               textAlignVertical="top"
               placeholder="Paste a coach message, email, or schedule here..."
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor="#9E8E7E"
               value={text}
               onChangeText={setText}
             />
@@ -114,20 +114,20 @@ export default function PasteImportScreen() {
           {/* Extract button */}
           <Pressable
             className={`rounded-xl py-4 items-center mb-6 ${
-              isExtracting || !text.trim() ? 'bg-gray-300 dark:bg-gray-700' : 'bg-rally-600 active:opacity-80'
+              isExtracting || !text.trim() ? 'bg-parchment dark:bg-rally-900' : 'bg-rally-600 active:opacity-80'
             }`}
             onPress={handleExtract}
             disabled={isExtracting || !text.trim()}
           >
             {isExtracting ? (
               <View className="flex-row items-center">
-                <ActivityIndicator size="small" color="white" />
-                <Text className="text-sm font-semibold text-white ml-2">Extracting...</Text>
+                <ActivityIndicator size="small" color="#FAF7F3" />
+                <Text className="text-sm font-semibold text-cream ml-2">Extracting...</Text>
               </View>
             ) : (
               <View className="flex-row items-center">
-                <Ionicons name="sparkles" size={18} color="white" />
-                <Text className="text-sm font-semibold text-white ml-2">Extract Tournaments</Text>
+                <Ionicons name="sparkles" size={18} color="#FAF7F3" />
+                <Text className="text-sm font-semibold text-cream ml-2">Extract Tournaments</Text>
               </View>
             )}
           </Pressable>
@@ -146,7 +146,6 @@ function mockExtract(text: string) {
   const tournaments: any[] = [];
 
   for (const line of lines) {
-    // Try to match patterns like "Name - Date - City" or "Name, Date, City"
     const dateMatch = line.match(
       /([A-Z][a-z]+ \d{1,2}(?:-\d{1,2})?(?:,?\s*\d{4})?)/
     );
@@ -155,13 +154,11 @@ function mockExtract(text: string) {
     const parts = line.split(/\s*[-–]\s*/);
     if (parts.length < 2) continue;
 
-    // Clean leading numbers/bullets
     const name = parts[0].replace(/^\d+[\.\)]\s*/, '').trim();
     const dateStr = parts[1]?.trim() || '';
     const city = parts[2]?.trim() || '';
     const venue = parts[3]?.trim() || '';
 
-    // Parse date range
     const monthDayMatch = dateStr.match(
       /([A-Z][a-z]+)\s+(\d{1,2})(?:\s*-\s*(\d{1,2}))?,?\s*(\d{4})?/
     );

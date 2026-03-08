@@ -39,23 +39,23 @@ export default function HomeScreen() {
   }, [tournaments, teamCode]);
 
   const ic = useIconColors();
-  const teamName = teamConfig?.team_name ?? 'RALLY';
+  const teamName = teamConfig?.team_name ?? 'RallyHQ';
   const seasonYear = teamConfig?.season_year ?? '';
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['top']}>
       <ScrollView className="flex-1 px-4">
         <View className="flex-row items-center justify-between mt-4">
           <View>
-            <Text className="text-3xl font-bold text-gray-900 dark:text-white">
-              RALLY
+            <Text className="text-3xl text-bark dark:text-cream font-nunito-black">
+              Rally<Text className="font-nunito-extrabold opacity-55">HQ</Text>
             </Text>
-            <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            <Text className="text-sm text-stone dark:text-parchment mt-0.5">
               {teamName}{seasonYear ? ` — ${seasonYear}` : ''}
             </Text>
           </View>
           <Pressable
-            className="w-10 h-10 rounded-full bg-white dark:bg-gray-800 items-center justify-center border border-gray-100 dark:border-gray-700 active:opacity-70"
+            className="w-10 h-10 rounded-full bg-warm-white dark:bg-bark-light items-center justify-center border border-parchment dark:border-rally-900 active:opacity-70"
             onPress={() => router.push('/notifications')}
           >
             <Ionicons name="notifications-outline" size={20} color={ic.muted} />
@@ -67,7 +67,7 @@ export default function HomeScreen() {
           <Text className="text-xs font-medium text-rally-200 uppercase tracking-wider">
             Team Code
           </Text>
-          <Text className="text-4xl font-bold text-white mt-1 tracking-widest">
+          <Text className="text-4xl font-bold text-cream mt-1 tracking-widest">
             {teamCode ?? '------'}
           </Text>
           <Text className="text-xs text-rally-200 mt-2">
@@ -77,7 +77,7 @@ export default function HomeScreen() {
 
         {/* Next Tournament */}
         <View className="mt-5">
-          <Text className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+          <Text className="text-xs font-semibold text-stone dark:text-stone uppercase tracking-wider mb-2">
             Up Next
           </Text>
           {nextTournament ? (
@@ -86,8 +86,8 @@ export default function HomeScreen() {
               onPress={() => router.push(`/tournament/${nextTournament.id}`)}
             />
           ) : (
-            <View className="bg-white dark:bg-gray-800 rounded-2xl p-5">
-              <Text className="text-base text-gray-500 dark:text-gray-400">
+            <View className="bg-warm-white dark:bg-bark-light rounded-2xl p-5">
+              <Text className="text-base text-stone dark:text-parchment">
                 No upcoming tournaments
               </Text>
             </View>
@@ -96,24 +96,24 @@ export default function HomeScreen() {
 
         {/* Action Items */}
         <View className="mt-5 mb-8">
-          <Text className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+          <Text className="text-xs font-semibold text-stone dark:text-stone uppercase tracking-wider mb-2">
             Action Items
           </Text>
           {actionItems.length > 0 ? (
             actionItems.map((item, i) => (
               <View
                 key={i}
-                className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-2 flex-row items-center border border-gray-100 dark:border-gray-700"
+                className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 flex-row items-center border border-parchment dark:border-rally-900"
               >
-                <View className="w-2 h-2 rounded-full bg-amber-400 mr-3" />
-                <Text className="text-sm text-gray-700 dark:text-gray-300 flex-1">
+                <View className="w-2 h-2 rounded-full bg-gold mr-3" />
+                <Text className="text-sm text-bark dark:text-parchment flex-1">
                   {item}
                 </Text>
               </View>
             ))
           ) : (
-            <View className="bg-white dark:bg-gray-800 rounded-xl p-4">
-              <Text className="text-sm text-gray-400 dark:text-gray-500">
+            <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4">
+              <Text className="text-sm text-stone dark:text-stone">
                 All caught up — no action items right now
               </Text>
             </View>

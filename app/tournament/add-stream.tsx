@@ -53,25 +53,25 @@ export default function AddStreamScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['bottom']}>
+    <SafeAreaView className="flex-1 bg-warm-white dark:bg-bark" edges={['bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
         {/* Header */}
-        <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+        <View className="flex-row items-center justify-between px-4 py-3 border-b border-parchment dark:border-bark-light">
           <Pressable onPress={() => router.back()} className="p-1">
             <Ionicons name="close" size={24} color={ic.muted} />
           </Pressable>
-          <Text className="text-lg font-bold text-gray-900 dark:text-white">
+          <Text className="text-lg font-bold text-bark dark:text-cream">
             Add Streaming Link
           </Text>
           <Pressable
             onPress={handleSave}
             disabled={isSaving}
-            className={`px-4 py-1.5 rounded-lg ${isSaving ? 'bg-gray-300' : 'bg-rally-600 active:opacity-80'}`}
+            className={`px-4 py-1.5 rounded-lg ${isSaving ? 'bg-parchment' : 'bg-rally-600 active:opacity-80'}`}
           >
-            <Text className="text-sm font-semibold text-white">{isSaving ? 'Saving...' : 'Save'}</Text>
+            <Text className="text-sm font-semibold text-cream">{isSaving ? 'Saving...' : 'Save'}</Text>
           </Pressable>
         </View>
 
@@ -100,15 +100,15 @@ export default function AddStreamScreen() {
           />
 
           {/* Quick-add suggestions */}
-          <Text className="text-xs text-gray-400 uppercase tracking-wider mb-2 ml-1">Quick Add</Text>
+          <Text className="text-xs text-stone uppercase tracking-wider mb-2 ml-1">Quick Add</Text>
           <View className="flex-row flex-wrap gap-2 mb-6">
             {['YouTube', 'GameChanger', 'Baller.tv'].map((platform) => (
               <Pressable
                 key={platform}
-                className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-700 active:opacity-70"
+                className="bg-cream dark:bg-bark-light rounded-lg px-3 py-2 border border-parchment dark:border-rally-900 active:opacity-70"
                 onPress={() => setLabel(platform)}
               >
-                <Text className="text-xs font-medium text-gray-600 dark:text-gray-300">{platform}</Text>
+                <Text className="text-xs font-medium text-stone dark:text-parchment">{platform}</Text>
               </Pressable>
             ))}
           </View>

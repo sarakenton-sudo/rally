@@ -9,10 +9,10 @@ interface TournamentCardProps {
 }
 
 const STATUS_CONFIG = {
-  upcoming: { label: 'Upcoming', bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' },
+  upcoming: { label: 'Upcoming', bg: 'bg-cream', text: 'text-stone', dot: 'bg-stone' },
   travel_needed: { label: 'Needs Booking', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
   booked: { label: 'Booked', bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-  complete: { label: 'Complete', bg: 'bg-blue-50', text: 'text-blue-600', dot: 'bg-blue-400' },
+  complete: { label: 'Complete', bg: 'bg-rally-50', text: 'text-rally-600', dot: 'bg-rally-400' },
 } as const;
 
 function openDirections(address: string) {
@@ -35,7 +35,7 @@ export default function TournamentCard({ tournament, onPress }: TournamentCardPr
 
   return (
     <Pressable
-      className="bg-white dark:bg-gray-800 rounded-2xl mb-3 overflow-hidden border border-gray-100 dark:border-gray-700 active:opacity-90"
+      className="bg-warm-white dark:bg-bark-light rounded-2xl mb-3 overflow-hidden border border-parchment dark:border-rally-900 active:opacity-90"
       onPress={onPress}
     >
       {/* Top accent bar — color-coded by status */}
@@ -43,8 +43,8 @@ export default function TournamentCard({ tournament, onPress }: TournamentCardPr
         className={`h-1 ${
           tournament.status === 'booked' ? 'bg-green-500' :
           tournament.status === 'travel_needed' ? 'bg-amber-400' :
-          tournament.status === 'complete' ? 'bg-blue-400' :
-          'bg-gray-300'
+          tournament.status === 'complete' ? 'bg-rally-400' :
+          'bg-stone'
         }`}
       />
 
@@ -52,10 +52,10 @@ export default function TournamentCard({ tournament, onPress }: TournamentCardPr
         {/* Header row: name + status badge */}
         <View className="flex-row items-start justify-between mb-2">
           <View className="flex-1 mr-3">
-            <Text className="text-lg font-bold text-gray-900 dark:text-white">
+            <Text className="text-lg font-bold text-bark dark:text-cream">
               {tournament.name}
             </Text>
-            <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            <Text className="text-sm text-stone dark:text-parchment mt-0.5">
               {formatDateRange(tournament.start_date, tournament.end_date)}
             </Text>
           </View>
@@ -71,14 +71,14 @@ export default function TournamentCard({ tournament, onPress }: TournamentCardPr
 
         {/* Location row */}
         <View className="flex-row items-center mb-3">
-          <Ionicons name="location-outline" size={16} color="#9ca3af" />
-          <Text className="text-sm text-gray-600 dark:text-gray-300 ml-1 flex-1" numberOfLines={1}>
+          <Ionicons name="location-outline" size={16} color="#9E8E7E" />
+          <Text className="text-sm text-stone dark:text-parchment ml-1 flex-1" numberOfLines={1}>
             {tournament.location_city}
           </Text>
           {tournament.travel_required && (
             <View className="flex-row items-center ml-2">
-              <Ionicons name="airplane-outline" size={14} color="#6b7280" />
-              <Text className="text-xs text-gray-500 ml-0.5">Travel</Text>
+              <Ionicons name="airplane-outline" size={14} color="#9E8E7E" />
+              <Text className="text-xs text-stone ml-0.5">Travel</Text>
             </View>
           )}
         </View>
@@ -86,8 +86,8 @@ export default function TournamentCard({ tournament, onPress }: TournamentCardPr
         {/* Venue detail (if known) */}
         {venueLabel && (
           <View className="flex-row items-center mb-3">
-            <Ionicons name="business-outline" size={14} color="#9ca3af" />
-            <Text className="text-xs text-gray-500 dark:text-gray-400 ml-1" numberOfLines={1}>
+            <Ionicons name="business-outline" size={14} color="#9E8E7E" />
+            <Text className="text-xs text-stone dark:text-parchment ml-1" numberOfLines={1}>
               {venueLabel}
               {!confirmedVenue && tournament.venues.length <= 1 && ' — venue TBD'}
             </Text>
@@ -101,15 +101,15 @@ export default function TournamentCard({ tournament, onPress }: TournamentCardPr
             <Ionicons
               name={days <= 0 ? 'checkmark-circle' : 'time-outline'}
               size={16}
-              color={days <= 7 && days > 0 ? '#f59e0b' : '#9ca3af'}
+              color={days <= 7 && days > 0 ? '#B8924A' : '#9E8E7E'}
             />
             <Text
               className={`text-sm font-medium ml-1 ${
                 days <= 7 && days > 0
                   ? 'text-amber-600'
                   : days <= 0
-                    ? 'text-blue-500'
-                    : 'text-gray-500 dark:text-gray-400'
+                    ? 'text-rally-500'
+                    : 'text-stone dark:text-parchment'
               }`}
             >
               {countdown}
@@ -121,7 +121,7 @@ export default function TournamentCard({ tournament, onPress }: TournamentCardPr
             className="flex-row items-center bg-rally-50 dark:bg-rally-900/30 px-3 py-1.5 rounded-lg active:opacity-70"
             onPress={() => openDirections(venueAddress)}
           >
-            <Ionicons name="navigate-outline" size={14} color="#2563eb" />
+            <Ionicons name="navigate-outline" size={14} color="#C4714A" />
             <Text className="text-xs font-semibold text-rally-600 ml-1">
               Directions
             </Text>

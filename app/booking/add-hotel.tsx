@@ -8,7 +8,7 @@ import DatePickerField from '@/components/DatePickerField';
 import DropdownField from '@/components/DropdownField';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useAuth } from '@/providers/AuthProvider';
-import { insertHotelBooking } from '@/hooks/useSupabaseData';
+import { insertHotelBooking, updateHotelBooking as updateHotelBookingDB, deleteHotelBooking as deleteHotelBookingDB } from '@/hooks/useSupabaseData';
 import { daysUntil } from '@/lib/dates';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess, notifyError } from '@/lib/haptics';
@@ -17,21 +17,27 @@ import type { HotelBooking, BookingPlatform, BookingStatus } from '@/types/datab
 const PLATFORMS: BookingPlatform[] = ['Bonvoy', 'Booking.com', 'Travel Source', 'Expedia', 'Direct', 'Other'];
 
 export default function AddHotelBookingScreen() {
-  const params = useLocalSearchParams<{ tournamentId?: string }>();
+  const params = useLocalSearchParams<{ tournamentId?: string; editId?: string }>();
+  const editId = params.editId;
+  const existing = useSeasonStore((s) => s.hotelBookings.find((h) => h.id === editId));
 
-  // Form state
-  const [hotelName, setHotelName] = useState('');
-  const [platform, setPlatform] = useState<string>('');
-  const [reservationNumber, setReservationNumber] = useState('');
-  const [checkIn, setCheckIn] = useState<Date | null>(null);
-  const [checkOut, setCheckOut] = useState<Date | null>(null);
-  const [bookedBy, setBookedBy] = useState('');
-  const [bookingName, setBookingName] = useState('');
-  const [cancellationDeadline, setCancellationDeadline] = useState<Date | null>(null);
-  const [cost, setCost] = useState('');
-  const [isBackup, setIsBackup] = useState(false);
+  // Form state — pre-fill from existing booking when editing
+  const [hotelName, setHotelName] = useState(existing?.hotel_name ?? '');
+  const [platform, setPlatform] = useState<string>(existing?.platform ?? '');
+  const [reservationNumber, setReservationNumber] = useState(existing?.reservation_number ?? '');
+  const [checkIn, setCheckIn] = useState<Date | null>(existing ? new Date(existing.check_in) : null);
+  const [checkOut, setCheckOut] = useState<Date | null>(existing ? new Date(existing.check_out) : null);
+  const [bookedBy, setBookedBy] = useState(existing?.booked_by ?? '');
+  const [bookingName, setBookingName] = useState(existing?.booking_name ?? '');
+  const [cancellationDeadline, setCancellationDeadline] = useState<Date | null>(
+    existing?.cancellation_deadline ? new Date(existing.cancellation_deadline) : null
+  );
+  const [cost, setCost] = useState(existing?.cost != null ? String(existing.cost) : '');
+  const [isBackup, setIsBackup] = useState(existing?.is_backup ?? false);
   const [isSaving, setIsSaving] = useState(false);
-  const [selectedTournamentId, setSelectedTournamentId] = useState(params.tournamentId ?? '');
+  const [selectedTournamentId, setSelectedTournamentId] = useState(
+    existing?.tournament_id ?? params.tournamentId ?? ''
+  );
 
   // Read from store
   const tournaments = useSeasonStore((s) => s.tournaments);
@@ -56,6 +62,8 @@ export default function AddHotelBookingScreen() {
 
   const ic = useIconColors();
   const addHotelBooking = useSeasonStore((s) => s.addHotelBooking);
+  const updateHotelBookingStore = useSeasonStore((s) => s.updateHotelBooking);
+  const removeHotelBooking = useSeasonStore((s) => s.removeHotelBooking);
 
   const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
@@ -95,25 +103,39 @@ export default function AddHotelBookingScreen() {
         : null,
       cost: cost ? parseFloat(cost) : null,
       is_backup: isBackup,
-      status: 'tentative' as BookingStatus,
+      status: (existing?.status ?? 'tentative') as BookingStatus,
     };
 
     try {
-      if (isSupabaseConfigured && user) {
-        const { data, error } = await insertHotelBooking(bookingData);
-        if (error) {
-          Alert.alert('Save failed', error.message);
-          return;
+      if (editId && existing) {
+        // Update existing booking
+        if (isSupabaseConfigured && user) {
+          const { error } = await updateHotelBookingDB(editId, bookingData);
+          if (error) {
+            Alert.alert('Save failed', error.message);
+            return;
+          }
         }
-        if (data) { addHotelBooking(data); notifySuccess(); }
-      } else {
-        const booking: HotelBooking = {
-          ...bookingData,
-          id: `h-${Date.now()}`,
-          created_at: new Date().toISOString(),
-        };
-        addHotelBooking(booking);
+        updateHotelBookingStore(editId, bookingData);
         notifySuccess();
+      } else {
+        // Create new booking
+        if (isSupabaseConfigured && user) {
+          const { data, error } = await insertHotelBooking(bookingData);
+          if (error) {
+            Alert.alert('Save failed', error.message);
+            return;
+          }
+          if (data) { addHotelBooking(data); notifySuccess(); }
+        } else {
+          const booking: HotelBooking = {
+            ...bookingData,
+            id: `h-${Date.now()}`,
+            created_at: new Date().toISOString(),
+          };
+          addHotelBooking(booking);
+          notifySuccess();
+        }
       }
       router.back();
     } finally {
@@ -121,103 +143,75 @@ export default function AddHotelBookingScreen() {
     }
   };
 
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Hotel Booking',
+      `Are you sure you want to delete "${existing?.hotel_name}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (isSupabaseConfigured && user && editId) {
+              await deleteHotelBookingDB(editId);
+            }
+            removeHotelBooking(editId!);
+            notifySuccess();
+            router.back();
+          },
+        },
+      ]
+    );
+  };
+
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['bottom']}>
+    <SafeAreaView className="flex-1 bg-warm-white dark:bg-bark" edges={['bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
         {/* Header */}
-        <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+        <View className="flex-row items-center justify-between px-4 py-3 border-b border-parchment dark:border-bark-light">
           <Pressable onPress={() => router.back()} className="p-1">
             <Ionicons name="close" size={24} color={ic.muted} />
           </Pressable>
-          <Text className="text-lg font-bold text-gray-900 dark:text-white">
-            Add Hotel Booking
+          <Text className="text-lg font-bold text-bark dark:text-cream">
+            {editId ? 'Edit Hotel Booking' : 'Add Hotel Booking'}
           </Text>
           <Pressable
             onPress={handleSave}
             disabled={isSaving}
-            className={`px-4 py-1.5 rounded-lg ${isSaving ? 'bg-gray-300' : 'bg-rally-600 active:opacity-80'}`}
+            className={`px-4 py-1.5 rounded-lg ${isSaving ? 'bg-parchment' : 'bg-rally-600 active:opacity-80'}`}
           >
-            <Text className="text-sm font-semibold text-white">{isSaving ? 'Saving...' : 'Save'}</Text>
+            <Text className="text-sm font-semibold text-cream">{isSaving ? 'Saving...' : 'Save'}</Text>
           </Pressable>
         </View>
 
         <ScrollView className="flex-1 px-4 pt-4" keyboardShouldPersistTaps="handled">
-          {/* Tournament selector */}
           <DropdownField
             label="Tournament"
             value={selectedTournamentName}
             options={tournamentOptions}
             onChange={handleTournamentChange}
           />
+          <FormField label="Hotel Name" value={hotelName} onChangeText={setHotelName} placeholder="e.g. Marriott Marquis Houston" />
+          <DropdownField label="Booking Platform" value={platform} options={PLATFORMS} onChange={setPlatform} />
+          <FormField label="Reservation Number" value={reservationNumber} onChangeText={setReservationNumber} placeholder="e.g. 217759" />
 
-          {/* Hotel name */}
-          <FormField
-            label="Hotel Name"
-            value={hotelName}
-            onChangeText={setHotelName}
-            placeholder="e.g. Marriott Marquis Houston"
-          />
-
-          {/* Platform */}
-          <DropdownField
-            label="Booking Platform"
-            value={platform}
-            options={PLATFORMS}
-            onChange={setPlatform}
-          />
-
-          {/* Reservation number */}
-          <FormField
-            label="Reservation Number"
-            value={reservationNumber}
-            onChangeText={setReservationNumber}
-            placeholder="e.g. 217759"
-          />
-
-          {/* Check-in / Check-out row */}
           <View className="flex-row gap-3">
             <View className="flex-1">
-              <DatePickerField
-                label="Check-in"
-                value={checkIn}
-                onChange={setCheckIn}
-              />
+              <DatePickerField label="Check-in" value={checkIn} onChange={setCheckIn} />
             </View>
             <View className="flex-1">
-              <DatePickerField
-                label="Check-out"
-                value={checkOut}
-                onChange={setCheckOut}
-              />
+              <DatePickerField label="Check-out" value={checkOut} onChange={setCheckOut} />
             </View>
           </View>
 
-          {/* Booked by */}
-          <FormField
-            label="Booked By"
-            value={bookedBy}
-            onChangeText={setBookedBy}
-            placeholder="e.g. Sara"
-          />
+          <FormField label="Booked By" value={bookedBy} onChangeText={setBookedBy} placeholder="e.g. Sara" />
+          <FormField label="Name on Reservation" value={bookingName} onChangeText={setBookingName} placeholder="e.g. Sara + Kenton" />
 
-          {/* Name on reservation */}
-          <FormField
-            label="Name on Reservation"
-            value={bookingName}
-            onChangeText={setBookingName}
-            placeholder="e.g. Sara + Kenton"
-          />
-
-          {/* Cancellation deadline */}
-          <DatePickerField
-            label="Cancellation Deadline"
-            value={cancellationDeadline}
-            onChange={setCancellationDeadline}
-            highlightDanger={cancellationDanger}
-          />
+          <DatePickerField label="Cancellation Deadline" value={cancellationDeadline} onChange={setCancellationDeadline} highlightDanger={cancellationDanger} />
           {cancellationDanger && (
             <View className="bg-red-50 rounded-lg px-3 py-2 mb-4 flex-row items-center -mt-2">
               <Ionicons name="alert-circle" size={16} color="#dc2626" />
@@ -227,34 +221,41 @@ export default function AddHotelBookingScreen() {
             </View>
           )}
 
-          {/* Cost */}
-          <FormField
-            label="Estimated Cost"
-            value={cost}
-            onChangeText={setCost}
-            placeholder="0.00"
-            keyboardType="decimal-pad"
-          />
+          <FormField label="Estimated Cost" value={cost} onChangeText={setCost} placeholder="0.00" keyboardType="decimal-pad" />
 
           {/* Backup toggle */}
-          <View className="flex-row items-center justify-between mb-6 bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
+          <View className="flex-row items-center justify-between mb-6 bg-cream dark:bg-bark-light rounded-xl px-4 py-3">
             <View className="flex-1 mr-4">
-              <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <Text className="text-sm font-medium text-bark dark:text-parchment">
                 Backup Hotel
               </Text>
-              <Text className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              <Text className="text-xs text-stone dark:text-stone mt-0.5">
                 Mark as "just in case" — gets a distinct visual indicator and its own cancellation tracking
               </Text>
             </View>
             <Switch
               value={isBackup}
               onValueChange={setIsBackup}
-              trackColor={{ false: '#d1d5db', true: '#93c5fd' }}
-              thumbColor={isBackup ? '#2563eb' : '#f4f4f5'}
+              trackColor={{ false: '#EDE4D6', true: '#E4AC85' }}
+              thumbColor={isBackup ? '#C4714A' : '#FAF7F3'}
             />
           </View>
 
-          {/* Bottom spacing */}
+          {/* Delete button when editing */}
+          {editId && existing && (
+            <Pressable
+              className="bg-red-50 dark:bg-red-900/20 rounded-xl py-4 items-center mb-6 active:opacity-80"
+              onPress={handleDelete}
+            >
+              <View className="flex-row items-center">
+                <Ionicons name="trash-outline" size={18} color="#dc2626" />
+                <Text className="text-sm font-semibold text-red-600 dark:text-red-400 ml-2">
+                  Delete Hotel Booking
+                </Text>
+              </View>
+            </Pressable>
+          )}
+
           <View className="h-8" />
         </ScrollView>
       </KeyboardAvoidingView>

@@ -8,15 +8,17 @@ import { useAuth } from './AuthProvider';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 // Configure how notifications appear when app is in foreground
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 interface NotificationContextValue {
   expoPushToken: string | null;
@@ -35,6 +37,11 @@ export function useNotifications() {
 }
 
 async function registerForPushNotificationsAsync(): Promise<string | null> {
+  // Push notifications don't work on web
+  if (Platform.OS === 'web') {
+    return null;
+  }
+
   // Push notifications only work on physical devices
   if (!Device.isDevice) {
     console.log('Push notifications require a physical device');
@@ -91,19 +98,20 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // Listen for incoming notifications (foreground)
-    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-      setNotifications((prev) => [notification, ...prev].slice(0, 50));
-    });
+    if (Platform.OS !== 'web') {
+      // Listen for incoming notifications (foreground)
+      notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
+        setNotifications((prev) => [notification, ...prev].slice(0, 50));
+      });
 
-    // Listen for notification taps (opens app)
-    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data;
-      // Navigate based on notification type
-      if (data?.tournamentId) {
-        router.push(`/tournament/${data.tournamentId}`);
-      }
-    });
+      // Listen for notification taps (opens app)
+      responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+        const data = response.notification.request.content.data;
+        if (data?.tournamentId) {
+          router.push(`/tournament/${data.tournamentId}`);
+        }
+      });
+    }
 
     return () => {
       notificationListener.current?.remove();
@@ -116,6 +124,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     body: string,
     data?: Record<string, unknown>
   ) => {
+    if (Platform.OS === 'web') return;
     await Notifications.scheduleNotificationAsync({
       content: { title, body, data },
       trigger: null, // Immediate

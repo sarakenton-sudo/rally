@@ -1,3 +1,46 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+
+@import "nativewind/theme";
+
+@source "./app/**/*.{js,jsx,ts,tsx}";
+@source "./components/**/*.{js,jsx,ts,tsx}";
+
+@theme {
+  /* Rally terracotta palette */
+  --color-rally-50: #FDF5F0;
+  --color-rally-100: #F9E4D6;
+  --color-rally-200: #F0C9AD;
+  --color-rally-300: #E4AC85;
+  --color-rally-400: #D48E60;
+  --color-rally-500: #C4714A;
+  --color-rally-600: #B0613D;
+  --color-rally-700: #8E4E32;
+  --color-rally-800: #6D3C27;
+  --color-rally-900: #5E2F1E;
+
+  /* Named colors */
+  --color-bark: #3D2E22;
+  --color-bark-light: #4A3829;
+  --color-cream: #F5EFE6;
+  --color-warm-white: #FAF7F3;
+  --color-sage: #7A8C6E;
+  --color-stone: #9E8E7E;
+  --color-parchment: #EDE4D6;
+  --color-gold: #B8924A;
+
+  /* Font families */
+  --font-nunito-extrabold: 'Nunito-ExtraBold';
+  --font-nunito-black: 'Nunito-Black';
+  --font-nunito-sans: 'NunitoSans-Regular';
+  --font-nunito-sans-semibold: 'NunitoSans-SemiBold';
+  --font-nunito-sans-bold: 'NunitoSans-Bold';
+
+  /* Border radius overrides */
+  --radius-xl: 14px;
+  --radius-2xl: 20px;
+
+  /* Card shadow */
+  --shadow-card: 0 2px 12px rgba(61, 46, 34, 0.08);
+}

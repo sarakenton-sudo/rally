@@ -63,15 +63,15 @@ export default function TravelScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900 items-center justify-center" edges={['top']}>
-        <ActivityIndicator size="large" color="#2563eb" />
-        <Text className="text-sm text-gray-400 mt-3">Loading travel...</Text>
+      <SafeAreaView className="flex-1 bg-cream dark:bg-bark items-center justify-center" edges={['top']}>
+        <ActivityIndicator size="large" color="#C4714A" />
+        <Text className="text-sm text-stone mt-3">Loading travel...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['top']}>
       <SectionList
         sections={sections}
         keyExtractor={(item) => `${item.type}-${item.data.id}`}
@@ -83,31 +83,31 @@ export default function TravelScreen() {
           <View className="mb-4">
             <View className="flex-row items-center justify-between">
               <View>
-                <Text className="text-2xl font-bold text-gray-900 dark:text-white">Travel</Text>
-                <Text className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                <Text className="text-2xl font-bold text-bark dark:text-cream font-nunito-extrabold">Travel</Text>
+                <Text className="text-sm text-stone dark:text-parchment mt-1">
                   {hotelBookings.length} hotel{hotelBookings.length !== 1 ? 's' : ''} · {flightBookings.length} flight{flightBookings.length !== 1 ? 's' : ''}
                 </Text>
               </View>
             </View>
 
             {(totalHotelCost > 0 || totalFlightCost > 0) && (
-              <View className="bg-white dark:bg-gray-800 rounded-xl p-4 mt-4 flex-row items-center justify-between border border-gray-100 dark:border-gray-700">
+              <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mt-4 flex-row items-center justify-between border border-parchment dark:border-rally-900">
                 <View>
-                  <Text className="text-xs text-gray-400 uppercase tracking-wider">Season Total</Text>
-                  <Text className="text-xl font-bold text-gray-900 dark:text-white mt-0.5">
+                  <Text className="text-xs text-stone uppercase tracking-wider">Season Total</Text>
+                  <Text className="text-xl font-bold text-bark dark:text-cream mt-0.5">
                     ${(totalHotelCost + totalFlightCost).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </Text>
                 </View>
                 <View className="flex-row">
                   <View className="items-end mr-4">
-                    <Text className="text-xs text-gray-400">Hotels</Text>
-                    <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    <Text className="text-xs text-stone">Hotels</Text>
+                    <Text className="text-sm font-semibold text-bark dark:text-parchment">
                       ${totalHotelCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </Text>
                   </View>
                   <View className="items-end">
-                    <Text className="text-xs text-gray-400">Flights</Text>
-                    <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    <Text className="text-xs text-stone">Flights</Text>
+                    <Text className="text-sm font-semibold text-bark dark:text-parchment">
                       ${totalFlightCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </Text>
                   </View>
@@ -119,22 +119,34 @@ export default function TravelScreen() {
         renderSectionHeader={({ section }) => (
           <View className="flex-row items-center mt-4 mb-2">
             <Ionicons name="trophy-outline" size={16} color={ic.subtle} />
-            <Text className="text-sm font-semibold text-gray-500 dark:text-gray-400 ml-1.5 uppercase tracking-wider">
+            <Text className="text-sm font-semibold text-stone dark:text-parchment ml-1.5 uppercase tracking-wider">
               {section.title}
             </Text>
           </View>
         )}
         renderItem={({ item }) => {
-          if (item.type === 'hotel') return <HotelBookingCard booking={item.data} />;
-          return <FlightBookingCard booking={item.data} />;
+          if (item.type === 'hotel') {
+            return (
+              <HotelBookingCard
+                booking={item.data}
+                onPress={() => router.push({ pathname: '/booking/add-hotel', params: { editId: item.data.id } })}
+              />
+            );
+          }
+          return (
+            <FlightBookingCard
+              booking={item.data}
+              onPress={() => router.push({ pathname: '/booking/add-flight', params: { editId: item.data.id } })}
+            />
+          );
         }}
         ListEmptyComponent={
           <View className="items-center justify-center py-16">
             <Ionicons name="airplane-outline" size={48} color={ic.placeholder} />
-            <Text className="text-lg font-semibold text-gray-900 dark:text-white mt-4">
+            <Text className="text-lg font-semibold text-bark dark:text-cream mt-4">
               No travel bookings yet
             </Text>
-            <Text className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-center px-8">
+            <Text className="text-sm text-stone dark:text-parchment mt-1 text-center px-8">
               Add hotel and flight bookings to track reservations and cancellation deadlines.
             </Text>
           </View>
@@ -149,7 +161,7 @@ export default function TravelScreen() {
         >
           <View className="absolute bottom-24 right-6">
             <Pressable
-              className="bg-white dark:bg-gray-800 rounded-xl px-4 py-3 mb-2 flex-row items-center shadow-lg active:opacity-80"
+              className="bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 mb-2 flex-row items-center shadow-lg active:opacity-80"
               style={{ elevation: 4 }}
               onPress={() => {
                 setShowAddMenu(false);
@@ -157,18 +169,18 @@ export default function TravelScreen() {
               }}
             >
               <Ionicons name="bed" size={20} color="#7c3aed" />
-              <Text className="text-sm font-semibold text-gray-900 dark:text-white ml-3">Add Hotel</Text>
+              <Text className="text-sm font-semibold text-bark dark:text-cream ml-3">Add Hotel</Text>
             </Pressable>
             <Pressable
-              className="bg-white dark:bg-gray-800 rounded-xl px-4 py-3 flex-row items-center shadow-lg active:opacity-80"
+              className="bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 flex-row items-center shadow-lg active:opacity-80"
               style={{ elevation: 4 }}
               onPress={() => {
                 setShowAddMenu(false);
                 router.push('/booking/add-flight');
               }}
             >
-              <Ionicons name="airplane" size={20} color="#2563eb" />
-              <Text className="text-sm font-semibold text-gray-900 dark:text-white ml-3">Add Flight</Text>
+              <Ionicons name="airplane" size={20} color="#C4714A" />
+              <Text className="text-sm font-semibold text-bark dark:text-cream ml-3">Add Flight</Text>
             </Pressable>
           </View>
         </Pressable>
@@ -180,7 +192,7 @@ export default function TravelScreen() {
         style={{ elevation: 4 }}
         onPress={() => setShowAddMenu(!showAddMenu)}
       >
-        <Ionicons name={showAddMenu ? 'close' : 'add'} size={28} color="white" />
+        <Ionicons name={showAddMenu ? 'close' : 'add'} size={28} color="#FAF7F3" />
       </Pressable>
     </SafeAreaView>
   );

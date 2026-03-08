@@ -18,7 +18,7 @@ const RELATIONSHIP_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 
 const NOTIF_BADGE: Record<string, { label: string; bg: string; text: string }> = {
   sms: { label: 'SMS', bg: 'bg-green-100', text: 'text-green-700' },
-  push: { label: 'Push', bg: 'bg-blue-100', text: 'text-blue-700' },
+  push: { label: 'Push', bg: 'bg-rally-100', text: 'text-rally-700' },
   both: { label: 'Push + SMS', bg: 'bg-purple-100', text: 'text-purple-700' },
 };
 
@@ -28,18 +28,18 @@ export default function GuestCard({ guest, onPress }: GuestCardProps) {
 
   return (
     <Pressable
-      className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-2 border border-gray-100 dark:border-gray-700 flex-row items-center active:opacity-90"
+      className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-90"
       onPress={onPress}
     >
       {/* Avatar circle */}
       <View className="w-11 h-11 rounded-full bg-rally-100 dark:bg-rally-900/30 items-center justify-center mr-3">
-        <Ionicons name={icon} size={20} color="#2563eb" />
+        <Ionicons name={icon} size={20} color="#C4714A" />
       </View>
 
       {/* Info */}
       <View className="flex-1">
         <View className="flex-row items-center">
-          <Text className="text-base font-semibold text-gray-900 dark:text-white">
+          <Text className="text-base font-semibold text-bark dark:text-cream">
             {guest.name}
           </Text>
           {guest.default_invited && (
@@ -49,9 +49,9 @@ export default function GuestCard({ guest, onPress }: GuestCardProps) {
           )}
         </View>
         <View className="flex-row items-center mt-0.5">
-          <Text className="text-xs text-gray-400">{guest.relationship}</Text>
-          <Text className="text-xs text-gray-300 mx-1.5">·</Text>
-          <Text className="text-xs text-gray-400">{guest.phone}</Text>
+          <Text className="text-xs text-stone">{guest.relationship}</Text>
+          <Text className="text-xs text-parchment mx-1.5">·</Text>
+          <Text className="text-xs text-stone">{guest.phone}</Text>
         </View>
       </View>
 

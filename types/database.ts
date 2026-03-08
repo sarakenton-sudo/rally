@@ -99,6 +99,14 @@ export interface TournamentGuest {
   ticket_purchased: boolean;
 }
 
+export interface NotificationPreferences {
+  tournament_reminders: boolean;
+  cancellation_deadlines: boolean;
+  email_arrivals: boolean;
+  rsvp_responses: boolean;
+  schedule_changes: boolean;
+}
+
 export interface TeamConfig {
   id: string;
   team_name: string;
@@ -107,10 +115,12 @@ export interface TeamConfig {
   club_email_domain: string | null;
   rally_forward_address: string;
   trusted_sender_emails: string[];
+  vip_sender_emails: string[];
   ical_feed_token: string;
   youtube_channel_id: string | null;
   default_streaming_platform: StreamingPlatform | null;
   external_links: ExternalLink[];
+  notification_preferences: NotificationPreferences;
   user_id: string;
   created_at: string;
 }

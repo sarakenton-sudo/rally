@@ -10,7 +10,7 @@ import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 import { useAuth } from '@/providers/AuthProvider';
-import { insertFlightBooking } from '@/hooks/useSupabaseData';
+import { insertFlightBooking, updateFlightBooking as updateFlightBookingDB, deleteFlightBooking as deleteFlightBookingDB } from '@/hooks/useSupabaseData';
 import type { FlightBooking } from '@/types/database';
 
 const AIRLINES = [
@@ -19,23 +19,35 @@ const AIRLINES = [
 ];
 
 export default function AddFlightBookingScreen() {
-  const params = useLocalSearchParams<{ tournamentId?: string }>();
+  const params = useLocalSearchParams<{ tournamentId?: string; editId?: string }>();
+  const editId = params.editId;
+  const existing = useSeasonStore((s) => s.flightBookings.find((f) => f.id === editId));
 
-  const [airline, setAirline] = useState('');
-  const [confirmationCode, setConfirmationCode] = useState('');
-  const [departureDate, setDepartureDate] = useState<Date | null>(null);
-  const [returnDate, setReturnDate] = useState<Date | null>(null);
-  const [bookedBy, setBookedBy] = useState('');
-  const [cost, setCost] = useState('');
-  const [selectedTournamentId, setSelectedTournamentId] = useState(params.tournamentId ?? '');
+  const [airline, setAirline] = useState(existing?.airline ?? '');
+  const [confirmationCode, setConfirmationCode] = useState(existing?.confirmation_code ?? '');
+  const [departureDate, setDepartureDate] = useState<Date | null>(
+    existing ? new Date(existing.departure_date) : null
+  );
+  const [returnDate, setReturnDate] = useState<Date | null>(
+    existing ? new Date(existing.return_date) : null
+  );
+  const [bookedBy, setBookedBy] = useState(existing?.booked_by ?? '');
+  const [cost, setCost] = useState(existing?.cost != null ? String(existing.cost) : '');
+  const [selectedTournamentId, setSelectedTournamentId] = useState(
+    existing?.tournament_id ?? params.tournamentId ?? ''
+  );
 
   const [isSaving, setIsSaving] = useState(false);
 
   // Traveler names — dynamic list
-  const [travelers, setTravelers] = useState<string[]>(['']);
+  const [travelers, setTravelers] = useState<string[]>(
+    existing?.traveler_names?.length ? existing.traveler_names : ['']
+  );
 
   const tournaments = useSeasonStore((s) => s.tournaments);
   const addFlightBooking = useSeasonStore((s) => s.addFlightBooking);
+  const updateFlightBookingStore = useSeasonStore((s) => s.updateFlightBooking);
+  const removeFlightBooking = useSeasonStore((s) => s.removeFlightBooking);
   const { user } = useAuth();
 
   const ic = useIconColors();
@@ -108,21 +120,35 @@ export default function AddFlightBookingScreen() {
     };
 
     try {
-      if (isSupabaseConfigured && user) {
-        const { data, error } = await insertFlightBooking(bookingData);
-        if (error) {
-          Alert.alert('Save failed', error.message);
-          return;
+      if (editId && existing) {
+        // Update existing booking
+        if (isSupabaseConfigured && user) {
+          const { error } = await updateFlightBookingDB(editId, bookingData);
+          if (error) {
+            Alert.alert('Save failed', error.message);
+            return;
+          }
         }
-        if (data) { addFlightBooking(data); notifySuccess(); }
-      } else {
-        const booking: FlightBooking = {
-          ...bookingData,
-          id: `f-${Date.now()}`,
-          created_at: new Date().toISOString(),
-        };
-        addFlightBooking(booking);
+        updateFlightBookingStore(editId, bookingData);
         notifySuccess();
+      } else {
+        // Create new booking
+        if (isSupabaseConfigured && user) {
+          const { data, error } = await insertFlightBooking(bookingData);
+          if (error) {
+            Alert.alert('Save failed', error.message);
+            return;
+          }
+          if (data) { addFlightBooking(data); notifySuccess(); }
+        } else {
+          const booking: FlightBooking = {
+            ...bookingData,
+            id: `f-${Date.now()}`,
+            created_at: new Date().toISOString(),
+          };
+          addFlightBooking(booking);
+          notifySuccess();
+        }
       }
       router.back();
     } finally {
@@ -130,92 +156,78 @@ export default function AddFlightBookingScreen() {
     }
   };
 
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Flight Booking',
+      `Are you sure you want to delete this ${existing?.airline} flight? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (isSupabaseConfigured && user && editId) {
+              await deleteFlightBookingDB(editId);
+            }
+            removeFlightBooking(editId!);
+            notifySuccess();
+            router.back();
+          },
+        },
+      ]
+    );
+  };
+
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['bottom']}>
+    <SafeAreaView className="flex-1 bg-warm-white dark:bg-bark" edges={['bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
         {/* Header */}
-        <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+        <View className="flex-row items-center justify-between px-4 py-3 border-b border-parchment dark:border-bark-light">
           <Pressable onPress={() => router.back()} className="p-1">
             <Ionicons name="close" size={24} color={ic.muted} />
           </Pressable>
-          <Text className="text-lg font-bold text-gray-900 dark:text-white">
-            Add Flight
+          <Text className="text-lg font-bold text-bark dark:text-cream">
+            {editId ? 'Edit Flight' : 'Add Flight'}
           </Text>
           <Pressable
             onPress={handleSave}
             disabled={isSaving}
-            className={`px-4 py-1.5 rounded-lg ${isSaving ? 'bg-gray-300' : 'bg-rally-600 active:opacity-80'}`}
+            className={`px-4 py-1.5 rounded-lg ${isSaving ? 'bg-parchment' : 'bg-rally-600 active:opacity-80'}`}
           >
-            <Text className="text-sm font-semibold text-white">{isSaving ? 'Saving...' : 'Save'}</Text>
+            <Text className="text-sm font-semibold text-cream">{isSaving ? 'Saving...' : 'Save'}</Text>
           </Pressable>
         </View>
 
         <ScrollView className="flex-1 px-4 pt-4" keyboardShouldPersistTaps="handled">
-          {/* Tournament selector */}
-          <DropdownField
-            label="Tournament"
-            value={selectedTournamentName}
-            options={tournamentOptions}
-            onChange={handleTournamentChange}
-          />
+          <DropdownField label="Tournament" value={selectedTournamentName} options={tournamentOptions} onChange={handleTournamentChange} />
+          <DropdownField label="Airline" value={airline} options={AIRLINES} onChange={setAirline} />
+          <FormField label="Confirmation Code" value={confirmationCode} onChangeText={setConfirmationCode} placeholder="e.g. ABC123" autoCapitalize="characters" />
 
-          {/* Airline */}
-          <DropdownField
-            label="Airline"
-            value={airline}
-            options={AIRLINES}
-            onChange={setAirline}
-          />
-
-          {/* Confirmation code */}
-          <FormField
-            label="Confirmation Code"
-            value={confirmationCode}
-            onChangeText={setConfirmationCode}
-            placeholder="e.g. ABC123"
-            autoCapitalize="characters"
-          />
-
-          {/* Departure / Return dates */}
           <View className="flex-row gap-3">
             <View className="flex-1">
-              <DatePickerField
-                label="Departure"
-                value={departureDate}
-                onChange={setDepartureDate}
-              />
+              <DatePickerField label="Departure" value={departureDate} onChange={setDepartureDate} />
             </View>
             <View className="flex-1">
-              <DatePickerField
-                label="Return"
-                value={returnDate}
-                onChange={setReturnDate}
-              />
+              <DatePickerField label="Return" value={returnDate} onChange={setReturnDate} />
             </View>
           </View>
 
-          {/* Booked by */}
-          <FormField
-            label="Booked By"
-            value={bookedBy}
-            onChangeText={setBookedBy}
-            placeholder="e.g. Sara"
-          />
+          <FormField label="Booked By" value={bookedBy} onChangeText={setBookedBy} placeholder="e.g. Sara" />
 
           {/* Traveler names */}
           <View className="mb-4">
             <View className="flex-row items-center justify-between mb-2">
-              <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <Text className="text-sm font-medium text-bark dark:text-parchment">
                 Travelers
               </Text>
               <Pressable
                 className="flex-row items-center active:opacity-70"
                 onPress={addTraveler}
               >
-                <Ionicons name="add-circle-outline" size={18} color="#2563eb" />
+                <Ionicons name="add-circle-outline" size={18} color="#C4714A" />
                 <Text className="text-xs font-semibold text-rally-600 ml-1">Add</Text>
               </Pressable>
             </View>
@@ -242,24 +254,32 @@ export default function AddFlightBookingScreen() {
             ))}
           </View>
 
-          {/* Cost */}
-          <FormField
-            label="Estimated Cost"
-            value={cost}
-            onChangeText={setCost}
-            placeholder="0.00"
-            keyboardType="decimal-pad"
-          />
+          <FormField label="Estimated Cost" value={cost} onChangeText={setCost} placeholder="0.00" keyboardType="decimal-pad" />
 
           {/* Flight info */}
-          <View className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-8">
+          <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 mb-8">
             <View className="flex-row items-start">
-              <Ionicons name="information-circle" size={18} color="#2563eb" />
-              <Text className="text-xs text-blue-700 dark:text-blue-300 ml-2 flex-1">
+              <Ionicons name="information-circle" size={18} color="#C4714A" />
+              <Text className="text-xs text-rally-700 dark:text-rally-300 ml-2 flex-1">
                 Tip: For Southwest, use the 6-character confirmation code. For multi-leg flights, add the full itinerary as one booking.
               </Text>
             </View>
           </View>
+
+          {/* Delete button when editing */}
+          {editId && existing && (
+            <Pressable
+              className="bg-red-50 dark:bg-red-900/20 rounded-xl py-4 items-center mb-6 active:opacity-80"
+              onPress={handleDelete}
+            >
+              <View className="flex-row items-center">
+                <Ionicons name="trash-outline" size={18} color="#dc2626" />
+                <Text className="text-sm font-semibold text-red-600 dark:text-red-400 ml-2">
+                  Delete Flight Booking
+                </Text>
+              </View>
+            </Pressable>
+          )}
 
           <View className="h-8" />
         </ScrollView>

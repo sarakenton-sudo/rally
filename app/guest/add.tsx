@@ -80,90 +80,58 @@ export default function AddGuestScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['bottom']}>
+    <SafeAreaView className="flex-1 bg-warm-white dark:bg-bark" edges={['bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
         {/* Header */}
-        <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+        <View className="flex-row items-center justify-between px-4 py-3 border-b border-parchment dark:border-bark-light">
           <Pressable onPress={() => router.back()} className="p-1">
             <Ionicons name="close" size={24} color={ic.muted} />
           </Pressable>
-          <Text className="text-lg font-bold text-gray-900 dark:text-white">
+          <Text className="text-lg font-bold text-bark dark:text-cream">
             Add Guest
           </Text>
           <Pressable
             onPress={handleSave}
             disabled={isSaving}
-            className={`px-4 py-1.5 rounded-lg ${isSaving ? 'bg-gray-300' : 'bg-rally-600 active:opacity-80'}`}
+            className={`px-4 py-1.5 rounded-lg ${isSaving ? 'bg-parchment' : 'bg-rally-600 active:opacity-80'}`}
           >
-            <Text className="text-sm font-semibold text-white">{isSaving ? 'Saving...' : 'Save'}</Text>
+            <Text className="text-sm font-semibold text-cream">{isSaving ? 'Saving...' : 'Save'}</Text>
           </Pressable>
         </View>
 
         <ScrollView className="flex-1 px-4 pt-4" keyboardShouldPersistTaps="handled">
-          <FormField
-            label="Name"
-            value={name}
-            onChangeText={setName}
-            placeholder="e.g. Grandma Kenton"
-          />
-
-          <FormField
-            label="Phone Number"
-            value={phone}
-            onChangeText={setPhone}
-            placeholder="+1 (512) 555-1001"
-            keyboardType="phone-pad"
-          />
-
-          <FormField
-            label="Email (optional)"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="grandma@example.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-
-          <DropdownField
-            label="Relationship"
-            value={relationship}
-            options={RELATIONSHIPS}
-            onChange={setRelationship}
-          />
-
-          <DropdownField
-            label="Notification Preference"
-            value={notifPref}
-            options={NOTIF_OPTIONS}
-            onChange={setNotifPref}
-          />
+          <FormField label="Name" value={name} onChangeText={setName} placeholder="e.g. Grandma Kenton" />
+          <FormField label="Phone Number" value={phone} onChangeText={setPhone} placeholder="+1 (512) 555-1001" keyboardType="phone-pad" />
+          <FormField label="Email (optional)" value={email} onChangeText={setEmail} placeholder="grandma@example.com" keyboardType="email-address" autoCapitalize="none" />
+          <DropdownField label="Relationship" value={relationship} options={RELATIONSHIPS} onChange={setRelationship} />
+          <DropdownField label="Notification Preference" value={notifPref} options={NOTIF_OPTIONS} onChange={setNotifPref} />
 
           {/* Default invited toggle */}
-          <View className="flex-row items-center justify-between mb-6 bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
+          <View className="flex-row items-center justify-between mb-6 bg-cream dark:bg-bark-light rounded-xl px-4 py-3">
             <View className="flex-1 mr-4">
-              <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <Text className="text-sm font-medium text-bark dark:text-parchment">
                 Auto-Invite to All Tournaments
               </Text>
-              <Text className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              <Text className="text-xs text-stone dark:text-stone mt-0.5">
                 Automatically invite this guest to every tournament
               </Text>
             </View>
             <Switch
               value={defaultInvited}
               onValueChange={setDefaultInvited}
-              trackColor={{ false: '#d1d5db', true: '#93c5fd' }}
-              thumbColor={defaultInvited ? '#2563eb' : '#f4f4f5'}
+              trackColor={{ false: '#EDE4D6', true: '#E4AC85' }}
+              thumbColor={defaultInvited ? '#C4714A' : '#FAF7F3'}
             />
           </View>
 
           {/* Info card */}
-          <View className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-8">
+          <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 mb-8">
             <View className="flex-row items-start">
-              <Ionicons name="information-circle" size={18} color="#2563eb" />
-              <Text className="text-xs text-blue-700 dark:text-blue-300 ml-2 flex-1">
+              <Ionicons name="information-circle" size={18} color="#C4714A" />
+              <Text className="text-xs text-rally-700 dark:text-rally-300 ml-2 flex-1">
                 Guests receive automated notifications via SMS or push — no app install required.
                 They can RSVP by replying YES, NO, or MAYBE to the SMS.
               </Text>

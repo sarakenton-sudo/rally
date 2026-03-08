@@ -111,23 +111,23 @@ export default function PasteReviewScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['bottom']}>
+    <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['bottom']}>
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+      <View className="flex-row items-center justify-between px-4 py-3 bg-warm-white dark:bg-bark border-b border-parchment dark:border-bark-light">
         <Pressable onPress={() => router.back()} className="p-1">
           <Ionicons name="chevron-back" size={24} color={ic.muted} />
         </Pressable>
-        <Text className="text-lg font-bold text-gray-900 dark:text-white">
+        <Text className="text-lg font-bold text-bark dark:text-cream">
           Review ({items.length})
         </Text>
         <Pressable
           onPress={handleSaveAll}
           disabled={isSaving || items.length === 0}
           className={`px-4 py-1.5 rounded-lg ${
-            isSaving || items.length === 0 ? 'bg-gray-300' : 'bg-rally-600 active:opacity-80'
+            isSaving || items.length === 0 ? 'bg-parchment' : 'bg-rally-600 active:opacity-80'
           }`}
         >
-          <Text className="text-sm font-semibold text-white">
+          <Text className="text-sm font-semibold text-cream">
             {isSaving ? 'Saving...' : 'Save All'}
           </Text>
         </Pressable>
@@ -145,7 +145,7 @@ export default function PasteReviewScreen() {
         {items.map((item, index) => (
           <View
             key={index}
-            className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 mb-3 overflow-hidden"
+            className="bg-warm-white dark:bg-bark-light rounded-xl border border-parchment dark:border-rally-900 mb-3 overflow-hidden"
           >
             {/* Card header with color bar */}
             <View className="bg-rally-600 h-1.5" />
@@ -155,13 +155,13 @@ export default function PasteReviewScreen() {
               <View className="flex-row items-start justify-between mb-2">
                 {editingIndex === index ? (
                   <TextInput
-                    className="flex-1 text-base font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700 rounded-lg px-3 py-2 mr-2"
+                    className="flex-1 text-base font-bold text-bark dark:text-cream bg-cream dark:bg-rally-900 rounded-lg px-3 py-2 mr-2"
                     value={item.name}
                     onChangeText={(v) => updateField(index, 'name', v)}
                     autoFocus
                   />
                 ) : (
-                  <Text className="flex-1 text-base font-bold text-gray-900 dark:text-white mr-2">
+                  <Text className="flex-1 text-base font-bold text-bark dark:text-cream mr-2">
                     {item.name}
                   </Text>
                 )}
@@ -173,7 +173,7 @@ export default function PasteReviewScreen() {
                     <Ionicons
                       name={editingIndex === index ? 'checkmark' : 'create-outline'}
                       size={18}
-                      color={editingIndex === index ? '#16a34a' : '#6b7280'}
+                      color={editingIndex === index ? '#16a34a' : '#9E8E7E'}
                     />
                   </Pressable>
                   <Pressable onPress={() => removeItem(index)} className="p-1.5">
@@ -183,7 +183,6 @@ export default function PasteReviewScreen() {
               </View>
 
               {editingIndex === index ? (
-                /* Edit mode */
                 <View className="gap-3">
                   <EditRow label="Start Date" value={item.start_date} onChange={(v) => updateField(index, 'start_date', v)} placeholder="YYYY-MM-DD" />
                   <EditRow label="End Date" value={item.end_date} onChange={(v) => updateField(index, 'end_date', v)} placeholder="YYYY-MM-DD" />
@@ -193,18 +192,17 @@ export default function PasteReviewScreen() {
                   <EditRow label="Notes" value={item.notes} onChange={(v) => updateField(index, 'notes', v)} placeholder="Notes" />
                 </View>
               ) : (
-                /* Display mode */
                 <View>
                   <View className="flex-row items-center mb-1.5">
                     <Ionicons name="calendar-outline" size={14} color={ic.muted} />
-                    <Text className="text-sm text-gray-600 dark:text-gray-300 ml-1.5">
+                    <Text className="text-sm text-stone dark:text-parchment ml-1.5">
                       {item.start_date}{item.end_date !== item.start_date ? ` → ${item.end_date}` : ''}
                     </Text>
                   </View>
 
                   <View className="flex-row items-center mb-1.5">
                     <Ionicons name="location-outline" size={14} color={ic.muted} />
-                    <Text className="text-sm text-gray-600 dark:text-gray-300 ml-1.5">
+                    <Text className="text-sm text-stone dark:text-parchment ml-1.5">
                       {item.location_city || 'No city'}
                     </Text>
                   </View>
@@ -212,26 +210,26 @@ export default function PasteReviewScreen() {
                   {item.venue_name ? (
                     <View className="flex-row items-center mb-1.5">
                       <Ionicons name="business-outline" size={14} color={ic.muted} />
-                      <Text className="text-sm text-gray-500 dark:text-gray-400 ml-1.5">
+                      <Text className="text-sm text-stone dark:text-parchment ml-1.5">
                         {item.venue_name}
                       </Text>
                     </View>
                   ) : null}
 
                   {item.notes ? (
-                    <Text className="text-xs text-gray-400 italic mt-1">{item.notes}</Text>
+                    <Text className="text-xs text-stone italic mt-1">{item.notes}</Text>
                   ) : null}
                 </View>
               )}
 
               {/* AES ID input */}
-              <View className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+              <View className="mt-3 pt-3 border-t border-parchment dark:border-rally-900">
                 <View className="flex-row items-center">
-                  <Text className="text-xs text-gray-400 mr-2">AES ID</Text>
+                  <Text className="text-xs text-stone mr-2">AES ID</Text>
                   <TextInput
-                    className="flex-1 bg-gray-50 dark:bg-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-700 dark:text-gray-200"
+                    className="flex-1 bg-cream dark:bg-rally-900 rounded-lg px-3 py-1.5 text-xs text-bark dark:text-parchment"
                     placeholder="Optional — e.g. AJV-2026-001"
-                    placeholderTextColor="#9ca3af"
+                    placeholderTextColor="#9E8E7E"
                     value={aesIds[index] || ''}
                     onChangeText={(v) => setAesIds((prev) => ({ ...prev, [index]: v }))}
                     autoCapitalize="characters"
@@ -245,8 +243,8 @@ export default function PasteReviewScreen() {
         {items.length === 0 && (
           <View className="items-center py-16">
             <Ionicons name="document-text-outline" size={48} color={ic.placeholder} />
-            <Text className="text-lg font-semibold text-gray-400 mt-4">No tournaments</Text>
-            <Text className="text-sm text-gray-400 mt-1">All extracted tournaments were removed.</Text>
+            <Text className="text-lg font-semibold text-stone mt-4">No tournaments</Text>
+            <Text className="text-sm text-stone mt-1">All extracted tournaments were removed.</Text>
           </View>
         )}
       </ScrollView>
@@ -267,13 +265,13 @@ function EditRow({
 }) {
   return (
     <View>
-      <Text className="text-xs text-gray-400 mb-1">{label}</Text>
+      <Text className="text-xs text-stone mb-1">{label}</Text>
       <TextInput
-        className="bg-gray-50 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white"
+        className="bg-cream dark:bg-rally-900 rounded-lg px-3 py-2 text-sm text-bark dark:text-cream"
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}
-        placeholderTextColor="#9ca3af"
+        placeholderTextColor="#9E8E7E"
       />
     </View>
   );

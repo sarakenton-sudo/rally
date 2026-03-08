@@ -4,8 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useColorScheme } from '@/components/useColorScheme';
 
-const TAB_ACTIVE_COLOR = '#2563eb';
-const TAB_INACTIVE_COLOR = '#9ca3af';
+const TAB_ACTIVE_COLOR = '#C4714A';
+const TAB_INACTIVE_COLOR = '#9E8E7E';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -16,13 +16,13 @@ export default function TabLayout() {
         tabBarActiveTintColor: TAB_ACTIVE_COLOR,
         tabBarInactiveTintColor: TAB_INACTIVE_COLOR,
         tabBarStyle: {
-          backgroundColor: colorScheme === 'dark' ? '#1f2937' : '#ffffff',
-          borderTopColor: colorScheme === 'dark' ? '#374151' : '#e5e7eb',
+          backgroundColor: colorScheme === 'dark' ? '#3D2E22' : '#FAF7F3',
+          borderTopColor: colorScheme === 'dark' ? '#5E2F1E' : '#EDE4D6',
         },
         headerStyle: {
-          backgroundColor: colorScheme === 'dark' ? '#1f2937' : '#ffffff',
+          backgroundColor: colorScheme === 'dark' ? '#3D2E22' : '#FAF7F3',
         },
-        headerTintColor: colorScheme === 'dark' ? '#f9fafb' : '#111827',
+        headerTintColor: colorScheme === 'dark' ? '#F5EFE6' : '#3D2E22',
       }}>
       <Tabs.Screen
         name="index"

@@ -27,8 +27,10 @@ CREATE TABLE team_config (
     season_year TEXT NOT NULL,
     team_code   TEXT,
     club_email_domain TEXT,
-    rally_forward_address TEXT NOT NULL DEFAULT 'plans@rally.app',
+    rally_forward_address TEXT NOT NULL DEFAULT 'plans@rallyhub.com',
     trusted_sender_emails TEXT[] NOT NULL DEFAULT '{}',
+    vip_sender_emails TEXT[] NOT NULL DEFAULT '{}',
+    notification_preferences JSONB NOT NULL DEFAULT '{"tournament_reminders":true,"cancellation_deadlines":true,"email_arrivals":true,"rsvp_responses":true,"schedule_changes":true}',
     ical_feed_token TEXT NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'),
     youtube_channel_id TEXT,
     default_streaming_platform streaming_platform,
@@ -161,7 +163,7 @@ CREATE TABLE usav_profiles (
     updated_at           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Forwarded emails (plans@rally.app inbox)
+-- Forwarded emails (plans@rallyhub.com inbox)
 CREATE TABLE forwarded_emails (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,

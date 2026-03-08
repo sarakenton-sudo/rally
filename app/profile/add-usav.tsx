@@ -89,25 +89,25 @@ export default function AddUSAVProfileScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={['bottom']}>
+    <SafeAreaView className="flex-1 bg-warm-white dark:bg-bark" edges={['bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
         {/* Header */}
-        <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+        <View className="flex-row items-center justify-between px-4 py-3 border-b border-parchment dark:border-bark-light">
           <Pressable onPress={() => router.back()} className="p-1">
             <Ionicons name="close" size={24} color={ic.muted} />
           </Pressable>
-          <Text className="text-lg font-bold text-gray-900 dark:text-white">
+          <Text className="text-lg font-bold text-bark dark:text-cream">
             {editId ? 'Edit' : 'Add'} USAV Profile
           </Text>
           <Pressable
             onPress={handleSave}
             disabled={isSaving}
-            className={`px-4 py-1.5 rounded-lg ${isSaving ? 'bg-gray-300' : 'bg-rally-600 active:opacity-80'}`}
+            className={`px-4 py-1.5 rounded-lg ${isSaving ? 'bg-parchment' : 'bg-rally-600 active:opacity-80'}`}
           >
-            <Text className="text-sm font-semibold text-white">{isSaving ? 'Saving...' : 'Save'}</Text>
+            <Text className="text-sm font-semibold text-cream">{isSaving ? 'Saving...' : 'Save'}</Text>
           </Pressable>
         </View>
 
@@ -120,40 +120,11 @@ export default function AddUSAVProfileScreen() {
             </Text>
           </View>
 
-          <FormField
-            label="Member Name"
-            value={memberName}
-            onChangeText={setMemberName}
-            placeholder="e.g. Avery Kenton"
-          />
-
-          <FormField
-            label="USAV Member ID"
-            value={memberId}
-            onChangeText={setMemberId}
-            placeholder="e.g. USAV-2026-1234567"
-            autoCapitalize="characters"
-          />
-
-          <FormField
-            label="Club Affiliation"
-            value={clubAffiliation}
-            onChangeText={setClubAffiliation}
-            placeholder="e.g. Austin Juniors Volleyball"
-          />
-
-          <DatePickerField
-            label="Membership Expiration"
-            value={expirationDate}
-            onChange={setExpirationDate}
-          />
-
-          <FormField
-            label="Notes (optional)"
-            value={notes}
-            onChangeText={setNotes}
-            placeholder="Any additional notes"
-          />
+          <FormField label="Member Name" value={memberName} onChangeText={setMemberName} placeholder="e.g. Avery Kenton" />
+          <FormField label="USAV Member ID" value={memberId} onChangeText={setMemberId} placeholder="e.g. USAV-2026-1234567" autoCapitalize="characters" />
+          <FormField label="Club Affiliation" value={clubAffiliation} onChangeText={setClubAffiliation} placeholder="e.g. Austin Juniors Volleyball" />
+          <DatePickerField label="Membership Expiration" value={expirationDate} onChange={setExpirationDate} />
+          <FormField label="Notes (optional)" value={notes} onChangeText={setNotes} placeholder="Any additional notes" />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

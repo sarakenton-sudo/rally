@@ -11,11 +11,11 @@ interface HotelBookingCardProps {
 
 const PLATFORM_COLORS: Record<string, string> = {
   'Bonvoy': 'bg-purple-100 text-purple-700',
-  'Booking.com': 'bg-blue-100 text-blue-700',
+  'Booking.com': 'bg-rally-100 text-rally-700',
   'Travel Source': 'bg-teal-100 text-teal-700',
   'Expedia': 'bg-yellow-100 text-yellow-700',
-  'Direct': 'bg-gray-100 text-gray-600',
-  'Other': 'bg-gray-100 text-gray-600',
+  'Direct': 'bg-cream text-stone',
+  'Other': 'bg-cream text-stone',
 };
 
 function formatDate(dateStr: string): string {
@@ -34,7 +34,7 @@ function getCancellationBadge(deadline: string | null): {
   const days = daysUntil(deadline);
 
   if (days < 0) {
-    return { text: 'Deadline passed', bgClass: 'bg-gray-100', textClass: 'text-gray-500', icon: 'time-outline' };
+    return { text: 'Deadline passed', bgClass: 'bg-cream', textClass: 'text-stone', icon: 'time-outline' };
   }
   if (days <= 2) {
     return { text: `Cancel by ${formatDate(deadline)}`, bgClass: 'bg-red-100', textClass: 'text-red-700', icon: 'alert-circle' };
@@ -45,7 +45,7 @@ function getCancellationBadge(deadline: string | null): {
   if (days <= 14) {
     return { text: `Cancel by ${formatDate(deadline)}`, bgClass: 'bg-amber-50', textClass: 'text-amber-600', icon: 'warning' };
   }
-  return { text: `Cancel by ${formatDate(deadline)}`, bgClass: 'bg-gray-50', textClass: 'text-gray-500', icon: 'time-outline' };
+  return { text: `Cancel by ${formatDate(deadline)}`, bgClass: 'bg-cream', textClass: 'text-stone', icon: 'time-outline' };
 }
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
@@ -66,7 +66,7 @@ export default function HotelBookingCard({ booking, tournamentName, onPress }: H
 
   return (
     <Pressable
-      className="bg-white dark:bg-gray-800 rounded-2xl mb-3 overflow-hidden border border-gray-100 dark:border-gray-700 active:opacity-90"
+      className="bg-warm-white dark:bg-bark-light rounded-2xl mb-3 overflow-hidden border border-parchment dark:border-rally-900 active:opacity-90"
       onPress={onPress}
     >
       <View className="p-4">
@@ -74,13 +74,13 @@ export default function HotelBookingCard({ booking, tournamentName, onPress }: H
         <View className="flex-row items-start justify-between mb-2">
           <View className="flex-1 mr-3">
             <View className="flex-row items-center">
-              <Ionicons name="bed-outline" size={18} color="#6b7280" />
-              <Text className="text-lg font-bold text-gray-900 dark:text-white ml-2" numberOfLines={1}>
+              <Ionicons name="bed-outline" size={18} color="#9E8E7E" />
+              <Text className="text-lg font-bold text-bark dark:text-cream ml-2" numberOfLines={1}>
                 {booking.hotel_name}
               </Text>
             </View>
             {tournamentName && (
-              <Text className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 ml-7">
+              <Text className="text-xs text-stone dark:text-stone mt-0.5 ml-7">
                 {tournamentName}
               </Text>
             )}
@@ -107,18 +107,18 @@ export default function HotelBookingCard({ booking, tournamentName, onPress }: H
         <View className="ml-7 space-y-1.5">
           {/* Check-in / Check-out */}
           <View className="flex-row items-center">
-            <Ionicons name="calendar-outline" size={14} color="#9ca3af" />
-            <Text className="text-sm text-gray-600 dark:text-gray-300 ml-2">
+            <Ionicons name="calendar-outline" size={14} color="#9E8E7E" />
+            <Text className="text-sm text-stone dark:text-parchment ml-2">
               {formatDate(booking.check_in)} — {formatDate(booking.check_out)}
-              <Text className="text-gray-400"> ({nights} night{nights !== 1 ? 's' : ''})</Text>
+              <Text className="text-stone"> ({nights} night{nights !== 1 ? 's' : ''})</Text>
             </Text>
           </View>
 
           {/* Reservation number */}
           {booking.reservation_number ? (
             <View className="flex-row items-center mt-1.5">
-              <Ionicons name="document-text-outline" size={14} color="#9ca3af" />
-              <Text className="text-sm text-gray-600 dark:text-gray-300 ml-2 font-mono">
+              <Ionicons name="document-text-outline" size={14} color="#9E8E7E" />
+              <Text className="text-sm text-stone dark:text-parchment ml-2 font-mono">
                 #{booking.reservation_number}
               </Text>
             </View>
@@ -126,8 +126,8 @@ export default function HotelBookingCard({ booking, tournamentName, onPress }: H
 
           {/* Booked by / name on reservation */}
           <View className="flex-row items-center mt-1.5">
-            <Ionicons name="person-outline" size={14} color="#9ca3af" />
-            <Text className="text-sm text-gray-600 dark:text-gray-300 ml-2">
+            <Ionicons name="person-outline" size={14} color="#9E8E7E" />
+            <Text className="text-sm text-stone dark:text-parchment ml-2">
               {booking.booking_name}
               {booking.booked_by && booking.booked_by !== booking.booking_name
                 ? ` (booked by ${booking.booked_by})`
@@ -138,8 +138,8 @@ export default function HotelBookingCard({ booking, tournamentName, onPress }: H
           {/* Cost */}
           {booking.cost != null && (
             <View className="flex-row items-center mt-1.5">
-              <Ionicons name="card-outline" size={14} color="#9ca3af" />
-              <Text className="text-sm text-gray-600 dark:text-gray-300 ml-2">
+              <Ionicons name="card-outline" size={14} color="#9E8E7E" />
+              <Text className="text-sm text-stone dark:text-parchment ml-2">
                 ${booking.cost.toFixed(2)}
               </Text>
             </View>
@@ -149,7 +149,7 @@ export default function HotelBookingCard({ booking, tournamentName, onPress }: H
         {/* Cancellation deadline badge */}
         {cancellation && booking.status !== 'cancelled' && (
           <View className={`flex-row items-center mt-3 ml-7 px-3 py-2 rounded-lg ${cancellation.bgClass}`}>
-            <Ionicons name={cancellation.icon} size={14} color={cancellation.textClass.includes('red') ? '#dc2626' : cancellation.textClass.includes('amber') ? '#d97706' : '#6b7280'} />
+            <Ionicons name={cancellation.icon} size={14} color={cancellation.textClass.includes('red') ? '#dc2626' : cancellation.textClass.includes('amber') ? '#d97706' : '#9E8E7E'} />
             <Text className={`text-xs font-semibold ml-1.5 ${cancellation.textClass}`}>
               {cancellation.text}
             </Text>

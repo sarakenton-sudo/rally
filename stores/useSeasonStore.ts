@@ -16,9 +16,15 @@ interface SeasonState {
 
   setHotelBookings: (bookings: HotelBooking[]) => void;
   addHotelBooking: (booking: HotelBooking) => void;
+  updateHotelBooking: (id: string, updates: Partial<HotelBooking>) => void;
+  removeHotelBooking: (id: string) => void;
 
   setFlightBookings: (bookings: FlightBooking[]) => void;
   addFlightBooking: (booking: FlightBooking) => void;
+  updateFlightBooking: (id: string, updates: Partial<FlightBooking>) => void;
+  removeFlightBooking: (id: string) => void;
+
+  removeTournament: (id: string) => void;
 
   setTeamConfig: (config: TeamConfig | null) => void;
   setUSAVProfiles: (profiles: USAVProfile[]) => void;
@@ -52,10 +58,29 @@ export const useSeasonStore = create<SeasonState>((set) => ({
   setHotelBookings: (hotelBookings) => set({ hotelBookings }),
   addHotelBooking: (booking) =>
     set((state) => ({ hotelBookings: [...state.hotelBookings, booking] })),
+  updateHotelBooking: (id, updates) =>
+    set((state) => ({
+      hotelBookings: state.hotelBookings.map((h) =>
+        h.id === id ? { ...h, ...updates } : h
+      ),
+    })),
+  removeHotelBooking: (id) =>
+    set((state) => ({ hotelBookings: state.hotelBookings.filter((h) => h.id !== id) })),
 
   setFlightBookings: (flightBookings) => set({ flightBookings }),
   addFlightBooking: (booking) =>
     set((state) => ({ flightBookings: [...state.flightBookings, booking] })),
+  updateFlightBooking: (id, updates) =>
+    set((state) => ({
+      flightBookings: state.flightBookings.map((f) =>
+        f.id === id ? { ...f, ...updates } : f
+      ),
+    })),
+  removeFlightBooking: (id) =>
+    set((state) => ({ flightBookings: state.flightBookings.filter((f) => f.id !== id) })),
+
+  removeTournament: (id) =>
+    set((state) => ({ tournaments: state.tournaments.filter((t) => t.id !== id) })),
 
   setTeamConfig: (teamConfig) => set({ teamConfig }),
   setUSAVProfiles: (usavProfiles) => set({ usavProfiles }),
