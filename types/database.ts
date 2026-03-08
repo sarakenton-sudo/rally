@@ -1,0 +1,213 @@
+export type TournamentStatus = 'upcoming' | 'travel_needed' | 'booked' | 'complete';
+export type BookingPlatform = 'Bonvoy' | 'Booking.com' | 'Travel Source' | 'Expedia' | 'Direct' | 'Other';
+export type BookingStatus = 'tentative' | 'confirmed' | 'cancelled';
+export type RSVPStatus = 'pending' | 'yes' | 'no' | 'maybe';
+export type NotificationPref = 'push' | 'sms' | 'both';
+export type EmailClassification = 'stay_and_play' | 'travel_confirmation' | 'coach_announcement' | 'schedule_change' | 'tournament_info' | 'other';
+export type EmailAction = 'booking_alert_sent' | 'travel_import_queued' | 'notification_sent' | 'none';
+export type StreamingPlatform = 'YouTube' | 'GameChanger' | 'Baller.tv' | 'Other';
+
+export interface Venue {
+  address: string;
+  label: string;
+  is_confirmed: boolean;
+}
+
+export interface StreamingLink {
+  label: string;
+  url: string;
+}
+
+export interface ExternalLink {
+  label: string;
+  url: string;
+  icon_name: string;
+}
+
+export interface Tournament {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  location_city: string;
+  venues: Venue[];
+  travel_required: boolean;
+  ticket_system: string | null;
+  ticket_link: string | null;
+  aes_tournament_id: string | null;
+  aes_feed_data: Record<string, unknown> | null;
+  aes_feed_last_updated: string | null;
+  aes_feed_available: boolean;
+  sportwrench_url: string | null;
+  tickets_purchased: boolean;
+  streaming_links: StreamingLink[];
+  status: TournamentStatus;
+  user_id: string;
+  created_at: string;
+}
+
+export interface HotelBooking {
+  id: string;
+  tournament_id: string;
+  hotel_name: string;
+  platform: BookingPlatform;
+  booking_name: string;
+  booked_by: string;
+  reservation_number: string;
+  check_in: string;
+  check_out: string;
+  cancellation_deadline: string | null;
+  cost: number | null;
+  is_backup: boolean;
+  status: BookingStatus;
+  user_id: string;
+  created_at: string;
+}
+
+export interface FlightBooking {
+  id: string;
+  tournament_id: string;
+  airline: string;
+  confirmation_code: string;
+  departure_date: string;
+  return_date: string;
+  booked_by: string;
+  traveler_names: string[];
+  cost: number | null;
+  user_id: string;
+  created_at: string;
+}
+
+export interface Guest {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  relationship: string;
+  notification_pref: NotificationPref;
+  default_invited: boolean;
+  user_id: string;
+  created_at: string;
+}
+
+export interface TournamentGuest {
+  tournament_id: string;
+  guest_id: string;
+  invited: boolean;
+  rsvp_status: RSVPStatus;
+  attending_in_person: boolean;
+  ticket_purchased: boolean;
+}
+
+export interface TeamConfig {
+  id: string;
+  team_name: string;
+  season_year: string;
+  team_code: string | null;
+  club_email_domain: string | null;
+  rally_forward_address: string;
+  trusted_sender_emails: string[];
+  ical_feed_token: string;
+  youtube_channel_id: string | null;
+  default_streaming_platform: StreamingPlatform | null;
+  external_links: ExternalLink[];
+  user_id: string;
+  created_at: string;
+}
+
+export interface TeamEvent {
+  id: string;
+  tournament_id: string | null;
+  name: string;
+  date: string;
+  time: string;
+  venue_name: string;
+  address: string;
+  reservation_name: string | null;
+  reservation_number: string | null;
+  party_size: number | null;
+  notes: string | null;
+  family_welcome: boolean;
+  user_id: string;
+  created_at: string;
+}
+
+export interface USAVProfile {
+  id: string;
+  member_name: string;
+  member_id: string;
+  club_affiliation: string;
+  expiration_date: string;
+  membership_card_file: string | null;
+  notes: string | null;
+  user_id: string;
+  created_at: string;
+}
+
+export interface ForwardedEmail {
+  id: string;
+  user_id: string;
+  from_address: string;
+  subject: string;
+  body_text: string;
+  received_at: string;
+  classification: EmailClassification;
+  action_taken: EmailAction;
+  raw_storage_url: string | null;
+}
+
+// Supabase Database type for typed client
+export interface Database {
+  public: {
+    Tables: {
+      tournaments: {
+        Row: Tournament;
+        Insert: Omit<Tournament, 'id' | 'created_at'>;
+        Update: Partial<Omit<Tournament, 'id'>>;
+      };
+      hotel_bookings: {
+        Row: HotelBooking;
+        Insert: Omit<HotelBooking, 'id' | 'created_at'>;
+        Update: Partial<Omit<HotelBooking, 'id'>>;
+      };
+      flight_bookings: {
+        Row: FlightBooking;
+        Insert: Omit<FlightBooking, 'id' | 'created_at'>;
+        Update: Partial<Omit<FlightBooking, 'id'>>;
+      };
+      guests: {
+        Row: Guest;
+        Insert: Omit<Guest, 'id' | 'created_at'>;
+        Update: Partial<Omit<Guest, 'id'>>;
+      };
+      tournament_guests: {
+        Row: TournamentGuest;
+        Insert: TournamentGuest;
+        Update: Partial<TournamentGuest>;
+      };
+      team_config: {
+        Row: TeamConfig;
+        Insert: Omit<TeamConfig, 'id' | 'created_at'>;
+        Update: Partial<Omit<TeamConfig, 'id'>>;
+      };
+      team_events: {
+        Row: TeamEvent;
+        Insert: Omit<TeamEvent, 'id' | 'created_at'>;
+        Update: Partial<Omit<TeamEvent, 'id'>>;
+      };
+      usav_profiles: {
+        Row: USAVProfile;
+        Insert: Omit<USAVProfile, 'id' | 'created_at'>;
+        Update: Partial<Omit<USAVProfile, 'id'>>;
+      };
+      forwarded_emails: {
+        Row: ForwardedEmail;
+        Insert: Omit<ForwardedEmail, 'id'>;
+        Update: Partial<Omit<ForwardedEmail, 'id'>>;
+      };
+    };
+    Views: {};
+    Functions: {};
+    Enums: {};
+  };
+}

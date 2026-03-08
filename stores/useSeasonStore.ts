@@ -1,0 +1,76 @@
+import { create } from 'zustand';
+import type { Tournament, HotelBooking, FlightBooking, TeamConfig, USAVProfile, ForwardedEmail } from '@/types/database';
+
+interface SeasonState {
+  tournaments: Tournament[];
+  hotelBookings: HotelBooking[];
+  flightBookings: FlightBooking[];
+  teamConfig: TeamConfig | null;
+  usavProfiles: USAVProfile[];
+  forwardedEmails: ForwardedEmail[];
+  isLoading: boolean;
+
+  setTournaments: (tournaments: Tournament[]) => void;
+  addTournament: (tournament: Tournament) => void;
+  updateTournament: (id: string, updates: Partial<Tournament>) => void;
+
+  setHotelBookings: (bookings: HotelBooking[]) => void;
+  addHotelBooking: (booking: HotelBooking) => void;
+
+  setFlightBookings: (bookings: FlightBooking[]) => void;
+  addFlightBooking: (booking: FlightBooking) => void;
+
+  setTeamConfig: (config: TeamConfig | null) => void;
+  setUSAVProfiles: (profiles: USAVProfile[]) => void;
+  addUSAVProfile: (profile: USAVProfile) => void;
+  updateUSAVProfile: (id: string, updates: Partial<USAVProfile>) => void;
+  removeUSAVProfile: (id: string) => void;
+  setForwardedEmails: (emails: ForwardedEmail[]) => void;
+  addForwardedEmail: (email: ForwardedEmail) => void;
+  setLoading: (loading: boolean) => void;
+}
+
+export const useSeasonStore = create<SeasonState>((set) => ({
+  tournaments: [],
+  hotelBookings: [],
+  flightBookings: [],
+  teamConfig: null,
+  usavProfiles: [],
+  forwardedEmails: [],
+  isLoading: false,
+
+  setTournaments: (tournaments) => set({ tournaments }),
+  addTournament: (tournament) =>
+    set((state) => ({ tournaments: [...state.tournaments, tournament] })),
+  updateTournament: (id, updates) =>
+    set((state) => ({
+      tournaments: state.tournaments.map((t) =>
+        t.id === id ? { ...t, ...updates } : t
+      ),
+    })),
+
+  setHotelBookings: (hotelBookings) => set({ hotelBookings }),
+  addHotelBooking: (booking) =>
+    set((state) => ({ hotelBookings: [...state.hotelBookings, booking] })),
+
+  setFlightBookings: (flightBookings) => set({ flightBookings }),
+  addFlightBooking: (booking) =>
+    set((state) => ({ flightBookings: [...state.flightBookings, booking] })),
+
+  setTeamConfig: (teamConfig) => set({ teamConfig }),
+  setUSAVProfiles: (usavProfiles) => set({ usavProfiles }),
+  addUSAVProfile: (profile) =>
+    set((state) => ({ usavProfiles: [...state.usavProfiles, profile] })),
+  updateUSAVProfile: (id, updates) =>
+    set((state) => ({
+      usavProfiles: state.usavProfiles.map((p) =>
+        p.id === id ? { ...p, ...updates } : p
+      ),
+    })),
+  removeUSAVProfile: (id) =>
+    set((state) => ({ usavProfiles: state.usavProfiles.filter((p) => p.id !== id) })),
+  setForwardedEmails: (forwardedEmails) => set({ forwardedEmails }),
+  addForwardedEmail: (email) =>
+    set((state) => ({ forwardedEmails: [email, ...state.forwardedEmails] })),
+  setLoading: (isLoading) => set({ isLoading }),
+}));
