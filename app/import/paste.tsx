@@ -83,7 +83,7 @@ export default function PasteImportScreen() {
           {/* Instructions */}
           <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 mb-4">
             <View className="flex-row items-start">
-              <Ionicons name="sparkles" size={18} color="#C4714A" />
+              <Ionicons name="sparkles" size={18} color="#3B82B0" />
               <Text className="text-sm text-rally-700 dark:text-rally-300 ml-2 flex-1">
                 Paste any text containing tournament info — a coach's GroupMe message, forwarded email, or schedule list. AI will extract the details automatically.
               </Text>
@@ -105,7 +105,7 @@ export default function PasteImportScreen() {
               multiline
               textAlignVertical="top"
               placeholder="Paste a coach message, email, or schedule here..."
-              placeholderTextColor="#9E8E7E"
+              placeholderTextColor="#8FA8BF"
               value={text}
               onChangeText={setText}
             />
@@ -121,12 +121,12 @@ export default function PasteImportScreen() {
           >
             {isExtracting ? (
               <View className="flex-row items-center">
-                <ActivityIndicator size="small" color="#FAF7F3" />
+                <ActivityIndicator size="small" color="#FEFEFE" />
                 <Text className="text-sm font-semibold text-cream ml-2">Extracting...</Text>
               </View>
             ) : (
               <View className="flex-row items-center">
-                <Ionicons name="sparkles" size={18} color="#FAF7F3" />
+                <Ionicons name="sparkles" size={18} color="#FEFEFE" />
                 <Text className="text-sm font-semibold text-cream ml-2">Extract Tournaments</Text>
               </View>
             )}

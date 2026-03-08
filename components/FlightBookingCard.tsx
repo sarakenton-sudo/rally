@@ -21,7 +21,7 @@ export default function FlightBookingCard({ booking, tournamentName, onPress }: 
     >
       <View className="p-4">
         <View className="flex-row items-center mb-2">
-          <Ionicons name="airplane" size={18} color="#9E8E7E" />
+          <Ionicons name="airplane" size={18} color="#8FA8BF" />
           <Text className="text-lg font-bold text-bark dark:text-cream ml-2">
             {booking.airline}
           </Text>
@@ -35,7 +35,7 @@ export default function FlightBookingCard({ booking, tournamentName, onPress }: 
         <View className="ml-7 space-y-1.5">
           {booking.confirmation_code ? (
             <View className="flex-row items-center">
-              <Ionicons name="document-text-outline" size={14} color="#9E8E7E" />
+              <Ionicons name="document-text-outline" size={14} color="#8FA8BF" />
               <Text className="text-sm text-stone dark:text-parchment ml-2 font-mono">
                 {booking.confirmation_code}
               </Text>
@@ -43,14 +43,14 @@ export default function FlightBookingCard({ booking, tournamentName, onPress }: 
           ) : null}
 
           <View className="flex-row items-center mt-1.5">
-            <Ionicons name="calendar-outline" size={14} color="#9E8E7E" />
+            <Ionicons name="calendar-outline" size={14} color="#8FA8BF" />
             <Text className="text-sm text-stone dark:text-parchment ml-2">
               {formatDate(booking.departure_date)} — {formatDate(booking.return_date)}
             </Text>
           </View>
 
           <View className="flex-row items-center mt-1.5">
-            <Ionicons name="people-outline" size={14} color="#9E8E7E" />
+            <Ionicons name="people-outline" size={14} color="#8FA8BF" />
             <Text className="text-sm text-stone dark:text-parchment ml-2">
               {booking.traveler_names.join(', ')}
             </Text>
@@ -58,7 +58,7 @@ export default function FlightBookingCard({ booking, tournamentName, onPress }: 
 
           {booking.cost != null && (
             <View className="flex-row items-center mt-1.5">
-              <Ionicons name="card-outline" size={14} color="#9E8E7E" />
+              <Ionicons name="card-outline" size={14} color="#8FA8BF" />
               <Text className="text-sm text-stone dark:text-parchment ml-2">
                 ${booking.cost.toFixed(2)}
               </Text>

@@ -76,6 +76,8 @@ export default function PasteReviewScreen() {
           sportwrench_url: null,
           tickets_purchased: false,
           streaming_links: [],
+          air_not_needed: false,
+          hotel_not_needed: false,
           status: 'upcoming' as const,
         };
 
@@ -128,7 +130,7 @@ export default function PasteReviewScreen() {
           }`}
         >
           <Text className="text-sm font-semibold text-cream">
-            {isSaving ? 'Saving...' : 'Save All'}
+            {isSaving ? 'Saving...' : 'Save'}
           </Text>
         </Pressable>
       </View>
@@ -173,7 +175,7 @@ export default function PasteReviewScreen() {
                     <Ionicons
                       name={editingIndex === index ? 'checkmark' : 'create-outline'}
                       size={18}
-                      color={editingIndex === index ? '#16a34a' : '#9E8E7E'}
+                      color={editingIndex === index ? '#16a34a' : '#8FA8BF'}
                     />
                   </Pressable>
                   <Pressable onPress={() => removeItem(index)} className="p-1.5">
@@ -229,7 +231,7 @@ export default function PasteReviewScreen() {
                   <TextInput
                     className="flex-1 bg-cream dark:bg-rally-900 rounded-lg px-3 py-1.5 text-xs text-bark dark:text-parchment"
                     placeholder="Optional — e.g. AJV-2026-001"
-                    placeholderTextColor="#9E8E7E"
+                    placeholderTextColor="#8FA8BF"
                     value={aesIds[index] || ''}
                     onChangeText={(v) => setAesIds((prev) => ({ ...prev, [index]: v }))}
                     autoCapitalize="characters"
@@ -271,7 +273,7 @@ function EditRow({
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}
-        placeholderTextColor="#9E8E7E"
+        placeholderTextColor="#8FA8BF"
       />
     </View>
   );

@@ -25,12 +25,12 @@ export default function AddHotelBookingScreen() {
   const [hotelName, setHotelName] = useState(existing?.hotel_name ?? '');
   const [platform, setPlatform] = useState<string>(existing?.platform ?? '');
   const [reservationNumber, setReservationNumber] = useState(existing?.reservation_number ?? '');
-  const [checkIn, setCheckIn] = useState<Date | null>(existing ? new Date(existing.check_in) : null);
-  const [checkOut, setCheckOut] = useState<Date | null>(existing ? new Date(existing.check_out) : null);
+  const [checkIn, setCheckIn] = useState<Date | null>(existing ? new Date(existing.check_in + 'T12:00:00') : null);
+  const [checkOut, setCheckOut] = useState<Date | null>(existing ? new Date(existing.check_out + 'T12:00:00') : null);
   const [bookedBy, setBookedBy] = useState(existing?.booked_by ?? '');
   const [bookingName, setBookingName] = useState(existing?.booking_name ?? '');
   const [cancellationDeadline, setCancellationDeadline] = useState<Date | null>(
-    existing?.cancellation_deadline ? new Date(existing.cancellation_deadline) : null
+    existing?.cancellation_deadline ? new Date(existing.cancellation_deadline + 'T12:00:00') : null
   );
   const [cost, setCost] = useState(existing?.cost != null ? String(existing.cost) : '');
   const [isBackup, setIsBackup] = useState(existing?.is_backup ?? false);
@@ -103,7 +103,7 @@ export default function AddHotelBookingScreen() {
         : null,
       cost: cost ? parseFloat(cost) : null,
       is_backup: isBackup,
-      status: (existing?.status ?? 'tentative') as BookingStatus,
+      status: (existing?.status ?? 'confirmed') as BookingStatus,
     };
 
     try {
@@ -137,7 +137,9 @@ export default function AddHotelBookingScreen() {
           notifySuccess();
         }
       }
-      router.back();
+      Alert.alert('Saved', 'Hotel booking saved.', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
     } finally {
       setIsSaving(false);
     }
@@ -236,8 +238,8 @@ export default function AddHotelBookingScreen() {
             <Switch
               value={isBackup}
               onValueChange={setIsBackup}
-              trackColor={{ false: '#EDE4D6', true: '#E4AC85' }}
-              thumbColor={isBackup ? '#C4714A' : '#FAF7F3'}
+              trackColor={{ false: '#D8E2EC', true: '#7DBDD9' }}
+              thumbColor={isBackup ? '#3B82B0' : '#FEFEFE'}
             />
           </View>
 

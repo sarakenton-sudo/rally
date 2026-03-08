@@ -2,7 +2,7 @@ export type TournamentStatus = 'upcoming' | 'travel_needed' | 'booked' | 'comple
 export type BookingPlatform = 'Bonvoy' | 'Booking.com' | 'Travel Source' | 'Expedia' | 'Direct' | 'Other';
 export type BookingStatus = 'tentative' | 'confirmed' | 'cancelled';
 export type RSVPStatus = 'pending' | 'yes' | 'no' | 'maybe';
-export type NotificationPref = 'push' | 'sms' | 'both';
+export type NotificationPref = 'sms';
 export type EmailClassification = 'stay_and_play' | 'travel_confirmation' | 'coach_announcement' | 'schedule_change' | 'tournament_info' | 'other';
 export type EmailAction = 'booking_alert_sent' | 'travel_import_queued' | 'notification_sent' | 'none';
 export type StreamingPlatform = 'YouTube' | 'GameChanger' | 'Baller.tv' | 'Other';
@@ -22,6 +22,8 @@ export interface ExternalLink {
   label: string;
   url: string;
   icon_name: string;
+  username: string | null;
+  password: string | null;
 }
 
 export interface Tournament {
@@ -41,6 +43,8 @@ export interface Tournament {
   sportwrench_url: string | null;
   tickets_purchased: boolean;
   streaming_links: StreamingLink[];
+  air_not_needed: boolean;
+  hotel_not_needed: boolean;
   status: TournamentStatus;
   user_id: string;
   created_at: string;
@@ -112,6 +116,7 @@ export interface TeamConfig {
   team_name: string;
   season_year: string;
   team_code: string | null;
+  athlete_name: string | null;
   club_email_domain: string | null;
   rally_forward_address: string;
   trusted_sender_emails: string[];
@@ -119,6 +124,12 @@ export interface TeamConfig {
   ical_feed_token: string;
   youtube_channel_id: string | null;
   default_streaming_platform: StreamingPlatform | null;
+  default_stream_url: string | null;
+  travel_sync_emails: string[];
+  gmail_connected: boolean;
+  gmail_email: string | null;
+  schedule_import_source: 'leagueapps' | 'teamsnap' | 'manual' | null;
+  schedule_import_connected: boolean;
   external_links: ExternalLink[];
   notification_preferences: NotificationPreferences;
   user_id: string;
@@ -154,6 +165,8 @@ export interface USAVProfile {
   created_at: string;
 }
 
+export type EmailSource = 'forward' | 'gmail_sync' | 'paste';
+
 export interface ForwardedEmail {
   id: string;
   user_id: string;
@@ -164,6 +177,29 @@ export interface ForwardedEmail {
   classification: EmailClassification;
   action_taken: EmailAction;
   raw_storage_url: string | null;
+  source: EmailSource;
+  gmail_message_id: string | null;
+}
+
+export type HouseholdRole = 'admin' | 'member';
+export type InviteStatus = 'pending' | 'accepted' | 'revoked';
+
+export interface HouseholdMember {
+  id: string;
+  owner_user_id: string;
+  member_user_id: string;
+  role: HouseholdRole;
+  created_at: string;
+}
+
+export interface HouseholdInvite {
+  id: string;
+  owner_user_id: string;
+  email: string;
+  invite_code: string;
+  status: InviteStatus;
+  expires_at: string;
+  created_at: string;
 }
 
 // Supabase Database type for typed client

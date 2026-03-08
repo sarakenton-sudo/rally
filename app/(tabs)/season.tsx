@@ -1,12 +1,14 @@
 import { View, Text, FlatList, ActivityIndicator, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import TournamentCard from '@/components/TournamentCard';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
+import { daysUntil } from '@/lib/dates';
 import type { Tournament } from '@/types/database';
+
+type ListItem = { type: 'tournament'; data: Tournament } | { type: 'divider'; label: string };
 
 export default function SeasonScreen() {
   const tournaments = useSeasonStore((s) => s.tournaments);
@@ -14,36 +16,64 @@ export default function SeasonScreen() {
   const isLoading = useSeasonStore((s) => s.isLoading);
   const { refresh, isRefreshing } = useDataRefresh();
 
-  const sorted = useMemo(
-    () => [...tournaments].sort((a, b) => a.start_date.localeCompare(b.start_date)),
-    [tournaments]
-  );
+  const hotelBookings = useSeasonStore((s) => s.hotelBookings);
+  const flightBookings = useSeasonStore((s) => s.flightBookings);
+
+  const listItems = useMemo(() => {
+    const upcoming = tournaments
+      .filter((t) => daysUntil(t.end_date) >= 0)
+      .sort((a, b) => a.start_date.localeCompare(b.start_date));
+    const past = tournaments
+      .filter((t) => daysUntil(t.end_date) < 0)
+      .sort((a, b) => a.start_date.localeCompare(b.start_date));
+
+    const items: ListItem[] = upcoming.map((t) => ({ type: 'tournament' as const, data: t }));
+    if (past.length > 0) {
+      items.push({ type: 'divider' as const, label: 'COMPLETED' });
+      past.forEach((t) => items.push({ type: 'tournament' as const, data: t }));
+    }
+    return items;
+  }, [tournaments]);
 
   const teamName = teamConfig?.team_name ?? '';
   const seasonYear = teamConfig?.season_year ?? '';
 
-  const renderItem = ({ item }: { item: Tournament }) => (
-    <TournamentCard
-      tournament={item}
-      onPress={() => router.push(`/tournament/${item.id}`)}
-    />
-  );
+  const renderItem = ({ item }: { item: ListItem }) => {
+    if (item.type === 'divider') {
+      return (
+        <View className="py-3 mt-2">
+          <Text className="text-xs font-semibold text-stone uppercase tracking-wider">
+            {item.label}
+          </Text>
+        </View>
+      );
+    }
+    return (
+      <TournamentCard
+        tournament={item.data}
+        hotelCount={hotelBookings.filter((h) => h.tournament_id === item.data.id).length}
+        flightCount={flightBookings.filter((f) => f.tournament_id === item.data.id).length}
+        backupHotelCount={hotelBookings.filter((h) => h.tournament_id === item.data.id && h.is_backup).length}
+        onPress={() => router.push(`/tournament/${item.data.id}`)}
+      />
+    );
+  };
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-cream dark:bg-bark items-center justify-center" edges={['top']}>
-        <ActivityIndicator size="large" color="#C4714A" />
+      <View className="flex-1 bg-cream dark:bg-bark items-center justify-center">
+        <ActivityIndicator size="large" color="#3B82B0" />
         <Text className="text-sm text-stone mt-3">Loading season...</Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['top']}>
+    <View className="flex-1 bg-cream dark:bg-bark">
       <FlatList
-        data={sorted}
+        data={listItems}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, index) => item.type === 'tournament' ? item.data.id : `divider-${index}`}
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         onRefresh={refresh}
         refreshing={isRefreshing}
@@ -57,12 +87,15 @@ export default function SeasonScreen() {
                 className="flex-row items-center bg-rally-50 dark:bg-rally-900/30 px-3 py-1.5 rounded-lg active:opacity-70"
                 onPress={() => router.push('/import/paste')}
               >
-                <Ionicons name="sparkles" size={14} color="#C4714A" />
+                <Ionicons name="sparkles" size={14} color="#3B82B0" />
                 <Text className="text-xs font-semibold text-rally-600 ml-1">Import</Text>
               </Pressable>
             </View>
             <Text className="text-sm text-stone dark:text-parchment mt-1">
-              {teamName}{seasonYear ? ` — ${seasonYear}` : ''} — {sorted.length} tournaments
+              {teamName}{seasonYear ? ` — ${seasonYear}` : ''} — {tournaments.length} tournaments
+            </Text>
+            <Text className="text-xs font-semibold text-stone uppercase tracking-wider mt-4">
+              Tournaments
             </Text>
           </View>
         }
@@ -77,6 +110,6 @@ export default function SeasonScreen() {
           </View>
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }

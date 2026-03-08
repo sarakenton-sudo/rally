@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { View, Text, ScrollView, RefreshControl, Pressable, Linking, Platform, Share, Alert } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, Pressable, Linking, Platform, Share, Alert, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,7 @@ import FlightBookingCard from '@/components/FlightBookingCard';
 import TournamentGuestList from '@/components/TournamentGuestList';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
-import { useTeamEvents, deleteTournament as deleteTournamentDB } from '@/hooks/useSupabaseData';
+import { useTeamEvents, deleteTournament as deleteTournamentDB, updateTournament as updateTournamentDB } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/providers/AuthProvider';
 import { useNotificationActions } from '@/hooks/useNotificationActions';
 import { MOCK_TEAM_EVENTS } from '@/lib/mock-data';
@@ -70,6 +70,7 @@ export default function TournamentDetailScreen() {
   const { sendRSVPRequest, sendTournamentReminder } = useNotificationActions();
   const { user } = useAuth();
   const removeTournament = useSeasonStore((s) => s.removeTournament);
+  const updateTournamentStore = useSeasonStore((s) => s.updateTournament);
   const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
   const handleDeleteTournament = () => {
@@ -114,7 +115,7 @@ export default function TournamentDetailScreen() {
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor="#FAF7F3" />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor="#FEFEFE" />}
       >
         {/* Hero header */}
         <View className={`px-5 pt-4 pb-5 ${
@@ -178,7 +179,7 @@ export default function TournamentDetailScreen() {
                   className="bg-rally-50 dark:bg-rally-900/30 px-3 py-2 rounded-lg active:opacity-70"
                   onPress={() => openDirections(venue.address)}
                 >
-                  <Ionicons name="navigate" size={18} color="#C4714A" />
+                  <Ionicons name="navigate" size={18} color="#3B82B0" />
                 </Pressable>
               </View>
             </View>
@@ -235,7 +236,7 @@ export default function TournamentDetailScreen() {
                     }
                   }}
                 >
-                  <Ionicons name="copy-outline" size={12} color="#9E8E7E" />
+                  <Ionicons name="copy-outline" size={12} color="#8FA8BF" />
                   <Text className="text-xs font-semibold text-stone dark:text-parchment ml-1">Copy</Text>
                 </Pressable>
               </View>
@@ -245,8 +246,8 @@ export default function TournamentDetailScreen() {
                   <QRCode
                     value={teamCode}
                     size={80}
-                    backgroundColor="#FAF7F3"
-                    color="#3D2E22"
+                    backgroundColor="#FEFEFE"
+                    color="#1E3A5F"
                   />
                 </View>
               )}
@@ -278,7 +279,101 @@ export default function TournamentDetailScreen() {
           </View>
 
           {/* TRAVEL */}
-          {(hotels.length > 0 || flights.length > 0) && (
+          {tournament.travel_required && (
+            <>
+              <SectionHeader icon="bed" title="Travel" iconColor={ic.muted} />
+
+              {/* Hotel Not Needed toggle */}
+              <View className="flex-row items-center justify-between mb-2 bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 border border-parchment dark:border-rally-900">
+                <View className="flex-1 mr-4">
+                  <Text className="text-sm font-medium text-bark dark:text-parchment">
+                    Hotel Not Needed
+                  </Text>
+                  <Text className="text-xs text-stone dark:text-stone mt-0.5">
+                    Staying local or with family
+                  </Text>
+                </View>
+                <Switch
+                  value={tournament.hotel_not_needed}
+                  onValueChange={async (value) => {
+                    if (isSupabaseConfigured && user) {
+                      await updateTournamentDB(tournament.id, { hotel_not_needed: value });
+                    }
+                    updateTournamentStore(tournament.id, { hotel_not_needed: value });
+                  }}
+                  trackColor={{ false: '#D8E2EC', true: '#86EFAC' }}
+                  thumbColor={tournament.hotel_not_needed ? '#16a34a' : '#FEFEFE'}
+                />
+              </View>
+
+              {/* Air Not Needed toggle */}
+              <View className="flex-row items-center justify-between mb-3 bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 border border-parchment dark:border-rally-900">
+                <View className="flex-1 mr-4">
+                  <Text className="text-sm font-medium text-bark dark:text-parchment">
+                    Air Not Needed
+                  </Text>
+                  <Text className="text-xs text-stone dark:text-stone mt-0.5">
+                    Driving or getting a ride
+                  </Text>
+                </View>
+                <Switch
+                  value={tournament.air_not_needed}
+                  onValueChange={async (value) => {
+                    if (isSupabaseConfigured && user) {
+                      await updateTournamentDB(tournament.id, { air_not_needed: value });
+                    }
+                    updateTournamentStore(tournament.id, { air_not_needed: value });
+                  }}
+                  trackColor={{ false: '#D8E2EC', true: '#86EFAC' }}
+                  thumbColor={tournament.air_not_needed ? '#16a34a' : '#FEFEFE'}
+                />
+              </View>
+
+              {/* Existing hotel bookings (always shown) */}
+              {hotels.map((h) => (
+                <HotelBookingCard
+                  key={h.id}
+                  booking={h}
+                  onPress={() => router.push({ pathname: '/booking/add-hotel', params: { editId: h.id } })}
+                />
+              ))}
+              {/* Existing flight bookings (always shown) */}
+              {flights.map((f) => (
+                <FlightBookingCard
+                  key={f.id}
+                  booking={f}
+                  onPress={() => router.push({ pathname: '/booking/add-flight', params: { editId: f.id } })}
+                />
+              ))}
+
+              {/* Add buttons — hidden when category marked not needed */}
+              {(!tournament.hotel_not_needed || !tournament.air_not_needed) && (
+                <View className="flex-row gap-2">
+                  {!tournament.hotel_not_needed && hotels.length === 0 && (
+                    <Pressable
+                      className="flex-1 bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900 items-center active:opacity-80"
+                      onPress={() => router.push({ pathname: '/booking/add-hotel', params: { tournamentId: tournament.id } })}
+                    >
+                      <Ionicons name="bed" size={22} color="#7c3aed" />
+                      <Text className="text-sm text-stone mt-1">Add Hotel</Text>
+                    </Pressable>
+                  )}
+                  {!tournament.air_not_needed && flights.length === 0 && (
+                    <Pressable
+                      className="flex-1 bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900 items-center active:opacity-80"
+                      onPress={() => router.push({ pathname: '/booking/add-flight', params: { tournamentId: tournament.id } })}
+                    >
+                      <Ionicons name="airplane" size={22} color="#3B82B0" />
+                      <Text className="text-sm text-stone mt-1">Add Flight</Text>
+                    </Pressable>
+                  )}
+                </View>
+              )}
+            </>
+          )}
+
+          {/* Non-travel tournament bookings (if any exist) */}
+          {!tournament.travel_required && (hotels.length > 0 || flights.length > 0) && (
             <>
               <SectionHeader icon="bed" title="Travel" iconColor={ic.muted} />
               {hotels.map((h) => (
@@ -298,31 +393,9 @@ export default function TournamentDetailScreen() {
             </>
           )}
 
-          {tournament.travel_required && hotels.length === 0 && flights.length === 0 && (
-            <>
-              <SectionHeader icon="bed" title="Travel" iconColor={ic.muted} />
-              <View className="flex-row gap-2">
-                <Pressable
-                  className="flex-1 bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900 items-center active:opacity-80"
-                  onPress={() => router.push({ pathname: '/booking/add-hotel', params: { tournamentId: tournament.id } })}
-                >
-                  <Ionicons name="bed" size={22} color="#7c3aed" />
-                  <Text className="text-sm text-stone mt-1">Add Hotel</Text>
-                </Pressable>
-                <Pressable
-                  className="flex-1 bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900 items-center active:opacity-80"
-                  onPress={() => router.push({ pathname: '/booking/add-flight', params: { tournamentId: tournament.id } })}
-                >
-                  <Ionicons name="airplane" size={22} color="#C4714A" />
-                  <Text className="text-sm text-stone mt-1">Add Flight</Text>
-                </Pressable>
-              </View>
-            </>
-          )}
-
           {/* GUESTS / RSVP */}
           <SectionHeader icon="people" title="Guests" iconColor={ic.muted} />
-          <TournamentGuestList tournamentId={tournament.id} />
+          <TournamentGuestList tournamentId={tournament.id} tournamentName={tournament.name} tournamentCity={tournament.location_city} />
 
           {/* Notification actions */}
           <View className="flex-row gap-2 mt-2">
@@ -337,7 +410,7 @@ export default function TournamentDetailScreen() {
               className="flex-1 bg-rally-50 dark:bg-rally-900/20 rounded-xl py-3 items-center flex-row justify-center active:opacity-80"
               onPress={() => sendTournamentReminder(tournament)}
             >
-              <Ionicons name="notifications-outline" size={16} color="#C4714A" />
+              <Ionicons name="notifications-outline" size={16} color="#3B82B0" />
               <Text className="text-xs font-semibold text-rally-700 dark:text-rally-300 ml-1.5">Send Reminder</Text>
             </Pressable>
           </View>
@@ -354,7 +427,7 @@ export default function TournamentDetailScreen() {
               className="flex-row items-center active:opacity-70"
               onPress={() => router.push({ pathname: '/tournament/add-stream', params: { tournamentId: tournament.id } })}
             >
-              <Ionicons name="add-circle-outline" size={18} color="#C4714A" />
+              <Ionicons name="add-circle-outline" size={18} color="#3B82B0" />
               <Text className="text-xs font-semibold text-rally-600 ml-1">Add</Text>
             </Pressable>
           </View>
@@ -400,10 +473,31 @@ export default function TournamentDetailScreen() {
                 </View>
               </View>
             ))
+          ) : teamConfig?.default_stream_url ? (
+            <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900">
+              <View className="flex-row items-center mb-2">
+                <View className="bg-rally-50 dark:bg-rally-900/20 px-2 py-0.5 rounded-full">
+                  <Text className="text-xs font-semibold text-rally-600">Team Default</Text>
+                </View>
+              </View>
+              <Pressable
+                className="flex-row items-center active:opacity-80"
+                onPress={() => Linking.openURL(teamConfig.default_stream_url!)}
+              >
+                <Ionicons name="play-circle" size={24} color="#dc2626" />
+                <View className="ml-3 flex-1">
+                  <Text className="text-sm font-semibold text-bark dark:text-cream">
+                    {teamConfig.default_streaming_platform ?? 'Stream'}
+                  </Text>
+                  <Text className="text-xs text-stone mt-0.5" numberOfLines={1}>{teamConfig.default_stream_url}</Text>
+                </View>
+                <Ionicons name="open-outline" size={16} color={ic.subtle} />
+              </Pressable>
+            </View>
           ) : (
             <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900">
               <Text className="text-sm text-stone">
-                No streaming links yet. Links will auto-detect from your team's YouTube channel, or add manually.
+                No streaming links yet. Set a default team channel in Hub → Streaming Hub, or add a link for this tournament.
               </Text>
             </View>
           )}
@@ -444,7 +538,7 @@ export default function TournamentDetailScreen() {
                       className="bg-rally-50 dark:bg-rally-900/30 px-3 py-2 rounded-lg active:opacity-70"
                       onPress={() => openDirections(event.address)}
                     >
-                      <Ionicons name="navigate" size={18} color="#C4714A" />
+                      <Ionicons name="navigate" size={18} color="#3B82B0" />
                     </Pressable>
                   </View>
                 </View>
@@ -460,7 +554,7 @@ export default function TournamentDetailScreen() {
                 className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
                 onPress={() => Linking.openURL(tournament.sportwrench_url!)}
               >
-                <Ionicons name="open-outline" size={18} color="#C4714A" />
+                <Ionicons name="open-outline" size={18} color="#3B82B0" />
                 <Text className="text-sm text-rally-600 font-semibold ml-2">View on SportsWrench</Text>
               </Pressable>
             </>

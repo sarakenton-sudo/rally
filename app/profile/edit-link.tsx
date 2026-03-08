@@ -3,26 +3,35 @@ import { View, Text, ScrollView, Pressable, Alert, KeyboardAvoidingView, Platfor
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import FormField from '@/components/FormField';
-import DropdownField from '@/components/DropdownField';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useAuth } from '@/providers/AuthProvider';
 import { updateTeamConfig } from '@/hooks/useSupabaseData';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
+import { tapLight } from '@/lib/haptics';
 
-const ICON_OPTIONS = [
-  'globe-outline',
-  'chatbubbles-outline',
-  'school-outline',
-  'trophy-outline',
-  'shield-outline',
-  'videocam-outline',
-  'people-outline',
-  'link-outline',
-  'logo-youtube',
-  'calendar-outline',
-];
+// Auto-assign icon based on label
+const ICON_MAP: Record<string, string> = {
+  'groupme': 'chatbubbles-outline',
+  'leagueapps': 'trophy-outline',
+  'teamsnap': 'people-outline',
+  'sportsengine': 'globe-outline',
+  'sportsrecruits': 'school-outline',
+  'usa volleyball': 'shield-outline',
+  'hudl': 'videocam-outline',
+  'university athlete': 'trophy-outline',
+  'youtube': 'logo-youtube',
+};
+
+function getIconForLabel(label: string): string {
+  const lower = label.toLowerCase();
+  for (const [key, icon] of Object.entries(ICON_MAP)) {
+    if (lower.includes(key)) return icon;
+  }
+  return 'globe-outline';
+}
 
 export default function EditLinkScreen() {
   const { index: indexStr } = useLocalSearchParams<{ index?: string }>();
@@ -37,7 +46,14 @@ export default function EditLinkScreen() {
 
   const [label, setLabel] = useState(existingLink?.label ?? '');
   const [url, setUrl] = useState(existingLink?.url ?? '');
-  const [iconName, setIconName] = useState(existingLink?.icon_name ?? 'globe-outline');
+  const [username, setUsername] = useState(existingLink?.username ?? '');
+  const [password, setPassword] = useState(existingLink?.password ?? '');
+
+  const handleCopy = async (value: string, fieldLabel: string) => {
+    await Clipboard.setStringAsync(value);
+    tapLight();
+    Alert.alert('Copied', `${fieldLabel} copied to clipboard.`);
+  };
 
   const handleSave = async () => {
     if (!label.trim()) {
@@ -51,7 +67,9 @@ export default function EditLinkScreen() {
     const linkData = {
       label: label.trim(),
       url: url.trim(),
-      icon_name: iconName,
+      icon_name: getIconForLabel(label.trim()),
+      username: username.trim() || null,
+      password: password.trim() || null,
     };
 
     if (editIndex >= 0) {
@@ -122,19 +140,37 @@ export default function EditLinkScreen() {
         <ScrollView className="flex-1 px-4 pt-4" keyboardShouldPersistTaps="handled">
           <FormField label="Label" value={label} onChangeText={setLabel} placeholder="e.g. GroupMe, LeagueApps" />
           <FormField label="URL" value={url} onChangeText={setUrl} placeholder="https://..." keyboardType="url" autoCapitalize="none" />
-          <DropdownField label="Icon" value={iconName} options={ICON_OPTIONS} onChange={setIconName} />
 
-          {/* Icon preview */}
-          <View className="items-center my-4">
-            <View className="bg-cream dark:bg-bark-light rounded-xl p-6 items-center">
-              <Ionicons
-                name={iconName as keyof typeof Ionicons.glyphMap}
-                size={32}
-                color="#C4714A"
-              />
-              <Text className="text-sm font-medium text-bark dark:text-parchment mt-2">
-                {label || 'Preview'}
-              </Text>
+          {/* Credentials section */}
+          <View className="mt-2 mb-4">
+            <Text className="text-xs font-semibold text-stone uppercase tracking-wider mb-3">Login Credentials</Text>
+
+            <View className="flex-row items-end mb-4">
+              <View className="flex-1 mr-2">
+                <FormField label="Username" value={username} onChangeText={setUsername} placeholder="email or username" autoCapitalize="none" />
+              </View>
+              {username ? (
+                <Pressable
+                  onPress={() => handleCopy(username, 'Username')}
+                  className="bg-cream dark:bg-bark-light rounded-xl p-3 mb-4 active:opacity-70"
+                >
+                  <Ionicons name="copy-outline" size={18} color="#3B82B0" />
+                </Pressable>
+              ) : null}
+            </View>
+
+            <View className="flex-row items-end">
+              <View className="flex-1 mr-2">
+                <FormField label="Password" value={password} onChangeText={setPassword} placeholder="password" secureTextEntry autoCapitalize="none" />
+              </View>
+              {password ? (
+                <Pressable
+                  onPress={() => handleCopy(password, 'Password')}
+                  className="bg-cream dark:bg-bark-light rounded-xl p-3 mb-4 active:opacity-70"
+                >
+                  <Ionicons name="copy-outline" size={18} color="#3B82B0" />
+                </Pressable>
+              ) : null}
             </View>
           </View>
 

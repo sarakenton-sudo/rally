@@ -1,12 +1,14 @@
 import { View, Text, ScrollView, RefreshControl, Pressable, Linking, Alert } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import USAVProfileCard from '@/components/USAVProfileCard';
+import HubSectionHeader from '@/components/HubSectionHeader';
+import HubSettingsRow from '@/components/HubSettingsRow';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { useIconColors } from '@/lib/colors';
+import { tapLight } from '@/lib/haptics';
 
 export default function HubScreen() {
   const usavProfiles = useSeasonStore((s) => s.usavProfiles);
@@ -19,35 +21,247 @@ export default function HubScreen() {
   const configuredLinks = externalLinks.filter((l) => l.url);
   const unconfiguredLinks = externalLinks.filter((l) => !l.url);
 
+  const streamPlatformLabel = teamConfig?.default_streaming_platform ?? 'Stream';
+
   return (
-    <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['top']}>
+    <View className="flex-1 bg-cream dark:bg-bark">
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor="#C4714A" />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor="#3B82B0" />}
       >
         <Text className="text-2xl font-bold text-bark dark:text-cream font-nunito-extrabold">
           Hub
         </Text>
         <Text className="text-sm text-stone dark:text-parchment mt-1 mb-6">
-          Club tools & profiles
+          Settings, travel, streaming & profiles
         </Text>
 
-        {/* USAV PROFILES */}
-        <View className="flex-row items-center justify-between mb-3">
-          <View className="flex-row items-center">
-            <Ionicons name="shield-checkmark" size={16} color="#dc2626" />
-            <Text className="text-sm font-semibold text-stone dark:text-parchment ml-1.5 uppercase tracking-wider">
-              USAV Membership
-            </Text>
-          </View>
+        {/* ============================================================ */}
+        {/* SECTION 0: ACCOUNT */}
+        {/* ============================================================ */}
+        <HubSectionHeader icon="person-circle" title="Account" iconColor={ic.muted} />
+
+        <HubSettingsRow
+          icon="person"
+          iconColor="#3B82B0"
+          title="Account & Co-Parent"
+          subtitle="Sign out, change password, invite co-parent"
+          onPress={() => router.push('/settings/account')}
+        />
+
+        {/* ============================================================ */}
+        {/* SECTION 1: SETTINGS */}
+        {/* ============================================================ */}
+        <View className="mt-6">
+          <HubSectionHeader icon="settings" title="Settings" iconColor={ic.muted} />
+        </View>
+
+        {/* Team Details */}
+        {teamConfig && (
           <Pressable
-            className="flex-row items-center active:opacity-70"
-            onPress={() => router.push('/profile/add-usav')}
+            className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 mb-2 active:opacity-80"
+            onPress={() => router.push('/settings/team-details')}
           >
-            <Ionicons name="add-circle-outline" size={18} color="#C4714A" />
-            <Text className="text-xs font-semibold text-rally-600 ml-1">Add</Text>
+            <View className="flex-row items-center justify-between mb-1">
+              <Text className="text-sm font-semibold text-bark dark:text-cream">{teamConfig.team_name}</Text>
+              <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
+            </View>
+            <Text className="text-xs text-stone dark:text-parchment">{teamConfig.season_year}</Text>
+            {teamConfig.athlete_name && (
+              <Text className="text-xs text-stone dark:text-parchment mt-0.5">{teamConfig.athlete_name}</Text>
+            )}
+            {teamConfig.team_code && (
+              <Text className="text-xs text-stone dark:text-parchment mt-0.5">Code: {teamConfig.team_code}</Text>
+            )}
           </Pressable>
+        )}
+
+        {/* Schedule Import */}
+        <HubSettingsRow
+          icon="calendar"
+          iconColor="#6A9E8A"
+          title="Tournament Schedule Import"
+          subtitle="Import from coach emails, copy/paste, or direct sync"
+          onPress={() => router.push('/settings/schedule-import')}
+        />
+
+        {/* Notification Preferences */}
+        <HubSettingsRow
+          icon="notifications-outline"
+          iconColor="#3B82B0"
+          title="Notification Preferences"
+          subtitle="Manage push notification categories"
+          onPress={() => router.push('/settings/notifications')}
+        />
+
+        {/* ============================================================ */}
+        {/* SECTION 2: TRAVEL INFORMATION */}
+        {/* ============================================================ */}
+        <View className="mt-6">
+          <HubSectionHeader icon="airplane" title="Travel Information" iconColor={ic.muted} />
+        </View>
+
+        {/* 1. Email & Sync */}
+        <HubSettingsRow
+          icon="sync"
+          iconColor="#3B82B0"
+          title="Email & Sync"
+          subtitle={teamConfig?.gmail_connected ? `Gmail: ${teamConfig.gmail_email}` : 'Connect Gmail for auto-import'}
+          badge={teamConfig?.gmail_connected ? undefined : 0}
+          onPress={() => router.push('/settings/email-connect')}
+        />
+
+        {/* 2. Copy / Paste + AI */}
+        <HubSettingsRow
+          icon="sparkles"
+          iconColor="#7c3aed"
+          title="Copy / Paste + AI"
+          subtitle="Paste a confirmation and AI will extract travel details"
+          onPress={() => router.push('/import/paste-travel')}
+        />
+
+        {/* 3. Forward Email */}
+        <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 mb-2">
+          <View className="flex-row items-center mb-2">
+            <View className="w-8 h-8 rounded-full items-center justify-center mr-3" style={{ backgroundColor: '#3B82B015' }}>
+              <Ionicons name="mail-open" size={16} color="#3B82B0" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-sm font-semibold text-bark dark:text-cream">Forward Email</Text>
+              <Text className="text-xs text-stone dark:text-parchment mt-0.5">
+                Forward a confirmation email and AI will extract travel details.
+              </Text>
+            </View>
+          </View>
+          {teamConfig?.rally_forward_address && (
+            <View className="bg-rally-50 dark:bg-rally-900/20 rounded-lg p-3 ml-11 flex-row items-center">
+              <Text className="text-sm font-semibold text-rally-600 flex-1" numberOfLines={1}>
+                {teamConfig.rally_forward_address}
+              </Text>
+              <Pressable
+                onPress={async () => {
+                  await Clipboard.setStringAsync(teamConfig.rally_forward_address);
+                  tapLight();
+                  Alert.alert('Copied', 'Forward address copied to clipboard.');
+                }}
+                className="bg-rally-600 px-3 py-1.5 rounded-lg active:opacity-80 ml-2"
+              >
+                <Text className="text-xs font-semibold text-cream">Copy</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+
+        {/* 4. Manual Entry */}
+        <HubSettingsRow
+          icon="add-circle"
+          iconColor="#6A9E8A"
+          title="Manual Entry"
+          subtitle="Add a hotel or flight booking manually"
+          onPress={() => router.push('/booking/add-hotel')}
+        />
+
+        {/* ============================================================ */}
+        {/* SECTION 3: VIP PUSH NOTIFICATIONS */}
+        {/* ============================================================ */}
+        <View className="mt-6">
+          <HubSectionHeader icon="notifications" title="VIP Push Notifications" iconColor="#6A9E8A" />
+        </View>
+
+        {/* Guidance card */}
+        <View className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 mb-3 flex-row items-start">
+          <Ionicons name="information-circle" size={20} color="#d97706" />
+          <Text className="text-xs text-amber-700 dark:text-amber-300 ml-3 flex-1">
+            We hate being the last to know about a stay-and-play booking block or a schedule change. Add your coach and club as VIP senders to get instant push alerts.
+          </Text>
+        </View>
+
+        {/* VIP Email Alerts */}
+        <HubSettingsRow
+          icon="star"
+          iconColor="#6A9E8A"
+          title="VIP Email Alerts"
+          subtitle="Coach & club email senders that trigger push notifications"
+          badge={teamConfig?.vip_sender_emails?.length || 0}
+          onPress={() => router.push('/settings/email-connect')}
+        />
+
+        {/* Forwarded Email Inbox */}
+        <HubSettingsRow
+          icon="mail-unread"
+          iconColor="#3B82B0"
+          title="Forwarded Email Inbox"
+          subtitle="View emails forwarded to Rally"
+          badge={forwardedEmails.length}
+          onPress={() => router.push('/email/inbox')}
+        />
+
+        {/* ============================================================ */}
+        {/* SECTION 4: STREAMING HUB */}
+        {/* ============================================================ */}
+        <View className="mt-6">
+          <HubSectionHeader icon="videocam" title="Streaming Hub" iconColor="#dc2626" />
+        </View>
+
+        {/* Guidance card */}
+        <View className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 mb-3 flex-row items-start">
+          <Ionicons name="information-circle" size={20} color="#dc2626" />
+          <Text className="text-xs text-red-700 dark:text-red-300 ml-3 flex-1">
+            Set a default channel so grandparents always have a place to watch, even when a specific tournament stream isn't added yet.
+          </Text>
+        </View>
+
+        {teamConfig?.default_stream_url ? (
+          <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900">
+            <View className="flex-row items-center justify-between mb-2">
+              <View className="flex-row items-center flex-1">
+                <Ionicons name="play-circle" size={24} color="#dc2626" />
+                <View className="ml-3 flex-1">
+                  <Text className="text-sm font-semibold text-bark dark:text-cream">{streamPlatformLabel}</Text>
+                  <Text className="text-xs text-stone mt-0.5" numberOfLines={1}>{teamConfig.default_stream_url}</Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => router.push('/settings/streaming-hub')}
+                className="p-1 active:opacity-60"
+                hitSlop={8}
+              >
+                <Text className="text-xs font-semibold text-rally-600">Edit</Text>
+              </Pressable>
+            </View>
+            <Pressable
+              className="bg-red-600 rounded-lg py-2.5 items-center active:opacity-80 mt-1"
+              onPress={() => Linking.openURL(teamConfig.default_stream_url!)}
+            >
+              <Text className="text-sm font-semibold text-white">Watch Now</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable
+            className="bg-cream dark:bg-bark-light/50 rounded-xl p-5 mb-2 border border-dashed border-red-200 dark:border-red-800 items-center active:opacity-80"
+            onPress={() => router.push('/settings/streaming-hub')}
+          >
+            <Ionicons name="videocam-outline" size={28} color="#dc2626" />
+            <Text className="text-sm font-semibold text-red-700 dark:text-red-300 mt-2">
+              Set Default Stream Channel
+            </Text>
+            <Text className="text-xs text-stone mt-1 text-center">
+              YouTube, GameChanger, Baller.tv, or other
+            </Text>
+          </Pressable>
+        )}
+
+        {/* ============================================================ */}
+        {/* SECTION 5: USAV ATHLETE */}
+        {/* ============================================================ */}
+        <View className="mt-6">
+          <HubSectionHeader
+            icon="shield-checkmark"
+            title="USAV Athlete"
+            iconColor="#dc2626"
+            action={{ label: 'Add', onPress: () => router.push('/profile/add-usav') }}
+          />
         </View>
 
         {usavProfiles.length > 0 ? (
@@ -74,95 +288,97 @@ export default function HubScreen() {
           </Pressable>
         )}
 
-        {/* RALLY FORWARD ADDRESS */}
-        {teamConfig?.rally_forward_address && (
-          <Pressable
-            className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 mb-6 mt-3 active:opacity-80"
-            onPress={() => router.push('/email/inbox')}
-          >
-            <View className="flex-row items-center justify-between mb-2">
-              <View className="flex-row items-center">
-                <Ionicons name="mail" size={16} color="#C4714A" />
-                <Text className="text-xs font-semibold text-rally-700 dark:text-rally-300 ml-1.5 uppercase tracking-wider">
-                  Email Forwarding
-                </Text>
-              </View>
-              <View className="flex-row items-center">
-                {forwardedEmails.length > 0 && (
-                  <View className="bg-rally-600 px-2 py-0.5 rounded-full mr-2">
-                    <Text className="text-xs font-bold text-cream">{forwardedEmails.length}</Text>
-                  </View>
-                )}
-                <Pressable
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    router.push('/settings/email-monitoring');
-                  }}
-                  className="p-1 active:opacity-60"
-                  hitSlop={8}
-                >
-                  <Ionicons name="settings-outline" size={16} color="#C4714A" />
-                </Pressable>
-              </View>
-            </View>
-            <View className="flex-row items-center">
-              <Text className="text-sm font-semibold text-rally-600">
-                {teamConfig.rally_forward_address}
-              </Text>
-              <Pressable
-                onPress={async () => {
-                  await Clipboard.setStringAsync(teamConfig.rally_forward_address!);
-                  Alert.alert('Copied', 'Forward address copied to clipboard.');
-                }}
-                className="ml-2 p-1 active:opacity-60"
-                hitSlop={8}
-              >
-                <Ionicons name="copy-outline" size={14} color="#C4714A" />
-              </Pressable>
-            </View>
-            <Text className="text-xs text-rally-500 dark:text-rally-400 mt-1">
-              Forward hotel confirmations & coach emails here for auto-import
-            </Text>
-          </Pressable>
-        )}
-
-        {/* QUICK LINKS — configured */}
-        <View className="flex-row items-center justify-between mt-3 mb-3">
-          <View className="flex-row items-center">
-            <Ionicons name="link" size={16} color={ic.muted} />
-            <Text className="text-sm font-semibold text-stone dark:text-parchment ml-1.5 uppercase tracking-wider">
-              Quick Links
-            </Text>
-          </View>
-          <Pressable
-            className="flex-row items-center active:opacity-70"
-            onPress={() => router.push('/profile/edit-link')}
-          >
-            <Ionicons name="add-circle-outline" size={18} color="#C4714A" />
-            <Text className="text-xs font-semibold text-rally-600 ml-1">Add</Text>
-          </Pressable>
+        {/* ============================================================ */}
+        {/* SECTION 6: QUICK LINKS */}
+        {/* ============================================================ */}
+        <View className="mt-6">
+          <HubSectionHeader
+            icon="link"
+            title="Quick Links"
+            iconColor={ic.muted}
+            subtitle="Connect GroupMe, SportsRecruits, University Athlete, or other one-click access systems"
+            action={{ label: 'Add', onPress: () => router.push('/profile/edit-link') }}
+          />
         </View>
 
         <View className="flex-row flex-wrap gap-3 mb-4">
           {configuredLinks.map((link, i) => {
             const originalIndex = externalLinks.indexOf(link);
+            const hasCredentials = !!(link.username || link.password);
             return (
-              <Pressable
+              <View
                 key={`${link.label}-${i}`}
-                className="bg-warm-white dark:bg-bark-light rounded-xl p-4 items-center justify-center border border-parchment dark:border-rally-900 active:opacity-70"
+                className="bg-warm-white dark:bg-bark-light rounded-xl border border-parchment dark:border-rally-900 overflow-hidden"
                 style={{ width: '47%' }}
-                onPress={() => Linking.openURL(link.url)}
-                onLongPress={() => router.push({ pathname: '/profile/edit-link', params: { index: String(originalIndex) } })}
               >
-                <Ionicons
-                  name={link.icon_name as keyof typeof Ionicons.glyphMap}
-                  size={28}
-                  color="#C4714A"
-                />
-                <Text className="text-sm font-medium text-bark dark:text-parchment mt-2 text-center">
-                  {link.label}
-                </Text>
-              </Pressable>
+                {/* Main tap area — opens the link */}
+                <Pressable
+                  className="items-center pt-4 pb-2 px-4 active:opacity-70"
+                  onPress={() => openDeepLink(link)}
+                >
+                  <View>
+                    <Ionicons
+                      name={link.icon_name as keyof typeof Ionicons.glyphMap}
+                      size={28}
+                      color="#3B82B0"
+                    />
+                    {hasCredentials && (
+                      <View className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-green-500 border border-warm-white dark:border-bark-light" />
+                    )}
+                  </View>
+                  <Text className="text-sm font-medium text-bark dark:text-parchment mt-2 text-center">
+                    {link.label}
+                  </Text>
+                </Pressable>
+                {/* Edit / credentials strip */}
+                {hasCredentials ? (
+                  <View className="flex-row border-t border-parchment dark:border-rally-900 bg-green-50 dark:bg-green-900/20">
+                    {link.username ? (
+                      <Pressable
+                        className="flex-1 flex-row items-center justify-center py-2 active:opacity-60"
+                        onPress={async () => {
+                          await Clipboard.setStringAsync(link.username!);
+                          tapLight();
+                          Alert.alert('Copied', 'Username copied.');
+                        }}
+                      >
+                        <Ionicons name="person-outline" size={12} color="#6A9E8A" />
+                        <Text className="text-xs font-semibold ml-1" style={{ color: '#6A9E8A' }}>Copy ID</Text>
+                      </Pressable>
+                    ) : null}
+                    {link.username && link.password ? (
+                      <View className="w-px bg-parchment dark:bg-rally-900" />
+                    ) : null}
+                    {link.password ? (
+                      <Pressable
+                        className="flex-1 flex-row items-center justify-center py-2 active:opacity-60"
+                        onPress={async () => {
+                          await Clipboard.setStringAsync(link.password!);
+                          tapLight();
+                          Alert.alert('Copied', 'Password copied.');
+                        }}
+                      >
+                        <Ionicons name="key-outline" size={12} color="#6A9E8A" />
+                        <Text className="text-xs font-semibold ml-1" style={{ color: '#6A9E8A' }}>Copy PW</Text>
+                      </Pressable>
+                    ) : null}
+                    <View className="w-px bg-parchment dark:bg-rally-900" />
+                    <Pressable
+                      className="px-3 items-center justify-center py-2 active:opacity-60"
+                      onPress={() => router.push({ pathname: '/profile/edit-link', params: { index: String(originalIndex) } })}
+                    >
+                      <Ionicons name="create-outline" size={14} color="#6A9E8A" />
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable
+                    className="py-2 items-center border-t border-parchment dark:border-rally-900 bg-amber-50 dark:bg-amber-900/20 active:opacity-70"
+                    onPress={() => router.push({ pathname: '/profile/edit-link', params: { index: String(originalIndex) } })}
+                  >
+                    <Text className="text-xs font-semibold" style={{ color: '#B8924A' }}>Add Login</Text>
+                  </Pressable>
+                )}
+              </View>
             );
           })}
         </View>
@@ -198,78 +414,26 @@ export default function HubScreen() {
             </View>
           </>
         )}
-
-        {/* TEAM INFO */}
-        {teamConfig && (
-          <>
-            <View className="flex-row items-center mt-3 mb-3">
-              <Ionicons name="information-circle" size={16} color={ic.muted} />
-              <Text className="text-sm font-semibold text-stone dark:text-parchment ml-1.5 uppercase tracking-wider">
-                Team Info
-              </Text>
-            </View>
-            <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900">
-              <InfoRow label="Team" value={teamConfig.team_name} />
-              <InfoRow label="Season" value={teamConfig.season_year} />
-              {teamConfig.team_code && (
-                <InfoRow label="Team Code" value={teamConfig.team_code} copyable />
-              )}
-              {teamConfig.club_email_domain && <InfoRow label="Club Domain" value={teamConfig.club_email_domain} />}
-            </View>
-          </>
-        )}
-
-        {/* SETTINGS */}
-        <View className="flex-row items-center mt-6 mb-3">
-          <Ionicons name="settings" size={16} color={ic.muted} />
-          <Text className="text-sm font-semibold text-stone dark:text-parchment ml-1.5 uppercase tracking-wider">
-            Settings
-          </Text>
-        </View>
-        <Pressable
-          className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
-          onPress={() => router.push('/settings/notifications')}
-        >
-          <Ionicons name="notifications-outline" size={22} color="#C4714A" />
-          <View className="ml-3 flex-1">
-            <Text className="text-sm font-semibold text-bark dark:text-cream">Notification Preferences</Text>
-            <Text className="text-xs text-stone mt-0.5">Manage push notification categories</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={ic.subtle} />
-        </Pressable>
-        <Pressable
-          className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
-          onPress={() => router.push('/settings/email-monitoring')}
-        >
-          <Ionicons name="mail-outline" size={22} color="#C4714A" />
-          <View className="ml-3 flex-1">
-            <Text className="text-sm font-semibold text-bark dark:text-cream">Email Monitoring</Text>
-            <Text className="text-xs text-stone mt-0.5">Manage trusted & VIP sender emails</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={ic.subtle} />
-        </Pressable>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
-function InfoRow({ label, value, copyable }: { label: string; value: string; copyable?: boolean }) {
-  const handleCopy = async () => {
-    await Clipboard.setStringAsync(value);
-    Alert.alert('Copied', `${label} copied to clipboard.`);
-  };
+// Deep link schemes for known apps
+const APP_SCHEMES: Record<string, string> = {
+  'GroupMe': 'groupme://',
+  'LeagueApps': 'leagueapps://',
+  'TeamSnap': 'teamsnap://',
+};
 
-  return (
-    <View className="flex-row items-center justify-between py-2 border-b border-cream dark:border-rally-900 last:border-b-0">
-      <Text className="text-sm text-stone dark:text-parchment">{label}</Text>
-      <View className="flex-row items-center">
-        <Text className="text-sm font-semibold text-bark dark:text-cream">{value}</Text>
-        {copyable && (
-          <Pressable onPress={handleCopy} className="ml-2 p-1 active:opacity-60">
-            <Ionicons name="copy-outline" size={14} color="#9E8E7E" />
-          </Pressable>
-        )}
-      </View>
-    </View>
-  );
+async function openDeepLink(link: { label: string; url: string }) {
+  const scheme = APP_SCHEMES[link.label];
+  if (scheme) {
+    const canOpen = await Linking.canOpenURL(scheme);
+    if (canOpen) {
+      Linking.openURL(scheme);
+      return;
+    }
+  }
+  Linking.openURL(link.url);
 }

@@ -8,11 +8,11 @@ import type { ForwardedEmail } from '@/types/database';
 
 const CLASS_CONFIG: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string; bg: string }> = {
   stay_and_play: { icon: 'bed', color: '#7c3aed', label: 'Hotel', bg: 'bg-purple-100' },
-  travel_confirmation: { icon: 'airplane', color: '#C4714A', label: 'Travel', bg: 'bg-rally-100' },
+  travel_confirmation: { icon: 'airplane', color: '#3B82B0', label: 'Travel', bg: 'bg-rally-100' },
   coach_announcement: { icon: 'megaphone', color: '#d97706', label: 'Coach', bg: 'bg-amber-100' },
   schedule_change: { icon: 'swap-horizontal', color: '#dc2626', label: 'Schedule', bg: 'bg-red-100' },
   tournament_info: { icon: 'trophy', color: '#16a34a', label: 'Tournament', bg: 'bg-green-100' },
-  other: { icon: 'mail', color: '#9E8E7E', label: 'Other', bg: 'bg-cream' },
+  other: { icon: 'mail', color: '#8FA8BF', label: 'Other', bg: 'bg-cream' },
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -101,7 +101,7 @@ export default function EmailInboxScreen() {
       {/* Forward address banner */}
       {teamConfig?.rally_forward_address && (
         <View className="mx-4 mt-3 bg-rally-50 dark:bg-rally-900/20 rounded-xl p-3 flex-row items-center">
-          <Ionicons name="mail" size={16} color="#C4714A" />
+          <Ionicons name="mail" size={16} color="#3B82B0" />
           <View className="ml-2 flex-1">
             <Text className="text-xs text-stone">Forward emails to:</Text>
             <Text className="text-sm font-semibold text-rally-600">{teamConfig.rally_forward_address}</Text>

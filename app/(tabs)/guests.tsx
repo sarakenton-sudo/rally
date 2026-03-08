@@ -1,5 +1,4 @@
 import { View, Text, FlatList, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useIconColors } from '@/lib/colors';
@@ -16,7 +15,7 @@ export default function GuestsScreen() {
   const autoInvited = guests.filter((g) => g.default_invited).length;
 
   return (
-    <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['top']}>
+    <View className="flex-1 bg-cream dark:bg-bark">
       <FlatList
         data={guests}
         keyExtractor={(item) => item.id}
@@ -35,7 +34,7 @@ export default function GuestsScreen() {
           </View>
         }
         renderItem={({ item }: { item: Guest }) => (
-          <GuestCard guest={item} />
+          <GuestCard guest={item} onPress={() => router.push({ pathname: '/guest/add', params: { editId: item.id } })} />
         )}
         ListEmptyComponent={
           <View className="items-center justify-center py-16">
@@ -63,9 +62,9 @@ export default function GuestsScreen() {
           style={{ elevation: 4 }}
           onPress={() => router.push('/guest/add')}
         >
-          <Ionicons name="person-add" size={22} color="#FAF7F3" />
+          <Ionicons name="person-add" size={22} color="#FEFEFE" />
         </Pressable>
       )}
-    </SafeAreaView>
+    </View>
   );
 }

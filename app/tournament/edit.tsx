@@ -160,8 +160,8 @@ export default function EditTournamentScreen() {
             <Switch
               value={travelRequired}
               onValueChange={setTravelRequired}
-              trackColor={{ false: '#EDE4D6', true: '#E4AC85' }}
-              thumbColor={travelRequired ? '#C4714A' : '#FAF7F3'}
+              trackColor={{ false: '#D8E2EC', true: '#7DBDD9' }}
+              thumbColor={travelRequired ? '#3B82B0' : '#FEFEFE'}
             />
           </View>
 

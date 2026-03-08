@@ -37,7 +37,7 @@ export default function USAVProfileCard({ profile, onPress }: USAVProfileCardPro
               </Text>
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={18} color="#9E8E7E" />
+          <Ionicons name="chevron-forward" size={18} color="#8FA8BF" />
         </View>
 
         <View className="mt-3 pt-3 border-t border-parchment dark:border-rally-900">

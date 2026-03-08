@@ -1,11 +1,48 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { View, Image, Pressable } from 'react-native';
+import { Tabs, router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useColorScheme } from '@/components/useColorScheme';
 
-const TAB_ACTIVE_COLOR = '#C4714A';
-const TAB_INACTIVE_COLOR = '#9E8E7E';
+const TAB_ACTIVE_COLOR = '#3B82B0';
+const TAB_INACTIVE_COLOR = '#8FA8BF';
+
+const logoLight = require('@/assets/images/rallyhub_lockup_light.png');
+const logoWhite = require('@/assets/images/rallyhub_lockup_white.png');
+
+function GlobalHeader() {
+  const colorScheme = useColorScheme();
+  const insets = useSafeAreaInsets();
+  const isDark = colorScheme === 'dark';
+
+  return (
+    <View
+      style={{ paddingTop: insets.top }}
+      className={isDark ? 'bg-bark' : 'bg-warm-white'}
+    >
+      {/* Logo row */}
+      <View className="items-center px-4 pt-2 pb-1">
+        <Image
+          source={isDark ? logoWhite : logoLight}
+          style={{ width: 240, height: 64 }}
+          resizeMode="contain"
+        />
+        <Pressable
+          className="w-9 h-9 rounded-full items-center justify-center active:opacity-70 absolute right-4"
+          style={{ top: 8 + insets.top }}
+          onPress={() => router.push('/notifications')}
+        >
+          <Ionicons name="notifications-outline" size={20} color="#8FA8BF" />
+        </Pressable>
+      </View>
+
+      {/* Bottom border */}
+      <View className={`h-px ${isDark ? 'bg-bark-light' : 'bg-parchment'}`} />
+    </View>
+  );
+}
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -16,13 +53,10 @@ export default function TabLayout() {
         tabBarActiveTintColor: TAB_ACTIVE_COLOR,
         tabBarInactiveTintColor: TAB_INACTIVE_COLOR,
         tabBarStyle: {
-          backgroundColor: colorScheme === 'dark' ? '#3D2E22' : '#FAF7F3',
-          borderTopColor: colorScheme === 'dark' ? '#5E2F1E' : '#EDE4D6',
+          backgroundColor: colorScheme === 'dark' ? '#1E3A5F' : '#FEFEFE',
+          borderTopColor: colorScheme === 'dark' ? '#152F43' : '#D8E2EC',
         },
-        headerStyle: {
-          backgroundColor: colorScheme === 'dark' ? '#3D2E22' : '#FAF7F3',
-        },
-        headerTintColor: colorScheme === 'dark' ? '#F5EFE6' : '#3D2E22',
+        header: () => <GlobalHeader />,
       }}>
       <Tabs.Screen
         name="index"
@@ -36,7 +70,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="season"
         options={{
-          title: 'Season',
+          title: 'Tournaments',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calendar" size={size} color={color} />
           ),
@@ -63,9 +97,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="hub"
         options={{
-          title: 'Hub',
+          title: 'Settings',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="link" size={size} color={color} />
+            <Ionicons name="settings" size={size} color={color} />
           ),
         }}
       />

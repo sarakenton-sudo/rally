@@ -144,9 +144,9 @@ export default function NotificationPreferencesScreen() {
           >
             <View
               className="w-9 h-9 rounded-full items-center justify-center mr-3"
-              style={{ backgroundColor: '#C4714A15' }}
+              style={{ backgroundColor: '#3B82B015' }}
             >
-              <Ionicons name={row.icon} size={18} color="#C4714A" />
+              <Ionicons name={row.icon} size={18} color="#3B82B0" />
             </View>
             <View className="flex-1 mr-3">
               <Text className="text-sm font-medium text-bark dark:text-cream">{row.label}</Text>
@@ -155,8 +155,8 @@ export default function NotificationPreferencesScreen() {
             <Switch
               value={prefs[row.key]}
               onValueChange={() => togglePref(row.key)}
-              trackColor={{ false: '#EDE4D6', true: '#E4AC85' }}
-              thumbColor={prefs[row.key] ? '#C4714A' : '#FAF7F3'}
+              trackColor={{ false: '#D8E2EC', true: '#7DBDD9' }}
+              thumbColor={prefs[row.key] ? '#3B82B0' : '#FEFEFE'}
             />
           </View>
         ))}

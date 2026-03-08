@@ -161,6 +161,22 @@ export function useTeamEvents(tournamentId?: string) {
   return { events, isLoading };
 }
 
+/**
+ * Returns the data-owning user_id for inserts.
+ * If the current user is a co-parent, returns the admin owner's user_id.
+ * Otherwise returns the current user's own id.
+ */
+export async function getHouseholdOwnerId(currentUserId: string): Promise<string> {
+  if (!isConfigured) return currentUserId;
+  const { data } = await supabase
+    .from('household_members')
+    .select('owner_user_id')
+    .eq('member_user_id', currentUserId)
+    .limit(1)
+    .single();
+  return (data as any)?.owner_user_id ?? currentUserId;
+}
+
 // ============================================================
 // Mutation helpers
 // ============================================================
@@ -241,6 +257,20 @@ export async function insertGuest(guest: Omit<Guest, 'id' | 'created_at'>) {
     .select()
     .single();
   return { data: data as Guest | null, error };
+}
+
+export async function updateGuest(id: string, updates: Partial<Guest>) {
+  const { data, error } = await (supabase
+    .from('guests') as any)
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  return { data: data as Guest | null, error };
+}
+
+export async function deleteGuest(id: string) {
+  return supabase.from('guests').delete().eq('id', id);
 }
 
 export async function upsertTournamentGuest(tg: TournamentGuest) {

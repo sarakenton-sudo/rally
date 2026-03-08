@@ -17,7 +17,7 @@ export default function FormField({ label, error, ...inputProps }: FormFieldProp
         className={`bg-cream dark:bg-bark-light border rounded-xl px-4 py-3 text-base text-bark dark:text-cream ${
           error ? 'border-red-300' : 'border-parchment dark:border-rally-900'
         }`}
-        placeholderTextColor="#9E8E7E"
+        placeholderTextColor="#8FA8BF"
         {...inputProps}
       />
       {error && (

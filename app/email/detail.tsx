@@ -1,26 +1,39 @@
+import { useState } from 'react';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import DropdownField from '@/components/DropdownField';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { updateTournament as updateTournamentDB } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/providers/AuthProvider';
 import { useIconColors } from '@/lib/colors';
 
 const CLASS_CONFIG: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string }> = {
   stay_and_play: { icon: 'bed', color: '#7c3aed', label: 'Hotel / Stay & Play' },
-  travel_confirmation: { icon: 'airplane', color: '#C4714A', label: 'Travel Confirmation' },
+  travel_confirmation: { icon: 'airplane', color: '#3B82B0', label: 'Travel Confirmation' },
   coach_announcement: { icon: 'megaphone', color: '#d97706', label: 'Coach Announcement' },
   schedule_change: { icon: 'swap-horizontal', color: '#dc2626', label: 'Schedule Change' },
   tournament_info: { icon: 'trophy', color: '#16a34a', label: 'Tournament Info' },
-  other: { icon: 'mail', color: '#9E8E7E', label: 'Other' },
+  other: { icon: 'mail', color: '#8FA8BF', label: 'Other' },
 };
+
+function extractTicketUrls(text: string): string[] {
+  const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
+  const urls = text.match(urlRegex) ?? [];
+  const ticketKeywords = ['ticket', 'aes', 'gofan', 'aesathletics'];
+  return urls.filter((url) => ticketKeywords.some((kw) => url.toLowerCase().includes(kw)));
+}
 
 export default function EmailDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const ic = useIconColors();
   const email = useSeasonStore((s) => s.forwardedEmails.find((e) => e.id === id));
+  const tournaments = useSeasonStore((s) => s.tournaments);
+  const updateTournamentStore = useSeasonStore((s) => s.updateTournament);
   const { user } = useAuth();
+  const [selectedTournamentName, setSelectedTournamentName] = useState('');
 
   if (!email) {
     return (
@@ -137,10 +150,49 @@ export default function EmailDetailScreen() {
             className="bg-rally-600 rounded-xl py-3.5 items-center flex-row justify-center mb-2 active:opacity-80"
             onPress={handleExtractSchedule}
           >
-            <Ionicons name="sparkles" size={18} color="#FAF7F3" />
+            <Ionicons name="sparkles" size={18} color="#FEFEFE" />
             <Text className="text-sm font-semibold text-cream ml-2">Extract Tournaments</Text>
           </Pressable>
         )}
+
+        {email.classification === 'tournament_info' && (() => {
+          const ticketUrls = extractTicketUrls(email.body_text + ' ' + email.subject);
+          if (ticketUrls.length === 0) return null;
+          const tournamentOptions = tournaments.map((t) => t.name);
+          return (
+            <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-3 border border-parchment dark:border-rally-900">
+              <View className="flex-row items-center mb-2">
+                <Ionicons name="ticket" size={16} color="#16a34a" />
+                <Text className="text-sm font-semibold text-bark dark:text-cream ml-2">
+                  Ticket Link Found
+                </Text>
+              </View>
+              <Text className="text-xs text-stone mb-3" numberOfLines={1}>{ticketUrls[0]}</Text>
+              <DropdownField
+                label="Link to Tournament"
+                value={selectedTournamentName}
+                options={tournamentOptions}
+                onChange={setSelectedTournamentName}
+              />
+              {selectedTournamentName ? (
+                <Pressable
+                  className="bg-green-600 rounded-lg py-3 items-center mt-2 active:opacity-80"
+                  onPress={async () => {
+                    const tournament = tournaments.find((t) => t.name === selectedTournamentName);
+                    if (!tournament) return;
+                    if (isSupabaseConfigured && user) {
+                      await updateTournamentDB(tournament.id, { ticket_link: ticketUrls[0] });
+                    }
+                    updateTournamentStore(tournament.id, { ticket_link: ticketUrls[0] });
+                    Alert.alert('Linked', `Ticket link saved to ${tournament.name}.`);
+                  }}
+                >
+                  <Text className="text-sm font-semibold text-white">Link Ticket to Tournament</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          );
+        })()}
 
         {(email.classification === 'stay_and_play' ||
           email.classification === 'travel_confirmation') && (

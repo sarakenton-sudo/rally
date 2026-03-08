@@ -27,7 +27,7 @@ export default function DropdownField({ label, value, options, onChange, error }
         <Text className={`text-base ${value ? 'text-bark dark:text-cream' : 'text-stone'}`}>
           {value || 'Select...'}
         </Text>
-        <Ionicons name="chevron-down" size={20} color="#9E8E7E" />
+        <Ionicons name="chevron-down" size={20} color="#8FA8BF" />
       </Pressable>
       {error && <Text className="text-xs text-red-500 mt-1">{error}</Text>}
 
@@ -40,7 +40,7 @@ export default function DropdownField({ label, value, options, onChange, error }
             <View className="flex-row items-center justify-between px-5 pt-4 pb-2">
               <Text className="text-lg font-bold text-bark dark:text-cream">{label}</Text>
               <Pressable onPress={() => setVisible(false)}>
-                <Ionicons name="close-circle" size={24} color="#9E8E7E" />
+                <Ionicons name="close-circle" size={24} color="#8FA8BF" />
               </Pressable>
             </View>
             <FlatList
@@ -62,7 +62,7 @@ export default function DropdownField({ label, value, options, onChange, error }
                     }`}>
                       {item}
                     </Text>
-                    {item === value && <Ionicons name="checkmark" size={20} color="#C4714A" />}
+                    {item === value && <Ionicons name="checkmark" size={20} color="#3B82B0" />}
                   </View>
                 </Pressable>
               )}

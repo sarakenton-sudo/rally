@@ -59,8 +59,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
           team_name: 'AJV Travel 14u',
           season_year: '2025-2026',
           team_code: 'AJV14U',
+          athlete_name: null,
           club_email_domain: 'austinjuniors.com',
-          rally_forward_address: 'ajv14u@rallyhub.com',
+          rally_forward_address: 'plans@rallyhub.com',
           trusted_sender_emails: [],
           vip_sender_emails: [],
           notification_preferences: {
@@ -73,6 +74,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
           ical_feed_token: 'mock-ical-token',
           youtube_channel_id: null,
           default_streaming_platform: null,
+          default_stream_url: null,
+          travel_sync_emails: [],
+          gmail_connected: false,
+          gmail_email: null,
+          schedule_import_source: null,
+          schedule_import_connected: false,
           external_links: MOCK_EXTERNAL_LINKS,
           created_at: '',
         });

@@ -1,5 +1,4 @@
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,14 +9,15 @@ import { useIconColors } from '@/lib/colors';
 
 export default function HomeScreen() {
   const tournaments = useSeasonStore((s) => s.tournaments);
+  const hotelBookings = useSeasonStore((s) => s.hotelBookings);
+  const flightBookings = useSeasonStore((s) => s.flightBookings);
   const teamConfig = useSeasonStore((s) => s.teamConfig);
   const teamCode = teamConfig?.team_code;
 
-  const nextTournament = useMemo(() => {
-    const upcoming = tournaments
-      .filter((t) => daysUntil(t.end_date) >= 0)
+  const next30Days = useMemo(() => {
+    return tournaments
+      .filter((t) => daysUntil(t.end_date) >= 0 && daysUntil(t.start_date) <= 30)
       .sort((a, b) => a.start_date.localeCompare(b.start_date));
-    return upcoming[0] ?? null;
   }, [tournaments]);
 
   const actionItems = useMemo(() => {
@@ -39,28 +39,15 @@ export default function HomeScreen() {
   }, [tournaments, teamCode]);
 
   const ic = useIconColors();
-  const teamName = teamConfig?.team_name ?? 'RallyHQ';
+  const teamName = teamConfig?.team_name ?? 'RallyHUB';
   const seasonYear = teamConfig?.season_year ?? '';
 
   return (
-    <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['top']}>
+    <View className="flex-1 bg-cream dark:bg-bark">
       <ScrollView className="flex-1 px-4">
-        <View className="flex-row items-center justify-between mt-4">
-          <View>
-            <Text className="text-3xl text-bark dark:text-cream font-nunito-black">
-              Rally<Text className="font-nunito-extrabold opacity-55">HQ</Text>
-            </Text>
-            <Text className="text-sm text-stone dark:text-parchment mt-0.5">
-              {teamName}{seasonYear ? ` — ${seasonYear}` : ''}
-            </Text>
-          </View>
-          <Pressable
-            className="w-10 h-10 rounded-full bg-warm-white dark:bg-bark-light items-center justify-center border border-parchment dark:border-rally-900 active:opacity-70"
-            onPress={() => router.push('/notifications')}
-          >
-            <Ionicons name="notifications-outline" size={20} color={ic.muted} />
-          </Pressable>
-        </View>
+        <Text className="text-sm text-stone dark:text-parchment mt-3 mb-1">
+          {teamName}{seasonYear ? ` — ${seasonYear}` : ''}
+        </Text>
 
         {/* Team Code Vault */}
         <View className="bg-rally-600 rounded-2xl p-5 mt-5">
@@ -75,20 +62,26 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        {/* Next Tournament */}
+        {/* Next 30 Days */}
         <View className="mt-5">
           <Text className="text-xs font-semibold text-stone dark:text-stone uppercase tracking-wider mb-2">
-            Up Next
+            Next 30 Days
           </Text>
-          {nextTournament ? (
-            <TournamentCard
-              tournament={nextTournament}
-              onPress={() => router.push(`/tournament/${nextTournament.id}`)}
-            />
+          {next30Days.length > 0 ? (
+            next30Days.map((t) => (
+              <TournamentCard
+                key={t.id}
+                tournament={t}
+                hotelCount={hotelBookings.filter((h) => h.tournament_id === t.id).length}
+                flightCount={flightBookings.filter((f) => f.tournament_id === t.id).length}
+                backupHotelCount={hotelBookings.filter((h) => h.tournament_id === t.id && h.is_backup).length}
+                onPress={() => router.push(`/tournament/${t.id}`)}
+              />
+            ))
           ) : (
             <View className="bg-warm-white dark:bg-bark-light rounded-2xl p-5">
               <Text className="text-base text-stone dark:text-parchment">
-                No upcoming tournaments
+                No upcoming tournaments in the next 30 days
               </Text>
             </View>
           )}
@@ -120,6 +113,6 @@ export default function HomeScreen() {
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

@@ -63,12 +63,12 @@ const isSupabaseConfigured = !!(
 const RallyLightTheme: Theme = {
   dark: false,
   colors: {
-    primary: '#C4714A',
-    background: '#F5EFE6',
-    card: '#FAF7F3',
-    text: '#3D2E22',
-    border: '#EDE4D6',
-    notification: '#C4714A',
+    primary: '#3B82B0',
+    background: '#F4F6F8',
+    card: '#FEFEFE',
+    text: '#1E3A5F',
+    border: '#D8E2EC',
+    notification: '#3B82B0',
   },
   fonts: {
     regular: { fontFamily: 'NunitoSans-Regular', fontWeight: '400' as const },
@@ -81,12 +81,12 @@ const RallyLightTheme: Theme = {
 const RallyDarkTheme: Theme = {
   dark: true,
   colors: {
-    primary: '#E4AC85',
-    background: '#3D2E22',
-    card: '#4A3829',
-    text: '#F5EFE6',
-    border: '#5E2F1E',
-    notification: '#C4714A',
+    primary: '#7DBDD9',
+    background: '#1E3A5F',
+    card: '#264B73',
+    text: '#F4F6F8',
+    border: '#152F43',
+    notification: '#3B82B0',
   },
   fonts: {
     regular: { fontFamily: 'NunitoSans-Regular', fontWeight: '400' as const },
@@ -106,11 +106,11 @@ function RootLayoutNav() {
     // Skip auth gating in dev mode when Supabase isn't configured
     if (!isSupabaseConfigured) return;
 
-    const inAuthScreen = segments[0] === 'auth';
+    const inAuthFlow = segments[0] === 'auth' || segments[0] === 'landing';
 
-    if (!session && !inAuthScreen) {
-      router.replace('/auth');
-    } else if (session && inAuthScreen) {
+    if (!session && !inAuthFlow) {
+      router.replace('/landing');
+    } else if (session && inAuthFlow) {
       router.replace('/');
     }
   }, [session, isLoading, segments]);
@@ -119,6 +119,7 @@ function RootLayoutNav() {
     <ThemeProvider value={colorScheme === 'dark' ? RallyDarkTheme : RallyLightTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="landing" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         <Stack.Screen
@@ -179,6 +180,50 @@ function RootLayoutNav() {
         />
         <Stack.Screen
           name="settings/notifications"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="settings/streaming-hub"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="settings/travel-sync"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="settings/schedule-import"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="settings/team-details"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="settings/leagueapps-connect"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="import/paste-travel"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="import/review-travel"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="settings/account"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="settings/change-password"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="settings/invite-coparent"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="settings/email-connect"
           options={{ presentation: 'modal', headerShown: false }}
         />
       </Stack>

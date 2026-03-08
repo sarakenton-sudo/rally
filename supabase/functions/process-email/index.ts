@@ -1,32 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { classifyEmail } from '../_shared/classify-email.ts';
 
 const CLAUDE_API_KEY = Deno.env.get('CLAUDE_API_KEY') ?? '';
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-
-const CLASSIFICATION_PROMPT = `You are an email classifier for a youth volleyball team management app called Rally.
-
-Classify the email into exactly ONE category:
-- "stay_and_play": Hotel booking confirmation, stay-and-play deals, hotel block info
-- "travel_confirmation": Flight confirmation, car rental, travel itinerary
-- "coach_announcement": Messages from the coach about practice, team updates, lineups
-- "schedule_change": Tournament schedule updates, pool reassignments, venue changes
-- "tournament_info": Tournament registration, bracket info, AES updates, check-in details
-- "other": Anything that doesn't fit the above
-
-Also extract any actionable data:
-- For stay_and_play/travel_confirmation: hotel name, dates, confirmation number, cost
-- For schedule_change/tournament_info: tournament name, dates, location, venue changes
-- For coach_announcement: key message summary
-
-Respond with JSON only:
-{
-  "classification": "one_of_the_categories",
-  "action": "booking_alert_sent" | "travel_import_queued" | "notification_sent" | "none",
-  "summary": "Brief 1-sentence summary of the email",
-  "extracted_data": { ... any structured data extracted ... }
-}`;
 
 interface InboundEmail {
   from: string;
@@ -86,44 +64,12 @@ serve(async (req: Request) => {
     }
 
     // Classify the email with Claude
-    let classification = 'other';
-    let action = 'none';
-    let extractedData: Record<string, unknown> = {};
-    let summary = '';
-
-    if (CLAUDE_API_KEY) {
-      const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': CLAUDE_API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1024,
-          system: CLASSIFICATION_PROMPT,
-          messages: [{
-            role: 'user',
-            content: `From: ${email.from}\nSubject: ${email.subject}\n\n${email.text.slice(0, 4000)}`,
-          }],
-        }),
-      });
-
-      if (claudeResponse.ok) {
-        const claudeData = await claudeResponse.json();
-        const rawText = claudeData.content?.[0]?.text ?? '';
-        try {
-          const parsed = JSON.parse(rawText.match(/\{[\s\S]*\}/)?.[0] ?? '{}');
-          classification = parsed.classification ?? 'other';
-          action = parsed.action ?? 'none';
-          extractedData = parsed.extracted_data ?? {};
-          summary = parsed.summary ?? '';
-        } catch {
-          console.error('Failed to parse Claude classification response');
-        }
-      }
-    }
+    const { classification, action, summary, extractedData } = await classifyEmail(
+      CLAUDE_API_KEY,
+      email.from,
+      email.subject,
+      email.text,
+    );
 
     // Store the email
     const { data: stored, error: storeError } = await supabase
@@ -144,6 +90,31 @@ serve(async (req: Request) => {
     if (storeError) {
       console.error('Failed to store email:', storeError);
       return jsonResponse({ error: 'Failed to store email' }, 500);
+    }
+
+    // Auto-link ticket URLs to matching tournaments
+    if (classification === 'tournament_info' && extractedData.ticket_urls) {
+      const ticketUrls = extractedData.ticket_urls as string[];
+      if (ticketUrls.length > 0 && extractedData.tournament_name) {
+        const tournamentName = (extractedData.tournament_name as string).toLowerCase();
+        const { data: matchingTournaments } = await supabase
+          .from('tournaments')
+          .select('id, name, ticket_link')
+          .eq('user_id', config.user_id);
+
+        if (matchingTournaments) {
+          const match = matchingTournaments.find((t) =>
+            t.name.toLowerCase().includes(tournamentName) ||
+            tournamentName.includes(t.name.toLowerCase())
+          );
+          if (match && !match.ticket_link) {
+            await supabase
+              .from('tournaments')
+              .update({ ticket_link: ticketUrls[0] })
+              .eq('id', match.id);
+          }
+        }
+      }
     }
 
     // Take action based on classification

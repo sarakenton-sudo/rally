@@ -26,10 +26,10 @@ export default function AddFlightBookingScreen() {
   const [airline, setAirline] = useState(existing?.airline ?? '');
   const [confirmationCode, setConfirmationCode] = useState(existing?.confirmation_code ?? '');
   const [departureDate, setDepartureDate] = useState<Date | null>(
-    existing ? new Date(existing.departure_date) : null
+    existing ? new Date(existing.departure_date + 'T12:00:00') : null
   );
   const [returnDate, setReturnDate] = useState<Date | null>(
-    existing ? new Date(existing.return_date) : null
+    existing ? new Date(existing.return_date + 'T12:00:00') : null
   );
   const [bookedBy, setBookedBy] = useState(existing?.booked_by ?? '');
   const [cost, setCost] = useState(existing?.cost != null ? String(existing.cost) : '');
@@ -150,7 +150,9 @@ export default function AddFlightBookingScreen() {
           notifySuccess();
         }
       }
-      router.back();
+      Alert.alert('Saved', 'Flight booking saved.', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
     } finally {
       setIsSaving(false);
     }
@@ -227,7 +229,7 @@ export default function AddFlightBookingScreen() {
                 className="flex-row items-center active:opacity-70"
                 onPress={addTraveler}
               >
-                <Ionicons name="add-circle-outline" size={18} color="#C4714A" />
+                <Ionicons name="add-circle-outline" size={18} color="#3B82B0" />
                 <Text className="text-xs font-semibold text-rally-600 ml-1">Add</Text>
               </Pressable>
             </View>
@@ -259,7 +261,7 @@ export default function AddFlightBookingScreen() {
           {/* Flight info */}
           <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 mb-8">
             <View className="flex-row items-start">
-              <Ionicons name="information-circle" size={18} color="#C4714A" />
+              <Ionicons name="information-circle" size={18} color="#3B82B0" />
               <Text className="text-xs text-rally-700 dark:text-rally-300 ml-2 flex-1">
                 Tip: For Southwest, use the 6-character confirmation code. For multi-leg flights, add the full itinerary as one booking.
               </Text>

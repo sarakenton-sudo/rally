@@ -22,11 +22,11 @@ interface NotificationLogEntry {
 }
 
 const TYPE_CONFIG: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string }> = {
-  tournament_reminder: { icon: 'calendar', color: '#C4714A', label: 'Reminder' },
+  tournament_reminder: { icon: 'calendar', color: '#3B82B0', label: 'Reminder' },
   rsvp_request: { icon: 'mail', color: '#7c3aed', label: 'RSVP' },
   cancellation_deadline: { icon: 'warning', color: '#dc2626', label: 'Deadline' },
   schedule_change: { icon: 'swap-horizontal', color: '#d97706', label: 'Schedule' },
-  custom: { icon: 'notifications', color: '#9E8E7E', label: 'Custom' },
+  custom: { icon: 'notifications', color: '#8FA8BF', label: 'Custom' },
 };
 
 const CHANNEL_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -115,7 +115,7 @@ export default function NotificationsScreen() {
                   <Ionicons
                     name={CHANNEL_ICON[item.channel] ?? 'notifications-outline'}
                     size={12}
-                    color="#9E8E7E"
+                    color="#8FA8BF"
                   />
                   <Text className="text-xs text-stone ml-0.5 uppercase">{item.channel}</Text>
                 </View>
@@ -142,13 +142,13 @@ export default function NotificationsScreen() {
             <View className="flex-row items-center mt-2 gap-3">
               {guestName && (
                 <View className="flex-row items-center">
-                  <Ionicons name="person-outline" size={12} color="#9E8E7E" />
+                  <Ionicons name="person-outline" size={12} color="#8FA8BF" />
                   <Text className="text-xs text-stone ml-1">{guestName}</Text>
                 </View>
               )}
               {tournamentName && (
                 <View className="flex-row items-center">
-                  <Ionicons name="trophy-outline" size={12} color="#9E8E7E" />
+                  <Ionicons name="trophy-outline" size={12} color="#8FA8BF" />
                   <Text className="text-xs text-stone ml-1">{tournamentName}</Text>
                 </View>
               )}
@@ -188,7 +188,7 @@ export default function NotificationsScreen() {
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#C4714A" />
+          <ActivityIndicator size="large" color="#3B82B0" />
         </View>
       ) : (
         <FlatList

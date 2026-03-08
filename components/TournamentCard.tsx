@@ -5,12 +5,16 @@ import { formatDateRange, countdownText, daysUntil } from '@/lib/dates';
 
 interface TournamentCardProps {
   tournament: Tournament;
+  hotelCount?: number;
+  flightCount?: number;
+  backupHotelCount?: number;
   onPress?: () => void;
 }
 
 const STATUS_CONFIG = {
   upcoming: { label: 'Upcoming', bg: 'bg-cream', text: 'text-stone', dot: 'bg-stone' },
   travel_needed: { label: 'Needs Booking', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
+  partial: { label: 'Partial', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
   booked: { label: 'Booked', bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
   complete: { label: 'Complete', bg: 'bg-rally-50', text: 'text-rally-600', dot: 'bg-rally-400' },
 } as const;
@@ -25,8 +29,17 @@ function openDirections(address: string) {
   if (url) Linking.openURL(url);
 }
 
-export default function TournamentCard({ tournament, onPress }: TournamentCardProps) {
-  const status = STATUS_CONFIG[tournament.status];
+export default function TournamentCard({ tournament, hotelCount = 0, flightCount = 0, backupHotelCount = 0, onPress }: TournamentCardProps) {
+  const hasHotel = hotelCount > 0;
+  const hasFlight = flightCount > 0;
+  const hasMultipleBookings = backupHotelCount > 0 || hotelCount > 1 || flightCount > 1;
+  // Compute display status: override with "partial" when only some travel is resolved
+  const hotelResolved = tournament.hotel_not_needed || hasHotel;
+  const airResolved = tournament.air_not_needed || hasFlight;
+  const displayStatus = tournament.travel_required && (tournament.status === 'booked' || tournament.status === 'travel_needed')
+    ? (hotelResolved && airResolved ? 'booked' : hotelResolved || airResolved ? 'partial' : 'travel_needed')
+    : tournament.status;
+  const status = STATUS_CONFIG[displayStatus];
   const days = daysUntil(tournament.start_date);
   const countdown = countdownText(tournament.start_date, tournament.end_date);
   const confirmedVenue = tournament.venues.find((v) => v.is_confirmed);
@@ -71,22 +84,53 @@ export default function TournamentCard({ tournament, onPress }: TournamentCardPr
 
         {/* Location row */}
         <View className="flex-row items-center mb-3">
-          <Ionicons name="location-outline" size={16} color="#9E8E7E" />
+          <Ionicons name="location-outline" size={16} color="#8FA8BF" />
           <Text className="text-sm text-stone dark:text-parchment ml-1 flex-1" numberOfLines={1}>
             {tournament.location_city}
           </Text>
           {tournament.travel_required && (
             <View className="flex-row items-center ml-2">
-              <Ionicons name="airplane-outline" size={14} color="#9E8E7E" />
+              <Ionicons name="airplane-outline" size={14} color="#8FA8BF" />
               <Text className="text-xs text-stone ml-0.5">Travel</Text>
             </View>
           )}
         </View>
 
+        {/* Booking badges */}
+        {tournament.travel_required ? (
+          <View className="flex-row items-center mb-3 gap-3">
+            <View className="flex-row items-center">
+              <Ionicons name="bed-outline" size={14} color={tournament.hotel_not_needed ? '#16a34a' : hasHotel ? '#16a34a' : '#d97706'} />
+              <Text className={`text-xs font-semibold ml-1 ${tournament.hotel_not_needed || hasHotel ? 'text-green-700' : 'text-amber-600'}`}>
+                {tournament.hotel_not_needed ? 'Hotel Not Needed' : hasHotel ? 'Booked' : 'Needs Booking'}
+              </Text>
+            </View>
+            <View className="flex-row items-center">
+              <Ionicons name="airplane-outline" size={14} color={tournament.air_not_needed ? '#16a34a' : hasFlight ? '#16a34a' : '#d97706'} />
+              <Text className={`text-xs font-semibold ml-1 ${tournament.air_not_needed || hasFlight ? 'text-green-700' : 'text-amber-600'}`}>
+                {tournament.air_not_needed ? 'Air Not Needed' : hasFlight ? 'Booked' : 'Needs Booking'}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
+        {/* Multiple bookings flag */}
+        {hasMultipleBookings && (
+          <View className="flex-row items-center mb-3">
+            <Ionicons name="alert-circle" size={14} color="#dc2626" />
+            <Text className="text-xs font-semibold text-red-600 ml-1">
+              Multiple Bookings
+            </Text>
+            <Text className="text-xs text-red-400 ml-1">
+              — {[hotelCount > 1 ? `${hotelCount} hotels` : null, flightCount > 1 ? `${flightCount} flights` : null, backupHotelCount > 0 ? `${backupHotelCount} backup` : null].filter(Boolean).join(' · ')}
+            </Text>
+          </View>
+        )}
+
         {/* Venue detail (if known) */}
         {venueLabel && (
           <View className="flex-row items-center mb-3">
-            <Ionicons name="business-outline" size={14} color="#9E8E7E" />
+            <Ionicons name="business-outline" size={14} color="#8FA8BF" />
             <Text className="text-xs text-stone dark:text-parchment ml-1" numberOfLines={1}>
               {venueLabel}
               {!confirmedVenue && tournament.venues.length <= 1 && ' — venue TBD'}
@@ -101,7 +145,7 @@ export default function TournamentCard({ tournament, onPress }: TournamentCardPr
             <Ionicons
               name={days <= 0 ? 'checkmark-circle' : 'time-outline'}
               size={16}
-              color={days <= 7 && days > 0 ? '#B8924A' : '#9E8E7E'}
+              color={days <= 7 && days > 0 ? '#6A9E8A' : '#8FA8BF'}
             />
             <Text
               className={`text-sm font-medium ml-1 ${
@@ -121,7 +165,7 @@ export default function TournamentCard({ tournament, onPress }: TournamentCardPr
             className="flex-row items-center bg-rally-50 dark:bg-rally-900/30 px-3 py-1.5 rounded-lg active:opacity-70"
             onPress={() => openDirections(venueAddress)}
           >
-            <Ionicons name="navigate-outline" size={14} color="#C4714A" />
+            <Ionicons name="navigate-outline" size={14} color="#3B82B0" />
             <Text className="text-xs font-semibold text-rally-600 ml-1">
               Directions
             </Text>

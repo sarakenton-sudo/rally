@@ -65,19 +65,16 @@ serve(async (req: Request) => {
       }
     }
 
-    // 2. Send SMS/push to invited guests
+    // 2. Send SMS to invited guests
     if (guest_ids && guest_ids.length > 0) {
       const { data: guests } = await supabase
         .from('guests')
-        .select('id, name, phone, notification_pref')
+        .select('id, name, phone')
         .in('id', guest_ids);
 
       if (guests) {
         for (const guest of guests) {
-          const pref = guest.notification_pref as string;
-
-          // SMS
-          if ((pref === 'sms' || pref === 'both') && guest.phone && TWILIO_ACCOUNT_SID) {
+          if (guest.phone && TWILIO_ACCOUNT_SID) {
             const smsResult = await sendTwilioSMS(guest.phone, `${title}\n${body}`);
             results.push({ channel: 'sms', guest_id: guest.id, status: smsResult.ok ? 'sent' : 'failed', error: smsResult.error });
 
@@ -90,22 +87,6 @@ serve(async (req: Request) => {
               message: body,
               status: smsResult.ok ? 'sent' : 'failed',
             });
-          }
-
-          // Push (if guest has the app — future feature)
-          if (pref === 'push' || pref === 'both') {
-            // Guest push tokens would be stored separately
-            // For now, log as a placeholder
-            await supabase.from('notification_log').insert({
-              user_id,
-              guest_id: guest.id,
-              tournament_id: tournament_id ?? null,
-              notification_type: type,
-              channel: 'push',
-              message: body,
-              status: 'sent',
-            });
-            results.push({ channel: 'push', guest_id: guest.id, status: 'sent' });
           }
         }
       }

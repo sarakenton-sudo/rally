@@ -10,7 +10,7 @@ CREATE TYPE tournament_status AS ENUM ('upcoming', 'travel_needed', 'booked', 'c
 CREATE TYPE booking_platform AS ENUM ('Bonvoy', 'Booking.com', 'Travel Source', 'Expedia', 'Direct', 'Other');
 CREATE TYPE booking_status AS ENUM ('tentative', 'confirmed', 'cancelled');
 CREATE TYPE rsvp_status AS ENUM ('pending', 'yes', 'no', 'maybe');
-CREATE TYPE notification_pref AS ENUM ('push', 'sms', 'both');
+CREATE TYPE notification_pref AS ENUM ('sms');
 CREATE TYPE email_classification AS ENUM ('stay_and_play', 'travel_confirmation', 'coach_announcement', 'schedule_change', 'tournament_info', 'other');
 CREATE TYPE email_action AS ENUM ('booking_alert_sent', 'travel_import_queued', 'notification_sent', 'none');
 CREATE TYPE streaming_platform AS ENUM ('YouTube', 'GameChanger', 'Baller.tv', 'Other');
@@ -26,6 +26,7 @@ CREATE TABLE team_config (
     team_name   TEXT NOT NULL,
     season_year TEXT NOT NULL,
     team_code   TEXT,
+    athlete_name TEXT,
     club_email_domain TEXT,
     rally_forward_address TEXT NOT NULL DEFAULT 'plans@rallyhub.com',
     trusted_sender_emails TEXT[] NOT NULL DEFAULT '{}',
@@ -34,6 +35,10 @@ CREATE TABLE team_config (
     ical_feed_token TEXT NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'),
     youtube_channel_id TEXT,
     default_streaming_platform streaming_platform,
+    default_stream_url TEXT,
+    travel_sync_emails TEXT[] NOT NULL DEFAULT '{}',
+    schedule_import_source TEXT,
+    schedule_import_connected BOOLEAN NOT NULL DEFAULT false,
     external_links JSONB NOT NULL DEFAULT '[]',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -59,6 +64,8 @@ CREATE TABLE tournaments (
     aes_feed_available BOOLEAN NOT NULL DEFAULT true,
     sportwrench_url TEXT,
     tickets_purchased BOOLEAN NOT NULL DEFAULT false,
+    air_not_needed BOOLEAN NOT NULL DEFAULT false,
+    hotel_not_needed BOOLEAN NOT NULL DEFAULT false,
     streaming_links JSONB NOT NULL DEFAULT '[]',
     status          tournament_status NOT NULL DEFAULT 'upcoming',
     source_platform TEXT,

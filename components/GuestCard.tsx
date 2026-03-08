@@ -16,15 +16,9 @@ const RELATIONSHIP_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   Other: 'person-outline',
 };
 
-const NOTIF_BADGE: Record<string, { label: string; bg: string; text: string }> = {
-  sms: { label: 'SMS', bg: 'bg-green-100', text: 'text-green-700' },
-  push: { label: 'Push', bg: 'bg-rally-100', text: 'text-rally-700' },
-  both: { label: 'Push + SMS', bg: 'bg-purple-100', text: 'text-purple-700' },
-};
 
 export default function GuestCard({ guest, onPress }: GuestCardProps) {
   const icon = RELATIONSHIP_ICONS[guest.relationship] ?? 'person-outline';
-  const notif = NOTIF_BADGE[guest.notification_pref] ?? NOTIF_BADGE.sms;
 
   return (
     <Pressable
@@ -33,7 +27,7 @@ export default function GuestCard({ guest, onPress }: GuestCardProps) {
     >
       {/* Avatar circle */}
       <View className="w-11 h-11 rounded-full bg-rally-100 dark:bg-rally-900/30 items-center justify-center mr-3">
-        <Ionicons name={icon} size={20} color="#C4714A" />
+        <Ionicons name={icon} size={20} color="#3B82B0" />
       </View>
 
       {/* Info */}
@@ -55,9 +49,9 @@ export default function GuestCard({ guest, onPress }: GuestCardProps) {
         </View>
       </View>
 
-      {/* Notification pref badge */}
-      <View className={`px-2 py-0.5 rounded-full ${notif.bg}`}>
-        <Text className={`text-[10px] font-semibold ${notif.text}`}>{notif.label}</Text>
+      {/* SMS badge */}
+      <View className="px-2 py-0.5 rounded-full bg-green-100">
+        <Text className="text-[10px] font-semibold text-green-700">SMS</Text>
       </View>
     </Pressable>
   );

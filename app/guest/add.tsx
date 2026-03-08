@@ -1,32 +1,36 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, Switch, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import FormField from '@/components/FormField';
-import DropdownField from '@/components/DropdownField';
+import DropdownField from '@/components/DropdownField'; // for relationship
 import { useGuestStore } from '@/stores/useGuestStore';
 import { useAuth } from '@/providers/AuthProvider';
-import { insertGuest } from '@/hooks/useSupabaseData';
+import { insertGuest, updateGuest as updateGuestDB, deleteGuest as deleteGuestDB } from '@/hooks/useSupabaseData';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 import type { Guest, NotificationPref } from '@/types/database';
 
 const RELATIONSHIPS = ['Grandma', 'Grandpa', 'Uncle', 'Aunt', 'Friend', 'Other'];
-const NOTIF_OPTIONS = ['SMS', 'Push', 'Both'];
-const NOTIF_MAP: Record<string, NotificationPref> = { SMS: 'sms', Push: 'push', Both: 'both' };
 
 export default function AddGuestScreen() {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [relationship, setRelationship] = useState('');
-  const [notifPref, setNotifPref] = useState('SMS');
-  const [defaultInvited, setDefaultInvited] = useState(false);
+  const { editId } = useLocalSearchParams<{ editId?: string }>();
+  const guests = useGuestStore((s) => s.guests);
+  const existing = useMemo(() => editId ? guests.find((g) => g.id === editId) : null, [editId, guests]);
+  const isEditing = !!existing;
+
+  const [name, setName] = useState(existing?.name ?? '');
+  const [phone, setPhone] = useState(existing?.phone ?? '');
+  const [email, setEmail] = useState(existing?.email ?? '');
+  const [relationship, setRelationship] = useState(existing?.relationship ?? '');
+  const [defaultInvited, setDefaultInvited] = useState(existing?.default_invited ?? false);
   const [isSaving, setIsSaving] = useState(false);
 
   const ic = useIconColors();
   const addGuest = useGuestStore((s) => s.addGuest);
+  const updateGuestStore = useGuestStore((s) => s.updateGuest);
+  const removeGuest = useGuestStore((s) => s.removeGuest);
   const { user } = useAuth();
   const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
@@ -52,31 +56,72 @@ export default function AddGuestScreen() {
       phone: phone.trim(),
       email: email.trim() || null,
       relationship,
-      notification_pref: NOTIF_MAP[notifPref] ?? 'sms' as NotificationPref,
+      notification_pref: 'sms' as NotificationPref,
       default_invited: defaultInvited,
     };
 
     try {
-      if (isSupabaseConfigured && user) {
-        const { data, error } = await insertGuest(guestData);
-        if (error) {
-          Alert.alert('Save failed', error.message);
-          return;
-        }
-        if (data) { addGuest(data); notifySuccess(); }
-      } else {
-        const guest: Guest = {
-          ...guestData,
-          id: `g-${Date.now()}`,
-          created_at: new Date().toISOString(),
+      if (isEditing) {
+        const updates = {
+          name: guestData.name,
+          phone: guestData.phone,
+          email: guestData.email,
+          relationship: guestData.relationship,
+          default_invited: guestData.default_invited,
         };
-        addGuest(guest);
+        if (isSupabaseConfigured && user) {
+          const { error } = await updateGuestDB(editId!, updates);
+          if (error) {
+            Alert.alert('Save failed', error.message);
+            return;
+          }
+        }
+        updateGuestStore(editId!, updates);
         notifySuccess();
+      } else {
+        if (isSupabaseConfigured && user) {
+          const { data, error } = await insertGuest(guestData);
+          if (error) {
+            Alert.alert('Save failed', error.message);
+            return;
+          }
+          if (data) { addGuest(data); notifySuccess(); }
+        } else {
+          const guest: Guest = {
+            ...guestData,
+            id: `g-${Date.now()}`,
+            created_at: new Date().toISOString(),
+          };
+          addGuest(guest);
+          notifySuccess();
+        }
       }
       router.back();
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleDelete = () => {
+    if (!existing) return;
+    Alert.alert(
+      'Delete Guest',
+      `Remove "${existing.name}" from your guest list?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (isSupabaseConfigured && user) {
+              await deleteGuestDB(editId!);
+            }
+            removeGuest(editId!);
+            router.back();
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -91,7 +136,7 @@ export default function AddGuestScreen() {
             <Ionicons name="close" size={24} color={ic.muted} />
           </Pressable>
           <Text className="text-lg font-bold text-bark dark:text-cream">
-            Add Guest
+            {isEditing ? 'Edit Guest' : 'Add Guest'}
           </Text>
           <Pressable
             onPress={handleSave}
@@ -107,7 +152,6 @@ export default function AddGuestScreen() {
           <FormField label="Phone Number" value={phone} onChangeText={setPhone} placeholder="+1 (512) 555-1001" keyboardType="phone-pad" />
           <FormField label="Email (optional)" value={email} onChangeText={setEmail} placeholder="grandma@example.com" keyboardType="email-address" autoCapitalize="none" />
           <DropdownField label="Relationship" value={relationship} options={RELATIONSHIPS} onChange={setRelationship} />
-          <DropdownField label="Notification Preference" value={notifPref} options={NOTIF_OPTIONS} onChange={setNotifPref} />
 
           {/* Default invited toggle */}
           <View className="flex-row items-center justify-between mb-6 bg-cream dark:bg-bark-light rounded-xl px-4 py-3">
@@ -122,21 +166,36 @@ export default function AddGuestScreen() {
             <Switch
               value={defaultInvited}
               onValueChange={setDefaultInvited}
-              trackColor={{ false: '#EDE4D6', true: '#E4AC85' }}
-              thumbColor={defaultInvited ? '#C4714A' : '#FAF7F3'}
+              trackColor={{ false: '#D8E2EC', true: '#7DBDD9' }}
+              thumbColor={defaultInvited ? '#3B82B0' : '#FEFEFE'}
             />
           </View>
 
           {/* Info card */}
           <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 mb-8">
             <View className="flex-row items-start">
-              <Ionicons name="information-circle" size={18} color="#C4714A" />
+              <Ionicons name="information-circle" size={18} color="#3B82B0" />
               <Text className="text-xs text-rally-700 dark:text-rally-300 ml-2 flex-1">
                 Guests receive automated notifications via SMS or push — no app install required.
                 They can RSVP by replying YES, NO, or MAYBE to the SMS.
               </Text>
             </View>
           </View>
+
+          {/* Delete button (edit mode only) */}
+          {isEditing && (
+            <Pressable
+              className="bg-red-50 dark:bg-red-900/20 rounded-xl py-4 items-center mb-8 active:opacity-80"
+              onPress={handleDelete}
+            >
+              <View className="flex-row items-center">
+                <Ionicons name="trash-outline" size={18} color="#dc2626" />
+                <Text className="text-sm font-semibold text-red-600 dark:text-red-400 ml-2">
+                  Delete Guest
+                </Text>
+              </View>
+            </Pressable>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -3,12 +3,15 @@ import { View, Text, Pressable, Alert, KeyboardAvoidingView, Platform } from 're
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FormField from '@/components/FormField';
 import { useAuth } from '@/providers/AuthProvider';
+import { supabase } from '@/lib/supabase';
 
 export default function AuthScreen() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, resetPassword } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [hasInviteCode, setHasInviteCode] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -16,16 +19,55 @@ export default function AuthScreen() {
       Alert.alert('Missing fields', 'Please enter both email and password.');
       return;
     }
-    setLoading(true);
-    const { error } = isSignUp
-      ? await signUp(email.trim(), password)
-      : await signIn(email.trim(), password);
-    setLoading(false);
+    if (isSignUp && hasInviteCode && !inviteCode.trim()) {
+      Alert.alert('Missing field', 'Please enter your invite code.');
+      return;
+    }
 
+    setLoading(true);
+
+    if (isSignUp) {
+      const { error } = await signUp(email.trim(), password);
+      if (error) {
+        setLoading(false);
+        Alert.alert('Sign Up Failed', error);
+        return;
+      }
+      Alert.alert('Check your email', 'We sent you a confirmation link. Please verify your email, then sign in.');
+      setIsSignUp(false);
+      setLoading(false);
+    } else {
+      const { error } = await signIn(email.trim(), password);
+      setLoading(false);
+      if (error) {
+        Alert.alert('Sign In Failed', error);
+        return;
+      }
+      // After successful sign-in, accept invite code if provided
+      if (hasInviteCode && inviteCode.trim()) {
+        const { data } = await (supabase.rpc as any)('accept_household_invite', { code: inviteCode.trim() });
+        const result = data as { success: boolean; error?: string; message?: string } | null;
+        if (result && !result.success) {
+          Alert.alert('Invite Error', result.error ?? 'Could not accept invite.');
+        } else if (result?.success) {
+          Alert.alert('Linked!', result.message ?? 'Your accounts are now linked.');
+        }
+      }
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      Alert.alert('Enter email', 'Please enter your email address first, then tap Forgot Password.');
+      return;
+    }
+    setLoading(true);
+    const { error } = await resetPassword(email.trim());
+    setLoading(false);
     if (error) {
-      Alert.alert(isSignUp ? 'Sign Up Failed' : 'Sign In Failed', error);
-    } else if (isSignUp) {
-      Alert.alert('Check your email', 'We sent you a confirmation link. Please verify your email before signing in.');
+      Alert.alert('Error', error);
+    } else {
+      Alert.alert('Check your email', 'We sent a password reset link to your email.');
     }
   };
 
@@ -62,6 +104,37 @@ export default function AuthScreen() {
           secureTextEntry
           autoComplete={isSignUp ? 'new-password' : 'current-password'}
         />
+
+        {/* Invite code toggle (sign-up only) */}
+        {isSignUp && (
+          <>
+            <Pressable
+              className="mb-3 active:opacity-70"
+              onPress={() => setHasInviteCode(!hasInviteCode)}
+            >
+              <Text className="text-sm text-rally-600 font-semibold">
+                {hasInviteCode ? 'Remove invite code' : 'Have an invite code?'}
+              </Text>
+            </Pressable>
+            {hasInviteCode && (
+              <FormField
+                label="Invite Code"
+                value={inviteCode}
+                onChangeText={setInviteCode}
+                placeholder="e.g. a1b2c3d4e5f6"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            )}
+          </>
+        )}
+
+        {/* Forgot password (sign-in only) */}
+        {!isSignUp && (
+          <Pressable className="items-end mb-2 active:opacity-70" onPress={handleForgotPassword}>
+            <Text className="text-sm text-rally-600 font-semibold">Forgot password?</Text>
+          </Pressable>
+        )}
 
         {/* Submit button */}
         <Pressable

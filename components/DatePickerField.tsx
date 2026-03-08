@@ -50,7 +50,7 @@ export default function DatePickerField({ label, value, onChange, error, highlig
         >
           {formatDisplay(value)}
         </Text>
-        <Ionicons name="calendar-outline" size={20} color={highlightDanger ? '#dc2626' : '#9E8E7E'} />
+        <Ionicons name="calendar-outline" size={20} color={highlightDanger ? '#dc2626' : '#8FA8BF'} />
       </Pressable>
       {error && <Text className="text-xs text-red-500 mt-1">{error}</Text>}
       {show && (

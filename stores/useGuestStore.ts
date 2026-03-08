@@ -11,6 +11,7 @@ interface GuestState {
   removeGuest: (id: string) => void;
 
   setTournamentGuests: (tg: TournamentGuest[]) => void;
+  addTournamentGuest: (tg: TournamentGuest) => void;
   updateRSVP: (tournamentId: string, guestId: string, updates: Partial<TournamentGuest>) => void;
 }
 
@@ -28,6 +29,8 @@ export const useGuestStore = create<GuestState>((set) => ({
     set((state) => ({ guests: state.guests.filter((g) => g.id !== id) })),
 
   setTournamentGuests: (tournamentGuests) => set({ tournamentGuests }),
+  addTournamentGuest: (tg) =>
+    set((state) => ({ tournamentGuests: [...state.tournamentGuests, tg] })),
   updateRSVP: (tournamentId, guestId, updates) =>
     set((state) => ({
       tournamentGuests: state.tournamentGuests.map((tg) =>

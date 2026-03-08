@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { View, Text, SectionList, Pressable, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +8,7 @@ import HotelBookingCard from '@/components/HotelBookingCard';
 import FlightBookingCard from '@/components/FlightBookingCard';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
+import { formatDateRange } from '@/lib/dates';
 import type { HotelBooking, FlightBooking } from '@/types/database';
 
 type BookingItem =
@@ -18,8 +18,20 @@ type BookingItem =
 interface Section {
   title: string;
   tournamentId: string;
+  sectionIndex: number;
+  locationCity: string;
+  dateRange: string;
   data: BookingItem[];
 }
+
+const SECTION_ACCENTS = [
+  { bar: 'bg-rally-600', bg: 'bg-rally-50 dark:bg-rally-900/10' },
+  { bar: 'bg-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/10' },
+  { bar: 'bg-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/10' },
+  { bar: 'bg-green-500', bg: 'bg-green-50 dark:bg-green-900/10' },
+  { bar: 'bg-rose-500', bg: 'bg-rose-50 dark:bg-rose-900/10' },
+  { bar: 'bg-cyan-500', bg: 'bg-cyan-50 dark:bg-cyan-900/10' },
+];
 
 export default function TravelScreen() {
   const ic = useIconColors();
@@ -37,7 +49,14 @@ export default function TravelScreen() {
       const t = tournaments.find((tour) => tour.id === hotel.tournament_id);
       const key = hotel.tournament_id;
       if (!map.has(key)) {
-        map.set(key, { title: t?.name ?? 'Unknown Tournament', tournamentId: key, data: [] });
+        map.set(key, {
+          title: t?.name ?? 'Unknown Tournament',
+          tournamentId: key,
+          sectionIndex: 0,
+          locationCity: t?.location_city ?? '',
+          dateRange: t ? formatDateRange(t.start_date, t.end_date) : '',
+          data: [],
+        });
       }
       map.get(key)!.data.push({ type: 'hotel', data: hotel });
     }
@@ -46,16 +65,25 @@ export default function TravelScreen() {
       const t = tournaments.find((tour) => tour.id === flight.tournament_id);
       const key = flight.tournament_id;
       if (!map.has(key)) {
-        map.set(key, { title: t?.name ?? 'Unknown Tournament', tournamentId: key, data: [] });
+        map.set(key, {
+          title: t?.name ?? 'Unknown Tournament',
+          tournamentId: key,
+          sectionIndex: 0,
+          locationCity: t?.location_city ?? '',
+          dateRange: t ? formatDateRange(t.start_date, t.end_date) : '',
+          data: [],
+        });
       }
       map.get(key)!.data.push({ type: 'flight', data: flight });
     }
 
-    return Array.from(map.values()).sort((a, b) => {
+    const sorted = Array.from(map.values()).sort((a, b) => {
       const tA = tournaments.find((t) => t.id === a.tournamentId);
       const tB = tournaments.find((t) => t.id === b.tournamentId);
       return (tA?.start_date ?? '').localeCompare(tB?.start_date ?? '');
     });
+    sorted.forEach((s, i) => { s.sectionIndex = i; });
+    return sorted;
   }, [tournaments, hotelBookings, flightBookings]);
 
   const totalHotelCost = hotelBookings.reduce((sum, h) => sum + (h.cost ?? 0), 0);
@@ -63,15 +91,15 @@ export default function TravelScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-cream dark:bg-bark items-center justify-center" edges={['top']}>
-        <ActivityIndicator size="large" color="#C4714A" />
+      <View className="flex-1 bg-cream dark:bg-bark items-center justify-center">
+        <ActivityIndicator size="large" color="#3B82B0" />
         <Text className="text-sm text-stone mt-3">Loading travel...</Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['top']}>
+    <View className="flex-1 bg-cream dark:bg-bark">
       <SectionList
         sections={sections}
         keyExtractor={(item) => `${item.type}-${item.data.id}`}
@@ -116,28 +144,55 @@ export default function TravelScreen() {
             )}
           </View>
         }
-        renderSectionHeader={({ section }) => (
-          <View className="flex-row items-center mt-4 mb-2">
-            <Ionicons name="trophy-outline" size={16} color={ic.subtle} />
-            <Text className="text-sm font-semibold text-stone dark:text-parchment ml-1.5 uppercase tracking-wider">
-              {section.title}
-            </Text>
-          </View>
+        renderSectionHeader={({ section }) => {
+          const accent = SECTION_ACCENTS[section.sectionIndex % SECTION_ACCENTS.length];
+          return (
+            <View className={`mt-5 rounded-t-xl overflow-hidden ${accent.bg}`}>
+              <View className={`h-1.5 ${accent.bar}`} />
+              <View className="px-4 pt-3 pb-2">
+                <Text className="text-base font-bold text-bark dark:text-cream">
+                  {section.title}
+                </Text>
+                <View className="flex-row items-center mt-0.5">
+                  {section.locationCity ? (
+                    <>
+                      <Ionicons name="location-outline" size={12} color="#8FA8BF" />
+                      <Text className="text-xs text-stone dark:text-parchment ml-1 mr-3">{section.locationCity}</Text>
+                    </>
+                  ) : null}
+                  {section.dateRange ? (
+                    <>
+                      <Ionicons name="calendar-outline" size={12} color="#8FA8BF" />
+                      <Text className="text-xs text-stone dark:text-parchment ml-1">{section.dateRange}</Text>
+                    </>
+                  ) : null}
+                </View>
+              </View>
+            </View>
+          );
+        }}
+        renderSectionFooter={() => (
+          <View className="h-1 rounded-b-xl bg-parchment/30 dark:bg-bark-light/30 mb-1" />
         )}
-        renderItem={({ item }) => {
+        renderItem={({ item, section }) => {
+          const accent = SECTION_ACCENTS[section.sectionIndex % SECTION_ACCENTS.length];
           if (item.type === 'hotel') {
             return (
-              <HotelBookingCard
-                booking={item.data}
-                onPress={() => router.push({ pathname: '/booking/add-hotel', params: { editId: item.data.id } })}
-              />
+              <View className={`px-2 pb-1 ${accent.bg}`}>
+                <HotelBookingCard
+                  booking={item.data}
+                  onPress={() => router.push({ pathname: '/booking/add-hotel', params: { editId: item.data.id } })}
+                />
+              </View>
             );
           }
           return (
-            <FlightBookingCard
-              booking={item.data}
-              onPress={() => router.push({ pathname: '/booking/add-flight', params: { editId: item.data.id } })}
-            />
+            <View className={`px-2 pb-1 ${accent.bg}`}>
+              <FlightBookingCard
+                booking={item.data}
+                onPress={() => router.push({ pathname: '/booking/add-flight', params: { editId: item.data.id } })}
+              />
+            </View>
           );
         }}
         ListEmptyComponent={
@@ -179,7 +234,7 @@ export default function TravelScreen() {
                 router.push('/booking/add-flight');
               }}
             >
-              <Ionicons name="airplane" size={20} color="#C4714A" />
+              <Ionicons name="airplane" size={20} color="#3B82B0" />
               <Text className="text-sm font-semibold text-bark dark:text-cream ml-3">Add Flight</Text>
             </Pressable>
           </View>
@@ -192,8 +247,8 @@ export default function TravelScreen() {
         style={{ elevation: 4 }}
         onPress={() => setShowAddMenu(!showAddMenu)}
       >
-        <Ionicons name={showAddMenu ? 'close' : 'add'} size={28} color="#FAF7F3" />
+        <Ionicons name={showAddMenu ? 'close' : 'add'} size={28} color="#FEFEFE" />
       </Pressable>
-    </SafeAreaView>
+    </View>
   );
 }
