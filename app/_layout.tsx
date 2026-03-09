@@ -10,6 +10,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { DataProvider } from '@/providers/DataProvider';
 import { NotificationProvider } from '@/providers/NotificationProvider';
+import { useSeasonStore } from '@/stores/useSeasonStore';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -100,20 +101,25 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { session, isLoading } = useAuth();
   const segments = useSegments();
+  const teamConfig = useSeasonStore((s) => s.teamConfig);
+  const storeLoading = useSeasonStore((s) => s.isLoading);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || storeLoading) return;
     // Skip auth gating in dev mode when Supabase isn't configured
     if (!isSupabaseConfigured) return;
 
     const inAuthFlow = segments[0] === 'auth' || segments[0] === 'landing';
+    const inOnboarding = segments[0] === 'onboarding';
 
     if (!session && !inAuthFlow) {
       router.replace('/landing');
-    } else if (session && inAuthFlow) {
+    } else if (session && !teamConfig && !inOnboarding && !inAuthFlow) {
+      router.replace('/onboarding');
+    } else if (session && teamConfig && (inAuthFlow || inOnboarding)) {
       router.replace('/');
     }
-  }, [session, isLoading, segments]);
+  }, [session, isLoading, segments, teamConfig, storeLoading]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? RallyDarkTheme : RallyLightTheme}>
@@ -121,6 +127,7 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="landing" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         <Stack.Screen
           name="booking/add-hotel"
