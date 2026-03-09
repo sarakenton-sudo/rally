@@ -1,5 +1,7 @@
 {
-  "buildCommand": "npx expo export --platform web && cp public/homepage.html dist/homepage.html && cp public/homepage.html dist/index.html",
+  "buildCommand": "npx expo export --platform web && cp public/homepage.html dist/index.html",
   "outputDirectory": "dist",
-  "framework": null
+  "framework": null,
+  "cleanUrls": true,
+  "trailingSlash": false
 }
