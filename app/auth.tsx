@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, Pressable, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Pressable, Alert, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FormField from '@/components/FormField';
 import { useAuth } from '@/providers/AuthProvider';
@@ -79,10 +79,11 @@ export default function AuthScreen() {
       >
         {/* Logo area */}
         <View className="items-center mb-10">
-          <Text className="text-5xl text-rally-600 font-nunito-black">Rally<Text className="font-nunito-extrabold opacity-55">HQ</Text></Text>
-          <Text className="text-base text-stone dark:text-parchment mt-1">
-            Your season, sorted.
-          </Text>
+          <Image
+            source={require('@/assets/images/rallyhub_lockup_light.png')}
+            style={{ width: 260, height: 72 }}
+            resizeMode="contain"
+          />
         </View>
 
         {/* Form */}

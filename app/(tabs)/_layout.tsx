@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Image, Pressable } from 'react-native';
+import { View, Image, Pressable, Platform, Linking } from 'react-native';
 import { Tabs, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,11 +24,20 @@ function GlobalHeader() {
     >
       {/* Logo row */}
       <View className="items-center px-4 pt-2 pb-1">
-        <Image
-          source={isDark ? logoWhite : logoLight}
-          style={{ width: 240, height: 64 }}
-          resizeMode="contain"
-        />
+        <Pressable
+          onPress={() => {
+            if (Platform.OS === 'web') {
+              window.location.href = '/homepage.html';
+            }
+          }}
+          style={{ cursor: Platform.OS === 'web' ? 'pointer' : 'default' } as any}
+        >
+          <Image
+            source={isDark ? logoWhite : logoLight}
+            style={{ width: 240, height: 64 }}
+            resizeMode="contain"
+          />
+        </Pressable>
         <Pressable
           className="w-9 h-9 rounded-full items-center justify-center active:opacity-70 absolute right-4"
           style={{ top: 8 + insets.top }}
