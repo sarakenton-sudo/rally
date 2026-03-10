@@ -282,6 +282,9 @@ async function syncUser(
         continue;
       }
 
+      // Auto-apply extracted data to matching tournaments
+      await autoApplyToTournament(supabase, token.user_id, classification, extractedData);
+
       // Trigger notifications for actionable classifications
       if (classification === 'stay_and_play' || classification === 'travel_confirmation') {
         await supabase.functions.invoke('send-notification', {
@@ -328,6 +331,87 @@ async function syncUser(
     .eq('user_id', token.user_id);
 
   return { user_id: token.user_id, emails_processed: processed };
+}
+
+// Auto-apply extracted email data to matching tournaments
+async function autoApplyToTournament(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  classification: string,
+  data: Record<string, unknown>,
+): Promise<void> {
+  // Only apply for tournament-related or schedule-related emails
+  if (!['tournament_info', 'schedule_change', 'stay_and_play'].includes(classification)) return;
+
+  // Need a tournament name or dates to match
+  const tournamentName = String(data.tournament_name ?? '').toLowerCase();
+  const startDate = String(data.start_date ?? '');
+
+  if (!tournamentName && !startDate) return;
+
+  try {
+    // Fetch user's tournaments
+    const { data: tournaments } = await supabase
+      .from('tournaments')
+      .select('id, name, start_date, end_date, schedule_link, schedule_available_date, ticket_sales_date, ticket_link, venues')
+      .eq('user_id', userId);
+
+    if (!tournaments || tournaments.length === 0) return;
+
+    // Find matching tournament by name similarity or date overlap
+    const match = tournaments.find((t: Record<string, unknown>) => {
+      const tName = String(t.name ?? '').toLowerCase();
+      // Name match: check if tournament name appears in extracted name or vice versa
+      if (tournamentName && tName) {
+        const nameWords = tournamentName.split(/\s+/).filter((w: string) => w.length > 3);
+        const matchingWords = nameWords.filter((w: string) => tName.includes(w));
+        if (matchingWords.length >= 2) return true;
+        if (tName.includes(tournamentName) || tournamentName.includes(tName)) return true;
+      }
+      // Date match: start dates within 1 day
+      if (startDate && t.start_date) {
+        const diff = Math.abs(new Date(startDate).getTime() - new Date(String(t.start_date)).getTime());
+        if (diff <= 24 * 60 * 60 * 1000) return true;
+      }
+      return false;
+    });
+
+    if (!match) return;
+
+    // Build update payload — only fill empty fields, never overwrite existing data
+    const updates: Record<string, unknown> = {};
+
+    if (!match.schedule_link && data.schedule_url) {
+      updates.schedule_link = data.schedule_url;
+    }
+    if (!match.schedule_available_date && data.schedule_available_date) {
+      updates.schedule_available_date = data.schedule_available_date;
+    }
+    if (!match.ticket_sales_date && data.ticket_sales_date) {
+      updates.ticket_sales_date = data.ticket_sales_date;
+    }
+    if (!match.ticket_link && data.ticket_url) {
+      updates.ticket_link = data.ticket_url;
+    }
+    // Auto-apply venue address if no venues exist
+    if (data.venue_address && Array.isArray(match.venues) && match.venues.length === 0) {
+      updates.venues = [{
+        label: String(data.venue_name ?? ''),
+        address: String(data.venue_address),
+        is_confirmed: false,
+      }];
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await supabase
+        .from('tournaments')
+        .update(updates)
+        .eq('id', match.id);
+      console.log(`Auto-applied to tournament "${match.name}":`, Object.keys(updates));
+    }
+  } catch (err) {
+    console.error('Auto-apply to tournament failed:', err);
+  }
 }
 
 // Cache tournament dates per user to avoid repeated DB calls
