@@ -56,6 +56,13 @@ const DATA_LABELS: Record<string, string> = {
   registration_deadline: 'Register By',
   entry_fee: 'Entry Fee',
   action_items: 'Action Items',
+  passenger_name: 'Passenger',
+  departure_city: 'From City',
+  arrival_city: 'To City',
+  return_date: 'Return Date',
+  number_of_nights: 'Nights',
+  outbound: 'Outbound Flight',
+  return: 'Return Flight',
 };
 
 function stripHtml(html: string): string {
@@ -137,12 +144,22 @@ function matchScore(tournament: Tournament, extracted: Record<string, unknown>, 
     }
   }
 
-  // Date matching
+  // Date matching — tournament dates or travel dates
   const eStart = String(extracted.start_date ?? '');
   const eEnd = String(extracted.end_date ?? '');
   if (eStart && tournament.start_date === eStart) score += 25;
   else if (eStart && tournament.start_date?.slice(0, 7) === eStart.slice(0, 7)) score += 10;
   if (eEnd && tournament.end_date === eEnd) score += 10;
+
+  // Match flights/hotels by travel date proximity to tournament
+  const travelDate = String(extracted.departure_date ?? extracted.check_in_date ?? (extracted.outbound as any)?.departure_date ?? '');
+  if (travelDate && tournament.start_date) {
+    const diffMs = Math.abs(new Date(travelDate).getTime() - new Date(tournament.start_date).getTime());
+    const diffDays = diffMs / (24 * 60 * 60 * 1000);
+    if (diffDays <= 1) score += 40;
+    else if (diffDays <= 3) score += 25;
+    else if (diffDays <= 5) score += 10;
+  }
 
   // City matching
   const eCity = String(extracted.location_city ?? '').toLowerCase();
@@ -403,8 +420,37 @@ export default function EmailDetailScreen() {
     }
   };
 
-  const handleCreateBooking = () => {
-    router.push({ pathname: '/booking/add-hotel', params: { emailSubject: email.subject } });
+  const handleCreateHotelBooking = () => {
+    const params: Record<string, string> = { emailSubject: email.subject };
+    if (activeMatch) params.tournamentId = activeMatch.id;
+    if (extractedData) {
+      if (extractedData.hotel_name) params.hotelName = String(extractedData.hotel_name);
+      if (extractedData.check_in_date) params.checkIn = String(extractedData.check_in_date);
+      if (extractedData.check_out_date) params.checkOut = String(extractedData.check_out_date);
+      if (extractedData.confirmation_number) params.confirmationNumber = String(extractedData.confirmation_number);
+      if (extractedData.total_cost) params.cost = String(extractedData.total_cost);
+      if (extractedData.cancellation_deadline) params.cancellationDeadline = String(extractedData.cancellation_deadline);
+    }
+    router.push({ pathname: '/booking/add-hotel', params });
+  };
+
+  const handleCreateFlightBooking = () => {
+    const params: Record<string, string> = { emailSubject: email.subject };
+    if (activeMatch) params.tournamentId = activeMatch.id;
+    if (extractedData) {
+      if (extractedData.airline) params.airline = String(extractedData.airline);
+      if (extractedData.confirmation_number) params.confirmationCode = String(extractedData.confirmation_number);
+      if (extractedData.departure_date) params.departureDate = String(extractedData.departure_date);
+      if (extractedData.return_date) params.returnDate = String(extractedData.return_date);
+      if (extractedData.passenger_name) params.travelerName = String(extractedData.passenger_name);
+      if (extractedData.total_cost) params.cost = String(extractedData.total_cost);
+      // Handle outbound/return legs
+      const outbound = extractedData.outbound as Record<string, unknown> | undefined;
+      const returnLeg = extractedData.return as Record<string, unknown> | undefined;
+      if (outbound?.departure_date) params.departureDate = String(outbound.departure_date);
+      if (returnLeg?.departure_date) params.returnDate = String(returnLeg.departure_date);
+    }
+    router.push({ pathname: '/booking/add-flight', params });
   };
 
   const openUrl = (url: string) => {
@@ -631,14 +677,23 @@ export default function EmailDetailScreen() {
           </Pressable>
         )}
 
-        {(email.classification === 'stay_and_play' ||
-          email.classification === 'travel_confirmation') && (
+        {email.classification === 'stay_and_play' && (
           <Pressable
             className="bg-purple-600 rounded-xl py-3.5 items-center flex-row justify-center mb-2 active:opacity-80"
-            onPress={handleCreateBooking}
+            onPress={handleCreateHotelBooking}
           >
             <Ionicons name="bed" size={18} color="white" />
-            <Text className="text-sm font-semibold text-white ml-2">Create Booking</Text>
+            <Text className="text-sm font-semibold text-white ml-2">Create Hotel Booking</Text>
+          </Pressable>
+        )}
+
+        {email.classification === 'travel_confirmation' && (
+          <Pressable
+            className="bg-rally-600 rounded-xl py-3.5 items-center flex-row justify-center mb-2 active:opacity-80"
+            onPress={handleCreateFlightBooking}
+          >
+            <Ionicons name="airplane" size={18} color="white" />
+            <Text className="text-sm font-semibold text-white ml-2">Create Flight Booking</Text>
           </Pressable>
         )}
 
