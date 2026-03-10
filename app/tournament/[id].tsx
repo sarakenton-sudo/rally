@@ -301,8 +301,19 @@ export default function TournamentDetailScreen() {
           })()}
 
           {/* TICKETS */}
-          <SectionHeader icon="ticket" title="Tickets" iconColor={ic.muted} />
-          <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900">
+          {(() => {
+            const hasTicketData = !!(tournament.ticket_link || teamCode || tournament.tickets_purchased);
+            return (
+              <>
+          <SectionHeader icon="ticket" title="Tickets" iconColor={hasTicketData ? '#d97706' : ic.muted} />
+          <View className={`rounded-xl p-4 border overflow-hidden ${
+            hasTicketData
+              ? 'bg-warm-white dark:bg-bark-light border-parchment dark:border-rally-900'
+              : 'bg-cream dark:bg-bark-light/50 border-dashed border-parchment dark:border-rally-900'
+          }`}>
+            {hasTicketData && (
+              <View className="absolute top-0 left-0 w-1 h-full bg-amber-400" />
+            )}
             {/* Team code + QR */}
             <View className="flex-row items-start justify-between mb-3">
               <View className="flex-1">
@@ -361,6 +372,9 @@ export default function TournamentDetailScreen() {
               </View>
             </View>
           </View>
+              </>
+            );
+          })()}
 
           {/* TRAVEL */}
           <>
