@@ -19,20 +19,29 @@ const AIRLINES = [
 ];
 
 export default function AddFlightBookingScreen() {
-  const params = useLocalSearchParams<{ tournamentId?: string; editId?: string }>();
+  const params = useLocalSearchParams<{
+    tournamentId?: string; editId?: string;
+    airline?: string; confirmationCode?: string;
+    departureDate?: string; returnDate?: string;
+    travelerName?: string; cost?: string;
+  }>();
   const editId = params.editId;
   const existing = useSeasonStore((s) => s.flightBookings.find((f) => f.id === editId));
 
-  const [airline, setAirline] = useState(existing?.airline ?? '');
-  const [confirmationCode, setConfirmationCode] = useState(existing?.confirmation_code ?? '');
+  const [airline, setAirline] = useState(existing?.airline ?? params.airline ?? '');
+  const [confirmationCode, setConfirmationCode] = useState(existing?.confirmation_code ?? params.confirmationCode ?? '');
   const [departureDate, setDepartureDate] = useState<Date | null>(
-    existing ? new Date(existing.departure_date + 'T12:00:00') : null
+    existing ? new Date(existing.departure_date + 'T12:00:00') :
+    params.departureDate ? new Date(params.departureDate + 'T12:00:00') : null
   );
   const [returnDate, setReturnDate] = useState<Date | null>(
-    existing ? new Date(existing.return_date + 'T12:00:00') : null
+    existing ? new Date(existing.return_date + 'T12:00:00') :
+    params.returnDate ? new Date(params.returnDate + 'T12:00:00') : null
   );
   const [bookedBy, setBookedBy] = useState(existing?.booked_by ?? '');
-  const [cost, setCost] = useState(existing?.cost != null ? String(existing.cost) : '');
+  const [cost, setCost] = useState(
+    existing?.cost != null ? String(existing.cost) : params.cost ?? ''
+  );
   const [selectedTournamentId, setSelectedTournamentId] = useState(
     existing?.tournament_id ?? params.tournamentId ?? ''
   );
@@ -41,7 +50,8 @@ export default function AddFlightBookingScreen() {
 
   // Traveler names — dynamic list
   const [travelers, setTravelers] = useState<string[]>(
-    existing?.traveler_names?.length ? existing.traveler_names : ['']
+    existing?.traveler_names?.length ? existing.traveler_names :
+    params.travelerName ? [params.travelerName] : ['']
   );
 
   const tournaments = useSeasonStore((s) => s.tournaments);
