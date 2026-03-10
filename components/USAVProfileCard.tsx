@@ -17,6 +17,7 @@ export default function USAVProfileCard({ profile, onPress }: USAVProfileCardPro
   return (
     <Pressable
       className="bg-warm-white dark:bg-bark-light rounded-xl border border-parchment dark:border-rally-900 overflow-hidden active:opacity-80"
+      style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
       onPress={onPress}
     >
       {/* Red accent bar */}

@@ -17,6 +17,7 @@ export default function HubSettingsRow({ icon, iconColor, title, subtitle, badge
   return (
     <Pressable
       className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
+      style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
       onPress={onPress}
     >
       <View

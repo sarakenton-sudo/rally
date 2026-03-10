@@ -67,7 +67,7 @@ export default function AuthScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-warm-white dark:bg-bark">
+    <SafeAreaView className="flex-1 bg-bark">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1 justify-center px-6"
@@ -75,7 +75,7 @@ export default function AuthScreen() {
         {/* Logo area */}
         <View className="items-center mb-10">
           <Image
-            source={require('@/assets/images/rallyhub_lockup_light.png')}
+            source={require('@/assets/images/rallyhub_lockup_white.png')}
             style={{ width: 260, height: 72 }}
             resizeMode="contain"
           />
@@ -108,6 +108,7 @@ export default function AuthScreen() {
           keyboardType="email-address"
           autoCapitalize="none"
           autoComplete="email"
+          darkBg
         />
 
         <FormField
@@ -117,6 +118,7 @@ export default function AuthScreen() {
           placeholder="••••••••"
           secureTextEntry
           autoComplete={isSignUp ? 'new-password' : 'current-password'}
+          darkBg
         />
 
         {/* Invite code toggle (sign-up only) */}
@@ -126,7 +128,7 @@ export default function AuthScreen() {
               className="mb-3 active:opacity-70"
               onPress={() => setHasInviteCode(!hasInviteCode)}
             >
-              <Text className="text-sm text-rally-600 font-semibold">
+              <Text className="text-sm text-rally-300 font-semibold">
                 {hasInviteCode ? 'Remove invite code' : 'Have an invite code?'}
               </Text>
             </Pressable>
@@ -138,6 +140,7 @@ export default function AuthScreen() {
                 placeholder="e.g. a1b2c3d4e5f6"
                 autoCapitalize="none"
                 autoCorrect={false}
+                darkBg
               />
             )}
           </>
@@ -146,17 +149,18 @@ export default function AuthScreen() {
         {/* Forgot password (sign-in only) */}
         {!isSignUp && (
           <Pressable className="items-end mb-2 active:opacity-70" onPress={handleForgotPassword}>
-            <Text className="text-sm text-rally-600 font-semibold">Forgot password?</Text>
+            <Text className="text-sm text-rally-300 font-semibold">Forgot password?</Text>
           </Pressable>
         )}
 
         {/* Submit button */}
         <Pressable
-          className={`bg-rally-600 rounded-xl py-4 items-center mt-2 ${loading ? 'opacity-60' : 'active:opacity-80'}`}
+          className={`bg-rally-500 rounded-xl py-4 items-center mt-2 ${loading ? 'opacity-60' : 'active:opacity-80'}`}
+          style={{ shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 4 }}
           onPress={handleSubmit}
           disabled={loading}
         >
-          <Text className="text-base font-semibold text-cream">
+          <Text className="text-base font-bold text-cream">
             {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Sign In'}
           </Text>
         </Pressable>
@@ -166,9 +170,9 @@ export default function AuthScreen() {
           className="mt-6 items-center"
           onPress={() => { setIsSignUp(!isSignUp); setMessage(null); }}
         >
-          <Text className="text-sm text-stone dark:text-parchment">
+          <Text className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
             {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
-            <Text className="text-rally-600 font-semibold">
+            <Text className="text-rally-300 font-semibold">
               {isSignUp ? 'Sign In' : 'Sign Up'}
             </Text>
           </Text>

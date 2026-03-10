@@ -61,6 +61,7 @@ export default function HubScreen() {
         {teamConfig && (
           <Pressable
             className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 mb-2 active:opacity-80"
+            style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
             onPress={() => router.push('/settings/team-details')}
           >
             <View className="flex-row items-center justify-between mb-1">
@@ -122,7 +123,10 @@ export default function HubScreen() {
         />
 
         {/* 3. Forward Email */}
-        <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 mb-2">
+        <View
+          className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 mb-2"
+          style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
+        >
           <View className="flex-row items-center mb-2">
             <View className="w-8 h-8 rounded-full items-center justify-center mr-3" style={{ backgroundColor: '#3B82B015' }}>
               <Ionicons name="mail-open" size={16} color="#3B82B0" />
@@ -213,7 +217,10 @@ export default function HubScreen() {
         </View>
 
         {teamConfig?.default_stream_url ? (
-          <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900">
+          <View
+            className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900"
+            style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
+          >
             <View className="flex-row items-center justify-between mb-2">
               <View className="flex-row items-center flex-1">
                 <Ionicons name="play-circle" size={24} color="#dc2626" />
@@ -309,7 +316,7 @@ export default function HubScreen() {
               <View
                 key={`${link.label}-${i}`}
                 className="bg-warm-white dark:bg-bark-light rounded-xl border border-parchment dark:border-rally-900 overflow-hidden"
-                style={{ width: '47%' }}
+                style={{ width: '47%', shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
               >
                 {/* Main tap area — opens the link */}
                 <Pressable

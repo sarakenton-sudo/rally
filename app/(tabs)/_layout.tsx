@@ -4,23 +4,15 @@ import { Tabs, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useColorScheme } from '@/components/useColorScheme';
-
-const TAB_ACTIVE_COLOR = '#3B82B0';
-const TAB_INACTIVE_COLOR = '#8FA8BF';
-
-const logoLight = require('@/assets/images/rallyhub_lockup_light.png');
 const logoWhite = require('@/assets/images/rallyhub_lockup_white.png');
 
 function GlobalHeader() {
-  const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
-  const isDark = colorScheme === 'dark';
 
   return (
     <View
       style={{ paddingTop: insets.top }}
-      className={isDark ? 'bg-bark' : 'bg-warm-white'}
+      className="bg-bark"
     >
       {/* Logo row */}
       <View className="items-center px-4 pt-2 pb-1">
@@ -33,7 +25,7 @@ function GlobalHeader() {
           style={{ cursor: Platform.OS === 'web' ? 'pointer' : 'default' } as any}
         >
           <Image
-            source={isDark ? logoWhite : logoLight}
+            source={logoWhite}
             style={{ width: 240, height: 64 }}
             resizeMode="contain"
           />
@@ -43,27 +35,25 @@ function GlobalHeader() {
           style={{ top: 8 + insets.top }}
           onPress={() => router.push('/notifications')}
         >
-          <Ionicons name="notifications-outline" size={20} color="#8FA8BF" />
+          <Ionicons name="notifications-outline" size={20} color="rgba(255,255,255,0.6)" />
         </Pressable>
       </View>
 
       {/* Bottom border */}
-      <View className={`h-px ${isDark ? 'bg-bark-light' : 'bg-parchment'}`} />
+      <View className="h-px" style={{ backgroundColor: 'rgba(255,255,255,0.07)' }} />
     </View>
   );
 }
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: TAB_ACTIVE_COLOR,
-        tabBarInactiveTintColor: TAB_INACTIVE_COLOR,
+        tabBarActiveTintColor: '#FEFEFE',
+        tabBarInactiveTintColor: 'rgba(255,255,255,0.45)',
         tabBarStyle: {
-          backgroundColor: colorScheme === 'dark' ? '#1E3A5F' : '#FEFEFE',
-          borderTopColor: colorScheme === 'dark' ? '#152F43' : '#D8E2EC',
+          backgroundColor: '#1E3A5F',
+          borderTopColor: 'rgba(255,255,255,0.07)',
         },
         header: () => <GlobalHeader />,
       }}>

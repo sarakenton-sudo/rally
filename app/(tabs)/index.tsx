@@ -50,7 +50,10 @@ export default function HomeScreen() {
         </Text>
 
         {/* Team Code Vault */}
-        <View className="bg-rally-600 rounded-2xl p-5 mt-5">
+        <View
+          className="bg-rally-600 rounded-2xl p-5 mt-5"
+          style={{ shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 4 }}
+        >
           <Text className="text-xs font-medium text-rally-200 uppercase tracking-wider">
             Team Code
           </Text>
@@ -79,7 +82,10 @@ export default function HomeScreen() {
               />
             ))
           ) : (
-            <View className="bg-warm-white dark:bg-bark-light rounded-2xl p-5">
+            <View
+              className="bg-warm-white dark:bg-bark-light rounded-2xl p-5 border border-parchment dark:border-rally-900"
+              style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
+            >
               <Text className="text-base text-stone dark:text-parchment">
                 No upcoming tournaments in the next 30 days
               </Text>

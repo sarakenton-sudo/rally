@@ -119,7 +119,10 @@ export default function TravelScreen() {
             </View>
 
             {(totalHotelCost > 0 || totalFlightCost > 0) && (
-              <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mt-4 flex-row items-center justify-between border border-parchment dark:border-rally-900">
+              <View
+                className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mt-4 flex-row items-center justify-between border border-parchment dark:border-rally-900"
+                style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
+              >
                 <View>
                   <Text className="text-xs text-stone uppercase tracking-wider">Season Total</Text>
                   <Text className="text-xl font-bold text-bark dark:text-cream mt-0.5">

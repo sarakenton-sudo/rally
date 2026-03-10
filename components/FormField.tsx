@@ -5,19 +5,21 @@ interface FormFieldProps extends TextInputProps {
   error?: string;
 }
 
-export default function FormField({ label, error, ...inputProps }: FormFieldProps) {
+export default function FormField({ label, error, darkBg, ...inputProps }: FormFieldProps & { darkBg?: boolean }) {
   return (
     <View className={label ? 'mb-4' : 'mb-0'}>
       {label ? (
-        <Text className="text-sm font-medium text-bark dark:text-parchment mb-1.5">
+        <Text className={`text-sm font-medium mb-1.5 ${darkBg ? 'text-parchment' : 'text-bark dark:text-parchment'}`}>
           {label}
         </Text>
       ) : null}
       <TextInput
-        className={`bg-cream dark:bg-bark-light border rounded-xl px-4 py-3 text-base text-bark dark:text-cream ${
-          error ? 'border-red-300' : 'border-parchment dark:border-rally-900'
+        className={`border rounded-xl px-4 py-3 text-base ${
+          darkBg
+            ? `bg-bark-light text-cream ${error ? 'border-red-400' : 'border-rally-900'}`
+            : `bg-cream dark:bg-bark-light text-bark dark:text-cream ${error ? 'border-red-300' : 'border-parchment dark:border-rally-900'}`
         }`}
-        placeholderTextColor="#8FA8BF"
+        placeholderTextColor={darkBg ? 'rgba(255,255,255,0.35)' : '#8FA8BF'}
         {...inputProps}
       />
       {error && (

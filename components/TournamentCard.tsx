@@ -49,6 +49,7 @@ export default function TournamentCard({ tournament, hotelCount = 0, flightCount
   return (
     <Pressable
       className="bg-warm-white dark:bg-bark-light rounded-2xl mb-3 overflow-hidden border border-parchment dark:border-rally-900 active:opacity-90"
+      style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
       onPress={onPress}
     >
       {/* Top accent bar — color-coded by status */}

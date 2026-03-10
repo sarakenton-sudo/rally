@@ -23,6 +23,7 @@ export default function GuestCard({ guest, onPress }: GuestCardProps) {
   return (
     <Pressable
       className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-90"
+      style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
       onPress={onPress}
     >
       {/* Avatar circle */}
