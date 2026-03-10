@@ -312,20 +312,49 @@ async function syncUser(
 }
 
 // Auto-apply extracted email data to matching tournaments
+// Find the nearest tournament to a travel date
+function findNearestTournament(
+  tournaments: Array<Record<string, unknown>>,
+  travelDate: string,
+  tournamentName?: string,
+): Record<string, unknown> | undefined {
+  // Try name match first
+  if (tournamentName) {
+    const nameLower = tournamentName.toLowerCase();
+    const nameMatch = tournaments.find((t) => {
+      const tName = String(t.name ?? '').toLowerCase();
+      const nameWords = nameLower.split(/\s+/).filter((w: string) => w.length > 3);
+      const matchingWords = nameWords.filter((w: string) => tName.includes(w));
+      return matchingWords.length >= 2 || tName.includes(nameLower) || nameLower.includes(tName);
+    });
+    if (nameMatch) return nameMatch;
+  }
+
+  // Fall back to nearest by date (within 3 days)
+  if (!travelDate) return undefined;
+  const threeDays = 3 * 24 * 60 * 60 * 1000;
+  let best: Record<string, unknown> | undefined;
+  let bestDiff = Infinity;
+
+  for (const t of tournaments) {
+    const diffStart = Math.abs(new Date(travelDate).getTime() - new Date(String(t.start_date)).getTime());
+    const diffEnd = Math.abs(new Date(travelDate).getTime() - new Date(String(t.end_date)).getTime());
+    const minDiff = Math.min(diffStart, diffEnd);
+    if (minDiff <= threeDays && minDiff < bestDiff) {
+      bestDiff = minDiff;
+      best = t;
+    }
+  }
+  return best;
+}
+
 async function autoApplyToTournament(
   supabase: ReturnType<typeof createClient>,
   userId: string,
   classification: string,
   data: Record<string, unknown>,
 ): Promise<void> {
-  // Only apply for tournament-related or schedule-related emails
-  if (!['tournament_info', 'schedule_change', 'stay_and_play'].includes(classification)) return;
-
-  // Need a tournament name or dates to match
-  const tournamentName = String(data.tournament_name ?? '').toLowerCase();
-  const startDate = String(data.start_date ?? '');
-
-  if (!tournamentName && !startDate) return;
+  if (!['tournament_info', 'schedule_change', 'stay_and_play', 'travel_confirmation'].includes(classification)) return;
 
   try {
     // Fetch user's tournaments
@@ -336,27 +365,74 @@ async function autoApplyToTournament(
 
     if (!tournaments || tournaments.length === 0) return;
 
-    // Find matching tournament by name similarity or date overlap
-    const match = tournaments.find((t: Record<string, unknown>) => {
-      const tName = String(t.name ?? '').toLowerCase();
-      // Name match: check if tournament name appears in extracted name or vice versa
-      if (tournamentName && tName) {
-        const nameWords = tournamentName.split(/\s+/).filter((w: string) => w.length > 3);
-        const matchingWords = nameWords.filter((w: string) => tName.includes(w));
-        if (matchingWords.length >= 2) return true;
-        if (tName.includes(tournamentName) || tournamentName.includes(tName)) return true;
-      }
-      // Date match: start dates within 1 day
-      if (startDate && t.start_date) {
-        const diff = Math.abs(new Date(startDate).getTime() - new Date(String(t.start_date)).getTime());
-        if (diff <= 24 * 60 * 60 * 1000) return true;
-      }
-      return false;
-    });
+    // For travel emails, match by travel date to nearest tournament
+    if (classification === 'travel_confirmation') {
+      const departureDate = String(data.departure_date ?? data.outbound?.departure_date ?? '');
+      const match = findNearestTournament(tournaments, departureDate, String(data.tournament_name ?? ''));
+      if (!match) return;
 
+      // Auto-create flight booking
+      const returnDate = String(data.return_date ?? data.return?.departure_date ?? '');
+      const { error } = await supabase
+        .from('flight_bookings')
+        .insert({
+          tournament_id: match.id,
+          user_id: userId,
+          airline: String(data.airline ?? ''),
+          confirmation_code: String(data.confirmation_number ?? ''),
+          departure_date: departureDate || null,
+          return_date: returnDate || null,
+          booked_by: String(data.passenger_name ?? ''),
+          traveler_names: data.passenger_name ? [String(data.passenger_name)] : [],
+          cost: data.total_cost ? Number(data.total_cost) : null,
+        });
+      if (error) {
+        console.error('Auto-create flight booking failed:', error);
+      } else {
+        console.log(`Auto-created flight booking for tournament "${match.name}"`);
+      }
+      return;
+    }
+
+    if (classification === 'stay_and_play') {
+      const checkInDate = String(data.check_in_date ?? '');
+      const match = findNearestTournament(tournaments, checkInDate, String(data.tournament_name ?? ''));
+      if (!match) return;
+
+      // Auto-create hotel booking
+      const { error } = await supabase
+        .from('hotel_bookings')
+        .insert({
+          tournament_id: match.id,
+          user_id: userId,
+          hotel_name: String(data.hotel_name ?? ''),
+          platform: 'Other',
+          booking_name: String(data.hotel_name ?? ''),
+          booked_by: '',
+          reservation_number: String(data.confirmation_number ?? ''),
+          check_in: checkInDate || null,
+          check_out: String(data.check_out_date ?? '') || null,
+          cancellation_deadline: String(data.cancellation_deadline ?? '') || null,
+          cost: data.total_cost ? Number(data.total_cost) : (data.nightly_rate ? Number(data.nightly_rate) : null),
+          is_backup: false,
+          status: 'confirmed',
+        });
+      if (error) {
+        console.error('Auto-create hotel booking failed:', error);
+      } else {
+        console.log(`Auto-created hotel booking for tournament "${match.name}"`);
+      }
+      // Also update tournament fields
+    }
+
+    // Tournament info / schedule updates
+    const tournamentName = String(data.tournament_name ?? '').toLowerCase();
+    const startDate = String(data.start_date ?? '');
+    if (!tournamentName && !startDate) return;
+
+    const match = findNearestTournament(tournaments, startDate, tournamentName);
     if (!match) return;
 
-    // Build update payload — only fill empty fields, never overwrite existing data
     const updates: Record<string, unknown> = {};
 
     if (!match.schedule_link && data.schedule_url) {
@@ -371,7 +447,6 @@ async function autoApplyToTournament(
     if (!match.ticket_link && data.ticket_url) {
       updates.ticket_link = data.ticket_url;
     }
-    // Auto-apply venue address if no venues exist
     if (data.venue_address && Array.isArray(match.venues) && match.venues.length === 0) {
       updates.venues = [{
         label: String(data.venue_name ?? ''),
