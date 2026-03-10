@@ -17,12 +17,12 @@ interface DatePickerFieldProps {
 }
 
 function formatDisplay(date: Date | null): string {
-  if (!date) return 'Select date';
+  if (!date || isNaN(date.getTime())) return 'Select date';
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function toISODate(date: Date | null): string {
-  if (!date) return '';
+  if (!date || isNaN(date.getTime())) return '';
   return date.toISOString().split('T')[0];
 }
 

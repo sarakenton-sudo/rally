@@ -32,16 +32,18 @@ export default function AddFlightBookingScreen() {
   const [airline, setAirline] = useState(existing?.airline ?? params.airline ?? '');
   const [confirmationCode, setConfirmationCode] = useState(existing?.confirmation_code ?? params.confirmationCode ?? '');
   const [departureDate, setDepartureDate] = useState<Date | null>(() => {
-    if (existing?.departure_date) return new Date(existing.departure_date + 'T12:00:00');
-    if (params.departureDate && /^\d{4}-\d{2}-\d{2}$/.test(params.departureDate)) {
-      return new Date(params.departureDate + 'T12:00:00');
+    const val = existing?.departure_date || params.departureDate || '';
+    if (val && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+      const d = new Date(val + 'T12:00:00');
+      return isNaN(d.getTime()) ? null : d;
     }
     return null;
   });
   const [returnDate, setReturnDate] = useState<Date | null>(() => {
-    if (existing?.return_date) return new Date(existing.return_date + 'T12:00:00');
-    if (params.returnDate && /^\d{4}-\d{2}-\d{2}$/.test(params.returnDate)) {
-      return new Date(params.returnDate + 'T12:00:00');
+    const val = existing?.return_date || params.returnDate || '';
+    if (val && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+      const d = new Date(val + 'T12:00:00');
+      return isNaN(d.getTime()) ? null : d;
     }
     return null;
   });
