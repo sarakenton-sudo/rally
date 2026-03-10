@@ -38,7 +38,13 @@ export default function EditTournamentScreen() {
   const [ticketLink, setTicketLink] = useState(existing?.ticket_link ?? '');
   const [ticketSystem, setTicketSystem] = useState(existing?.ticket_system ?? '');
   const [aesTournamentId, setAesTournamentId] = useState(existing?.aes_tournament_id ?? '');
-  const [sportwrenchUrl, setSportwrenchUrl] = useState(existing?.sportwrench_url ?? '');
+  const [scheduleLink, setScheduleLink] = useState(existing?.schedule_link ?? '');
+  const [scheduleAvailableDate, setScheduleAvailableDate] = useState<Date | null>(
+    existing?.schedule_available_date ? new Date(existing.schedule_available_date) : null
+  );
+  const [ticketSalesDate, setTicketSalesDate] = useState<Date | null>(
+    existing?.ticket_sales_date ? new Date(existing.ticket_sales_date) : null
+  );
   const [venueName, setVenueName] = useState(existing?.venues?.[0]?.label ?? '');
   const [venueAddress, setVenueAddress] = useState(existing?.venues?.[0]?.address ?? '');
   const [isSaving, setIsSaving] = useState(false);
@@ -88,7 +94,9 @@ export default function EditTournamentScreen() {
       ticket_link: ticketLink.trim() || null,
       ticket_system: ticketSystem.trim() || null,
       aes_tournament_id: aesTournamentId.trim() || null,
-      sportwrench_url: sportwrenchUrl.trim() || null,
+      schedule_link: scheduleLink.trim() || null,
+      schedule_available_date: scheduleAvailableDate ? scheduleAvailableDate.toISOString().split('T')[0] : null,
+      ticket_sales_date: ticketSalesDate ? ticketSalesDate.toISOString().split('T')[0] : null,
     };
 
     try {
@@ -179,7 +187,16 @@ export default function EditTournamentScreen() {
           <FormField label="Ticket Link" value={ticketLink} onChangeText={setTicketLink} placeholder="https://..." keyboardType="url" />
           <FormField label="Ticket System" value={ticketSystem} onChangeText={setTicketSystem} placeholder="e.g. GoFan, AES" />
           <FormField label="AES Tournament ID" value={aesTournamentId} onChangeText={setAesTournamentId} placeholder="e.g. 12345" />
-          <FormField label="SportsWrench URL" value={sportwrenchUrl} onChangeText={setSportwrenchUrl} placeholder="https://..." keyboardType="url" />
+          <FormField label="Schedule Link" value={scheduleLink} onChangeText={setScheduleLink} placeholder="https://..." keyboardType="url" />
+
+          <View className="flex-row gap-3">
+            <View className="flex-1">
+              <DatePickerField label="Schedule Posts" value={scheduleAvailableDate} onChange={setScheduleAvailableDate} />
+            </View>
+            <View className="flex-1">
+              <DatePickerField label="Tickets On Sale" value={ticketSalesDate} onChange={setTicketSalesDate} />
+            </View>
+          </View>
 
           <View className="h-8" />
         </ScrollView>

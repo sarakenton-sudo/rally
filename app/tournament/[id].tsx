@@ -224,6 +224,30 @@ export default function TournamentDetailScreen() {
                 No AES Tournament ID set. Add one to auto-import pool assignments and court numbers.
               </Text>
             )}
+
+            {/* Schedule available date */}
+            {tournament.schedule_available_date && (
+              <View className="flex-row items-center mt-3 pt-3 border-t border-parchment dark:border-rally-900">
+                <Ionicons name="calendar-outline" size={14} color={daysUntil(tournament.schedule_available_date) <= 0 ? '#16a34a' : '#d97706'} />
+                <Text className={`text-sm ml-2 font-medium ${daysUntil(tournament.schedule_available_date) <= 0 ? 'text-green-700' : 'text-amber-600'}`}>
+                  {daysUntil(tournament.schedule_available_date) <= 0
+                    ? 'Schedule should be posted!'
+                    : `Schedule posts ${new Date(tournament.schedule_available_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`}
+                </Text>
+              </View>
+            )}
+
+            {/* Ticket sales date */}
+            {tournament.ticket_sales_date && (
+              <View className="flex-row items-center mt-3 pt-3 border-t border-parchment dark:border-rally-900">
+                <Ionicons name="ticket-outline" size={14} color={daysUntil(tournament.ticket_sales_date) <= 0 ? '#16a34a' : '#3B82B0'} />
+                <Text className={`text-sm ml-2 font-medium ${daysUntil(tournament.ticket_sales_date) <= 0 ? 'text-green-700' : 'text-rally-600'}`}>
+                  {daysUntil(tournament.ticket_sales_date) <= 0
+                    ? 'Tickets should be on sale!'
+                    : `Tickets on sale ${new Date(tournament.ticket_sales_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`}
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* TICKETS */}
@@ -554,16 +578,17 @@ export default function TournamentDetailScreen() {
             </>
           )}
 
-          {/* SPORTWRENCH */}
-          {tournament.sportwrench_url && (
+          {/* SCHEDULE LINK */}
+          {tournament.schedule_link && (
             <>
-              <SectionHeader icon="globe" title="SportsWrench" iconColor={ic.muted} />
+              <SectionHeader icon="globe" title="Schedule Link" iconColor={ic.muted} />
               <Pressable
                 className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
-                onPress={() => Linking.openURL(tournament.sportwrench_url!)}
+                onPress={() => Linking.openURL(tournament.schedule_link!)}
               >
                 <Ionicons name="open-outline" size={18} color="#3B82B0" />
-                <Text className="text-sm text-rally-600 font-semibold ml-2">View on SportsWrench</Text>
+                <Text className="text-sm text-rally-600 font-semibold ml-2 flex-1" numberOfLines={1}>View Schedule</Text>
+                <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
               </Pressable>
             </>
           )}

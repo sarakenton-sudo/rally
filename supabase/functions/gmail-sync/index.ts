@@ -107,6 +107,10 @@ serve(async (req: Request) => {
       }
     }
 
+    // Proactive notifications: check if schedule/ticket dates arrived today
+    const today = new Date().toISOString().split('T')[0];
+    await checkScheduleAndTicketDates(supabase, today);
+
     return jsonResponse({ synced: results.length, results });
   } catch (err) {
     console.error('Gmail sync error:', err);
@@ -288,6 +292,51 @@ async function syncUser(
     .eq('user_id', token.user_id);
 
   return { user_id: token.user_id, emails_processed: processed };
+}
+
+async function checkScheduleAndTicketDates(
+  supabase: ReturnType<typeof createClient>,
+  today: string,
+): Promise<void> {
+  try {
+    // Find tournaments where schedule_available_date or ticket_sales_date is today
+    const { data: tournaments } = await supabase
+      .from('tournaments')
+      .select('id, user_id, name, schedule_available_date, ticket_sales_date')
+      .or(`schedule_available_date.eq.${today},ticket_sales_date.eq.${today}`);
+
+    if (!tournaments || tournaments.length === 0) return;
+
+    for (const t of tournaments) {
+      if (t.schedule_available_date === today) {
+        await supabase.functions.invoke('send-notification', {
+          body: {
+            user_id: t.user_id,
+            type: 'custom',
+            title: `Schedule Posted: ${t.name}`,
+            body: `The schedule for ${t.name} should be available now! Check your schedule link or AES for pool assignments.`,
+            data: { tournamentId: t.id },
+          },
+        });
+        console.log(`Sent schedule notification for ${t.name}`);
+      }
+
+      if (t.ticket_sales_date === today) {
+        await supabase.functions.invoke('send-notification', {
+          body: {
+            user_id: t.user_id,
+            type: 'custom',
+            title: `Tickets On Sale: ${t.name}`,
+            body: `Tickets for ${t.name} should be on sale now! Don't forget to buy before they sell out.`,
+            data: { tournamentId: t.id },
+          },
+        });
+        console.log(`Sent ticket sales notification for ${t.name}`);
+      }
+    }
+  } catch (err) {
+    console.error('Schedule/ticket date check failed:', err);
+  }
 }
 
 async function refreshAccessToken(

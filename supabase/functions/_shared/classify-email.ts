@@ -15,6 +15,10 @@ Extract ALL pertinent structured data from the email. Be thorough:
 - For tournament_info: also extract ticket_code, ticket_url (URLs containing "ticket", "aes", "gofan", "aesathletics", or similar), registration_deadline, entry_fee
 - For coach_announcement: key message summary, any dates/times mentioned, action_items
 
+IMPORTANT — Schedule and ticket timing:
+- If the email mentions WHEN schedules will be posted (e.g., "Schedule will be posted Wednesday prior to the event", "Pools released the Monday before"), extract as "schedule_available_description" (the raw text) AND compute "schedule_available_date" as an ISO date (YYYY-MM-DD) by calculating from the tournament start_date. For example, if start_date is 2026-03-14 (Saturday) and schedule posts "Wednesday prior", that's 2026-03-11.
+- If the email mentions WHEN ticket sales start (e.g., "Tickets on sale March 1", "Spectator tickets available two weeks before"), extract as "ticket_sales_description" (raw text) AND compute "ticket_sales_date" as ISO date (YYYY-MM-DD).
+
 Include only fields that are actually present in the email. Use ISO date format (YYYY-MM-DD) for dates when possible.
 
 Respond with JSON only:

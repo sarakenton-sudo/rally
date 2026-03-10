@@ -47,12 +47,52 @@ const DATA_LABELS: Record<string, string> = {
   pool_info: 'Pool',
   check_in_time: 'Check-in Time',
   schedule_url: 'Schedule Link',
+  schedule_available_date: 'Schedule Posts',
+  schedule_available_description: 'Schedule Timing',
   ticket_code: 'Ticket Code',
   ticket_url: 'Ticket Link',
+  ticket_sales_date: 'Tickets On Sale',
+  ticket_sales_description: 'Ticket Timing',
   registration_deadline: 'Register By',
   entry_fee: 'Entry Fee',
   action_items: 'Action Items',
 };
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/tr>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '• ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&rsquo;/g, "'")
+    .replace(/&lsquo;/g, "'")
+    .replace(/&rdquo;/g, '"')
+    .replace(/&ldquo;/g, '"')
+    .replace(/&mdash;/g, '—')
+    .replace(/&ndash;/g, '–')
+    .replace(/&#\d+;/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function cleanEmailBody(text: string): string {
+  // If it looks like HTML, strip tags
+  if (/<[a-z][\s\S]*>/i.test(text)) {
+    return stripHtml(text);
+  }
+  return text;
+}
 
 function extractTicketUrls(text: string): string[] {
   const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
@@ -141,13 +181,38 @@ function getSuggestedUpdates(tournament: Tournament, extracted: Record<string, u
 
   // Schedule link
   const scheduleUrl = String(extracted.schedule_url ?? '');
-  if (scheduleUrl && isUrl(scheduleUrl) && !tournament.sportwrench_url) {
+  if (scheduleUrl && isUrl(scheduleUrl) && !tournament.schedule_link) {
     suggestions.push({
       field: 'schedule_url',
       label: 'Schedule Link',
-      currentValue: tournament.sportwrench_url ?? 'Not set',
+      currentValue: tournament.schedule_link ?? 'Not set',
       newValue: scheduleUrl,
-      dbField: 'sportwrench_url',
+      dbField: 'schedule_link',
+    });
+  }
+
+  // Schedule available date
+  const scheduleAvailDate = String(extracted.schedule_available_date ?? '');
+  if (scheduleAvailDate && !tournament.schedule_available_date) {
+    const desc = String(extracted.schedule_available_description ?? scheduleAvailDate);
+    suggestions.push({
+      field: 'schedule_available_date',
+      label: 'Schedule Posts',
+      currentValue: tournament.schedule_available_date ?? 'Not set',
+      newValue: scheduleAvailDate,
+      dbField: 'schedule_available_date',
+    });
+  }
+
+  // Ticket sales date
+  const ticketSalesDate = String(extracted.ticket_sales_date ?? '');
+  if (ticketSalesDate && !tournament.ticket_sales_date) {
+    suggestions.push({
+      field: 'ticket_sales_date',
+      label: 'Tickets On Sale',
+      currentValue: tournament.ticket_sales_date ?? 'Not set',
+      newValue: ticketSalesDate,
+      dbField: 'ticket_sales_date',
     });
   }
 
@@ -320,8 +385,9 @@ export default function EmailDetailScreen() {
     return <Text className="text-sm text-bark dark:text-cream">{str}</Text>;
   };
 
-  const bodyIsLong = email.body_text.length > 500;
-  const displayBody = showFullBody ? email.body_text : email.body_text.slice(0, 500);
+  const cleanBody = cleanEmailBody(email.body_text);
+  const bodyIsLong = cleanBody.length > 500;
+  const displayBody = showFullBody ? cleanBody : cleanBody.slice(0, 500);
   const confidenceLabel = tournamentMatch
     ? tournamentMatch.score >= 60 ? 'High confidence' : tournamentMatch.score >= 35 ? 'Likely match' : 'Possible match'
     : '';

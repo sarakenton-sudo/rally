@@ -40,7 +40,9 @@ export interface Tournament {
   aes_feed_data: Record<string, unknown> | null;
   aes_feed_last_updated: string | null;
   aes_feed_available: boolean;
-  sportwrench_url: string | null;
+  schedule_link: string | null;
+  schedule_available_date: string | null;
+  ticket_sales_date: string | null;
   tickets_purchased: boolean;
   streaming_links: StreamingLink[];
   air_not_needed: boolean;
