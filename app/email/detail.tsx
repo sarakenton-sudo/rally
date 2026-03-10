@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, Alert, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -9,6 +9,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { updateTournament as updateTournamentDB } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/providers/AuthProvider';
 import { useIconColors } from '@/lib/colors';
+import type { Tournament } from '@/types/database';
 
 const CLASS_CONFIG: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string }> = {
   stay_and_play: { icon: 'bed', color: '#7c3aed', label: 'Hotel / Stay & Play' },
@@ -64,6 +65,131 @@ function isUrl(value: string): boolean {
   return typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://'));
 }
 
+// Score how well extracted data matches a tournament (0-100)
+function matchScore(tournament: Tournament, extracted: Record<string, unknown>, emailSubject: string, emailBody: string): number {
+  let score = 0;
+  const tName = tournament.name.toLowerCase();
+  const eName = String(extracted.tournament_name ?? '').toLowerCase();
+  const fullText = `${emailSubject} ${emailBody}`.toLowerCase();
+
+  // Name matching — fuzzy
+  if (eName) {
+    // Exact substring match
+    if (tName.includes(eName) || eName.includes(tName)) {
+      score += 50;
+    } else {
+      // Word overlap
+      const tWords = tName.split(/\s+/).filter((w) => w.length > 2);
+      const eWords = eName.split(/\s+/).filter((w) => w.length > 2);
+      const overlap = tWords.filter((w) => eWords.some((ew) => ew.includes(w) || w.includes(ew)));
+      if (overlap.length > 0) {
+        score += Math.min(40, overlap.length * 15);
+      }
+    }
+  }
+
+  // Check if tournament name appears anywhere in email
+  if (!eName) {
+    const tWords = tName.split(/\s+/).filter((w) => w.length > 3);
+    const bodyMatches = tWords.filter((w) => fullText.includes(w));
+    if (bodyMatches.length >= 2) {
+      score += Math.min(35, bodyMatches.length * 12);
+    }
+  }
+
+  // Date matching
+  const eStart = String(extracted.start_date ?? '');
+  const eEnd = String(extracted.end_date ?? '');
+  if (eStart && tournament.start_date === eStart) score += 25;
+  else if (eStart && tournament.start_date?.slice(0, 7) === eStart.slice(0, 7)) score += 10;
+  if (eEnd && tournament.end_date === eEnd) score += 10;
+
+  // City matching
+  const eCity = String(extracted.location_city ?? '').toLowerCase();
+  const tCity = (tournament.location_city ?? '').toLowerCase();
+  if (eCity && tCity && (tCity.includes(eCity) || eCity.includes(tCity))) score += 15;
+
+  return Math.min(100, score);
+}
+
+interface SuggestedUpdate {
+  field: string;
+  label: string;
+  currentValue: string;
+  newValue: string;
+  dbField: string;
+}
+
+function getSuggestedUpdates(tournament: Tournament, extracted: Record<string, unknown>): SuggestedUpdate[] {
+  const suggestions: SuggestedUpdate[] = [];
+
+  // Venue name & address
+  const venueName = String(extracted.venue_name ?? '');
+  const venueAddress = String(extracted.venue_address ?? '');
+  if (venueName || venueAddress) {
+    const currentVenue = tournament.venues?.[0];
+    if (!currentVenue?.label || !currentVenue?.address) {
+      suggestions.push({
+        field: 'venue',
+        label: 'Venue',
+        currentValue: currentVenue?.label ? `${currentVenue.label} — ${currentVenue.address || 'no address'}` : 'Not set',
+        newValue: `${venueName}${venueAddress ? ` — ${venueAddress}` : ''}`,
+        dbField: 'venues',
+      });
+    }
+  }
+
+  // Schedule link
+  const scheduleUrl = String(extracted.schedule_url ?? '');
+  if (scheduleUrl && isUrl(scheduleUrl) && !tournament.sportwrench_url) {
+    suggestions.push({
+      field: 'schedule_url',
+      label: 'Schedule Link',
+      currentValue: tournament.sportwrench_url ?? 'Not set',
+      newValue: scheduleUrl,
+      dbField: 'sportwrench_url',
+    });
+  }
+
+  // Ticket link
+  const ticketUrl = String(extracted.ticket_url ?? '');
+  if (ticketUrl && isUrl(ticketUrl) && !tournament.ticket_link) {
+    suggestions.push({
+      field: 'ticket_link',
+      label: 'Ticket Link',
+      currentValue: tournament.ticket_link ?? 'Not set',
+      newValue: ticketUrl,
+      dbField: 'ticket_link',
+    });
+  }
+
+  // Ticket code
+  const ticketCode = String(extracted.ticket_code ?? '');
+  if (ticketCode) {
+    suggestions.push({
+      field: 'ticket_code',
+      label: 'Ticket Code',
+      currentValue: (tournament as any).ticket_code ?? 'Not set',
+      newValue: ticketCode,
+      dbField: 'ticket_code',
+    });
+  }
+
+  // Location city
+  const locationCity = String(extracted.location_city ?? '');
+  if (locationCity && !tournament.location_city) {
+    suggestions.push({
+      field: 'location_city',
+      label: 'City',
+      currentValue: tournament.location_city || 'Not set',
+      newValue: locationCity,
+      dbField: 'location_city',
+    });
+  }
+
+  return suggestions;
+}
+
 export default function EmailDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const ic = useIconColors();
@@ -71,8 +197,9 @@ export default function EmailDetailScreen() {
   const tournaments = useSeasonStore((s) => s.tournaments);
   const updateTournamentStore = useSeasonStore((s) => s.updateTournament);
   const { user } = useAuth();
-  const [selectedTournamentName, setSelectedTournamentName] = useState('');
   const [showFullBody, setShowFullBody] = useState(false);
+  const [appliedUpdates, setAppliedUpdates] = useState<Set<string>>(new Set());
+  const [overrideMatch, setOverrideMatch] = useState<string>('');
 
   if (!email) {
     return (
@@ -90,35 +217,72 @@ export default function EmailDetailScreen() {
   const extractedData = (email as any).extracted_data as Record<string, unknown> | null;
   const hasExtractedData = extractedData && Object.keys(extractedData).length > 0;
 
+  // AI tournament matching
+  const tournamentMatch = useMemo(() => {
+    if (!hasExtractedData || !tournaments.length) return null;
+
+    const scored = tournaments
+      .map((t) => ({ tournament: t, score: matchScore(t, extractedData!, email.subject, email.body_text) }))
+      .filter((s) => s.score >= 20)
+      .sort((a, b) => b.score - a.score);
+
+    if (scored.length === 0) return null;
+    return scored[0];
+  }, [email, extractedData, tournaments]);
+
+  // Allow user override
+  const activeMatch = overrideMatch
+    ? tournaments.find((t) => t.name === overrideMatch)
+    : tournamentMatch?.tournament;
+
+  const suggestedUpdates = useMemo(() => {
+    if (!activeMatch || !hasExtractedData) return [];
+    return getSuggestedUpdates(activeMatch, extractedData!);
+  }, [activeMatch, extractedData]);
+
+  const handleApplyUpdate = async (update: SuggestedUpdate) => {
+    if (!activeMatch) return;
+
+    let dbUpdates: any = {};
+    if (update.dbField === 'venues') {
+      const venueName = String(extractedData?.venue_name ?? '');
+      const venueAddress = String(extractedData?.venue_address ?? '');
+      dbUpdates.venues = [{ label: venueName, address: venueAddress, is_confirmed: false }];
+    } else {
+      dbUpdates[update.dbField] = update.newValue;
+    }
+
+    if (isSupabaseConfigured && user) {
+      await updateTournamentDB(activeMatch.id, dbUpdates);
+    }
+    updateTournamentStore(activeMatch.id, dbUpdates);
+    setAppliedUpdates((prev) => new Set([...prev, update.field]));
+  };
+
+  const handleApplyAll = async () => {
+    const pending = suggestedUpdates.filter((u) => !appliedUpdates.has(u.field));
+    for (const update of pending) {
+      await handleApplyUpdate(update);
+    }
+  };
+
   const handleExtractSchedule = async () => {
     if (isSupabaseConfigured && user) {
       try {
         const { data, error } = await supabase.functions.invoke('extract-schedule', {
           body: { text: `Subject: ${email.subject}\n\n${email.body_text}` },
         });
-
         if (error) throw new Error(error.message);
-
-        const tournaments = data?.tournaments;
-        if (!tournaments || tournaments.length === 0) {
-          if (Platform.OS === 'web') {
-            window.alert('Could not extract tournament details from this email.');
-          } else {
-            Alert.alert('No tournaments found', 'Could not extract tournament details from this email.');
-          }
+        const t = data?.tournaments;
+        if (!t || t.length === 0) {
+          if (Platform.OS === 'web') window.alert('Could not extract tournament details from this email.');
+          else Alert.alert('No tournaments found', 'Could not extract tournament details from this email.');
           return;
         }
-
-        router.push({
-          pathname: '/import/review',
-          params: { tournaments: JSON.stringify(tournaments) },
-        });
+        router.push({ pathname: '/import/review', params: { tournaments: JSON.stringify(t) } });
       } catch (err: any) {
-        if (Platform.OS === 'web') {
-          window.alert(err.message);
-        } else {
-          Alert.alert('Extraction failed', err.message);
-        }
+        if (Platform.OS === 'web') window.alert(err.message);
+        else Alert.alert('Extraction failed', err.message);
       }
     } else {
       router.push({ pathname: '/import/paste' });
@@ -126,24 +290,16 @@ export default function EmailDetailScreen() {
   };
 
   const handleCreateBooking = () => {
-    router.push({
-      pathname: '/booking/add-hotel',
-      params: { emailSubject: email.subject },
-    });
+    router.push({ pathname: '/booking/add-hotel', params: { emailSubject: email.subject } });
   };
 
   const openUrl = (url: string) => {
-    if (Platform.OS === 'web') {
-      window.open(url, '_blank');
-    } else {
-      Linking.openURL(url);
-    }
+    if (Platform.OS === 'web') window.open(url, '_blank');
+    else Linking.openURL(url);
   };
 
-  // Render an extracted data value
   const renderValue = (key: string, value: unknown) => {
     if (value === null || value === undefined || value === '') return null;
-
     if (Array.isArray(value)) {
       return value.map((v, i) => (
         <Text key={i} className="text-sm text-bark dark:text-cream">
@@ -153,7 +309,6 @@ export default function EmailDetailScreen() {
         </Text>
       ));
     }
-
     const str = String(value);
     if (isUrl(str)) {
       return (
@@ -162,12 +317,17 @@ export default function EmailDetailScreen() {
         </Pressable>
       );
     }
-
     return <Text className="text-sm text-bark dark:text-cream">{str}</Text>;
   };
 
   const bodyIsLong = email.body_text.length > 500;
   const displayBody = showFullBody ? email.body_text : email.body_text.slice(0, 500);
+  const confidenceLabel = tournamentMatch
+    ? tournamentMatch.score >= 60 ? 'High confidence' : tournamentMatch.score >= 35 ? 'Likely match' : 'Possible match'
+    : '';
+  const confidenceColor = tournamentMatch
+    ? tournamentMatch.score >= 60 ? '#16a34a' : tournamentMatch.score >= 35 ? '#d97706' : '#8FA8BF'
+    : '#8FA8BF';
 
   return (
     <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['bottom']}>
@@ -233,16 +393,93 @@ export default function EmailDetailScreen() {
                 </View>
               );
             })}
-            {/* Show ticket_urls separately as tappable links */}
-            {Array.isArray(extractedData!.ticket_urls) && (extractedData!.ticket_urls as string[]).length > 0 && (
-              <View className="mt-1">
-                <Text className="text-xs text-stone mb-1">Ticket Links</Text>
-                {(extractedData!.ticket_urls as string[]).map((url, i) => (
-                  <Pressable key={i} onPress={() => openUrl(url)} className="mb-1">
-                    <Text className="text-sm text-rally-600 underline" numberOfLines={1}>{url}</Text>
-                  </Pressable>
-                ))}
+          </View>
+        )}
+
+        {/* AI Tournament Match */}
+        {hasExtractedData && tournaments.length > 0 && (
+          <View className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 mb-3 border border-purple-200 dark:border-purple-800">
+            <View className="flex-row items-center mb-3">
+              <Ionicons name="link" size={18} color="#7c3aed" />
+              <Text className="text-sm font-semibold text-purple-700 dark:text-purple-300 ml-2">
+                Tournament Match
+              </Text>
+            </View>
+
+            {tournamentMatch && !overrideMatch ? (
+              <View>
+                <View className="flex-row items-center mb-2">
+                  <View className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: confidenceColor }} />
+                  <Text className="text-xs font-semibold" style={{ color: confidenceColor }}>
+                    {confidenceLabel}
+                  </Text>
+                </View>
+                <View className="bg-white/60 dark:bg-bark-light rounded-lg p-3 mb-3">
+                  <Text className="text-sm font-bold text-bark dark:text-cream">
+                    {tournamentMatch.tournament.name}
+                  </Text>
+                  <Text className="text-xs text-stone mt-0.5">
+                    {tournamentMatch.tournament.start_date} — {tournamentMatch.tournament.location_city || 'Location TBD'}
+                  </Text>
+                </View>
               </View>
+            ) : !overrideMatch ? (
+              <Text className="text-xs text-stone mb-2">No automatic match found.</Text>
+            ) : null}
+
+            {/* Override / manual select */}
+            <DropdownField
+              label={tournamentMatch && !overrideMatch ? 'Change match' : 'Select tournament'}
+              value={overrideMatch}
+              options={tournaments.map((t) => t.name)}
+              onChange={setOverrideMatch}
+            />
+
+            {/* Suggested updates */}
+            {activeMatch && suggestedUpdates.length > 0 && (
+              <View className="mt-3">
+                <Text className="text-xs font-semibold text-purple-700 dark:text-purple-300 uppercase tracking-wider mb-2">
+                  Suggested Updates
+                </Text>
+                {suggestedUpdates.map((update) => {
+                  const applied = appliedUpdates.has(update.field);
+                  return (
+                    <View key={update.field} className="bg-white/60 dark:bg-bark-light rounded-lg p-3 mb-2">
+                      <View className="flex-row items-center justify-between mb-1">
+                        <Text className="text-xs font-semibold text-bark dark:text-cream">{update.label}</Text>
+                        {applied ? (
+                          <View className="flex-row items-center">
+                            <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
+                            <Text className="text-xs text-green-600 ml-1 font-semibold">Applied</Text>
+                          </View>
+                        ) : (
+                          <Pressable
+                            onPress={() => handleApplyUpdate(update)}
+                            className="bg-purple-600 px-3 py-1 rounded-lg active:opacity-80"
+                          >
+                            <Text className="text-xs font-semibold text-white">Apply</Text>
+                          </Pressable>
+                        )}
+                      </View>
+                      <Text className="text-xs text-stone line-through">{update.currentValue}</Text>
+                      <Text className="text-sm text-bark dark:text-cream mt-0.5">{update.newValue}</Text>
+                    </View>
+                  );
+                })}
+
+                {suggestedUpdates.filter((u) => !appliedUpdates.has(u.field)).length > 1 && (
+                  <Pressable
+                    onPress={handleApplyAll}
+                    className="bg-purple-600 rounded-lg py-3 items-center mt-1 active:opacity-80"
+                  >
+                    <Text className="text-sm font-semibold text-white">Apply All Updates</Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
+
+            {activeMatch && suggestedUpdates.length === 0 && (
+              <Text className="text-xs text-stone mt-2">No new data to update for this tournament.</Text>
             )}
           </View>
         )}
@@ -262,7 +499,7 @@ export default function EmailDetailScreen() {
           )}
         </View>
 
-        {/* Action buttons based on classification */}
+        {/* Action buttons */}
         <Text className="text-xs font-semibold text-stone uppercase tracking-wider mb-2 ml-1">
           Actions
         </Text>
@@ -278,70 +515,6 @@ export default function EmailDetailScreen() {
             <Text className="text-sm font-semibold text-cream ml-2">Extract Tournaments</Text>
           </Pressable>
         )}
-
-        {email.classification === 'tournament_info' && (() => {
-          const ticketUrls = [
-            ...extractTicketUrls(email.body_text + ' ' + email.subject),
-            ...((extractedData?.ticket_urls as string[]) ?? []),
-            ...(extractedData?.ticket_url ? [String(extractedData.ticket_url)] : []),
-          ].filter((v, i, a) => a.indexOf(v) === i); // dedupe
-
-          if (ticketUrls.length === 0) return null;
-          const tournamentOptions = tournaments.map((t) => t.name);
-          return (
-            <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-3 border border-parchment dark:border-rally-900">
-              <View className="flex-row items-center mb-2">
-                <Ionicons name="ticket" size={16} color="#16a34a" />
-                <Text className="text-sm font-semibold text-bark dark:text-cream ml-2">
-                  Ticket Link Found
-                </Text>
-              </View>
-              {ticketUrls.map((url, i) => (
-                <Pressable key={i} onPress={() => openUrl(url)} className="mb-1">
-                  <Text className="text-xs text-rally-600 underline" numberOfLines={1}>{url}</Text>
-                </Pressable>
-              ))}
-              {extractedData?.ticket_code && (
-                <View className="flex-row items-center mt-2 mb-2">
-                  <Text className="text-xs text-stone mr-2">Code:</Text>
-                  <Text className="text-sm font-bold text-bark dark:text-cream" selectable>
-                    {String(extractedData.ticket_code)}
-                  </Text>
-                </View>
-              )}
-              <DropdownField
-                label="Link to Tournament"
-                value={selectedTournamentName}
-                options={tournamentOptions}
-                onChange={setSelectedTournamentName}
-              />
-              {selectedTournamentName ? (
-                <Pressable
-                  className="bg-green-600 rounded-lg py-3 items-center mt-2 active:opacity-80"
-                  onPress={async () => {
-                    const tournament = tournaments.find((t) => t.name === selectedTournamentName);
-                    if (!tournament) return;
-                    const updates: any = { ticket_link: ticketUrls[0] };
-                    if (extractedData?.ticket_code) {
-                      updates.ticket_code = String(extractedData.ticket_code);
-                    }
-                    if (isSupabaseConfigured && user) {
-                      await updateTournamentDB(tournament.id, updates);
-                    }
-                    updateTournamentStore(tournament.id, updates);
-                    if (Platform.OS === 'web') {
-                      window.alert(`Ticket link saved to ${tournament.name}.`);
-                    } else {
-                      Alert.alert('Linked', `Ticket link saved to ${tournament.name}.`);
-                    }
-                  }}
-                >
-                  <Text className="text-sm font-semibold text-white">Link Ticket to Tournament</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          );
-        })()}
 
         {(email.classification === 'stay_and_play' ||
           email.classification === 'travel_confirmation') && (
