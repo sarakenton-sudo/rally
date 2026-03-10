@@ -8,18 +8,21 @@ Classify the email into exactly ONE category:
 - "tournament_info": Tournament registration, bracket info, AES updates, check-in details
 - "other": Anything that doesn't fit the above
 
-Also extract any actionable data:
-- For stay_and_play/travel_confirmation: hotel name, dates, confirmation number, cost
-- For schedule_change/tournament_info: tournament name, dates, location, venue changes
-- For tournament_info: also extract any ticket purchase URLs (URLs containing "ticket", "aes", "gofan", "aesathletics", or similar ticketing platforms)
-- For coach_announcement: key message summary
+Extract ALL pertinent structured data from the email. Be thorough:
+- For stay_and_play/travel_confirmation: hotel_name, check_in_date, check_out_date, confirmation_number, nightly_rate, total_cost, cancellation_deadline, address, phone, booking_url
+- For travel_confirmation (flights): airline, flight_number, departure_date, departure_time, arrival_time, departure_airport, arrival_airport, confirmation_number, booking_url
+- For schedule_change/tournament_info: tournament_name, start_date, end_date, location_city, venue_name, venue_address, pool_info, check_in_time, schedule_url
+- For tournament_info: also extract ticket_code, ticket_url (URLs containing "ticket", "aes", "gofan", "aesathletics", or similar), registration_deadline, entry_fee
+- For coach_announcement: key message summary, any dates/times mentioned, action_items
+
+Include only fields that are actually present in the email. Use ISO date format (YYYY-MM-DD) for dates when possible.
 
 Respond with JSON only:
 {
   "classification": "one_of_the_categories",
   "action": "booking_alert_sent" | "travel_import_queued" | "notification_sent" | "none",
   "summary": "Brief 1-sentence summary of the email",
-  "extracted_data": { ... any structured data extracted, include "ticket_urls": [...] for tournament_info emails ... }
+  "extracted_data": { ... all structured data extracted ... }
 }`;
 
 export interface ClassificationResult {

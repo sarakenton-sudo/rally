@@ -29,6 +29,20 @@ const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? '';
 
+async function triggerGmailSync() {
+  try {
+    await fetch(`${SUPABASE_URL}/functions/v1/gmail-sync`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (err) {
+    console.warn('Initial Gmail sync failed:', err);
+  }
+}
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SEASON_OPTIONS = ['2025-2026', '2026-2027'];
 const TOTAL_STEPS = 6;
@@ -182,7 +196,8 @@ export default function OnboardingScreen() {
         const success = url.searchParams.get('success') === 'true';
         const email = url.searchParams.get('email');
         if (success && email) {
-          setGmailStatus({ text: `Connected: ${email}`, type: 'success' });
+          setGmailStatus({ text: `Connected: ${email}. Syncing emails...`, type: 'success' });
+          triggerGmailSync();
         } else {
           setGmailStatus({ text: url.searchParams.get('error') ?? 'Connection failed.', type: 'error' });
         }

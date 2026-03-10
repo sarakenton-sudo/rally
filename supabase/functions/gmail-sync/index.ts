@@ -228,6 +228,7 @@ async function syncUser(
           raw_storage_url: null,
           source: 'gmail_sync',
           gmail_message_id: msgId,
+          extracted_data: extractedData,
         })
         .select()
         .single();

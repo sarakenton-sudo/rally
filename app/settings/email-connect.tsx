@@ -14,6 +14,21 @@ import { notifySuccess, tapLight } from '@/lib/haptics';
 
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? '';
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+
+async function triggerGmailSync() {
+  try {
+    await fetch(`${SUPABASE_URL}/functions/v1/gmail-sync`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (err) {
+    console.warn('Initial Gmail sync failed:', err);
+  }
+}
 
 export default function EmailConnectScreen() {
   const ic = useIconColors();
@@ -51,7 +66,8 @@ export default function EmailConnectScreen() {
       const error = params.get('error');
       if (success === 'true' && email && teamConfig) {
         setTeamConfig({ ...teamConfig, gmail_connected: true, gmail_email: email });
-        setStatusMsg({ text: `Gmail connected: ${email}`, type: 'success' });
+        setStatusMsg({ text: `Gmail connected: ${email}. Syncing emails...`, type: 'success' });
+        triggerGmailSync();
         // Clean up URL
         window.history.replaceState({}, '', window.location.pathname);
       } else if (success === 'false' && error) {
@@ -101,7 +117,8 @@ export default function EmailConnectScreen() {
         if (success && email && teamConfig) {
           setTeamConfig({ ...teamConfig, gmail_connected: true, gmail_email: email });
           notifySuccess();
-          setStatusMsg({ text: `Gmail connected: ${email}`, type: 'success' });
+          setStatusMsg({ text: `Gmail connected: ${email}. Syncing emails...`, type: 'success' });
+          triggerGmailSync();
         } else {
           setStatusMsg({ text: error ?? 'Unable to connect Gmail. Please try again.', type: 'error' });
         }
@@ -304,6 +321,13 @@ export default function EmailConnectScreen() {
                   </Text>
                 </Pressable>
               </View>
+              <Pressable
+                onPress={() => router.push('/email/inbox')}
+                className="flex-row items-center justify-center py-2.5 mt-1 bg-rally-600 rounded-lg active:opacity-80"
+              >
+                <Ionicons name="mail-unread" size={16} color="#FEFEFE" />
+                <Text className="text-sm font-semibold text-cream ml-2">View Email Inbox</Text>
+              </Pressable>
             </View>
           ) : (
             <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 mb-4 border border-rally-200 dark:border-rally-800">

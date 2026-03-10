@@ -180,6 +180,7 @@ export interface ForwardedEmail {
   raw_storage_url: string | null;
   source: EmailSource;
   gmail_message_id: string | null;
+  extracted_data: Record<string, unknown> | null;
 }
 
 export type HouseholdRole = 'admin' | 'member';

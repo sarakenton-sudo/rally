@@ -125,6 +125,9 @@ export default function StreamingHubScreen() {
             autoCapitalize="none"
             autoCorrect={false}
           />
+          <Text className="text-xs text-stone dark:text-parchment mt-2 ml-1">
+            Must include https:// (e.g. https://youtube.com/@yourchannel)
+          </Text>
 
           <View className="h-8" />
         </ScrollView>

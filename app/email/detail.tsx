@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,11 +19,49 @@ const CLASS_CONFIG: Record<string, { icon: keyof typeof Ionicons.glyphMap; color
   other: { icon: 'mail', color: '#8FA8BF', label: 'Other' },
 };
 
+const DATA_LABELS: Record<string, string> = {
+  hotel_name: 'Hotel',
+  check_in_date: 'Check-in',
+  check_out_date: 'Check-out',
+  confirmation_number: 'Confirmation #',
+  nightly_rate: 'Nightly Rate',
+  total_cost: 'Total Cost',
+  cancellation_deadline: 'Cancel By',
+  address: 'Address',
+  phone: 'Phone',
+  booking_url: 'Booking Link',
+  airline: 'Airline',
+  flight_number: 'Flight #',
+  departure_date: 'Departure',
+  departure_time: 'Departs',
+  arrival_time: 'Arrives',
+  departure_airport: 'From',
+  arrival_airport: 'To',
+  tournament_name: 'Tournament',
+  start_date: 'Start Date',
+  end_date: 'End Date',
+  location_city: 'City',
+  venue_name: 'Venue',
+  venue_address: 'Venue Address',
+  pool_info: 'Pool',
+  check_in_time: 'Check-in Time',
+  schedule_url: 'Schedule Link',
+  ticket_code: 'Ticket Code',
+  ticket_url: 'Ticket Link',
+  registration_deadline: 'Register By',
+  entry_fee: 'Entry Fee',
+  action_items: 'Action Items',
+};
+
 function extractTicketUrls(text: string): string[] {
   const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
   const urls = text.match(urlRegex) ?? [];
   const ticketKeywords = ['ticket', 'aes', 'gofan', 'aesathletics'];
   return urls.filter((url) => ticketKeywords.some((kw) => url.toLowerCase().includes(kw)));
+}
+
+function isUrl(value: string): boolean {
+  return typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://'));
 }
 
 export default function EmailDetailScreen() {
@@ -34,6 +72,7 @@ export default function EmailDetailScreen() {
   const updateTournamentStore = useSeasonStore((s) => s.updateTournament);
   const { user } = useAuth();
   const [selectedTournamentName, setSelectedTournamentName] = useState('');
+  const [showFullBody, setShowFullBody] = useState(false);
 
   if (!email) {
     return (
@@ -48,6 +87,8 @@ export default function EmailDetailScreen() {
 
   const cls = CLASS_CONFIG[email.classification] ?? CLASS_CONFIG.other;
   const receivedDate = new Date(email.received_at);
+  const extractedData = (email as any).extracted_data as Record<string, unknown> | null;
+  const hasExtractedData = extractedData && Object.keys(extractedData).length > 0;
 
   const handleExtractSchedule = async () => {
     if (isSupabaseConfigured && user) {
@@ -60,7 +101,11 @@ export default function EmailDetailScreen() {
 
         const tournaments = data?.tournaments;
         if (!tournaments || tournaments.length === 0) {
-          Alert.alert('No tournaments found', 'Could not extract tournament details from this email.');
+          if (Platform.OS === 'web') {
+            window.alert('Could not extract tournament details from this email.');
+          } else {
+            Alert.alert('No tournaments found', 'Could not extract tournament details from this email.');
+          }
           return;
         }
 
@@ -69,12 +114,14 @@ export default function EmailDetailScreen() {
           params: { tournaments: JSON.stringify(tournaments) },
         });
       } catch (err: any) {
-        Alert.alert('Extraction failed', err.message);
+        if (Platform.OS === 'web') {
+          window.alert(err.message);
+        } else {
+          Alert.alert('Extraction failed', err.message);
+        }
       }
     } else {
-      router.push({
-        pathname: '/import/paste',
-      });
+      router.push({ pathname: '/import/paste' });
     }
   };
 
@@ -84,6 +131,43 @@ export default function EmailDetailScreen() {
       params: { emailSubject: email.subject },
     });
   };
+
+  const openUrl = (url: string) => {
+    if (Platform.OS === 'web') {
+      window.open(url, '_blank');
+    } else {
+      Linking.openURL(url);
+    }
+  };
+
+  // Render an extracted data value
+  const renderValue = (key: string, value: unknown) => {
+    if (value === null || value === undefined || value === '') return null;
+
+    if (Array.isArray(value)) {
+      return value.map((v, i) => (
+        <Text key={i} className="text-sm text-bark dark:text-cream">
+          {typeof v === 'string' && isUrl(v) ? (
+            <Text className="text-rally-600 underline" onPress={() => openUrl(v)}>{v}</Text>
+          ) : String(v)}
+        </Text>
+      ));
+    }
+
+    const str = String(value);
+    if (isUrl(str)) {
+      return (
+        <Pressable onPress={() => openUrl(str)}>
+          <Text className="text-sm text-rally-600 underline" numberOfLines={2}>{str}</Text>
+        </Pressable>
+      );
+    }
+
+    return <Text className="text-sm text-bark dark:text-cream">{str}</Text>;
+  };
+
+  const bodyIsLong = email.body_text.length > 500;
+  const displayBody = showFullBody ? email.body_text : email.body_text.slice(0, 500);
 
   return (
     <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['bottom']}>
@@ -130,12 +214,52 @@ export default function EmailDetailScreen() {
           </View>
         </View>
 
+        {/* Extracted data card */}
+        {hasExtractedData && (
+          <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 mb-3 border border-rally-200 dark:border-rally-800">
+            <View className="flex-row items-center mb-3">
+              <Ionicons name="sparkles" size={18} color="#3B82B0" />
+              <Text className="text-sm font-semibold text-rally-700 dark:text-rally-300 ml-2">
+                AI Extracted Details
+              </Text>
+            </View>
+            {Object.entries(extractedData!).map(([key, value]) => {
+              if (value === null || value === undefined || value === '' || key === 'ticket_urls') return null;
+              const label = DATA_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+              return (
+                <View key={key} className="flex-row mb-2">
+                  <Text className="text-xs text-stone w-28 pt-0.5">{label}</Text>
+                  <View className="flex-1">{renderValue(key, value)}</View>
+                </View>
+              );
+            })}
+            {/* Show ticket_urls separately as tappable links */}
+            {Array.isArray(extractedData!.ticket_urls) && (extractedData!.ticket_urls as string[]).length > 0 && (
+              <View className="mt-1">
+                <Text className="text-xs text-stone mb-1">Ticket Links</Text>
+                {(extractedData!.ticket_urls as string[]).map((url, i) => (
+                  <Pressable key={i} onPress={() => openUrl(url)} className="mb-1">
+                    <Text className="text-sm text-rally-600 underline" numberOfLines={1}>{url}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Email body */}
         <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-4 border border-parchment dark:border-rally-900">
-          <Text className="text-xs text-stone uppercase tracking-wider mb-2">Body</Text>
-          <Text className="text-sm text-bark dark:text-parchment leading-5">
-            {email.body_text}
+          <Text className="text-xs text-stone uppercase tracking-wider mb-2">Email Body</Text>
+          <Text className="text-sm text-bark dark:text-parchment leading-5" selectable>
+            {displayBody}{bodyIsLong && !showFullBody ? '...' : ''}
           </Text>
+          {bodyIsLong && (
+            <Pressable onPress={() => setShowFullBody(!showFullBody)} className="mt-3 active:opacity-70">
+              <Text className="text-sm font-semibold text-rally-600">
+                {showFullBody ? 'Show less' : 'Show full email'}
+              </Text>
+            </Pressable>
+          )}
         </View>
 
         {/* Action buttons based on classification */}
@@ -156,7 +280,12 @@ export default function EmailDetailScreen() {
         )}
 
         {email.classification === 'tournament_info' && (() => {
-          const ticketUrls = extractTicketUrls(email.body_text + ' ' + email.subject);
+          const ticketUrls = [
+            ...extractTicketUrls(email.body_text + ' ' + email.subject),
+            ...((extractedData?.ticket_urls as string[]) ?? []),
+            ...(extractedData?.ticket_url ? [String(extractedData.ticket_url)] : []),
+          ].filter((v, i, a) => a.indexOf(v) === i); // dedupe
+
           if (ticketUrls.length === 0) return null;
           const tournamentOptions = tournaments.map((t) => t.name);
           return (
@@ -167,7 +296,19 @@ export default function EmailDetailScreen() {
                   Ticket Link Found
                 </Text>
               </View>
-              <Text className="text-xs text-stone mb-3" numberOfLines={1}>{ticketUrls[0]}</Text>
+              {ticketUrls.map((url, i) => (
+                <Pressable key={i} onPress={() => openUrl(url)} className="mb-1">
+                  <Text className="text-xs text-rally-600 underline" numberOfLines={1}>{url}</Text>
+                </Pressable>
+              ))}
+              {extractedData?.ticket_code && (
+                <View className="flex-row items-center mt-2 mb-2">
+                  <Text className="text-xs text-stone mr-2">Code:</Text>
+                  <Text className="text-sm font-bold text-bark dark:text-cream" selectable>
+                    {String(extractedData.ticket_code)}
+                  </Text>
+                </View>
+              )}
               <DropdownField
                 label="Link to Tournament"
                 value={selectedTournamentName}
@@ -180,11 +321,19 @@ export default function EmailDetailScreen() {
                   onPress={async () => {
                     const tournament = tournaments.find((t) => t.name === selectedTournamentName);
                     if (!tournament) return;
-                    if (isSupabaseConfigured && user) {
-                      await updateTournamentDB(tournament.id, { ticket_link: ticketUrls[0] });
+                    const updates: any = { ticket_link: ticketUrls[0] };
+                    if (extractedData?.ticket_code) {
+                      updates.ticket_code = String(extractedData.ticket_code);
                     }
-                    updateTournamentStore(tournament.id, { ticket_link: ticketUrls[0] });
-                    Alert.alert('Linked', `Ticket link saved to ${tournament.name}.`);
+                    if (isSupabaseConfigured && user) {
+                      await updateTournamentDB(tournament.id, updates);
+                    }
+                    updateTournamentStore(tournament.id, updates);
+                    if (Platform.OS === 'web') {
+                      window.alert(`Ticket link saved to ${tournament.name}.`);
+                    } else {
+                      Alert.alert('Linked', `Ticket link saved to ${tournament.name}.`);
+                    }
                   }}
                 >
                   <Text className="text-sm font-semibold text-white">Link Ticket to Tournament</Text>
