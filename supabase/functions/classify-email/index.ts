@@ -15,6 +15,11 @@ serve(async (req: Request) => {
   }
 
   try {
+    if (!CLAUDE_API_KEY) {
+      console.error('CLAUDE_API_KEY not set');
+      return jsonResponse({ error: 'API key not configured' }, 500);
+    }
+
     const { from, subject, body, schedule_url } = await req.json();
 
     if (!from && !subject && !body) {

@@ -380,11 +380,12 @@ export default function EmailDetailScreen() {
     setIsReExtracting(true);
     try {
       // Call classify-email edge function to re-process with updated AI
+      // Truncate body to avoid request size limits
       const { data, error } = await supabase.functions.invoke('classify-email', {
         body: {
           from: email.from_address,
           subject: email.subject,
-          body: email.body_text,
+          body: email.body_text.slice(0, 10000),
         },
       });
       if (error) throw new Error(error.message);
