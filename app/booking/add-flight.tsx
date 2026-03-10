@@ -24,6 +24,7 @@ export default function AddFlightBookingScreen() {
     airline?: string; confirmationCode?: string;
     departureDate?: string; returnDate?: string;
     travelerName?: string; cost?: string;
+    ticketNumber?: string;
   }>();
   const editId = params.editId;
   const existing = useSeasonStore((s) => s.flightBookings.find((f) => f.id === editId));
@@ -38,6 +39,7 @@ export default function AddFlightBookingScreen() {
     existing ? new Date(existing.return_date + 'T12:00:00') :
     params.returnDate ? new Date(params.returnDate + 'T12:00:00') : null
   );
+  const [ticketNumber, setTicketNumber] = useState(existing?.ticket_number ?? params.ticketNumber ?? '');
   const [bookedBy, setBookedBy] = useState(existing?.booked_by ?? '');
   const [cost, setCost] = useState(
     existing?.cost != null ? String(existing.cost) : params.cost ?? ''
@@ -122,6 +124,7 @@ export default function AddFlightBookingScreen() {
       tournament_id: selectedTournamentId,
       airline,
       confirmation_code: confirmationCode.trim().toUpperCase(),
+      ticket_number: ticketNumber.trim() || null,
       departure_date: departureDate.toISOString().split('T')[0],
       return_date: returnDate.toISOString().split('T')[0],
       booked_by: bookedBy.trim(),
@@ -217,6 +220,7 @@ export default function AddFlightBookingScreen() {
           <DropdownField label="Tournament" value={selectedTournamentName} options={tournamentOptions} onChange={handleTournamentChange} />
           <DropdownField label="Airline" value={airline} options={AIRLINES} onChange={setAirline} />
           <FormField label="Confirmation Code" value={confirmationCode} onChangeText={setConfirmationCode} placeholder="e.g. ABC123" autoCapitalize="characters" />
+          <FormField label="Ticket Number" value={ticketNumber} onChangeText={setTicketNumber} placeholder="e.g. 00623456789" />
 
           <View className="flex-row gap-3">
             <View className="flex-1">

@@ -134,13 +134,13 @@ async function syncUser(
   // Tournament/event keywords — catch emails from any organizer (not just known domains)
   const tournamentKeywords = '"tournament" OR "pool play" OR "bracket" OR "court assignment" OR "wave" OR "stay and play" OR "stay-and-play" OR "team check-in"';
 
-  // Travel brand names + booking keywords — catches subdomains like t.delta.com, e.marriott.com etc.
-  const travelBrands = 'delta OR southwest OR united OR american OR jetblue OR spirit OR frontier OR alaska OR allegiant OR marriott OR hilton OR hyatt OR ihg OR wyndham OR "best western" OR radisson OR "choice hotels" OR "four seasons" OR omni OR drury OR "la quinta" OR expedia OR "hotels.com" OR priceline OR kayak OR airbnb OR vrbo OR hertz OR enterprise OR avis';
-  const bookingKeywords = 'confirmation OR reservation OR receipt OR itinerary OR cancellation OR "check-in" OR "e-ticket" OR booking';
+  // Booking keywords — broad enough to catch all travel confirmations
+  // AI classification + tournament date filter handle relevance
+  const bookingKeywords = 'subject:confirmation OR subject:reservation OR subject:receipt OR subject:itinerary OR subject:booking OR subject:"e-ticket" OR subject:"check-in" OR subject:"flight" OR subject:"your trip" OR subject:"your stay"';
 
   let query = `after:${afterEpoch} ${excludeMarketing} (`;
-  // Travel brand + booking keyword combo — catches any sender domain
-  query += `(${travelBrands}) (${bookingKeywords})`;
+  // Travel/booking emails by subject keywords
+  query += `(${bookingKeywords})`;
   // Tournament/event emails from anyone
   query += ` OR (${tournamentKeywords})`;
 
@@ -587,21 +587,35 @@ function findPart(parts: GmailPart[] | undefined, mimeType: string): GmailPart |
 }
 
 function extractBody(msg: GmailMessage): string {
-  // Recursively search for plain text body
+  // Prefer HTML for AI classification — Claude reads HTML tables well and flight
+  // receipts have critical data (dates, times, airports) only in HTML tables
+  const htmlPart = findPart(msg.payload.parts, 'text/html');
+  if (htmlPart?.body?.data) {
+    const rawHtml = base64UrlDecode(htmlPart.body.data);
+    // Light cleanup: remove scripts/styles but keep structure for Claude
+    return rawHtml
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<!--[\s\S]*?-->/g, '');
+  }
+
+  // Fall back to plain text
   const textPart = findPart(msg.payload.parts, 'text/plain');
   if (textPart?.body?.data) {
     return base64UrlDecode(textPart.body.data);
   }
 
-  // Fall back to HTML part (also recursive)
-  const htmlPart = findPart(msg.payload.parts, 'text/html');
-  if (htmlPart?.body?.data) {
-    return stripHtml(base64UrlDecode(htmlPart.body.data));
-  }
-
   // Single-part message
   if (msg.payload.body?.data) {
-    return base64UrlDecode(msg.payload.body.data);
+    const raw = base64UrlDecode(msg.payload.body.data);
+    // Check if it's HTML
+    if (/<[a-z][\s\S]*>/i.test(raw)) {
+      return raw
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<!--[\s\S]*?-->/g, '');
+    }
+    return raw;
   }
 
   // Last resort: use snippet

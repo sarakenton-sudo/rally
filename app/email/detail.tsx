@@ -33,6 +33,7 @@ const DATA_LABELS: Record<string, string> = {
   booking_url: 'Booking Link',
   airline: 'Airline',
   flight_number: 'Flight #',
+  ticket_number: 'Ticket #',
   departure_date: 'Departure',
   departure_time: 'Departs',
   arrival_time: 'Arrives',
@@ -465,6 +466,10 @@ export default function EmailDetailScreen() {
       // Cost
       const cost = d.total_cost ?? d.cost ?? d.total ?? d.amount ?? '';
       if (cost) p.cost = String(cost);
+
+      // Ticket number
+      const ticket = d.ticket_number ?? d.ticket_no ?? '';
+      if (ticket) p.ticketNumber = String(ticket);
     }
     router.push({ pathname: '/booking/add-flight', params: p });
   };

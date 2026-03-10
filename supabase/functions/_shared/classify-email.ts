@@ -22,7 +22,8 @@ IMPORTANT — Schedule and ticket timing:
 - If the email mentions WHEN schedules will be posted (e.g., "Schedule will be posted Wednesday prior to the event", "Pools released the Monday before"), extract as "schedule_available_description" (the raw text) AND compute "schedule_available_date" as an ISO date (YYYY-MM-DD) by calculating from the tournament start_date. For example, if start_date is 2026-03-14 (Saturday) and schedule posts "Wednesday prior", that's 2026-03-11.
 - If the email mentions WHEN ticket sales start (e.g., "Tickets on sale March 1", "Spectator tickets available two weeks before"), extract as "ticket_sales_description" (raw text) AND compute "ticket_sales_date" as ISO date (YYYY-MM-DD).
 
-Include only fields that are actually present in the email. Use ISO date format (YYYY-MM-DD) for dates when possible.
+The email body may be HTML — parse data from HTML tables, spans, and divs. Flight receipts often have dates, times, and airports in HTML table cells.
+Include only fields that are actually present in the email. Use ISO date format (YYYY-MM-DD) for dates when possible. Use HH:MM (24-hour) for times.
 
 Respond with JSON only:
 {

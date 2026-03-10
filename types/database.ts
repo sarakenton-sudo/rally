@@ -75,6 +75,7 @@ export interface FlightBooking {
   tournament_id: string;
   airline: string;
   confirmation_code: string;
+  ticket_number: string | null;
   departure_date: string;
   return_date: string;
   booked_by: string;
