@@ -201,28 +201,39 @@ export default function TournamentDetailScreen() {
           )}
 
           {/* SCHEDULE */}
-          <SectionHeader icon="list" title={tournament.aes_tournament_id ? 'Schedule (AES)' : 'Schedule'} iconColor={ic.muted} />
+          <SectionHeader icon="list" title="Schedule" iconColor={ic.muted} />
           <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900">
-            {tournament.aes_tournament_id ? (
-              tournament.aes_feed_available && tournament.aes_feed_data ? (
-                <Text className="text-sm text-stone dark:text-parchment">
-                  Pool and bracket data loaded from AES
-                </Text>
-              ) : (
-                <>
-                  <Text className="text-sm text-stone">Schedule data will appear once available from AES.</Text>
-                  <Pressable
-                    className="mt-2"
-                    onPress={() => Linking.openURL(`https://www.aesathletics.com/events/${tournament.aes_tournament_id}`)}
-                  >
-                    <Text className="text-sm text-rally-600 font-semibold">View on AES →</Text>
-                  </Pressable>
-                </>
-              )
+            {/* Schedule link — primary action */}
+            {tournament.schedule_link ? (
+              <Pressable
+                className="flex-row items-center active:opacity-80"
+                onPress={() => Linking.openURL(tournament.schedule_link!)}
+              >
+                <Ionicons name="open-outline" size={18} color="#3B82B0" />
+                <Text className="text-sm text-rally-600 font-semibold ml-2 flex-1" numberOfLines={1}>View Schedule</Text>
+                <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
+              </Pressable>
             ) : (
-              <Text className="text-sm text-stone">
-                No AES Tournament ID set. Add one to auto-import pool assignments and court numbers.
-              </Text>
+              <Text className="text-sm text-stone">No schedule link set yet.</Text>
+            )}
+
+            {/* AES feed info */}
+            {tournament.aes_tournament_id && (
+              <View className="mt-3 pt-3 border-t border-parchment dark:border-rally-900">
+                {tournament.aes_feed_available && tournament.aes_feed_data ? (
+                  <Text className="text-sm text-stone dark:text-parchment">
+                    Pool and bracket data loaded from AES
+                  </Text>
+                ) : (
+                  <Text className="text-sm text-stone">AES data will appear once available.</Text>
+                )}
+                <Pressable
+                  className="mt-1"
+                  onPress={() => Linking.openURL(`https://www.aesathletics.com/events/${tournament.aes_tournament_id}`)}
+                >
+                  <Text className="text-sm text-rally-600 font-semibold">View on AES →</Text>
+                </Pressable>
+              </View>
             )}
 
             {/* Schedule available date */}
@@ -578,20 +589,6 @@ export default function TournamentDetailScreen() {
             </>
           )}
 
-          {/* SCHEDULE LINK */}
-          {tournament.schedule_link && (
-            <>
-              <SectionHeader icon="globe" title="Schedule Link" iconColor={ic.muted} />
-              <Pressable
-                className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
-                onPress={() => Linking.openURL(tournament.schedule_link!)}
-              >
-                <Ionicons name="open-outline" size={18} color="#3B82B0" />
-                <Text className="text-sm text-rally-600 font-semibold ml-2 flex-1" numberOfLines={1}>View Schedule</Text>
-                <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
-              </Pressable>
-            </>
-          )}
 
           {/* DELETE TOURNAMENT */}
           <Pressable
