@@ -31,14 +31,20 @@ export default function AddFlightBookingScreen() {
 
   const [airline, setAirline] = useState(existing?.airline ?? params.airline ?? '');
   const [confirmationCode, setConfirmationCode] = useState(existing?.confirmation_code ?? params.confirmationCode ?? '');
-  const [departureDate, setDepartureDate] = useState<Date | null>(
-    existing ? new Date(existing.departure_date + 'T12:00:00') :
-    params.departureDate ? new Date(params.departureDate + 'T12:00:00') : null
-  );
-  const [returnDate, setReturnDate] = useState<Date | null>(
-    existing ? new Date(existing.return_date + 'T12:00:00') :
-    params.returnDate ? new Date(params.returnDate + 'T12:00:00') : null
-  );
+  const [departureDate, setDepartureDate] = useState<Date | null>(() => {
+    if (existing?.departure_date) return new Date(existing.departure_date + 'T12:00:00');
+    if (params.departureDate && /^\d{4}-\d{2}-\d{2}$/.test(params.departureDate)) {
+      return new Date(params.departureDate + 'T12:00:00');
+    }
+    return null;
+  });
+  const [returnDate, setReturnDate] = useState<Date | null>(() => {
+    if (existing?.return_date) return new Date(existing.return_date + 'T12:00:00');
+    if (params.returnDate && /^\d{4}-\d{2}-\d{2}$/.test(params.returnDate)) {
+      return new Date(params.returnDate + 'T12:00:00');
+    }
+    return null;
+  });
   const [ticketNumber, setTicketNumber] = useState(existing?.ticket_number ?? params.ticketNumber ?? '');
   const [bookedBy, setBookedBy] = useState(existing?.booked_by ?? '');
   const [cost, setCost] = useState(
