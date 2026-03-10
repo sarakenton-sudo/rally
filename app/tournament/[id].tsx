@@ -168,98 +168,137 @@ export default function TournamentDetailScreen() {
 
         <View className="px-4">
           {/* VENUE */}
-          <SectionHeader icon="location" title="Venue" iconColor={ic.muted} />
-          {tournament.venues.map((venue, i) => (
-            <View key={i} className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900">
-              <View className="flex-row items-start justify-between">
-                <View className="flex-1 mr-3">
-                  <View className="flex-row items-center">
-                    <Text className="text-base font-semibold text-bark dark:text-cream">
-                      {venue.label || tournament.location_city}
-                    </Text>
-                    <View className={`px-2 py-0.5 rounded-full ml-2 ${venue.is_confirmed ? 'bg-green-100' : 'bg-cream'}`}>
-                      <Text className={`text-xs font-medium ${venue.is_confirmed ? 'text-green-700' : 'text-stone'}`}>
-                        {venue.is_confirmed ? 'Confirmed' : 'TBD'}
+          {(() => {
+            const hasVenue = tournament.venues.length > 0 && (tournament.venues[0]?.label || tournament.venues[0]?.address);
+            return (
+              <>
+                <SectionHeader icon="location" title="Venue" iconColor={hasVenue ? '#6A9E8A' : ic.muted} />
+                {hasVenue ? (
+                  <>
+                    {tournament.venues.map((venue, i) => (
+                      <View key={i} className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900 overflow-hidden">
+                        <View className="absolute top-0 left-0 w-1 h-full bg-sage" />
+                        <View className="flex-row items-start justify-between">
+                          <View className="flex-1 mr-3">
+                            <View className="flex-row items-center">
+                              <Text className="text-base font-semibold text-bark dark:text-cream">
+                                {venue.label || tournament.location_city}
+                              </Text>
+                              <View className={`px-2 py-0.5 rounded-full ml-2 ${venue.is_confirmed ? 'bg-green-100' : 'bg-cream'}`}>
+                                <Text className={`text-xs font-medium ${venue.is_confirmed ? 'text-green-700' : 'text-stone'}`}>
+                                  {venue.is_confirmed ? 'Confirmed' : 'TBD'}
+                                </Text>
+                              </View>
+                            </View>
+                            <Text className="text-sm text-stone dark:text-parchment mt-1">{venue.address}</Text>
+                          </View>
+                          <Pressable
+                            className="bg-rally-50 dark:bg-rally-900/30 px-3 py-2 rounded-lg active:opacity-70"
+                            onPress={() => openDirections(venue.address)}
+                          >
+                            <Ionicons name="navigate" size={18} color="#3B82B0" />
+                          </Pressable>
+                        </View>
+                      </View>
+                    ))}
+                    {tournament.venues.length > 1 && (
+                      <Text className="text-xs text-stone mb-2 ml-1">
+                        Multiple possible venues — will be confirmed closer to event
                       </Text>
-                    </View>
+                    )}
+                  </>
+                ) : (
+                  <View className="bg-cream dark:bg-bark-light/50 rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900">
+                    <Text className="text-sm text-stone text-center">
+                      No venue set yet. Will appear when extracted from emails.
+                    </Text>
                   </View>
-                  <Text className="text-sm text-stone dark:text-parchment mt-1">{venue.address}</Text>
-                </View>
-                <Pressable
-                  className="bg-rally-50 dark:bg-rally-900/30 px-3 py-2 rounded-lg active:opacity-70"
-                  onPress={() => openDirections(venue.address)}
-                >
-                  <Ionicons name="navigate" size={18} color="#3B82B0" />
-                </Pressable>
-              </View>
-            </View>
-          ))}
-          {tournament.venues.length > 1 && (
-            <Text className="text-xs text-stone mb-2 ml-1">
-              Multiple possible venues — will be confirmed closer to event
-            </Text>
-          )}
+                )}
+              </>
+            );
+          })()}
 
           {/* SCHEDULE */}
-          <SectionHeader icon="list" title="Schedule" iconColor={ic.muted} />
-          <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900">
-            {/* Schedule link — primary action */}
-            {tournament.schedule_link ? (
-              <Pressable
-                className="flex-row items-center active:opacity-80"
-                onPress={() => Linking.openURL(tournament.schedule_link!)}
-              >
-                <Ionicons name="open-outline" size={18} color="#3B82B0" />
-                <Text className="text-sm text-rally-600 font-semibold ml-2 flex-1" numberOfLines={1}>View Schedule</Text>
-                <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
-              </Pressable>
-            ) : (
-              <Text className="text-sm text-stone">No schedule link set yet.</Text>
-            )}
+          {(() => {
+            const hasScheduleData = !!(tournament.schedule_link || tournament.aes_tournament_id || tournament.schedule_available_date || tournament.ticket_sales_date);
+            return (
+              <>
+                <SectionHeader icon="list" title="Schedule" iconColor={hasScheduleData ? '#3B82B0' : ic.muted} />
+                <View className={`rounded-xl p-4 border overflow-hidden ${
+                  hasScheduleData
+                    ? 'bg-warm-white dark:bg-bark-light border-parchment dark:border-rally-900'
+                    : 'bg-cream dark:bg-bark-light/50 border-dashed border-parchment dark:border-rally-900'
+                }`}>
+                  {/* Accent bar when alive */}
+                  {hasScheduleData && (
+                    <View className="absolute top-0 left-0 w-1 h-full bg-rally-500" />
+                  )}
 
-            {/* AES feed info */}
-            {tournament.aes_tournament_id && (
-              <View className="mt-3 pt-3 border-t border-parchment dark:border-rally-900">
-                {tournament.aes_feed_available && tournament.aes_feed_data ? (
-                  <Text className="text-sm text-stone dark:text-parchment">
-                    Pool and bracket data loaded from AES
-                  </Text>
-                ) : (
-                  <Text className="text-sm text-stone">AES data will appear once available.</Text>
-                )}
-                <Pressable
-                  className="mt-1"
-                  onPress={() => Linking.openURL(`https://www.aesathletics.com/events/${tournament.aes_tournament_id}`)}
-                >
-                  <Text className="text-sm text-rally-600 font-semibold">View on AES →</Text>
-                </Pressable>
-              </View>
-            )}
+                  {/* Schedule link */}
+                  {tournament.schedule_link && (
+                    <Pressable
+                      className="flex-row items-center active:opacity-80 mb-1"
+                      onPress={() => Linking.openURL(tournament.schedule_link!)}
+                    >
+                      <Ionicons name="open-outline" size={18} color="#3B82B0" />
+                      <Text className="text-sm text-rally-600 font-semibold ml-2 flex-1" numberOfLines={1}>View Schedule</Text>
+                      <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
+                    </Pressable>
+                  )}
 
-            {/* Schedule available date */}
-            {tournament.schedule_available_date && (
-              <View className="flex-row items-center mt-3 pt-3 border-t border-parchment dark:border-rally-900">
-                <Ionicons name="calendar-outline" size={14} color={daysUntil(tournament.schedule_available_date) <= 0 ? '#16a34a' : '#d97706'} />
-                <Text className={`text-sm ml-2 font-medium ${daysUntil(tournament.schedule_available_date) <= 0 ? 'text-green-700' : 'text-amber-600'}`}>
-                  {daysUntil(tournament.schedule_available_date) <= 0
-                    ? 'Schedule should be posted!'
-                    : `Schedule posts ${new Date(tournament.schedule_available_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`}
-                </Text>
-              </View>
-            )}
+                  {/* AES feed info */}
+                  {tournament.aes_tournament_id && (
+                    <View className={tournament.schedule_link ? 'mt-3 pt-3 border-t border-parchment dark:border-rally-900' : ''}>
+                      {tournament.aes_feed_available && tournament.aes_feed_data ? (
+                        <Text className="text-sm text-stone dark:text-parchment">
+                          Pool and bracket data loaded from AES
+                        </Text>
+                      ) : (
+                        <Text className="text-sm text-stone">AES data will appear once available.</Text>
+                      )}
+                      <Pressable
+                        className="mt-1"
+                        onPress={() => Linking.openURL(`https://www.aesathletics.com/events/${tournament.aes_tournament_id}`)}
+                      >
+                        <Text className="text-sm text-rally-600 font-semibold">View on AES →</Text>
+                      </Pressable>
+                    </View>
+                  )}
 
-            {/* Ticket sales date */}
-            {tournament.ticket_sales_date && (
-              <View className="flex-row items-center mt-3 pt-3 border-t border-parchment dark:border-rally-900">
-                <Ionicons name="ticket-outline" size={14} color={daysUntil(tournament.ticket_sales_date) <= 0 ? '#16a34a' : '#3B82B0'} />
-                <Text className={`text-sm ml-2 font-medium ${daysUntil(tournament.ticket_sales_date) <= 0 ? 'text-green-700' : 'text-rally-600'}`}>
-                  {daysUntil(tournament.ticket_sales_date) <= 0
-                    ? 'Tickets should be on sale!'
-                    : `Tickets on sale ${new Date(tournament.ticket_sales_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`}
-                </Text>
-              </View>
-            )}
-          </View>
+                  {/* Schedule available date */}
+                  {tournament.schedule_available_date && (
+                    <View className="flex-row items-center mt-3 pt-3 border-t border-parchment dark:border-rally-900">
+                      <Ionicons name="calendar-outline" size={14} color={daysUntil(tournament.schedule_available_date) <= 0 ? '#16a34a' : '#d97706'} />
+                      <Text className={`text-sm ml-2 font-medium ${daysUntil(tournament.schedule_available_date) <= 0 ? 'text-green-700' : 'text-amber-600'}`}>
+                        {daysUntil(tournament.schedule_available_date) <= 0
+                          ? 'Schedule should be posted!'
+                          : `Schedule posts ${new Date(tournament.schedule_available_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Ticket sales date */}
+                  {tournament.ticket_sales_date && (
+                    <View className="flex-row items-center mt-3 pt-3 border-t border-parchment dark:border-rally-900">
+                      <Ionicons name="ticket-outline" size={14} color={daysUntil(tournament.ticket_sales_date) <= 0 ? '#16a34a' : '#3B82B0'} />
+                      <Text className={`text-sm ml-2 font-medium ${daysUntil(tournament.ticket_sales_date) <= 0 ? 'text-green-700' : 'text-rally-600'}`}>
+                        {daysUntil(tournament.ticket_sales_date) <= 0
+                          ? 'Tickets should be on sale!'
+                          : `Tickets on sale ${new Date(tournament.ticket_sales_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Dormant state */}
+                  {!hasScheduleData && (
+                    <Text className="text-sm text-stone text-center">
+                      No schedule info yet. Link or dates will appear when extracted from emails.
+                    </Text>
+                  )}
+                </View>
+              </>
+            );
+          })()}
 
           {/* TICKETS */}
           <SectionHeader icon="ticket" title="Tickets" iconColor={ic.muted} />
