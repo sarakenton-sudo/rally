@@ -101,29 +101,23 @@ export default function AddFlightBookingScreen() {
     setTravelers((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const showAlert = (title: string, msg: string, onOk?: () => void) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}: ${msg}`);
+      onOk?.();
+    } else {
+      Alert.alert(title, msg, onOk ? [{ text: 'OK', onPress: onOk }] : undefined);
+    }
+  };
+
   const handleSave = async () => {
-    if (!airline) {
-      Alert.alert('Missing field', 'Please select an airline.');
-      return;
-    }
-    if (!confirmationCode.trim()) {
-      Alert.alert('Missing field', 'Please enter a confirmation code.');
-      return;
-    }
-    if (!departureDate || !returnDate) {
-      Alert.alert('Missing field', 'Please set departure and return dates.');
-      return;
-    }
-    if (!selectedTournamentId) {
-      Alert.alert('Missing field', 'Please select a tournament.');
-      return;
-    }
+    if (!airline) { showAlert('Missing field', 'Please select an airline.'); return; }
+    if (!confirmationCode.trim()) { showAlert('Missing field', 'Please enter a confirmation code.'); return; }
+    if (!departureDate || !returnDate) { showAlert('Missing field', 'Please set departure and return dates.'); return; }
+    if (!selectedTournamentId) { showAlert('Missing field', 'Please select a tournament.'); return; }
 
     const travelerNames = travelers.map((t) => t.trim()).filter(Boolean);
-    if (travelerNames.length === 0) {
-      Alert.alert('Missing field', 'Please add at least one traveler name.');
-      return;
-    }
+    if (travelerNames.length === 0) { showAlert('Missing field', 'Please add at least one traveler name.'); return; }
 
     setIsSaving(true);
 
@@ -142,24 +136,16 @@ export default function AddFlightBookingScreen() {
 
     try {
       if (editId && existing) {
-        // Update existing booking
         if (isSupabaseConfigured && user) {
           const { error } = await updateFlightBookingDB(editId, bookingData);
-          if (error) {
-            Alert.alert('Save failed', error.message);
-            return;
-          }
+          if (error) { showAlert('Save failed', error.message); return; }
         }
         updateFlightBookingStore(editId, bookingData);
         notifySuccess();
       } else {
-        // Create new booking
         if (isSupabaseConfigured && user) {
           const { data, error } = await insertFlightBooking(bookingData);
-          if (error) {
-            Alert.alert('Save failed', error.message);
-            return;
-          }
+          if (error) { showAlert('Save failed', error.message); return; }
           if (data) { addFlightBooking(data); notifySuccess(); }
         } else {
           const booking: FlightBooking = {
@@ -171,34 +157,34 @@ export default function AddFlightBookingScreen() {
           notifySuccess();
         }
       }
-      Alert.alert('Saved', 'Flight booking saved.', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      showAlert('Saved', 'Flight booking saved.', () => router.back());
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDelete = () => {
-    Alert.alert(
-      'Delete Flight Booking',
-      `Are you sure you want to delete this ${existing?.airline} flight? This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            if (isSupabaseConfigured && user && editId) {
-              await deleteFlightBookingDB(editId);
-            }
+  const handleDelete = async () => {
+    if (Platform.OS === 'web') {
+      if (!window.confirm(`Delete this ${existing?.airline} flight? This cannot be undone.`)) return;
+    } else {
+      return new Promise<void>((resolve) => {
+        Alert.alert('Delete Flight', `Are you sure you want to delete this ${existing?.airline} flight?`, [
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve() },
+          { text: 'Delete', style: 'destructive', onPress: async () => {
+            if (isSupabaseConfigured && user && editId) await deleteFlightBookingDB(editId);
             removeFlightBooking(editId!);
             notifySuccess();
             router.back();
-          },
-        },
-      ]
-    );
+            resolve();
+          }},
+        ]);
+      });
+    }
+    // Web path
+    if (isSupabaseConfigured && user && editId) await deleteFlightBookingDB(editId);
+    removeFlightBooking(editId!);
+    notifySuccess();
+    router.back();
   };
 
   return (

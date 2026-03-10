@@ -67,24 +67,20 @@ export default function AddHotelBookingScreen() {
 
   const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
+  const showAlert = (title: string, msg: string, onOk?: () => void) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}: ${msg}`);
+      onOk?.();
+    } else {
+      Alert.alert(title, msg, onOk ? [{ text: 'OK', onPress: onOk }] : undefined);
+    }
+  };
+
   const handleSave = async () => {
-    // Validation
-    if (!hotelName.trim()) {
-      Alert.alert('Missing field', 'Please enter a hotel name.');
-      return;
-    }
-    if (!platform) {
-      Alert.alert('Missing field', 'Please select a booking platform.');
-      return;
-    }
-    if (!checkIn || !checkOut) {
-      Alert.alert('Missing field', 'Please set check-in and check-out dates.');
-      return;
-    }
-    if (!selectedTournamentId) {
-      Alert.alert('Missing field', 'Please select a tournament.');
-      return;
-    }
+    if (!hotelName.trim()) { showAlert('Missing field', 'Please enter a hotel name.'); return; }
+    if (!platform) { showAlert('Missing field', 'Please select a booking platform.'); return; }
+    if (!checkIn || !checkOut) { showAlert('Missing field', 'Please set check-in and check-out dates.'); return; }
+    if (!selectedTournamentId) { showAlert('Missing field', 'Please select a tournament.'); return; }
 
     setIsSaving(true);
 
@@ -108,24 +104,16 @@ export default function AddHotelBookingScreen() {
 
     try {
       if (editId && existing) {
-        // Update existing booking
         if (isSupabaseConfigured && user) {
           const { error } = await updateHotelBookingDB(editId, bookingData);
-          if (error) {
-            Alert.alert('Save failed', error.message);
-            return;
-          }
+          if (error) { showAlert('Save failed', error.message); return; }
         }
         updateHotelBookingStore(editId, bookingData);
         notifySuccess();
       } else {
-        // Create new booking
         if (isSupabaseConfigured && user) {
           const { data, error } = await insertHotelBooking(bookingData);
-          if (error) {
-            Alert.alert('Save failed', error.message);
-            return;
-          }
+          if (error) { showAlert('Save failed', error.message); return; }
           if (data) { addHotelBooking(data); notifySuccess(); }
         } else {
           const booking: HotelBooking = {
@@ -137,34 +125,33 @@ export default function AddHotelBookingScreen() {
           notifySuccess();
         }
       }
-      Alert.alert('Saved', 'Hotel booking saved.', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      showAlert('Saved', 'Hotel booking saved.', () => router.back());
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDelete = () => {
-    Alert.alert(
-      'Delete Hotel Booking',
-      `Are you sure you want to delete "${existing?.hotel_name}"? This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            if (isSupabaseConfigured && user && editId) {
-              await deleteHotelBookingDB(editId);
-            }
+  const handleDelete = async () => {
+    if (Platform.OS === 'web') {
+      if (!window.confirm(`Delete "${existing?.hotel_name}"? This cannot be undone.`)) return;
+    } else {
+      return new Promise<void>((resolve) => {
+        Alert.alert('Delete Hotel', `Delete "${existing?.hotel_name}"? This cannot be undone.`, [
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve() },
+          { text: 'Delete', style: 'destructive', onPress: async () => {
+            if (isSupabaseConfigured && user && editId) await deleteHotelBookingDB(editId);
             removeHotelBooking(editId!);
             notifySuccess();
             router.back();
-          },
-        },
-      ]
-    );
+            resolve();
+          }},
+        ]);
+      });
+    }
+    if (isSupabaseConfigured && user && editId) await deleteHotelBookingDB(editId);
+    removeHotelBooking(editId!);
+    notifySuccess();
+    router.back();
   };
 
   return (
