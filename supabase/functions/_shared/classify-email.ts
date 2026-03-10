@@ -12,8 +12,8 @@ Classify the email into exactly ONE category:
 IMPORTANT: Emails from airlines (Delta, Southwest, United, etc.) or hotels (Marriott, Hilton, etc.) that reference a specific trip, flight, stay, confirmation number, or date are NEVER "other" — they are "travel_confirmation" or "stay_and_play".
 
 Extract ALL pertinent structured data from the email. Be thorough:
-- For stay_and_play/travel_confirmation: hotel_name, check_in_date, check_out_date, confirmation_number, nightly_rate, total_cost, cancellation_deadline, address, phone, booking_url
-- For travel_confirmation (flights): airline, flight_number, departure_date, departure_time, arrival_time, departure_airport, arrival_airport, confirmation_number, booking_url
+- For stay_and_play: hotel_name, check_in_date (YYYY-MM-DD), check_out_date (YYYY-MM-DD), confirmation_number, nightly_rate, total_cost, cancellation_deadline (YYYY-MM-DD), address, phone, booking_url, number_of_nights
+- For travel_confirmation (flights): airline, flight_number, departure_date (YYYY-MM-DD), departure_time (HH:MM), arrival_time (HH:MM), departure_airport (3-letter code), arrival_airport (3-letter code), departure_city, arrival_city, confirmation_number, passenger_name, booking_url. For round trips, extract BOTH legs as "outbound" and "return" objects with the same fields. Parse dates from ANY format (e.g., "19MAR26" = 2026-03-19, "Mar 19, 2026" = 2026-03-19).
 - For schedule_change/tournament_info: tournament_name, start_date, end_date, location_city, venue_name, venue_address, pool_info, check_in_time, schedule_url
 - For tournament_info: also extract ticket_code, ticket_url (URLs containing "ticket", "aes", "gofan", "aesathletics", or similar), registration_deadline, entry_fee
 - For coach_announcement: key message summary, any dates/times mentioned, action_items
@@ -67,7 +67,7 @@ export async function classifyEmail(
       system: CLASSIFICATION_PROMPT,
       messages: [{
         role: 'user',
-        content: `From: ${from}\nSubject: ${subject}\n\n${body.slice(0, 4000)}`,
+        content: `From: ${from}\nSubject: ${subject}\n\n${body.slice(0, 8000)}`,
       }],
     }),
   });
