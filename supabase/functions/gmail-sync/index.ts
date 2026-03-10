@@ -29,6 +29,10 @@ const TRAVEL_SENDER_DOMAINS = [
   'enterprise.com', 'hertz.com', 'avis.com', 'budget.com', 'nationalcar.com',
   // Travel aggregators
   'tripit.com', 'google.com', // Google Travel confirmations
+  // Volleyball / tournament platforms
+  'aesathletics.com', 'sportwrench.com', 'leagueapps.com', 'teamsnap.com',
+  'sportsengine.com', 'advanceeventssystems.com', 'usavolleyball.org',
+  'gjnc.org', 'avca.org', 'azregionvolleyball.org', 'arizonaregionvolleyball.org',
 ];
 
 interface GmailToken {
@@ -150,14 +154,18 @@ async function syncUser(
 
   // Travel query: from known domains + booking keywords (broader to catch schedules/confirmations)
   // The real spam filter is Claude AI — emails classified "other" get discarded
-  const bookingKeywords = 'confirmation OR reservation OR itinerary OR booking OR "check-in" OR receipt OR e-ticket OR schedule OR tournament OR cancellation OR "flight" OR "hotel"';
   const excludeMarketing = '-subject:unsubscribe -subject:"limited time" -subject:"% off" -subject:newsletter -subject:"bonus points" -subject:"credit card"';
   const domainClauses = TRAVEL_SENDER_DOMAINS.map((d) => `from:${d}`);
   const travelFromQuery = domainClauses.join(' OR ');
 
-  let query = `in:inbox after:${afterEpoch} ${excludeMarketing} (`;
-  // Travel senders with booking keywords
-  query += `({${travelFromQuery}} (${bookingKeywords}))`;
+  // Tournament/event keywords — catch emails from any organizer (not just known domains)
+  const tournamentKeywords = '"tournament" OR "pool play" OR "bracket" OR "court assignment" OR "wave" OR "stay and play" OR "stay-and-play" OR "team check-in"';
+
+  let query = `after:${afterEpoch} ${excludeMarketing} (`;
+  // All emails from known travel domains — tournament date post-filter + AI handles relevance
+  query += `{${travelFromQuery}}`;
+  // Tournament/event emails from anyone
+  query += ` OR (${tournamentKeywords})`;
 
   // VIP senders — get everything from these (coach messages, etc.)
   const vipSenders = [...userVipSenders, ...userTravelSenders];
@@ -230,6 +238,26 @@ async function syncUser(
         continue;
       }
 
+      // For travel emails, check if dates are near a tournament (±3 days)
+      if (classification === 'stay_and_play' || classification === 'travel_confirmation') {
+        const tournamentDates = await getTournamentDates(supabase, token.user_id);
+        if (tournamentDates.length > 0) {
+          const travelDate = extractedData.check_in_date || extractedData.departure_date || extractedData.start_date;
+          if (travelDate && typeof travelDate === 'string') {
+            const isNearTournament = tournamentDates.some((td) => {
+              const diffStart = Math.abs(new Date(travelDate).getTime() - new Date(td.start).getTime());
+              const diffEnd = Math.abs(new Date(travelDate).getTime() - new Date(td.end).getTime());
+              const threeDays = 3 * 24 * 60 * 60 * 1000;
+              return diffStart <= threeDays || diffEnd <= threeDays;
+            });
+            if (!isNearTournament) {
+              console.log(`Skipping travel email not near any tournament: "${subject}" (travel date: ${travelDate})`);
+              continue;
+            }
+          }
+        }
+      }
+
       // Store in forwarded_emails
       const { data: stored, error: storeError } = await supabase
         .from('forwarded_emails')
@@ -300,6 +328,28 @@ async function syncUser(
     .eq('user_id', token.user_id);
 
   return { user_id: token.user_id, emails_processed: processed };
+}
+
+// Cache tournament dates per user to avoid repeated DB calls
+const tournamentDateCache = new Map<string, { start: string; end: string }[]>();
+
+async function getTournamentDates(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+): Promise<{ start: string; end: string }[]> {
+  if (tournamentDateCache.has(userId)) {
+    return tournamentDateCache.get(userId)!;
+  }
+  const { data } = await supabase
+    .from('tournaments')
+    .select('start_date, end_date')
+    .eq('user_id', userId);
+  const dates = (data ?? []).map((t: { start_date: string; end_date: string }) => ({
+    start: t.start_date,
+    end: t.end_date,
+  }));
+  tournamentDateCache.set(userId, dates);
+  return dates;
 }
 
 async function checkScheduleAndTicketDates(
