@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, Switch, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,15 +40,38 @@ export default function EmailConnectScreen() {
   // ============================================================
   // Gmail OAuth
   // ============================================================
+  const [statusMsg, setStatusMsg] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
+
+  // On web, check URL params for OAuth callback result
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const success = params.get('success');
+      const email = params.get('email');
+      const error = params.get('error');
+      if (success === 'true' && email && teamConfig) {
+        setTeamConfig({ ...teamConfig, gmail_connected: true, gmail_email: email });
+        setStatusMsg({ text: `Gmail connected: ${email}`, type: 'success' });
+        // Clean up URL
+        window.history.replaceState({}, '', window.location.pathname);
+      } else if (success === 'false' && error) {
+        setStatusMsg({ text: `Connection failed: ${error}`, type: 'error' });
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, [teamConfig, setTeamConfig]);
+
   const connectGmail = useCallback(async () => {
     if (!user || !GOOGLE_CLIENT_ID) {
-      Alert.alert('Configuration Error', 'Google Client ID is not configured.');
+      setStatusMsg({ text: 'Google Client ID is not configured.', type: 'error' });
       return;
     }
 
     setIsConnecting(true);
+    setStatusMsg(null);
     try {
       const redirectUri = `${SUPABASE_URL}/functions/v1/gmail-auth-callback`;
+      const isWeb = Platform.OS === 'web';
       const params = new URLSearchParams({
         client_id: GOOGLE_CLIENT_ID,
         redirect_uri: redirectUri,
@@ -55,10 +79,16 @@ export default function EmailConnectScreen() {
         scope: 'https://www.googleapis.com/auth/gmail.readonly',
         access_type: 'offline',
         prompt: 'consent',
-        state: user.id,
+        state: isWeb ? `${user.id}|web` : user.id,
       });
 
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+
+      if (isWeb) {
+        // On web, redirect the whole page to Google OAuth
+        window.location.href = authUrl;
+        return;
+      }
 
       const result = await WebBrowser.openAuthSessionAsync(authUrl, 'rally://auth/gmail-callback');
 
@@ -71,52 +101,58 @@ export default function EmailConnectScreen() {
         if (success && email && teamConfig) {
           setTeamConfig({ ...teamConfig, gmail_connected: true, gmail_email: email });
           notifySuccess();
-          Alert.alert('Connected', `Gmail connected: ${email}`);
+          setStatusMsg({ text: `Gmail connected: ${email}`, type: 'success' });
         } else {
-          Alert.alert('Connection Failed', error ?? 'Unable to connect Gmail. Please try again.');
+          setStatusMsg({ text: error ?? 'Unable to connect Gmail. Please try again.', type: 'error' });
         }
       }
     } catch (err) {
       console.error('Gmail connect error:', err);
-      Alert.alert('Error', 'An error occurred while connecting Gmail.');
+      setStatusMsg({ text: 'An error occurred while connecting Gmail.', type: 'error' });
     } finally {
       setIsConnecting(false);
     }
   }, [user, teamConfig, setTeamConfig]);
 
   const disconnectGmail = useCallback(async () => {
-    Alert.alert('Disconnect Gmail', 'Stop auto-syncing emails from Gmail?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Disconnect',
-        style: 'destructive',
-        onPress: async () => {
-          setIsDisconnecting(true);
-          try {
-            const response = await fetch(`${SUPABASE_URL}/functions/v1/gmail-auth-callback`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${session?.access_token}`,
-              },
-              body: JSON.stringify({ action: 'disconnect' }),
-            });
+    const doDisconnect = async () => {
+      setIsDisconnecting(true);
+      setStatusMsg(null);
+      try {
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/gmail-auth-callback`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ action: 'disconnect' }),
+        });
 
-            if (response.ok && teamConfig) {
-              setTeamConfig({ ...teamConfig, gmail_connected: false, gmail_email: null });
-              notifySuccess();
-            } else {
-              Alert.alert('Error', 'Failed to disconnect Gmail.');
-            }
-          } catch (err) {
-            console.error('Gmail disconnect error:', err);
-            Alert.alert('Error', 'An error occurred while disconnecting Gmail.');
-          } finally {
-            setIsDisconnecting(false);
-          }
-        },
-      },
-    ]);
+        if (response.ok && teamConfig) {
+          setTeamConfig({ ...teamConfig, gmail_connected: false, gmail_email: null });
+          notifySuccess();
+          setStatusMsg({ text: 'Gmail disconnected.', type: 'success' });
+        } else {
+          setStatusMsg({ text: 'Failed to disconnect Gmail.', type: 'error' });
+        }
+      } catch (err) {
+        console.error('Gmail disconnect error:', err);
+        setStatusMsg({ text: 'An error occurred while disconnecting Gmail.', type: 'error' });
+      } finally {
+        setIsDisconnecting(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('Stop auto-syncing emails from Gmail?')) {
+        doDisconnect();
+      }
+    } else {
+      Alert.alert('Disconnect Gmail', 'Stop auto-syncing emails from Gmail?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Disconnect', style: 'destructive', onPress: doDisconnect },
+      ]);
+    }
   }, [session, teamConfig, setTeamConfig]);
 
   // ============================================================
@@ -134,11 +170,11 @@ export default function EmailConnectScreen() {
     const email = newTrustedEmail.trim().toLowerCase();
     if (!email) return;
     if (!email.includes('@')) {
-      Alert.alert('Invalid email', 'Please enter a valid email address.');
+      setStatusMsg({ text: 'Please enter a valid email address.', type: 'error' });
       return;
     }
     if (trustedEmails.includes(email)) {
-      Alert.alert('Duplicate', 'This email is already in the list.');
+      setStatusMsg({ text: 'This email is already in the list.', type: 'error' });
       return;
     }
     setTrustedEmails((prev) => [...prev, email]);
@@ -157,11 +193,11 @@ export default function EmailConnectScreen() {
     const email = newTravelEmail.trim().toLowerCase();
     if (!email) return;
     if (!email.includes('@')) {
-      Alert.alert('Invalid email', 'Please enter a valid email address.');
+      setStatusMsg({ text: 'Please enter a valid email address.', type: 'error' });
       return;
     }
     if (travelEmails.includes(email)) {
-      Alert.alert('Duplicate', 'This email is already in the list.');
+      setStatusMsg({ text: 'This email is already in the list.', type: 'error' });
       return;
     }
     setTravelEmails((prev) => [...prev, email]);
@@ -189,7 +225,7 @@ export default function EmailConnectScreen() {
       if (isSupabaseConfigured && user) {
         const { error } = await updateTeamConfig(teamConfig.id, updates);
         if (error) {
-          Alert.alert('Save failed', error.message);
+          setStatusMsg({ text: `Save failed: ${error.message}`, type: 'error' });
           return;
         }
       }
@@ -228,6 +264,15 @@ export default function EmailConnectScreen() {
         </View>
 
         <ScrollView className="flex-1 px-4 pt-4" keyboardShouldPersistTaps="handled">
+          {/* Status message */}
+          {statusMsg && (
+            <View className={`rounded-xl p-3 mb-3 ${statusMsg.type === 'error' ? 'bg-red-50' : 'bg-green-50'}`}>
+              <Text className={`text-sm font-semibold text-center ${statusMsg.type === 'error' ? 'text-red-600' : 'text-green-700'}`}>
+                {statusMsg.text}
+              </Text>
+            </View>
+          )}
+
           {/* ============================================================ */}
           {/* GMAIL CONNECTION */}
           {/* ============================================================ */}
@@ -438,7 +483,7 @@ export default function EmailConnectScreen() {
                   onPress={async () => {
                     await Clipboard.setStringAsync(teamConfig.rally_forward_address);
                     tapLight();
-                    Alert.alert('Copied', 'Forward address copied to clipboard.');
+                    setStatusMsg({ text: 'Forward address copied to clipboard.', type: 'success' });
                   }}
                   className="bg-rally-600 px-3 py-1.5 rounded-lg active:opacity-80 ml-2"
                 >

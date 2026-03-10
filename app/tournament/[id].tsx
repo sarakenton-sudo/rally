@@ -73,26 +73,36 @@ export default function TournamentDetailScreen() {
   const updateTournamentStore = useSeasonStore((s) => s.updateTournament);
   const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
-  const handleDeleteTournament = () => {
+  const handleDeleteTournament = async () => {
     if (!tournament) return;
-    Alert.alert(
-      'Delete Tournament',
-      `Are you sure you want to delete "${tournament.name}"? All associated bookings will remain but this tournament will be removed.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            if (isSupabaseConfigured && user) {
-              await deleteTournamentDB(id);
-            }
-            removeTournament(id);
-            router.back();
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(`Are you sure you want to delete "${tournament.name}"?`);
+      if (!confirmed) return;
+      if (isSupabaseConfigured && user) {
+        await deleteTournamentDB(id);
+      }
+      removeTournament(id);
+      router.back();
+    } else {
+      Alert.alert(
+        'Delete Tournament',
+        `Are you sure you want to delete "${tournament.name}"? All associated bookings will remain but this tournament will be removed.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              if (isSupabaseConfigured && user) {
+                await deleteTournamentDB(id);
+              }
+              removeTournament(id);
+              router.back();
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   if (!tournament) {
@@ -279,8 +289,7 @@ export default function TournamentDetailScreen() {
           </View>
 
           {/* TRAVEL */}
-          {tournament.travel_required && (
-            <>
+          <>
               <SectionHeader icon="bed" title="Travel" iconColor={ic.muted} />
 
               {/* Hotel Not Needed toggle */}
@@ -370,10 +379,9 @@ export default function TournamentDetailScreen() {
                 </View>
               )}
             </>
-          )}
 
-          {/* Non-travel tournament bookings (if any exist) */}
-          {!tournament.travel_required && (hotels.length > 0 || flights.length > 0) && (
+          {/* Non-travel tournament bookings (if any exist — legacy fallback, hidden since travel always shows) */}
+          {false && (
             <>
               <SectionHeader icon="bed" title="Travel" iconColor={ic.muted} />
               {hotels.map((h) => (

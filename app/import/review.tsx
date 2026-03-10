@@ -66,7 +66,6 @@ export default function PasteReviewScreen() {
           venues: item.venue_name
             ? [{ label: item.venue_name, address: item.venue_address || item.location_city, is_confirmed: false }]
             : [{ label: item.location_city, address: item.location_city, is_confirmed: false }],
-          travel_required: false,
           ticket_system: null,
           ticket_link: null,
           aes_tournament_id: aesIds[i]?.trim() || null,
@@ -78,6 +77,7 @@ export default function PasteReviewScreen() {
           streaming_links: [],
           air_not_needed: false,
           hotel_not_needed: false,
+          travel_required: true,
           status: 'upcoming' as const,
         };
 

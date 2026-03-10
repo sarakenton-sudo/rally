@@ -39,6 +39,8 @@ export default function EditTournamentScreen() {
   const [ticketSystem, setTicketSystem] = useState(existing?.ticket_system ?? '');
   const [aesTournamentId, setAesTournamentId] = useState(existing?.aes_tournament_id ?? '');
   const [sportwrenchUrl, setSportwrenchUrl] = useState(existing?.sportwrench_url ?? '');
+  const [venueName, setVenueName] = useState(existing?.venues?.[0]?.label ?? '');
+  const [venueAddress, setVenueAddress] = useState(existing?.venues?.[0]?.address ?? '');
   const [isSaving, setIsSaving] = useState(false);
 
   const ic = useIconColors();
@@ -69,6 +71,12 @@ export default function EditTournamentScreen() {
 
     setIsSaving(true);
 
+    const venues = venueName.trim() ? [{
+      label: venueName.trim(),
+      address: venueAddress.trim() || '',
+      is_confirmed: true,
+    }] : existing.venues;
+
     const updates = {
       name: name.trim(),
       location_city: locationCity.trim(),
@@ -76,6 +84,7 @@ export default function EditTournamentScreen() {
       end_date: endDate.toISOString().split('T')[0],
       status: status as TournamentStatus,
       travel_required: travelRequired,
+      venues,
       ticket_link: ticketLink.trim() || null,
       ticket_system: ticketSystem.trim() || null,
       aes_tournament_id: aesTournamentId.trim() || null,
@@ -130,6 +139,8 @@ export default function EditTournamentScreen() {
         <ScrollView className="flex-1 px-4 pt-4" keyboardShouldPersistTaps="handled">
           <FormField label="Tournament Name" value={name} onChangeText={setName} placeholder="e.g. Lonestar Classic" />
           <FormField label="City" value={locationCity} onChangeText={setLocationCity} placeholder="e.g. Dallas, TX" />
+          <FormField label="Venue Name" value={venueName} onChangeText={setVenueName} placeholder="e.g. Dallas Convention Center" />
+          <FormField label="Venue Address" value={venueAddress} onChangeText={setVenueAddress} placeholder="e.g. 650 S Griffin St, Dallas, TX" />
 
           <View className="flex-row gap-3">
             <View className="flex-1">

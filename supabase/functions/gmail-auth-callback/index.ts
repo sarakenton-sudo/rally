@@ -32,14 +32,25 @@ serve(async (req: Request) => {
       const error = url.searchParams.get('error');
 
       if (error) {
-        return redirectToApp(`rally://auth/gmail-callback?success=false&error=${encodeURIComponent(error)}`);
+        return redirectToApp(`rally://auth/gmail-callback?success=false&error=${encodeURIComponent(error)}`, state);
       }
 
       if (!code || !state) {
-        return redirectToApp('rally://auth/gmail-callback?success=false&error=missing_params');
+        return redirectToApp('rally://auth/gmail-callback?success=false&error=missing_params', state);
       }
 
-      const userId = state;
+      // State format: "userId" or "userId|web" (web platform indicator)
+      const stateParts = state.split('|');
+      const userId = stateParts[0];
+      const isWeb = stateParts[1] === 'web';
+
+      // Debug: log what we're sending (redacted)
+      console.log('Token exchange starting...', {
+        hasClientId: !!GOOGLE_CLIENT_ID,
+        hasClientSecret: !!GOOGLE_CLIENT_SECRET,
+        redirectUri: GOOGLE_REDIRECT_URI,
+        codeLength: code.length,
+      });
 
       // Exchange authorization code for tokens
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -54,10 +65,13 @@ serve(async (req: Request) => {
         }),
       });
 
+      console.log('Token exchange response status:', tokenResponse.status);
+
       if (!tokenResponse.ok) {
         const err = await tokenResponse.text();
-        console.error('Token exchange failed:', err);
-        return redirectToApp('rally://auth/gmail-callback?success=false&error=token_exchange_failed');
+        console.error('Token exchange failed:', tokenResponse.status, err);
+        const errorMsg = encodeURIComponent(`token_exchange_${tokenResponse.status}: ${err.substring(0, 200)}`);
+        return redirectToApp(`rally://auth/gmail-callback?success=false&error=${errorMsg}`, state);
       }
 
       const tokens = await tokenResponse.json();
@@ -68,7 +82,7 @@ serve(async (req: Request) => {
 
       if (!refreshToken) {
         console.error('No refresh token received — user may need to re-consent with access_type=offline&prompt=consent');
-        return redirectToApp('rally://auth/gmail-callback?success=false&error=no_refresh_token');
+        return redirectToApp('rally://auth/gmail-callback?success=false&error=no_refresh_token', state);
       }
 
       // Fetch Gmail profile to get email address
@@ -78,7 +92,7 @@ serve(async (req: Request) => {
 
       if (!profileResponse.ok) {
         console.error('Failed to fetch Gmail profile');
-        return redirectToApp('rally://auth/gmail-callback?success=false&error=profile_fetch_failed');
+        return redirectToApp('rally://auth/gmail-callback?success=false&error=profile_fetch_failed', state);
       }
 
       const profile = await profileResponse.json();
@@ -100,7 +114,7 @@ serve(async (req: Request) => {
 
       if (upsertError) {
         console.error('Failed to store tokens:', upsertError);
-        return redirectToApp('rally://auth/gmail-callback?success=false&error=storage_failed');
+        return redirectToApp('rally://auth/gmail-callback?success=false&error=storage_failed', state);
       }
 
       // Update team_config with connection status
@@ -109,7 +123,7 @@ serve(async (req: Request) => {
         .update({ gmail_connected: true, gmail_email: gmailEmail })
         .eq('user_id', userId);
 
-      return redirectToApp(`rally://auth/gmail-callback?success=true&email=${encodeURIComponent(gmailEmail)}`);
+      return redirectToApp(`rally://auth/gmail-callback?success=true&email=${encodeURIComponent(gmailEmail)}`, state);
     }
 
     // ============================================================
@@ -169,7 +183,16 @@ serve(async (req: Request) => {
   }
 });
 
-function redirectToApp(url: string): Response {
+function redirectToApp(path: string, state?: string | null): Response {
+  const isWeb = state?.includes('|web');
+  let url: string;
+  if (isWeb) {
+    // For web, redirect to rally-hub.com with query params
+    const params = path.split('?')[1] || '';
+    url = `https://rally-hub.com/settings/email-connect?${params}`;
+  } else {
+    url = path;
+  }
   return new Response(null, {
     status: 302,
     headers: { Location: url },

@@ -1,48 +1,78 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
+import { smartExtract } from '@/lib/schedule-parser';
 
-const EXAMPLE_TEXT = `AJV 14u Travel 2025-2026 Schedule:
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
-1. Lonestar Classic - Jan 17-19, 2026 - Dallas, TX - Dallas Convention Center
-2. AJV Region Qualifier #1 - Feb 7-8, 2026 - San Antonio, TX
-3. Triple Crown NIT - Mar 20-22, 2026 - Denver, CO - Colorado Convention Center`;
+const EXAMPLE_TEXT = `Hey parents! Here's our updated tournament schedule for the spring:
+
+Lonestar Classic - January 17-19, 2026 - Dallas, TX - Dallas Convention Center
+AJV Region Qualifier #1, Feb 7-8 2026 in San Antonio, TX
+Triple Crown NIT  March 20-22, 2026  Denver, CO @ Colorado Convention Center
+Show Me National Qualifier - April 17-19, 2026 - Kansas City, MO - KC Convention Center
+USAV Junior Nationals  June 25-28, 2026  Indianapolis, IN  Indiana Convention Center
+
+Let me know if you have any conflicts! -Coach Kim`;
 
 export default function PasteImportScreen() {
   const ic = useIconColors();
   const [text, setText] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleExtract = async () => {
     const trimmed = text.trim();
     if (!trimmed) {
-      Alert.alert('Empty text', 'Paste a schedule, coach message, or email to extract tournaments.');
+      setErrorMsg('Paste a schedule, coach message, or email to extract tournaments.');
       return;
     }
 
+    setErrorMsg('');
     setIsExtracting(true);
 
     try {
       let tournaments;
 
-      if (isSupabaseConfigured) {
-        const { data, error } = await supabase.functions.invoke('extract-schedule', {
-          body: { text: trimmed },
-        });
+      // Try AI extraction via edge function first, fall back to local parser
+      if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 15000);
+          const resp = await fetch(`${SUPABASE_URL}/functions/v1/extract-schedule`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'apikey': SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({ text: trimmed }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
+          const data = await resp.json();
+          if (resp.ok && data.tournaments && data.tournaments.length > 0) {
+            tournaments = data.tournaments;
+          } else if (data.error) {
+            console.warn('AI extraction error:', data.error);
+          }
+        } catch (e) {
+          console.warn('AI extraction failed, using local parser:', e);
+        }
+      }
 
-        if (error) throw new Error(error.message);
-        tournaments = data?.tournaments;
-      } else {
-        // Mock extraction for dev mode
-        tournaments = mockExtract(trimmed);
+      // Fallback to smart local parser if AI didn't return results
+      if (!tournaments || tournaments.length === 0) {
+        tournaments = smartExtract(trimmed);
       }
 
       if (!tournaments || tournaments.length === 0) {
-        Alert.alert('No tournaments found', 'Could not extract any tournament details from the text. Try pasting a different format.');
+        setErrorMsg('Could not extract any tournament details from the text. Try pasting a different format.');
         return;
       }
 
@@ -52,7 +82,7 @@ export default function PasteImportScreen() {
         params: { tournaments: JSON.stringify(tournaments) },
       });
     } catch (err: any) {
-      Alert.alert('Extraction failed', err.message || 'Something went wrong. Please try again.');
+      setErrorMsg(err.message || 'Something went wrong. Please try again.');
     } finally {
       setIsExtracting(false);
     }
@@ -85,10 +115,17 @@ export default function PasteImportScreen() {
             <View className="flex-row items-start">
               <Ionicons name="sparkles" size={18} color="#3B82B0" />
               <Text className="text-sm text-rally-700 dark:text-rally-300 ml-2 flex-1">
-                Paste any text containing tournament info — a coach's GroupMe message, forwarded email, or schedule list. AI will extract the details automatically.
+                Paste any text containing tournament info — a coach's GroupMe message, forwarded email, or schedule list. We'll extract the details automatically.
               </Text>
             </View>
           </View>
+
+          {/* Error message */}
+          {errorMsg ? (
+            <View className="bg-red-50 rounded-xl p-3 mb-3">
+              <Text className="text-sm text-red-600 font-semibold text-center">{errorMsg}</Text>
+            </View>
+          ) : null}
 
           {/* Text input */}
           <View className="flex-1 mb-4">
@@ -137,54 +174,3 @@ export default function PasteImportScreen() {
   );
 }
 
-/**
- * Mock extraction for dev mode (no Supabase/Claude API).
- * Does simple line-by-line parsing for demo purposes.
- */
-function mockExtract(text: string) {
-  const lines = text.split('\n').filter((l) => l.trim().length > 0);
-  const tournaments: any[] = [];
-
-  for (const line of lines) {
-    const dateMatch = line.match(
-      /([A-Z][a-z]+ \d{1,2}(?:-\d{1,2})?(?:,?\s*\d{4})?)/
-    );
-    if (!dateMatch) continue;
-
-    const parts = line.split(/\s*[-–]\s*/);
-    if (parts.length < 2) continue;
-
-    const name = parts[0].replace(/^\d+[\.\)]\s*/, '').trim();
-    const dateStr = parts[1]?.trim() || '';
-    const city = parts[2]?.trim() || '';
-    const venue = parts[3]?.trim() || '';
-
-    const monthDayMatch = dateStr.match(
-      /([A-Z][a-z]+)\s+(\d{1,2})(?:\s*-\s*(\d{1,2}))?,?\s*(\d{4})?/
-    );
-    if (!monthDayMatch) continue;
-
-    const monthStr = monthDayMatch[1];
-    const startDay = parseInt(monthDayMatch[2]);
-    const endDay = monthDayMatch[3] ? parseInt(monthDayMatch[3]) : startDay;
-    const year = monthDayMatch[4] || '2026';
-
-    const monthMap: Record<string, string> = {
-      Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
-      Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
-    };
-    const month = monthMap[monthStr] || '01';
-
-    tournaments.push({
-      name,
-      start_date: `${year}-${month}-${String(startDay).padStart(2, '0')}`,
-      end_date: `${year}-${month}-${String(endDay).padStart(2, '0')}`,
-      location_city: city,
-      venue_name: venue,
-      venue_address: '',
-      notes: '',
-    });
-  }
-
-  return tournaments;
-}

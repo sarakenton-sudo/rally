@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { View, Text, Pressable, Alert, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, Text, Pressable, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FormField from '@/components/FormField';
 import { useAuth } from '@/providers/AuthProvider';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 export default function AuthScreen() {
   const { signIn, signUp, resetPassword } = useAuth();
@@ -13,61 +13,56 @@ export default function AuthScreen() {
   const [inviteCode, setInviteCode] = useState('');
   const [hasInviteCode, setHasInviteCode] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
 
   const handleSubmit = async () => {
+    setMessage(null);
+
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Missing fields', 'Please enter both email and password.');
-      return;
-    }
-    if (isSignUp && hasInviteCode && !inviteCode.trim()) {
-      Alert.alert('Missing field', 'Please enter your invite code.');
+      setMessage({ text: 'Please enter both email and password.', type: 'error' });
       return;
     }
 
     setLoading(true);
 
-    if (isSignUp) {
-      const { error } = await signUp(email.trim(), password);
-      if (error) {
+    try {
+      if (isSignUp) {
+        const { error } = await signUp(email.trim(), password);
         setLoading(false);
-        Alert.alert('Sign Up Failed', error);
-        return;
-      }
-      Alert.alert('Check your email', 'We sent you a confirmation link. Please verify your email, then sign in.');
-      setIsSignUp(false);
-      setLoading(false);
-    } else {
-      const { error } = await signIn(email.trim(), password);
-      setLoading(false);
-      if (error) {
-        Alert.alert('Sign In Failed', error);
-        return;
-      }
-      // After successful sign-in, accept invite code if provided
-      if (hasInviteCode && inviteCode.trim()) {
-        const { data } = await (supabase.rpc as any)('accept_household_invite', { code: inviteCode.trim() });
-        const result = data as { success: boolean; error?: string; message?: string } | null;
-        if (result && !result.success) {
-          Alert.alert('Invite Error', result.error ?? 'Could not accept invite.');
-        } else if (result?.success) {
-          Alert.alert('Linked!', result.message ?? 'Your accounts are now linked.');
+        if (error) {
+          setMessage({ text: `Sign up error: ${error}`, type: 'error' });
+          return;
         }
+        setMessage({ text: 'Account created! Check your email for a confirmation link, then sign in.', type: 'success' });
+        setIsSignUp(false);
+      } else {
+        const { error } = await signIn(email.trim(), password);
+        setLoading(false);
+        if (error) {
+          setMessage({ text: `Sign in error: ${error}`, type: 'error' });
+          return;
+        }
+        setMessage({ text: 'Signed in! Redirecting...', type: 'success' });
+        // Navigation happens automatically via _layout.tsx auth gating
       }
+    } catch (err: any) {
+      setLoading(false);
+      setMessage({ text: `Unexpected error: ${err?.message ?? String(err)}`, type: 'error' });
     }
   };
 
   const handleForgotPassword = async () => {
     if (!email.trim()) {
-      Alert.alert('Enter email', 'Please enter your email address first, then tap Forgot Password.');
+      setMessage({ text: 'Enter your email address first, then tap Forgot Password.', type: 'error' });
       return;
     }
     setLoading(true);
     const { error } = await resetPassword(email.trim());
     setLoading(false);
     if (error) {
-      Alert.alert('Error', error);
+      setMessage({ text: error, type: 'error' });
     } else {
-      Alert.alert('Check your email', 'We sent a password reset link to your email.');
+      setMessage({ text: 'Check your email for a password reset link.', type: 'success' });
     }
   };
 
@@ -85,6 +80,24 @@ export default function AuthScreen() {
             resizeMode="contain"
           />
         </View>
+
+        {/* Status message */}
+        {message && (
+          <View className={`rounded-xl p-4 mb-4 ${message.type === 'error' ? 'bg-red-50' : 'bg-green-50'}`}>
+            <Text className={`text-sm text-center font-semibold ${message.type === 'error' ? 'text-red-600' : 'text-green-700'}`}>
+              {message.text}
+            </Text>
+          </View>
+        )}
+
+        {/* Supabase debug */}
+        {!isSupabaseConfigured && (
+          <View className="bg-amber-50 rounded-xl p-4 mb-4">
+            <Text className="text-xs text-amber-700 text-center font-bold">
+              Supabase not configured. Auth will not work.
+            </Text>
+          </View>
+        )}
 
         {/* Form */}
         <FormField
@@ -151,7 +164,7 @@ export default function AuthScreen() {
         {/* Toggle sign in / sign up */}
         <Pressable
           className="mt-6 items-center"
-          onPress={() => setIsSignUp(!isSignUp)}
+          onPress={() => { setIsSignUp(!isSignUp); setMessage(null); }}
         >
           <Text className="text-sm text-stone dark:text-parchment">
             {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
@@ -160,15 +173,6 @@ export default function AuthScreen() {
             </Text>
           </Text>
         </Pressable>
-
-        {/* Dev mode bypass hint */}
-        {!process.env.EXPO_PUBLIC_SUPABASE_URL && (
-          <View className="mt-8 bg-amber-50 rounded-xl p-4">
-            <Text className="text-xs text-amber-700 text-center">
-              Supabase not configured. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in .env to enable auth.
-            </Text>
-          </View>
-        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

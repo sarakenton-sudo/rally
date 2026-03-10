@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
 
@@ -31,17 +31,49 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const validatedRef = useRef(false);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setIsLoading(false);
-    });
+    // Step 1: Validate cached session server-side before trusting it
+    const init = async () => {
+      try {
+        const { data: { session: cached } } = await supabase.auth.getSession();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+        if (cached) {
+          // Verify the user actually still exists on the server
+          const { data: { user }, error } = await supabase.auth.getUser();
+          console.log('[Auth] getUser result:', { hasUser: !!user, error: error?.message });
+          if (error || !user) {
+            // Stale session — user was deleted. Force clear everything.
+            console.log('[Auth] Stale session detected, signing out');
+            await supabase.auth.signOut();
+            setSession(null);
+          } else {
+            console.log('[Auth] Valid session for user:', user.email);
+            setSession(cached);
+          }
+        } else {
+          console.log('[Auth] No cached session');
+          setSession(null);
+        }
+      } catch (err) {
+        console.error('[Auth] Init error, clearing session:', err);
+        await supabase.auth.signOut().catch(() => {});
+        setSession(null);
+      }
+
+      validatedRef.current = true;
+      setIsLoading(false);
+    };
+
+    init();
+
+    // Step 2: Listen for FUTURE auth changes (sign in, sign out, token refresh)
+    // But ignore events until initial validation is done
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (validatedRef.current) {
+        setSession(newSession);
+      }
     });
 
     return () => subscription.unsubscribe();

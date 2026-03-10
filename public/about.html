@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About Us — RallyHUB</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700&family=Nunito+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#1E3A5F;--steel:#3B82B0;--teal:#6A9E8A;--mist:#8FA8BF;--frost:#D8E2EC;--ice:#F4F6F8;}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Nunito Sans',sans-serif;color:var(--navy);background:var(--ice);overflow-x:hidden;}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(30,58,95,0.97);backdrop-filter:blur(12px);padding:0 48px;height:68px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.07);}
+.nav-logo{display:flex;align-items:center;gap:6px;text-decoration:none;}
+.nav-cap{width:32px;height:25px;object-fit:contain;}
+.nav-wordmark{font-family:'Nunito',sans-serif;font-weight:900;font-size:20px;color:white;letter-spacing:-0.03em;}
+.nav-wordmark span{font-weight:700;opacity:0.45;}
+.nav-links{display:flex;align-items:center;gap:32px;}
+.nav-links a{font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);text-decoration:none;transition:color 0.2s;}
+.nav-links a:hover{color:white;}
+.nav-cta{background:var(--steel)!important;color:white!important;padding:9px 22px;border-radius:9px;font-weight:800!important;opacity:1!important;transition:background 0.2s,transform 0.15s!important;}
+.nav-cta:hover{background:#2d6a96!important;transform:translateY(-1px);}
+
+/* ABOUT */
+.about-hero{padding:140px 48px 60px;background:var(--navy);text-align:center;}
+.about-eyebrow{font-size:11px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:var(--steel);margin-bottom:16px;}
+.about-headline{font-family:'Nunito',sans-serif;font-weight:900;font-size:clamp(32px,4vw,52px);color:white;letter-spacing:-0.03em;line-height:1.08;margin-bottom:20px;}
+.about-headline .accent{color:var(--steel);}
+
+.about-content{max-width:720px;margin:0 auto;padding:64px 32px 100px;}
+.about-content p{font-size:18px;font-weight:400;color:#2a4a66;line-height:1.85;margin-bottom:28px;}
+.about-content p:first-child{font-size:22px;font-weight:600;color:var(--navy);line-height:1.7;}
+.about-content p:last-child{font-size:20px;font-weight:700;color:var(--navy);line-height:1.7;margin-bottom:0;}
+
+/* CTA */
+.about-cta{background:var(--navy);padding:80px 48px;text-align:center;}
+.about-cta-text{font-family:'Nunito',sans-serif;font-weight:800;font-size:clamp(22px,2.5vw,32px);color:white;margin-bottom:28px;max-width:600px;margin-left:auto;margin-right:auto;}
+.btn-large{display:inline-block;background:var(--steel);color:white;font-family:'Nunito',sans-serif;font-weight:800;font-size:16px;padding:16px 40px;border-radius:12px;text-decoration:none;transition:background 0.2s,transform 0.15s;}
+.btn-large:hover{background:#2d6a96;transform:translateY(-2px);}
+
+/* FOOTER */
+footer{background:var(--navy);border-top:1px solid rgba(255,255,255,0.07);padding:32px 48px;}
+.footer-inner{max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;}
+.footer-logo{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+.f-cap{width:22px;height:18px;object-fit:contain;}
+.f-word{font-family:'Nunito',sans-serif;font-weight:900;font-size:16px;color:white;letter-spacing:-0.02em;}
+.f-word span{font-weight:700;opacity:0.45;}
+.f-tag{font-size:11px;color:rgba(255,255,255,0.35);}
+.footer-right{font-size:11px;color:rgba(255,255,255,0.3);text-align:right;line-height:1.6;}
+
+@media(max-width:768px){
+  nav{padding:0 20px;}
+  .nav-links{display:none;}
+  .about-hero{padding:110px 24px 48px;}
+  .about-content{padding:48px 24px 80px;}
+  .about-content p{font-size:16px;}
+  .about-content p:first-child{font-size:19px;}
+  .about-content p:last-child{font-size:18px;}
+  .about-cta{padding:60px 24px;}
+  footer{padding:24px 20px;}
+  .footer-inner{flex-direction:column;gap:16px;text-align:center;}
+  .footer-right{text-align:center;}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">
+    <img src="/rallyhub_lockup_white.png" style="height:64px;object-fit:contain;" alt="RallyHUB">
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/auth" class="nav-cta">Get Early Access</a>
+  </div>
+</nav>
+
+<section class="about-hero">
+  <div class="about-eyebrow">About us</div>
+  <h1 class="about-headline">We didn't build this because<br>we had <span class="accent">time.</span></h1>
+</section>
+
+<div class="about-content">
+  <p>We built this because we had a non-refundable hotel room we forgot about, a cancellation window that closed while we were at work, and a family group chat that has asked for the streaming links so many times we started to wonder if we were the ones who were wrong.</p>
+
+  <p>The schedule was shared 23 times. The screenshot was shared with family 57 times. The Stay-N-Play booking email was in the inbox, sitting quietly between a car warranty extension and an abandoned cart notification from 2022, waiting to become a regret. The deadline was yesterday. It is always yesterday.</p>
+
+  <p>The hotel booking fee is gone now. Not partially gone. Fully, philosophically, spiritually gone. It has moved on. It is somewhere else living its best life, unbothered — probably in Hawaii. Not Minnesota. Not Kansas City. Not Boston. Hawaii.</p>
+
+  <p>We have also stood in the ticket line of 500 people at 6:45am because the system was down and they were only taking cash. Cash we did not have, because we did not buy tickets in advance, despite being reminded to do so approximately 87 times. We were reminded. We saw the reminders. We did not act on the reminders. This is who we are.</p>
+
+  <p>And then there is the math. The math you are not supposed to do. The math that starts innocently — a tournament fee here, a hotel there — and ends with you realizing that for what you spent this season, your family could have done a week in Maui, a European river cruise, or honestly just received an envelope of cash with a note that said "go be happy somewhere warm." This is not counting the $30 acai bowl that was absolutely necessary between pool play and brackets. This is not counting the (5) $100 tournament sweatshirt that was non-negotiable in the moment and is now in the backseat of the car under a pair of kneepads and a half-eaten granola bar. We are not saying it wasn't worth it. We are saying it is very important that you never actually do this math.</p>
+
+  <p>We built this anyway. For every parent eating a gas station breakfast in a convention center parking garage at 7am. For the parent who just wants to find 45 minutes between the ref game and the off game to go lie down in the hotel room they are sharing with 3 people in one queen bed and a rollaway. You know who you are. We see you. We are you.</p>
+</div>
+
+<section class="about-cta">
+  <div class="about-cta-text">Your season, sorted. Finally.</div>
+  <a href="/auth" class="btn-large">Get Early Access — It's Free</a>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-logo">
+        <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f9e2.png" class="f-cap" alt="cap">
+        <div class="f-word">Rally<span>HUB</span></div>
+      </div>
+      <div class="f-tag">Your season, sorted. · Built by club parents, for club parents.</div>
+    </div>
+    <div class="footer-right">© 2026 RallyHUB · All rights reserved<br>For the parents who make it all happen.</div>
+  </div>
+</footer>
+
+</body>
+</html>

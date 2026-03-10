@@ -4,6 +4,7 @@ import { useFonts } from 'expo-font';
 import { Stack, router, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
@@ -106,23 +107,33 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (isLoading || storeLoading) return;
-    // Skip auth gating in dev mode when Supabase isn't configured
     if (!isSupabaseConfigured) return;
 
     const inAuthFlow = segments[0] === 'auth' || segments[0] === 'landing';
     const inOnboarding = segments[0] === 'onboarding';
 
     if (!session && !inAuthFlow) {
-      router.replace('/landing');
-    } else if (session && !teamConfig && !inOnboarding && !inAuthFlow) {
+      router.replace('/auth');
+    } else if (session && !teamConfig && !inOnboarding) {
       router.replace('/onboarding');
     } else if (session && teamConfig && (inAuthFlow || inOnboarding)) {
       router.replace('/');
     }
   }, [session, isLoading, segments, teamConfig, storeLoading]);
 
+  const theme = colorScheme === 'dark' ? RallyDarkTheme : RallyLightTheme;
+
+  // Block rendering until auth is validated (no stale session flash)
+  if (isLoading) {
+    return (
+      <ThemeProvider value={theme}>
+        <View style={{ flex: 1, backgroundColor: theme.colors.background }} />
+      </ThemeProvider>
+    );
+  }
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? RallyDarkTheme : RallyLightTheme}>
+    <ThemeProvider value={theme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="landing" options={{ headerShown: false }} />

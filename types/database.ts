@@ -114,6 +114,7 @@ export interface NotificationPreferences {
 export interface TeamConfig {
   id: string;
   team_name: string;
+  club_name: string | null;
   season_year: string;
   team_code: string | null;
   athlete_name: string | null;

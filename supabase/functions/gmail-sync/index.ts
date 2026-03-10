@@ -8,8 +8,28 @@ const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET') ?? '';
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-const MAX_MESSAGES_PER_SYNC = 20;
+const MAX_MESSAGES_PER_SYNC = 50;
 const MAX_SYNC_ERRORS = 3;
+
+// Default travel-related sender domains — always included in sync
+const TRAVEL_SENDER_DOMAINS = [
+  // Hotels
+  'marriott.com', 'hilton.com', 'ihg.com', 'hyatt.com', 'wyndham.com',
+  'choicehotels.com', 'bestwestern.com', 'radissonhotels.com', 'accor.com',
+  'fourseasons.com', 'omnihotels.com', 'druryhotels.com', 'laquinta.com',
+  'embassy-suites.hilton.com', 'hamptoninn.hilton.com', 'homewoodsuites.hilton.com',
+  // Airlines
+  'southwest.com', 'united.com', 'aa.com', 'delta.com', 'jetblue.com',
+  'spirit.com', 'frontierairlines.com', 'alaskaair.com', 'allegiantair.com',
+  // Booking sites
+  'expedia.com', 'hotels.com', 'booking.com', 'priceline.com', 'kayak.com',
+  'hotwire.com', 'orbitz.com', 'travelocity.com', 'trivago.com',
+  'airbnb.com', 'vrbo.com',
+  // Car rental
+  'enterprise.com', 'hertz.com', 'avis.com', 'budget.com', 'nationalcar.com',
+  // Travel aggregators
+  'tripit.com', 'google.com', // Google Travel confirmations
+];
 
 interface GmailToken {
   user_id: string;
@@ -112,19 +132,30 @@ async function syncUser(
   // Build Gmail search query
   const afterEpoch = token.last_sync_at
     ? Math.floor(new Date(token.last_sync_at).getTime() / 1000)
-    : Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 1000); // Default: last 24h
+    : Math.floor(new Date('2025-08-01').getTime() / 1000); // First sync: go back to Aug 2025
 
-  let query = `in:inbox after:${afterEpoch}`;
+  // Build two query strategies:
+  // 1. Travel domains — only booking/confirmation emails (not marketing)
+  // 2. VIP/trusted senders — all emails from those people (coach, etc.)
+  const userVipSenders = config?.trusted_sender_emails ?? [];
+  const userTravelSenders = config?.travel_sync_emails ?? [];
 
-  // Optionally filter by trusted + travel senders
-  const senderEmails = [
-    ...(config?.trusted_sender_emails ?? []),
-    ...(config?.travel_sync_emails ?? []),
-  ];
-  if (senderEmails.length > 0) {
-    const fromClauses = senderEmails.map((e: string) => `from:${e}`).join(' OR ');
-    query += ` {${fromClauses}}`;
+  // Travel query: from known domains + must contain booking keywords
+  const bookingKeywords = 'confirmation OR reservation OR itinerary OR booking OR "check-in" OR "check in" OR receipt OR e-ticket OR "flight details" OR "hotel details" OR cancellation';
+  const domainClauses = TRAVEL_SENDER_DOMAINS.map((d) => `from:${d}`);
+  const travelFromQuery = domainClauses.join(' OR ');
+
+  let query = `in:inbox after:${afterEpoch} (`;
+  // Travel senders with booking keywords
+  query += `({${travelFromQuery}} (${bookingKeywords}))`;
+
+  // VIP senders — get everything from these (coach messages, etc.)
+  const vipSenders = [...userVipSenders, ...userTravelSenders];
+  if (vipSenders.length > 0) {
+    const vipClauses = vipSenders.map((e: string) => `from:${e}`).join(' OR ');
+    query += ` OR {${vipClauses}}`;
   }
+  query += `)`;
 
   // List messages matching the query
   const listUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=${MAX_MESSAGES_PER_SYNC}`;

@@ -83,13 +83,22 @@ export default function SeasonScreen() {
               <Text className="text-2xl font-bold text-bark dark:text-cream font-nunito-extrabold">
                 Season
               </Text>
-              <Pressable
-                className="flex-row items-center bg-rally-50 dark:bg-rally-900/30 px-3 py-1.5 rounded-lg active:opacity-70"
-                onPress={() => router.push('/import/paste')}
-              >
-                <Ionicons name="sparkles" size={14} color="#3B82B0" />
-                <Text className="text-xs font-semibold text-rally-600 ml-1">Import</Text>
-              </Pressable>
+              <View className="flex-row items-center gap-2">
+                <Pressable
+                  className="flex-row items-center bg-rally-50 dark:bg-rally-900/30 px-3 py-1.5 rounded-lg active:opacity-70"
+                  onPress={() => router.push('/import/paste')}
+                >
+                  <Ionicons name="sparkles" size={14} color="#3B82B0" />
+                  <Text className="text-xs font-semibold text-rally-600 ml-1">Paste</Text>
+                </Pressable>
+                <Pressable
+                  className="flex-row items-center bg-rally-50 dark:bg-rally-900/30 px-3 py-1.5 rounded-lg active:opacity-70"
+                  onPress={() => router.push('/settings/schedule-import')}
+                >
+                  <Ionicons name="mail" size={14} color="#3B82B0" />
+                  <Text className="text-xs font-semibold text-rally-600 ml-1">Auto Import</Text>
+                </Pressable>
+              </View>
             </View>
             <Text className="text-sm text-stone dark:text-parchment mt-1">
               {teamName}{seasonYear ? ` — ${seasonYear}` : ''} — {tournaments.length} tournaments
