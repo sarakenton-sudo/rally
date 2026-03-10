@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { View, Text, Pressable, Platform, TextInput } from 'react-native';
+import { useState } from 'react';
+import { View, Text, Pressable, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 // Only import native date picker on non-web platforms
@@ -28,7 +28,6 @@ function toISODate(date: Date | null): string {
 
 export default function DatePickerField({ label, value, onChange, error, highlightDanger }: DatePickerFieldProps) {
   const [show, setShow] = useState(false);
-  const inputRef = useRef<any>(null);
 
   const handleNativeChange = (_event: any, selectedDate?: Date) => {
     if (Platform.OS === 'android') setShow(false);
@@ -47,7 +46,7 @@ export default function DatePickerField({ label, value, onChange, error, highlig
       ? 'border-red-400 bg-red-50'
       : 'border-parchment dark:border-rally-900';
 
-  // Web: use HTML date input
+  // Web: use native HTML date input
   if (Platform.OS === 'web') {
     return (
       <View className="mb-4">
@@ -55,15 +54,19 @@ export default function DatePickerField({ label, value, onChange, error, highlig
           {label}
         </Text>
         <View className={`bg-cream dark:bg-bark-light border rounded-xl overflow-hidden ${borderClass}`}>
-          <TextInput
-            ref={inputRef}
-            value={toISODate(value)}
-            onChangeText={handleWebChange}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor="#8FA8BF"
-            className="px-4 py-3 text-base text-bark dark:text-cream"
-            // @ts-ignore — web-only prop
+          <input
             type="date"
+            value={toISODate(value)}
+            onChange={(e: any) => handleWebChange(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              fontSize: 16,
+              border: 'none',
+              background: 'transparent',
+              color: value ? '#1E3A5F' : '#8FA8BF',
+              outline: 'none',
+            }}
           />
         </View>
         {error && <Text className="text-xs text-red-500 mt-1">{error}</Text>}
