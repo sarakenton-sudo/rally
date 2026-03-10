@@ -33,6 +33,7 @@ interface SeasonState {
   removeUSAVProfile: (id: string) => void;
   setForwardedEmails: (emails: ForwardedEmail[]) => void;
   addForwardedEmail: (email: ForwardedEmail) => void;
+  updateForwardedEmail: (id: string, updates: Partial<ForwardedEmail>) => void;
   setLoading: (loading: boolean) => void;
 }
 
@@ -97,5 +98,11 @@ export const useSeasonStore = create<SeasonState>((set) => ({
   setForwardedEmails: (forwardedEmails) => set({ forwardedEmails }),
   addForwardedEmail: (email) =>
     set((state) => ({ forwardedEmails: [email, ...state.forwardedEmails] })),
+  updateForwardedEmail: (id, updates) =>
+    set((state) => ({
+      forwardedEmails: state.forwardedEmails.map((e) =>
+        e.id === id ? { ...e, ...updates } : e
+      ),
+    })),
   setLoading: (isLoading) => set({ isLoading }),
 }));

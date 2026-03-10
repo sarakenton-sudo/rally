@@ -8,7 +8,7 @@ const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET') ?? '';
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-const MAX_MESSAGES_PER_SYNC = 50;
+const MAX_MESSAGES_PER_SYNC = 100;
 const MAX_SYNC_ERRORS = 3;
 
 // Default travel-related sender domains — always included in sync
@@ -148,9 +148,10 @@ async function syncUser(
   const userVipSenders = config?.trusted_sender_emails ?? [];
   const userTravelSenders = config?.travel_sync_emails ?? [];
 
-  // Travel query: from known domains + must contain booking keywords + exclude marketing
-  const bookingKeywords = '"confirmation number" OR "reservation number" OR "booking confirmation" OR itinerary OR "e-ticket" OR "flight details" OR "hotel confirmation" OR "check-in date" OR "check-in time" OR "cancellation policy" OR "cancellation deadline"';
-  const excludeMarketing = '-subject:unsubscribe -subject:deals -subject:offer -subject:promotion -subject:"limited time" -subject:sale -subject:reward -subject:points -subject:newsletter -subject:"earn" -subject:"exclusive" -subject:"save" -subject:"% off" -subject:"dream" -subject:"getaway" -subject:"explore"';
+  // Travel query: from known domains + booking keywords (broader to catch schedules/confirmations)
+  // The real spam filter is Claude AI — emails classified "other" get discarded
+  const bookingKeywords = 'confirmation OR reservation OR itinerary OR booking OR "check-in" OR receipt OR e-ticket OR schedule OR tournament OR cancellation OR "flight" OR "hotel"';
+  const excludeMarketing = '-subject:unsubscribe -subject:"limited time" -subject:"% off" -subject:newsletter -subject:"bonus points" -subject:"credit card"';
   const domainClauses = TRAVEL_SENDER_DOMAINS.map((d) => `from:${d}`);
   const travelFromQuery = domainClauses.join(' OR ');
 

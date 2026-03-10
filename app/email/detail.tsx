@@ -261,6 +261,7 @@ export default function EmailDetailScreen() {
   const email = useSeasonStore((s) => s.forwardedEmails.find((e) => e.id === id));
   const tournaments = useSeasonStore((s) => s.tournaments);
   const updateTournamentStore = useSeasonStore((s) => s.updateTournament);
+  const updateForwardedEmail = useSeasonStore((s) => s.updateForwardedEmail);
   const { user } = useAuth();
   const [showFullBody, setShowFullBody] = useState(false);
   const [appliedUpdates, setAppliedUpdates] = useState<Set<string>>(new Set());
@@ -351,6 +352,54 @@ export default function EmailDetailScreen() {
       }
     } else {
       router.push({ pathname: '/import/paste' });
+    }
+  };
+
+  const [isReExtracting, setIsReExtracting] = useState(false);
+
+  const handleReExtract = async () => {
+    if (!isSupabaseConfigured || !user) return;
+    setIsReExtracting(true);
+    try {
+      // Call classify-email edge function to re-process with updated AI
+      const { data, error } = await supabase.functions.invoke('classify-email', {
+        body: {
+          from: email.from_address,
+          subject: email.subject,
+          body: email.body_text,
+        },
+      });
+      if (error) throw new Error(error.message);
+
+      const newClassification = data?.classification ?? email.classification;
+      const newExtractedData = data?.extracted_data ?? {};
+      const newSummary = data?.summary ?? '';
+      const newAction = data?.action ?? email.action_taken;
+
+      // Update the email record in DB
+      await supabase
+        .from('forwarded_emails')
+        .update({
+          classification: newClassification,
+          extracted_data: newExtractedData,
+          action_taken: newAction,
+        })
+        .eq('id', email.id);
+
+      // Update local store
+      updateForwardedEmail(email.id, {
+        classification: newClassification,
+        extracted_data: newExtractedData,
+        action_taken: newAction,
+      } as any);
+
+      if (Platform.OS === 'web') window.alert(`Re-extracted! Classification: ${newClassification}. ${Object.keys(newExtractedData).length} fields found.`);
+      else Alert.alert('Re-extracted', `Classification: ${newClassification}. ${Object.keys(newExtractedData).length} fields found.`);
+    } catch (err: any) {
+      if (Platform.OS === 'web') window.alert(`Re-extract failed: ${err.message}`);
+      else Alert.alert('Failed', err.message);
+    } finally {
+      setIsReExtracting(false);
     }
   };
 
@@ -594,12 +643,13 @@ export default function EmailDetailScreen() {
         )}
 
         <Pressable
-          className="bg-warm-white dark:bg-bark-light rounded-xl py-3.5 items-center flex-row justify-center border border-parchment dark:border-rally-900 active:opacity-80"
-          onPress={handleExtractSchedule}
+          className={`bg-warm-white dark:bg-bark-light rounded-xl py-3.5 items-center flex-row justify-center border border-parchment dark:border-rally-900 ${isReExtracting ? 'opacity-60' : 'active:opacity-80'}`}
+          onPress={handleReExtract}
+          disabled={isReExtracting}
         >
-          <Ionicons name="search" size={18} color={ic.muted} />
+          <Ionicons name="sparkles" size={18} color={ic.muted} />
           <Text className="text-sm font-semibold text-stone dark:text-parchment ml-2">
-            Re-extract with AI
+            {isReExtracting ? 'Re-extracting...' : 'Re-extract with AI'}
           </Text>
         </Pressable>
       </ScrollView>
