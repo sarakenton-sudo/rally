@@ -435,22 +435,38 @@ export default function EmailDetailScreen() {
   };
 
   const handleCreateFlightBooking = () => {
-    const params: Record<string, string> = { emailSubject: email.subject };
-    if (activeMatch) params.tournamentId = activeMatch.id;
+    const p: Record<string, string> = { emailSubject: email.subject };
+    if (activeMatch) p.tournamentId = activeMatch.id;
     if (extractedData) {
-      if (extractedData.airline) params.airline = String(extractedData.airline);
-      if (extractedData.confirmation_number) params.confirmationCode = String(extractedData.confirmation_number);
-      if (extractedData.departure_date) params.departureDate = String(extractedData.departure_date);
-      if (extractedData.return_date) params.returnDate = String(extractedData.return_date);
-      if (extractedData.passenger_name) params.travelerName = String(extractedData.passenger_name);
-      if (extractedData.total_cost) params.cost = String(extractedData.total_cost);
-      // Handle outbound/return legs
-      const outbound = extractedData.outbound as Record<string, unknown> | undefined;
-      const returnLeg = extractedData.return as Record<string, unknown> | undefined;
-      if (outbound?.departure_date) params.departureDate = String(outbound.departure_date);
-      if (returnLeg?.departure_date) params.returnDate = String(returnLeg.departure_date);
+      const d = extractedData;
+      const outbound = d.outbound as Record<string, unknown> | undefined;
+      const returnLeg = (d.return ?? d.return_flight ?? d.return_leg) as Record<string, unknown> | undefined;
+
+      // Airline — check multiple possible field names
+      const airline = d.airline ?? outbound?.airline ?? '';
+      if (airline) p.airline = String(airline);
+
+      // Confirmation
+      const conf = d.confirmation_number ?? d.confirmation_code ?? d.booking_reference ?? d.record_locator ?? '';
+      if (conf) p.confirmationCode = String(conf);
+
+      // Departure date
+      const depDate = d.departure_date ?? outbound?.departure_date ?? '';
+      if (depDate) p.departureDate = String(depDate);
+
+      // Return date
+      const retDate = d.return_date ?? returnLeg?.departure_date ?? '';
+      if (retDate) p.returnDate = String(retDate);
+
+      // Traveler
+      const traveler = d.passenger_name ?? d.traveler_name ?? d.passenger ?? d.name ?? '';
+      if (traveler) p.travelerName = String(traveler);
+
+      // Cost
+      const cost = d.total_cost ?? d.cost ?? d.total ?? d.amount ?? '';
+      if (cost) p.cost = String(cost);
     }
-    router.push({ pathname: '/booking/add-flight', params });
+    router.push({ pathname: '/booking/add-flight', params: p });
   };
 
   const openUrl = (url: string) => {
