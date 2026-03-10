@@ -8,32 +8,9 @@ const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET') ?? '';
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-const MAX_MESSAGES_PER_SYNC = 100;
+const MAX_MESSAGES_PER_SYNC = 50;
 const MAX_SYNC_ERRORS = 3;
 
-// Default travel-related sender domains — always included in sync
-const TRAVEL_SENDER_DOMAINS = [
-  // Hotels
-  'marriott.com', 'hilton.com', 'ihg.com', 'hyatt.com', 'wyndham.com',
-  'choicehotels.com', 'bestwestern.com', 'radissonhotels.com', 'accor.com',
-  'fourseasons.com', 'omnihotels.com', 'druryhotels.com', 'laquinta.com',
-  'embassy-suites.hilton.com', 'hamptoninn.hilton.com', 'homewoodsuites.hilton.com',
-  // Airlines
-  'southwest.com', 'united.com', 'aa.com', 'delta.com', 'jetblue.com',
-  'spirit.com', 'frontierairlines.com', 'alaskaair.com', 'allegiantair.com',
-  // Booking sites
-  'expedia.com', 'hotels.com', 'booking.com', 'priceline.com', 'kayak.com',
-  'hotwire.com', 'orbitz.com', 'travelocity.com', 'trivago.com',
-  'airbnb.com', 'vrbo.com',
-  // Car rental
-  'enterprise.com', 'hertz.com', 'avis.com', 'budget.com', 'nationalcar.com',
-  // Travel aggregators
-  'tripit.com', 'google.com', // Google Travel confirmations
-  // Volleyball / tournament platforms
-  'aesathletics.com', 'sportwrench.com', 'leagueapps.com', 'teamsnap.com',
-  'sportsengine.com', 'advanceeventssystems.com', 'usavolleyball.org',
-  'gjnc.org', 'avca.org', 'azregionvolleyball.org', 'arizonaregionvolleyball.org',
-];
 
 interface GmailToken {
   user_id: string;
@@ -152,18 +129,18 @@ async function syncUser(
   const userVipSenders = config?.trusted_sender_emails ?? [];
   const userTravelSenders = config?.travel_sync_emails ?? [];
 
-  // Travel query: from known domains + booking keywords (broader to catch schedules/confirmations)
-  // The real spam filter is Claude AI — emails classified "other" get discarded
   const excludeMarketing = '-subject:unsubscribe -subject:"limited time" -subject:"% off" -subject:newsletter -subject:"bonus points" -subject:"credit card"';
-  const domainClauses = TRAVEL_SENDER_DOMAINS.map((d) => `from:${d}`);
-  const travelFromQuery = domainClauses.join(' OR ');
 
   // Tournament/event keywords — catch emails from any organizer (not just known domains)
   const tournamentKeywords = '"tournament" OR "pool play" OR "bracket" OR "court assignment" OR "wave" OR "stay and play" OR "stay-and-play" OR "team check-in"';
 
+  // Travel brand names + booking keywords — catches subdomains like t.delta.com, e.marriott.com etc.
+  const travelBrands = 'delta OR southwest OR united OR american OR jetblue OR spirit OR frontier OR alaska OR allegiant OR marriott OR hilton OR hyatt OR ihg OR wyndham OR "best western" OR radisson OR "choice hotels" OR "four seasons" OR omni OR drury OR "la quinta" OR expedia OR "hotels.com" OR priceline OR kayak OR airbnb OR vrbo OR hertz OR enterprise OR avis';
+  const bookingKeywords = 'confirmation OR reservation OR receipt OR itinerary OR cancellation OR "check-in" OR "e-ticket" OR booking';
+
   let query = `after:${afterEpoch} ${excludeMarketing} (`;
-  // All emails from known travel domains — tournament date post-filter + AI handles relevance
-  query += `{${travelFromQuery}}`;
+  // Travel brand + booking keyword combo — catches any sender domain
+  query += `(${travelBrands}) (${bookingKeywords})`;
   // Tournament/event emails from anyone
   query += ` OR (${tournamentKeywords})`;
 
@@ -238,12 +215,13 @@ async function syncUser(
         continue;
       }
 
-      // For travel emails, check if dates are near a tournament (±3 days)
+      // For travel emails, check if extracted dates are near a tournament (±3 days)
+      // Only filter when we actually have a date — pass through if no date extracted
       if (classification === 'stay_and_play' || classification === 'travel_confirmation') {
-        const tournamentDates = await getTournamentDates(supabase, token.user_id);
-        if (tournamentDates.length > 0) {
-          const travelDate = extractedData.check_in_date || extractedData.departure_date || extractedData.start_date;
-          if (travelDate && typeof travelDate === 'string') {
+        const travelDate = String(extractedData.check_in_date ?? extractedData.departure_date ?? extractedData.start_date ?? '');
+        if (travelDate) {
+          const tournamentDates = await getTournamentDates(supabase, token.user_id);
+          if (tournamentDates.length > 0) {
             const isNearTournament = tournamentDates.some((td) => {
               const diffStart = Math.abs(new Date(travelDate).getTime() - new Date(td.start).getTime());
               const diffEnd = Math.abs(new Date(travelDate).getTime() - new Date(td.end).getTime());

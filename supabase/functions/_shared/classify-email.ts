@@ -1,12 +1,15 @@
 const CLASSIFICATION_PROMPT = `You are an email classifier for a youth volleyball team management app called Rally.
+This app helps families manage travel for youth volleyball tournaments. Err on the side of KEEPING emails — only classify as "other" if it's clearly irrelevant marketing.
 
 Classify the email into exactly ONE category:
-- "stay_and_play": Hotel booking confirmation, stay-and-play deals, hotel block info
-- "travel_confirmation": Flight confirmation, car rental, travel itinerary
+- "stay_and_play": Hotel booking confirmation, hotel reservation, stay-and-play deals, hotel block info, hotel check-in info, ANY email from a hotel chain about an actual stay/reservation
+- "travel_confirmation": Flight confirmation, flight receipt, flight itinerary, boarding pass, trip summary, car rental confirmation, ANY email from an airline about an actual flight/booking
 - "coach_announcement": Messages from the coach about practice, team updates, lineups
 - "schedule_change": Tournament schedule updates, pool reassignments, venue changes
-- "tournament_info": Tournament registration, bracket info, AES updates, check-in details
-- "other": Anything that doesn't fit the above
+- "tournament_info": Tournament registration, bracket info, AES updates, check-in details, tournament logistics, event information
+- "other": ONLY use for clear marketing/promotions (loyalty point offers, credit card upsells, sale announcements, newsletters, furniture stores, sports news). If in doubt, do NOT classify as "other"
+
+IMPORTANT: Emails from airlines (Delta, Southwest, United, etc.) or hotels (Marriott, Hilton, etc.) that reference a specific trip, flight, stay, confirmation number, or date are NEVER "other" — they are "travel_confirmation" or "stay_and_play".
 
 Extract ALL pertinent structured data from the email. Be thorough:
 - For stay_and_play/travel_confirmation: hotel_name, check_in_date, check_out_date, confirmation_number, nightly_rate, total_cost, cancellation_deadline, address, phone, booking_url
@@ -79,8 +82,17 @@ export async function classifyEmail(
       result.extractedData = parsed.extracted_data ?? {};
       result.summary = parsed.summary ?? '';
     } catch {
-      console.error('Failed to parse Claude classification response');
+      console.error('Failed to parse Claude classification response, raw:', rawText.slice(0, 200));
+      // Don't default to "other" on parse failure — mark as unclassified so it still gets stored
+      result.classification = 'unclassified';
+      result.summary = 'AI classification failed — needs manual review';
     }
+  } else {
+    const errorText = await claudeResponse.text();
+    console.error(`Claude API failed (${claudeResponse.status}): ${errorText.slice(0, 200)}`);
+    // Don't default to "other" — mark as unclassified so it still gets stored
+    result.classification = 'unclassified';
+    result.summary = 'AI classification unavailable — needs manual review';
   }
 
   return result;
