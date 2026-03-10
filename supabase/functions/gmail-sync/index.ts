@@ -42,12 +42,16 @@ interface GmailToken {
   sync_errors: number;
 }
 
+interface GmailPart {
+  mimeType: string;
+  body?: { data?: string };
+  parts?: GmailPart[];
+}
+
 interface GmailMessage {
   id: string;
-  payload: {
+  payload: GmailPart & {
     headers: Array<{ name: string; value: string }>;
-    body?: { data?: string };
-    parts?: Array<{ mimeType: string; body?: { data?: string } }>;
   };
   snippet: string;
 }
@@ -325,18 +329,30 @@ function getHeader(msg: GmailMessage, name: string): string | undefined {
   )?.value;
 }
 
+function findPart(parts: GmailPart[] | undefined, mimeType: string): GmailPart | undefined {
+  if (!parts) return undefined;
+  for (const part of parts) {
+    if (part.mimeType === mimeType && part.body?.data) return part;
+    // Recurse into nested multipart structures
+    if (part.parts) {
+      const found = findPart(part.parts, mimeType);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
 function extractBody(msg: GmailMessage): string {
-  // Try to get plain text body
-  if (msg.payload.parts) {
-    const textPart = msg.payload.parts.find((p) => p.mimeType === 'text/plain');
-    if (textPart?.body?.data) {
-      return base64UrlDecode(textPart.body.data);
-    }
-    // Fall back to HTML part
-    const htmlPart = msg.payload.parts.find((p) => p.mimeType === 'text/html');
-    if (htmlPart?.body?.data) {
-      return stripHtml(base64UrlDecode(htmlPart.body.data));
-    }
+  // Recursively search for plain text body
+  const textPart = findPart(msg.payload.parts, 'text/plain');
+  if (textPart?.body?.data) {
+    return base64UrlDecode(textPart.body.data);
+  }
+
+  // Fall back to HTML part (also recursive)
+  const htmlPart = findPart(msg.payload.parts, 'text/html');
+  if (htmlPart?.body?.data) {
+    return stripHtml(base64UrlDecode(htmlPart.body.data));
   }
 
   // Single-part message
