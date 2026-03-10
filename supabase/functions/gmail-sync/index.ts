@@ -148,12 +148,13 @@ async function syncUser(
   const userVipSenders = config?.trusted_sender_emails ?? [];
   const userTravelSenders = config?.travel_sync_emails ?? [];
 
-  // Travel query: from known domains + must contain booking keywords
-  const bookingKeywords = 'confirmation OR reservation OR itinerary OR booking OR "check-in" OR "check in" OR receipt OR e-ticket OR "flight details" OR "hotel details" OR cancellation';
+  // Travel query: from known domains + must contain booking keywords + exclude marketing
+  const bookingKeywords = '"confirmation number" OR "reservation number" OR "booking confirmation" OR itinerary OR "e-ticket" OR "flight details" OR "hotel confirmation" OR "check-in date" OR "check-in time" OR "cancellation policy" OR "cancellation deadline"';
+  const excludeMarketing = '-subject:unsubscribe -subject:deals -subject:offer -subject:promotion -subject:"limited time" -subject:sale -subject:reward -subject:points -subject:newsletter -subject:"earn" -subject:"exclusive" -subject:"save" -subject:"% off" -subject:"dream" -subject:"getaway" -subject:"explore"';
   const domainClauses = TRAVEL_SENDER_DOMAINS.map((d) => `from:${d}`);
   const travelFromQuery = domainClauses.join(' OR ');
 
-  let query = `in:inbox after:${afterEpoch} (`;
+  let query = `in:inbox after:${afterEpoch} ${excludeMarketing} (`;
   // Travel senders with booking keywords
   query += `({${travelFromQuery}} (${bookingKeywords}))`;
 
@@ -221,6 +222,12 @@ async function syncUser(
         subject,
         body,
       );
+
+      // Skip marketing / irrelevant emails — don't store "other"
+      if (classification === 'other') {
+        console.log(`Skipping irrelevant email: "${subject}" from ${from}`);
+        continue;
+      }
 
       // Store in forwarded_emails
       const { data: stored, error: storeError } = await supabase
