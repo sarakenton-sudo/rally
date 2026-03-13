@@ -290,7 +290,22 @@ export default function OnboardingScreen() {
 
     if (isSupabaseConfigured && user) {
       try {
-        await supabase.from('user_profiles').upsert({ id: user.id, role: 'admin' }, { onConflict: 'id', ignoreDuplicates: true });
+        // Ensure user_profiles row exists with role='admin'
+        // Try insert first, then update if it already exists
+        const { error: insertProfileError } = await supabase
+          .from('user_profiles')
+          .insert({ id: user.id, role: 'admin' } as any);
+        if (insertProfileError) {
+          // Row likely exists already (from trigger) — update role to admin
+          const { error: updateProfileError } = await supabase
+            .from('user_profiles')
+            .update({ role: 'admin' } as any)
+            .eq('id', user.id);
+          if (updateProfileError) {
+            console.error('[Onboarding] user_profiles update failed:', updateProfileError);
+            throw new Error(`Profile setup failed: ${updateProfileError.message}`);
+          }
+        }
 
         const { data: athleteData, error: athleteError } = await supabase
           .from('athletes').insert({ first_name: athleteName.trim() || 'My Athlete', last_name: null, can_edit: false } as any).select().single();
