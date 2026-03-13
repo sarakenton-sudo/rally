@@ -78,6 +78,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log('[Auth] Valid session for user:', user.email);
             setSession(cached);
             await fetchUserProfile(user.id);
+
+            // If this session has Google provider tokens, store them for Gmail sync
+            if (cached.provider_token && user.app_metadata?.provider === 'google') {
+              console.log('[Auth] Found Google provider tokens in session, storing for Gmail sync');
+              supabase.rpc('store_google_auth_tokens', {
+                p_access_token: cached.provider_token,
+                p_refresh_token: cached.provider_refresh_token || '',
+                p_expires_in: 3600,
+                p_gmail_email: user.email || null,
+              }).then(({ error }) => {
+                if (error) console.error('[Auth] Failed to store Gmail tokens:', error);
+                else console.log('[Auth] Gmail tokens stored from initial session');
+              });
+            }
           }
         } else {
           console.log('[Auth] No cached session');
@@ -99,11 +113,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Step 2: Listen for FUTURE auth changes (sign in, sign out, token refresh)
     // But ignore events until initial validation is done
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (validatedRef.current) {
         setSession(newSession);
         if (newSession?.user) {
           fetchUserProfile(newSession.user.id);
+
+          // Store Google OAuth tokens for Gmail sync (one-time after sign-in)
+          if (event === 'SIGNED_IN' && newSession.provider_token) {
+            console.log('[Auth] Storing Google OAuth tokens for Gmail sync');
+            supabase.rpc('store_google_auth_tokens', {
+              p_access_token: newSession.provider_token,
+              p_refresh_token: newSession.provider_refresh_token || '',
+              p_expires_in: 3600,
+              p_gmail_email: newSession.user.email || null,
+            }).then(({ error }) => {
+              if (error) console.error('[Auth] Failed to store Gmail tokens:', error);
+              else console.log('[Auth] Gmail tokens stored successfully');
+            });
+          }
         } else {
           setUserProfile(null);
         }

@@ -97,10 +97,19 @@ serve(async (req: Request) => {
       const ticketUrls = extractedData.ticket_urls as string[];
       if (ticketUrls.length > 0 && extractedData.tournament_name) {
         const tournamentName = (extractedData.tournament_name as string).toLowerCase();
-        const { data: matchingTournaments } = await supabase
-          .from('tournaments')
-          .select('id, name, ticket_link')
-          .eq('user_id', config.user_id);
+        // Get tournaments through season relationships
+        const { data: adminAthletes } = await supabase
+          .from('admin_athletes')
+          .select('athlete_id')
+          .eq('admin_id', config.user_id);
+        const athleteIds = (adminAthletes ?? []).map((r: any) => r.athlete_id);
+        const { data: seasons } = athleteIds.length > 0
+          ? await supabase.from('seasons').select('id').in('athlete_id', athleteIds)
+          : { data: [] };
+        const seasonIds = (seasons ?? []).map((s: any) => s.id);
+        const { data: matchingTournaments } = seasonIds.length > 0
+          ? await supabase.from('tournaments').select('id, name, ticket_link').in('season_id', seasonIds)
+          : { data: [] };
 
         if (matchingTournaments) {
           const match = matchingTournaments.find((t) =>

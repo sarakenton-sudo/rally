@@ -11,6 +11,39 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const MAX_MESSAGES_PER_SYNC = 50;
 const MAX_SYNC_ERRORS = 3;
 
+// Helper: get season IDs for a user through admin_athletes → athletes → seasons
+async function getUserSeasonIds(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+): Promise<string[]> {
+  const { data } = await supabase
+    .from('admin_athletes')
+    .select('athlete_id')
+    .eq('admin_id', userId);
+  if (!data || data.length === 0) return [];
+  const athleteIds = data.map((r: { athlete_id: string }) => r.athlete_id);
+  const { data: seasons } = await supabase
+    .from('seasons')
+    .select('id')
+    .in('athlete_id', athleteIds);
+  return (seasons ?? []).map((s: { id: string }) => s.id);
+}
+
+// Helper: get tournaments for a user through season relationships
+async function getUserTournaments(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  selectFields = 'id, name, start_date, end_date, schedule_link, schedule_available_date, ticket_sales_date, ticket_link, venues, season_id',
+) {
+  const seasonIds = await getUserSeasonIds(supabase, userId);
+  if (seasonIds.length === 0) return [];
+  const { data } = await supabase
+    .from('tournaments')
+    .select(selectFields)
+    .in('season_id', seasonIds);
+  return data ?? [];
+}
+
 
 interface GmailToken {
   user_id: string;
@@ -357,13 +390,9 @@ async function autoApplyToTournament(
   if (!['tournament_info', 'schedule_change', 'stay_and_play', 'travel_confirmation'].includes(classification)) return;
 
   try {
-    // Fetch user's tournaments
-    const { data: tournaments } = await supabase
-      .from('tournaments')
-      .select('id, name, start_date, end_date, schedule_link, schedule_available_date, ticket_sales_date, ticket_link, venues')
-      .eq('user_id', userId);
-
-    if (!tournaments || tournaments.length === 0) return;
+    // Fetch user's tournaments through season relationships
+    const tournaments = await getUserTournaments(supabase, userId);
+    if (tournaments.length === 0) return;
 
     // For travel emails, match by travel date to nearest tournament
     if (classification === 'travel_confirmation') {
@@ -377,7 +406,7 @@ async function autoApplyToTournament(
         .from('flight_bookings')
         .insert({
           tournament_id: match.id,
-          user_id: userId,
+          created_by_user_id: userId,
           airline: String(data.airline ?? ''),
           confirmation_code: String(data.confirmation_number ?? ''),
           departure_date: departureDate || null,
@@ -385,6 +414,7 @@ async function autoApplyToTournament(
           booked_by: String(data.passenger_name ?? ''),
           traveler_names: data.passenger_name ? [String(data.passenger_name)] : [],
           cost: data.total_cost ? Number(data.total_cost) : null,
+          ticket_number: '',
         });
       if (error) {
         console.error('Auto-create flight booking failed:', error);
@@ -404,7 +434,7 @@ async function autoApplyToTournament(
         .from('hotel_bookings')
         .insert({
           tournament_id: match.id,
-          user_id: userId,
+          created_by_user_id: userId,
           hotel_name: String(data.hotel_name ?? ''),
           platform: 'Other',
           booking_name: String(data.hotel_name ?? ''),
@@ -477,10 +507,10 @@ async function getTournamentDates(
   if (tournamentDateCache.has(userId)) {
     return tournamentDateCache.get(userId)!;
   }
-  const { data } = await supabase
-    .from('tournaments')
-    .select('start_date, end_date')
-    .eq('user_id', userId);
+  const seasonIds = await getUserSeasonIds(supabase, userId);
+  const { data } = seasonIds.length > 0
+    ? await supabase.from('tournaments').select('start_date, end_date').in('season_id', seasonIds)
+    : { data: [] };
   const dates = (data ?? []).map((t: { start_date: string; end_date: string }) => ({
     start: t.start_date,
     end: t.end_date,
@@ -497,16 +527,20 @@ async function checkScheduleAndTicketDates(
     // Find tournaments where schedule_available_date or ticket_sales_date is today
     const { data: tournaments } = await supabase
       .from('tournaments')
-      .select('id, user_id, name, schedule_available_date, ticket_sales_date')
+      .select('id, name, schedule_available_date, ticket_sales_date, season_id, seasons!inner(athlete_id, athletes!inner(admin_athletes!inner(admin_id)))')
       .or(`schedule_available_date.eq.${today},ticket_sales_date.eq.${today}`);
 
     if (!tournaments || tournaments.length === 0) return;
 
-    for (const t of tournaments) {
+    for (const t of tournaments as any[]) {
+      // Get admin user_id from the relationship chain
+      const adminId = t.seasons?.athletes?.admin_athletes?.[0]?.admin_id;
+      if (!adminId) continue;
+
       if (t.schedule_available_date === today) {
         await supabase.functions.invoke('send-notification', {
           body: {
-            user_id: t.user_id,
+            user_id: adminId,
             type: 'custom',
             title: `Schedule Posted: ${t.name}`,
             body: `The schedule for ${t.name} should be available now! Check your schedule link or AES for pool assignments.`,
@@ -519,7 +553,7 @@ async function checkScheduleAndTicketDates(
       if (t.ticket_sales_date === today) {
         await supabase.functions.invoke('send-notification', {
           body: {
-            user_id: t.user_id,
+            user_id: adminId,
             type: 'custom',
             title: `Tickets On Sale: ${t.name}`,
             body: `Tickets for ${t.name} should be on sale now! Don't forget to buy before they sell out.`,
