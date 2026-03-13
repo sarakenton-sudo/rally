@@ -184,10 +184,11 @@ export default function OnboardingScreen() {
   const [extractedTournaments, setExtractedTournaments] = useState<any[]>([]);
   const [extractError, setExtractError] = useState('');
 
-  // Step 4: Email & Travel
+  // Step 4: Email & Travel — auto-detect if signed in with Google
+  const signedInWithGoogle = user?.app_metadata?.provider === 'google';
   const [gmailConnecting, setGmailConnecting] = useState(false);
-  const [gmailConnected, setGmailConnected] = useState(false);
-  const [gmailEmail, setGmailEmail] = useState('');
+  const [gmailConnected, setGmailConnected] = useState(signedInWithGoogle);
+  const [gmailEmail, setGmailEmail] = useState(signedInWithGoogle ? (user?.email ?? '') : '');
   const [trustedEmails, setTrustedEmails] = useState<string[]>([]);
   const [trustedEmailInput, setTrustedEmailInput] = useState('');
 
@@ -291,20 +292,39 @@ export default function OnboardingScreen() {
     if (isSupabaseConfigured && user) {
       try {
         // Ensure user_profiles row exists with role='admin'
-        // Try insert first, then update if it already exists
-        const { error: insertProfileError } = await supabase
+        // Check if row exists first
+        const { data: existingProfile } = await supabase
           .from('user_profiles')
-          .insert({ id: user.id, role: 'admin' } as any);
-        if (insertProfileError) {
-          // Row likely exists already (from trigger) — update role to admin
-          const { error: updateProfileError } = await supabase
-            .from('user_profiles')
-            .update({ role: 'admin' } as any)
-            .eq('id', user.id);
-          if (updateProfileError) {
-            console.error('[Onboarding] user_profiles update failed:', updateProfileError);
-            throw new Error(`Profile setup failed: ${updateProfileError.message}`);
+          .select('id, role')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (existingProfile) {
+          // Row exists — ensure role is admin
+          if (existingProfile.role !== 'admin') {
+            const { error: updateErr } = await supabase
+              .from('user_profiles')
+              .update({ role: 'admin' } as any)
+              .eq('id', user.id);
+            if (updateErr) throw new Error(`Profile update failed: ${updateErr.message}`);
           }
+        } else {
+          // No row — create it
+          const { error: insertErr } = await supabase
+            .from('user_profiles')
+            .insert({ id: user.id, role: 'admin' } as any);
+          if (insertErr) throw new Error(`Profile insert failed: ${insertErr.message}`);
+        }
+
+        // Clean up any partial data from previous onboarding attempts
+        await supabase.from('admin_config').delete().eq('user_id', user.id);
+        const { data: existingLinks } = await supabase.from('admin_athletes').select('athlete_id').eq('admin_id', user.id);
+        if (existingLinks && existingLinks.length > 0) {
+          const existingAthleteIds = existingLinks.map((l: any) => l.athlete_id);
+          await supabase.from('seasons').delete().in('athlete_id', existingAthleteIds);
+          await supabase.from('guests').delete().in('athlete_id', existingAthleteIds);
+          await supabase.from('admin_athletes').delete().eq('admin_id', user.id);
+          await supabase.from('athletes').delete().in('id', existingAthleteIds);
         }
 
         const { data: athleteData, error: athleteError } = await supabase
