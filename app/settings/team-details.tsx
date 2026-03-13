@@ -6,26 +6,34 @@ import { Ionicons } from '@expo/vector-icons';
 import FormField from '@/components/FormField';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useAuth } from '@/providers/AuthProvider';
-import { updateTeamConfig } from '@/hooks/useSupabaseData';
-import { isSupabaseConfigured } from '@/lib/supabase';
+import { updateAdminConfig } from '@/hooks/useSupabaseData';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 
 export default function TeamDetailsScreen() {
   const ic = useIconColors();
-  const teamConfig = useSeasonStore((s) => s.teamConfig);
-  const setTeamConfig = useSeasonStore((s) => s.setTeamConfig);
+  const adminConfig = useSeasonStore((s) => s.adminConfig);
+  const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
+  const seasons = useSeasonStore((s) => s.seasons);
+  const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
+  const setSeasons = useSeasonStore((s) => s.setSeasons);
+  const athletes = useSeasonStore((s) => s.athletes);
   const { user } = useAuth();
 
-  const [teamName, setTeamName] = useState(teamConfig?.team_name ?? '');
-  const [seasonYear, setSeasonYear] = useState(teamConfig?.season_year ?? '');
-  const [athleteName, setAthleteName] = useState(teamConfig?.athlete_name ?? '');
-  const [teamCode, setTeamCode] = useState(teamConfig?.team_code ?? '');
-  const [clubDomain, setClubDomain] = useState(teamConfig?.club_email_domain ?? '');
+  const activeSeason = seasons.find((s) => s.id === activeSeasonId) ?? null;
+  const activeAthlete = athletes.find((a) => a.id === activeSeason?.athlete_id) ?? null;
+  const athleteDisplayName = [activeAthlete?.first_name, activeAthlete?.last_name].filter(Boolean).join(' ');
+
+  const [teamName, setTeamName] = useState(activeSeason?.team_name ?? '');
+  const [seasonYear, setSeasonYear] = useState(activeSeason?.season_year ?? '');
+  const [athleteName, setAthleteName] = useState(athleteDisplayName);
+  const [teamCode, setTeamCode] = useState(activeSeason?.team_code ?? '');
+  const [clubDomain, setClubDomain] = useState(adminConfig?.club_email_domain ?? '');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!teamConfig) return;
+    if (!activeSeason || !adminConfig) return;
     if (!teamName.trim()) {
       Alert.alert('Missing field', 'Team name is required.');
       return;
@@ -33,23 +41,35 @@ export default function TeamDetailsScreen() {
 
     setIsSaving(true);
 
-    const updates = {
+    const seasonUpdates = {
       team_name: teamName.trim(),
       season_year: seasonYear.trim(),
-      athlete_name: athleteName.trim() || null,
       team_code: teamCode.trim() || null,
+    };
+
+    const adminUpdates = {
       club_email_domain: clubDomain.trim() || null,
     };
 
     try {
       if (isSupabaseConfigured && user) {
-        const { error } = await updateTeamConfig(teamConfig.id, updates);
-        if (error) {
-          Alert.alert('Save failed', error.message);
+        const { error: seasonError } = await supabase
+          .from('seasons')
+          .update(seasonUpdates)
+          .eq('id', activeSeason.id);
+        if (seasonError) {
+          Alert.alert('Save failed', seasonError.message);
+          return;
+        }
+
+        const { error: adminError } = await updateAdminConfig(adminConfig.id, adminUpdates);
+        if (adminError) {
+          Alert.alert('Save failed', adminError.message);
           return;
         }
       }
-      setTeamConfig({ ...teamConfig, ...updates });
+      setSeasons(seasons.map((s) => s.id === activeSeason.id ? { ...s, ...seasonUpdates } : s));
+      setAdminConfig({ ...adminConfig, ...adminUpdates });
       notifySuccess();
       router.back();
     } finally {

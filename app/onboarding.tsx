@@ -22,7 +22,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useGuestStore } from '@/stores/useGuestStore';
-import type { TeamConfig, Tournament } from '@/types/database';
+import type { AdminConfig, Tournament, Athlete, Season } from '@/types/database';
 import { smartExtract as smartExtractOnboarding } from '@/lib/schedule-parser';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
@@ -54,7 +54,11 @@ export default function OnboardingScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const [step, setStep] = useState(0);
   const { user } = useAuth();
-  const setTeamConfig = useSeasonStore((s) => s.setTeamConfig);
+  const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
+  const setAthletes = useSeasonStore((s) => s.setAthletes);
+  const setSeasons = useSeasonStore((s) => s.setSeasons);
+  const setAdminAthletes = useSeasonStore((s) => s.setAdminAthletes);
+  const setActiveSeasonId = useSeasonStore((s) => s.setActiveSeasonId);
 
   // Step 2: Team
   const [clubName, setClubName] = useState('');
@@ -223,63 +227,130 @@ export default function OnboardingScreen() {
     setSaving(true);
 
     if (isSupabaseConfigured && user) {
-      // 1. Create team config
-      // Check if team_config already exists for this user
-      const { data: existing } = await supabase
-        .from('team_config')
+      // 1. Create athlete
+      const { data: athleteData, error: athleteError } = await supabase
+        .from('athletes')
+        .insert({
+          first_name: athleteName.trim() || 'My Athlete',
+          last_name: null,
+          can_edit: false,
+        } as any)
+        .select()
+        .single();
+
+      if (athleteError || !athleteData) {
+        setSaving(false);
+        console.error('Athlete creation error:', athleteError);
+        if (Platform.OS === 'web') {
+          window.alert(athleteError?.message ?? 'Failed to create athlete');
+        } else {
+          Alert.alert('Error', athleteError?.message ?? 'Failed to create athlete');
+        }
+        return;
+      }
+
+      const athlete = athleteData as Athlete;
+
+      // 2. Create admin_athletes link
+      const { error: linkError } = await supabase
+        .from('admin_athletes')
+        .insert({
+          admin_id: user.id,
+          athlete_id: athlete.id,
+          permission: 'manage',
+          is_primary: true,
+        } as any);
+
+      if (linkError) {
+        console.error('Admin-athlete link error:', linkError);
+      }
+
+      // 3. Create season
+      const { data: seasonData, error: seasonError } = await supabase
+        .from('seasons')
+        .insert({
+          athlete_id: athlete.id,
+          team_name: teamName.trim(),
+          club_name: clubName.trim() || null,
+          season_year: seasonYear,
+          team_code: teamCode.trim() || null,
+          schedule_import_source: scheduleSource === 'leagueapps' ? 'leagueapps' : scheduleSource === 'paste' ? 'manual' : null,
+          schedule_import_connected: false,
+          is_active: true,
+        } as any)
+        .select()
+        .single();
+
+      if (seasonError || !seasonData) {
+        setSaving(false);
+        console.error('Season creation error:', seasonError);
+        if (Platform.OS === 'web') {
+          window.alert(seasonError?.message ?? 'Failed to create season');
+        } else {
+          Alert.alert('Error', seasonError?.message ?? 'Failed to create season');
+        }
+        return;
+      }
+
+      const season = seasonData as Season;
+
+      // 4. Create or update admin_config
+      const { data: existingConfig } = await supabase
+        .from('admin_config')
         .select('id')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      let data, error;
-      if (existing) {
-        ({ data, error } = await supabase
-          .from('team_config')
+      let configData, configError;
+      if (existingConfig) {
+        ({ data: configData, error: configError } = await supabase
+          .from('admin_config')
           .update({
-            team_name: teamName.trim(),
-            club_name: clubName.trim() || null,
-            season_year: seasonYear,
-            athlete_name: athleteName.trim() || null,
-            team_code: teamCode.trim() || null,
-            schedule_import_source: scheduleSource === 'leagueapps' ? 'leagueapps' : scheduleSource === 'paste' ? 'manual' : null,
+            active_season_id: season.id,
           } as any)
           .eq('user_id', user.id)
           .select()
           .single());
       } else {
-        ({ data, error } = await supabase
-          .from('team_config')
+        ({ data: configData, error: configError } = await supabase
+          .from('admin_config')
           .insert({
             user_id: user.id,
-            team_name: teamName.trim(),
-            club_name: clubName.trim() || null,
-            season_year: seasonYear,
-            athlete_name: athleteName.trim() || null,
-            team_code: teamCode.trim() || null,
-            schedule_import_source: scheduleSource === 'leagueapps' ? 'leagueapps' : scheduleSource === 'paste' ? 'manual' : null,
+            active_season_id: season.id,
           } as any)
           .select()
           .single());
       }
 
-      if (error) {
+      if (configError) {
         setSaving(false);
-        console.error('Team config error:', error);
+        console.error('Admin config error:', configError);
         if (Platform.OS === 'web') {
-          window.alert(error.message);
+          window.alert(configError.message);
         } else {
-          Alert.alert('Error', error.message);
+          Alert.alert('Error', configError.message);
         }
         return;
       }
 
-      setTeamConfig(data as TeamConfig);
+      setAdminConfig(configData as AdminConfig);
+      setAthletes([athlete]);
+      setSeasons([season]);
+      setAdminAthletes([{
+        id: '',
+        admin_id: user.id,
+        athlete_id: athlete.id,
+        permission: 'manage',
+        is_primary: true,
+        created_at: new Date().toISOString(),
+      }]);
+      setActiveSeasonId(season.id);
 
-      // 2. Save extracted tournaments (if any)
+      // 5. Save extracted tournaments (if any)
       if (extractedTournaments.length > 0) {
         const { error: tError } = await supabase.from('tournaments').insert(
           extractedTournaments.map((t) => ({
-            user_id: user.id,
+            season_id: season.id,
             name: t.name,
             start_date: t.start_date,
             end_date: t.end_date,
@@ -294,12 +365,12 @@ export default function OnboardingScreen() {
         }
       }
 
-      // 3. Create guests (if any filled in)
+      // 6. Create guests (if any filled in)
       const validGuests = guests.filter((g) => g.name.trim());
       if (validGuests.length > 0) {
         await supabase.from('guests').insert(
           validGuests.map((g) => ({
-            user_id: user.id,
+            athlete_id: athlete.id,
             name: g.name.trim(),
             relationship: g.relation,
             phone: g.phone.trim() || null,
@@ -309,14 +380,11 @@ export default function OnboardingScreen() {
       }
     } else {
       // Dev mode
-      setTeamConfig({
+      const mockSeasonId = 'season-dev-001';
+      const mockAthleteId = 'athlete-dev-001';
+      setAdminConfig({
         id: 'onboarding-dev',
         user_id: 'dev',
-        team_name: teamName.trim(),
-        club_name: clubName.trim() || null,
-        season_year: seasonYear,
-        athlete_name: athleteName.trim() || null,
-        team_code: teamCode.trim() || null,
         club_email_domain: null,
         rally_forward_address: 'plans@rally.app',
         trusted_sender_emails: [],
@@ -328,8 +396,6 @@ export default function OnboardingScreen() {
         travel_sync_emails: [],
         gmail_connected: false,
         gmail_email: null,
-        schedule_import_source: null,
-        schedule_import_connected: false,
         external_links: [],
         notification_preferences: {
           tournament_reminders: true,
@@ -338,8 +404,33 @@ export default function OnboardingScreen() {
           rsvp_responses: true,
           schedule_changes: true,
         },
+        active_season_id: mockSeasonId,
         created_at: new Date().toISOString(),
       });
+      setAthletes([{
+        id: mockAthleteId,
+        user_id: null,
+        first_name: athleteName.trim() || 'My Athlete',
+        last_name: null,
+        can_edit: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }]);
+      setSeasons([{
+        id: mockSeasonId,
+        athlete_id: mockAthleteId,
+        team_name: teamName.trim(),
+        club_name: clubName.trim() || null,
+        season_year: seasonYear,
+        sport: 'volleyball',
+        team_code: teamCode.trim() || null,
+        schedule_import_source: null,
+        schedule_import_connected: false,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }]);
+      setActiveSeasonId(mockSeasonId);
     }
 
     setSaving(false);

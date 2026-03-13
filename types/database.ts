@@ -7,6 +7,12 @@ export type EmailClassification = 'stay_and_play' | 'travel_confirmation' | 'coa
 export type EmailAction = 'booking_alert_sent' | 'travel_import_queued' | 'notification_sent' | 'none';
 export type StreamingPlatform = 'YouTube' | 'GameChanger' | 'Baller.tv' | 'Other';
 
+// New multi-user types
+export type UserRole = 'admin' | 'athlete';
+export type AdminPermission = 'manage' | 'view';
+export type InviteType = 'admin' | 'athlete';
+export type InviteStatus = 'pending' | 'accepted' | 'revoked';
+
 export interface Venue {
   address: string;
   label: string;
@@ -24,6 +30,61 @@ export interface ExternalLink {
   icon_name: string;
   username: string | null;
   password: string | null;
+}
+
+export interface UserProfile {
+  id: string;
+  role: UserRole;
+  display_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Athlete {
+  id: string;
+  user_id: string | null;
+  first_name: string;
+  last_name: string | null;
+  can_edit: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminAthlete {
+  id: string;
+  admin_id: string;
+  athlete_id: string;
+  permission: AdminPermission;
+  is_primary: boolean;
+  created_at: string;
+}
+
+export interface Season {
+  id: string;
+  athlete_id: string;
+  team_name: string;
+  club_name: string | null;
+  season_year: string;
+  sport: string;
+  team_code: string | null;
+  schedule_import_source: 'leagueapps' | 'teamsnap' | 'manual' | null;
+  schedule_import_connected: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AthleteInvite {
+  id: string;
+  inviter_id: string;
+  athlete_id: string;
+  email: string;
+  invite_type: InviteType;
+  permission: AdminPermission;
+  invite_code: string;
+  status: InviteStatus;
+  expires_at: string;
+  created_at: string;
 }
 
 export interface Tournament {
@@ -48,7 +109,7 @@ export interface Tournament {
   air_not_needed: boolean;
   hotel_not_needed: boolean;
   status: TournamentStatus;
-  user_id: string;
+  season_id: string;
   created_at: string;
 }
 
@@ -66,7 +127,7 @@ export interface HotelBooking {
   cost: number | null;
   is_backup: boolean;
   status: BookingStatus;
-  user_id: string;
+  created_by_user_id: string;
   created_at: string;
 }
 
@@ -81,7 +142,7 @@ export interface FlightBooking {
   booked_by: string;
   traveler_names: string[];
   cost: number | null;
-  user_id: string;
+  created_by_user_id: string;
   created_at: string;
 }
 
@@ -93,7 +154,7 @@ export interface Guest {
   relationship: string;
   notification_pref: NotificationPref;
   default_invited: boolean;
-  user_id: string;
+  athlete_id: string;
   created_at: string;
 }
 
@@ -114,13 +175,8 @@ export interface NotificationPreferences {
   schedule_changes: boolean;
 }
 
-export interface TeamConfig {
+export interface AdminConfig {
   id: string;
-  team_name: string;
-  club_name: string | null;
-  season_year: string;
-  team_code: string | null;
-  athlete_name: string | null;
   club_email_domain: string | null;
   rally_forward_address: string;
   trusted_sender_emails: string[];
@@ -132,10 +188,9 @@ export interface TeamConfig {
   travel_sync_emails: string[];
   gmail_connected: boolean;
   gmail_email: string | null;
-  schedule_import_source: 'leagueapps' | 'teamsnap' | 'manual' | null;
-  schedule_import_connected: boolean;
   external_links: ExternalLink[];
   notification_preferences: NotificationPreferences;
+  active_season_id: string | null;
   user_id: string;
   created_at: string;
 }
@@ -153,7 +208,7 @@ export interface TeamEvent {
   party_size: number | null;
   notes: string | null;
   family_welcome: boolean;
-  user_id: string;
+  season_id: string;
   created_at: string;
 }
 
@@ -165,7 +220,7 @@ export interface USAVProfile {
   expiration_date: string;
   membership_card_file: string | null;
   notes: string | null;
-  user_id: string;
+  athlete_id: string;
   created_at: string;
 }
 
@@ -186,31 +241,35 @@ export interface ForwardedEmail {
   extracted_data: Record<string, unknown> | null;
 }
 
-export type HouseholdRole = 'admin' | 'member';
-export type InviteStatus = 'pending' | 'accepted' | 'revoked';
-
-export interface HouseholdMember {
-  id: string;
-  owner_user_id: string;
-  member_user_id: string;
-  role: HouseholdRole;
-  created_at: string;
-}
-
-export interface HouseholdInvite {
-  id: string;
-  owner_user_id: string;
-  email: string;
-  invite_code: string;
-  status: InviteStatus;
-  expires_at: string;
-  created_at: string;
-}
-
 // Supabase Database type for typed client
 export interface Database {
   public: {
     Tables: {
+      user_profiles: {
+        Row: UserProfile;
+        Insert: Omit<UserProfile, 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<UserProfile, 'id'>>;
+      };
+      athletes: {
+        Row: Athlete;
+        Insert: Omit<Athlete, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Athlete, 'id'>>;
+      };
+      admin_athletes: {
+        Row: AdminAthlete;
+        Insert: Omit<AdminAthlete, 'id' | 'created_at'>;
+        Update: Partial<Omit<AdminAthlete, 'id'>>;
+      };
+      seasons: {
+        Row: Season;
+        Insert: Omit<Season, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Season, 'id'>>;
+      };
+      athlete_invites: {
+        Row: AthleteInvite;
+        Insert: Omit<AthleteInvite, 'id' | 'created_at' | 'invite_code'>;
+        Update: Partial<Omit<AthleteInvite, 'id'>>;
+      };
       tournaments: {
         Row: Tournament;
         Insert: Omit<Tournament, 'id' | 'created_at'>;
@@ -236,10 +295,10 @@ export interface Database {
         Insert: TournamentGuest;
         Update: Partial<TournamentGuest>;
       };
-      team_config: {
-        Row: TeamConfig;
-        Insert: Omit<TeamConfig, 'id' | 'created_at'>;
-        Update: Partial<Omit<TeamConfig, 'id'>>;
+      admin_config: {
+        Row: AdminConfig;
+        Insert: Omit<AdminConfig, 'id' | 'created_at'>;
+        Update: Partial<Omit<AdminConfig, 'id'>>;
       };
       team_events: {
         Row: TeamEvent;

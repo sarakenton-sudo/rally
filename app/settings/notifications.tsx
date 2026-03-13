@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useAuth } from '@/providers/AuthProvider';
-import { updateTeamConfig } from '@/hooks/useSupabaseData';
+import { updateAdminConfig } from '@/hooks/useSupabaseData';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 import type { NotificationPreferences } from '@/types/database';
@@ -21,8 +21,8 @@ const PREF_ROWS: { key: keyof NotificationPreferences; label: string; descriptio
 
 export default function NotificationPreferencesScreen() {
   const ic = useIconColors();
-  const teamConfig = useSeasonStore((s) => s.teamConfig);
-  const setTeamConfig = useSeasonStore((s) => s.setTeamConfig);
+  const adminConfig = useSeasonStore((s) => s.adminConfig);
+  const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
   const { user } = useAuth();
   const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
@@ -35,7 +35,7 @@ export default function NotificationPreferencesScreen() {
   };
 
   const [prefs, setPrefs] = useState<NotificationPreferences>(
-    teamConfig?.notification_preferences ?? defaultPrefs
+    adminConfig?.notification_preferences ?? defaultPrefs
   );
   const [isSaving, setIsSaving] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<string | null>(null);
@@ -67,20 +67,20 @@ export default function NotificationPreferencesScreen() {
   };
 
   const handleSave = async () => {
-    if (!teamConfig) return;
+    if (!adminConfig) return;
     setIsSaving(true);
 
     const updates = { notification_preferences: prefs };
 
     try {
       if (isSupabaseConfigured && user) {
-        const { error } = await updateTeamConfig(teamConfig.id, updates);
+        const { error } = await updateAdminConfig(adminConfig.id, updates);
         if (error) {
           Alert.alert('Save failed', error.message);
           return;
         }
       }
-      setTeamConfig({ ...teamConfig, ...updates });
+      setAdminConfig({ ...adminConfig, ...updates });
       notifySuccess();
       router.back();
     } finally {

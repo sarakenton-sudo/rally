@@ -12,16 +12,21 @@ import { tapLight } from '@/lib/haptics';
 
 export default function HubScreen() {
   const usavProfiles = useSeasonStore((s) => s.usavProfiles);
-  const teamConfig = useSeasonStore((s) => s.teamConfig);
+  const adminConfig = useSeasonStore((s) => s.adminConfig);
+  const seasons = useSeasonStore((s) => s.seasons);
+  const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
+  const activeSeason = seasons.find((s) => s.id === activeSeasonId);
+  const athletes = useSeasonStore((s) => s.athletes);
+  const activeAthlete = athletes.find((a) => a.id === activeSeason?.athlete_id);
   const forwardedEmails = useSeasonStore((s) => s.forwardedEmails);
   const ic = useIconColors();
   const { refresh, isRefreshing } = useDataRefresh();
-  const externalLinks = teamConfig?.external_links ?? [];
+  const externalLinks = adminConfig?.external_links ?? [];
 
   const configuredLinks = externalLinks.filter((l) => l.url);
   const unconfiguredLinks = externalLinks.filter((l) => !l.url);
 
-  const streamPlatformLabel = teamConfig?.default_streaming_platform ?? 'Stream';
+  const streamPlatformLabel = adminConfig?.default_streaming_platform ?? 'Stream';
 
   return (
     <View className="flex-1 bg-cream dark:bg-bark">
@@ -58,22 +63,22 @@ export default function HubScreen() {
         </View>
 
         {/* Team Details */}
-        {teamConfig && (
+        {activeSeason && (
           <Pressable
             className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 mb-2 active:opacity-80"
             style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
             onPress={() => router.push('/settings/team-details')}
           >
             <View className="flex-row items-center justify-between mb-1">
-              <Text className="text-sm font-semibold text-bark dark:text-cream">{teamConfig.team_name}</Text>
+              <Text className="text-sm font-semibold text-bark dark:text-cream">{activeSeason.team_name}</Text>
               <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
             </View>
-            <Text className="text-xs text-stone dark:text-parchment">{teamConfig.season_year}</Text>
-            {teamConfig.athlete_name && (
-              <Text className="text-xs text-stone dark:text-parchment mt-0.5">{teamConfig.athlete_name}</Text>
+            <Text className="text-xs text-stone dark:text-parchment">{activeSeason.season_year}</Text>
+            {activeAthlete?.first_name && (
+              <Text className="text-xs text-stone dark:text-parchment mt-0.5">{activeAthlete.first_name}</Text>
             )}
-            {teamConfig.team_code && (
-              <Text className="text-xs text-stone dark:text-parchment mt-0.5">Code: {teamConfig.team_code}</Text>
+            {activeSeason.team_code && (
+              <Text className="text-xs text-stone dark:text-parchment mt-0.5">Code: {activeSeason.team_code}</Text>
             )}
           </Pressable>
         )}
@@ -108,8 +113,8 @@ export default function HubScreen() {
           icon="sync"
           iconColor="#3B82B0"
           title="Email & Sync"
-          subtitle={teamConfig?.gmail_connected ? `Gmail: ${teamConfig.gmail_email}` : 'Connect Gmail for auto-import'}
-          badge={teamConfig?.gmail_connected ? undefined : 0}
+          subtitle={adminConfig?.gmail_connected ? `Gmail: ${adminConfig.gmail_email}` : 'Connect Gmail for auto-import'}
+          badge={adminConfig?.gmail_connected ? undefined : 0}
           onPress={() => router.push('/settings/email-connect')}
         />
 
@@ -138,14 +143,14 @@ export default function HubScreen() {
               </Text>
             </View>
           </View>
-          {teamConfig?.rally_forward_address && (
+          {adminConfig?.rally_forward_address && (
             <View className="bg-rally-50 dark:bg-rally-900/20 rounded-lg p-3 ml-11 flex-row items-center">
               <Text className="text-sm font-semibold text-rally-600 flex-1" numberOfLines={1}>
-                {teamConfig.rally_forward_address}
+                {adminConfig.rally_forward_address}
               </Text>
               <Pressable
                 onPress={async () => {
-                  await Clipboard.setStringAsync(teamConfig.rally_forward_address);
+                  await Clipboard.setStringAsync(adminConfig.rally_forward_address);
                   tapLight();
                   Alert.alert('Copied', 'Forward address copied to clipboard.');
                 }}
@@ -187,7 +192,7 @@ export default function HubScreen() {
           iconColor="#6A9E8A"
           title="VIP Email Alerts"
           subtitle="Coach & club email senders that trigger push notifications"
-          badge={teamConfig?.vip_sender_emails?.length || 0}
+          badge={adminConfig?.vip_sender_emails?.length || 0}
           onPress={() => router.push('/settings/email-connect')}
         />
 
@@ -216,7 +221,7 @@ export default function HubScreen() {
           </Text>
         </View>
 
-        {teamConfig?.default_stream_url ? (
+        {adminConfig?.default_stream_url ? (
           <View
             className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900"
             style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
@@ -226,7 +231,7 @@ export default function HubScreen() {
                 <Ionicons name="play-circle" size={24} color="#dc2626" />
                 <View className="ml-3 flex-1">
                   <Text className="text-sm font-semibold text-bark dark:text-cream">{streamPlatformLabel}</Text>
-                  <Text className="text-xs text-stone mt-0.5" numberOfLines={1}>{teamConfig.default_stream_url}</Text>
+                  <Text className="text-xs text-stone mt-0.5" numberOfLines={1}>{adminConfig.default_stream_url}</Text>
                 </View>
               </View>
               <Pressable
@@ -239,7 +244,7 @@ export default function HubScreen() {
             </View>
             <Pressable
               className="bg-red-600 rounded-lg py-2.5 items-center active:opacity-80 mt-1"
-              onPress={() => Linking.openURL(teamConfig.default_stream_url!)}
+              onPress={() => Linking.openURL(adminConfig.default_stream_url!)}
             >
               <Text className="text-sm font-semibold text-white">Watch Now</Text>
             </Pressable>

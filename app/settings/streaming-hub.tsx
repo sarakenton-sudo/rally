@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useAuth } from '@/providers/AuthProvider';
-import { updateTeamConfig } from '@/hooks/useSupabaseData';
+import { updateAdminConfig } from '@/hooks/useSupabaseData';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 import type { StreamingPlatform } from '@/types/database';
@@ -19,17 +19,17 @@ const PLATFORMS: { label: string; value: StreamingPlatform }[] = [
 
 export default function StreamingHubScreen() {
   const ic = useIconColors();
-  const teamConfig = useSeasonStore((s) => s.teamConfig);
-  const setTeamConfig = useSeasonStore((s) => s.setTeamConfig);
+  const adminConfig = useSeasonStore((s) => s.adminConfig);
+  const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
   const { user } = useAuth();
   const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
-  const [platform, setPlatform] = useState<StreamingPlatform | null>(teamConfig?.default_streaming_platform ?? null);
-  const [url, setUrl] = useState(teamConfig?.default_stream_url ?? '');
+  const [platform, setPlatform] = useState<StreamingPlatform | null>(adminConfig?.default_streaming_platform ?? null);
+  const [url, setUrl] = useState(adminConfig?.default_stream_url ?? '');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!teamConfig) return;
+    if (!adminConfig) return;
     if (url.trim() && !url.trim().startsWith('http')) {
       Alert.alert('Invalid URL', 'Please enter a valid URL starting with http:// or https://');
       return;
@@ -43,13 +43,13 @@ export default function StreamingHubScreen() {
 
     try {
       if (isSupabaseConfigured && user) {
-        const { error } = await updateTeamConfig(teamConfig.id, updates);
+        const { error } = await updateAdminConfig(adminConfig.id, updates);
         if (error) {
           Alert.alert('Save failed', error.message);
           return;
         }
       }
-      setTeamConfig({ ...teamConfig, ...updates });
+      setAdminConfig({ ...adminConfig, ...updates });
       notifySuccess();
       router.back();
     } finally {

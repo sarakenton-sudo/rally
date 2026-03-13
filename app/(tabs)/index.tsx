@@ -11,8 +11,11 @@ export default function HomeScreen() {
   const tournaments = useSeasonStore((s) => s.tournaments);
   const hotelBookings = useSeasonStore((s) => s.hotelBookings);
   const flightBookings = useSeasonStore((s) => s.flightBookings);
-  const teamConfig = useSeasonStore((s) => s.teamConfig);
-  const teamCode = teamConfig?.team_code;
+  const adminConfig = useSeasonStore((s) => s.adminConfig);
+  const seasons = useSeasonStore((s) => s.seasons);
+  const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
+  const activeSeason = seasons.find((s) => s.id === activeSeasonId);
+  const teamCode = activeSeason?.team_code;
 
   const next30Days = useMemo(() => {
     return tournaments
@@ -39,8 +42,8 @@ export default function HomeScreen() {
   }, [tournaments, teamCode]);
 
   const ic = useIconColors();
-  const teamName = teamConfig?.team_name ?? 'RallyHUB';
-  const seasonYear = teamConfig?.season_year ?? '';
+  const teamName = activeSeason?.team_name ?? 'RallyHUB';
+  const seasonYear = activeSeason?.season_year ?? '';
 
   return (
     <View className="flex-1 bg-cream dark:bg-bark">

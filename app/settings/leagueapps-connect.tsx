@@ -6,19 +6,21 @@ import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useAuth } from '@/providers/AuthProvider';
-import { updateTeamConfig } from '@/hooks/useSupabaseData';
-import { isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 
 export default function LeagueAppsConnectScreen() {
   const ic = useIconColors();
-  const teamConfig = useSeasonStore((s) => s.teamConfig);
-  const setTeamConfig = useSeasonStore((s) => s.setTeamConfig);
+  const seasons = useSeasonStore((s) => s.seasons);
+  const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
+  const setSeasons = useSeasonStore((s) => s.setSeasons);
   const { user } = useAuth();
   const [isConnecting, setIsConnecting] = useState(false);
 
-  const isConnected = teamConfig?.schedule_import_source === 'leagueapps' && teamConfig?.schedule_import_connected;
+  const activeSeason = seasons.find((s) => s.id === activeSeasonId) ?? null;
+
+  const isConnected = activeSeason?.schedule_import_source === 'leagueapps' && activeSeason?.schedule_import_connected;
 
   const handleConnect = async () => {
     setIsConnecting(true);
@@ -27,7 +29,7 @@ export default function LeagueAppsConnectScreen() {
       await WebBrowser.openBrowserAsync('https://leagueapps.com/oauth/authorize');
 
       // For now, simulate successful connection
-      if (!teamConfig) return;
+      if (!activeSeason) return;
 
       const updates = {
         schedule_import_source: 'leagueapps' as const,
@@ -35,14 +37,17 @@ export default function LeagueAppsConnectScreen() {
       };
 
       if (isSupabaseConfigured && user) {
-        const { error } = await updateTeamConfig(teamConfig.id, updates);
+        const { error } = await supabase
+          .from('seasons')
+          .update(updates)
+          .eq('id', activeSeason.id);
         if (error) {
           Alert.alert('Connection failed', error.message);
           return;
         }
       }
 
-      setTeamConfig({ ...teamConfig, ...updates });
+      setSeasons(seasons.map((s) => s.id === activeSeason.id ? { ...s, ...updates } : s));
       notifySuccess();
       Alert.alert('Connected', 'LeagueApps is now connected. Your schedule will sync automatically.');
     } catch (err: any) {

@@ -8,27 +8,45 @@ import FormField from '@/components/FormField';
 import { useAuth } from '@/providers/AuthProvider';
 import { useIconColors } from '@/lib/colors';
 import { supabase } from '@/lib/supabase';
+import { useSeasonStore } from '@/stores/useSeasonStore';
 import { tapLight, notifySuccess } from '@/lib/haptics';
+import type { InviteType, AdminPermission } from '@/types/database';
 
 export default function InviteCoParentScreen() {
   const ic = useIconColors();
   const { user } = useAuth();
+  const adminAthletes = useSeasonStore((s) => s.adminAthletes);
+  const athletes = useSeasonStore((s) => s.athletes);
+
   const [email, setEmail] = useState('');
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [inviteType, setInviteType] = useState<InviteType>('admin');
+  const [permission, setPermission] = useState<AdminPermission>('view');
+
+  // Get the primary athlete for this admin
+  const primaryLink = adminAthletes.find((aa) => aa.admin_id === user?.id && aa.is_primary);
+  const primaryAthlete = athletes.find((a) => a.id === primaryLink?.athlete_id);
 
   const handleSendInvite = async () => {
     if (!email.trim()) {
       Alert.alert('Missing field', 'Please enter an email address.');
       return;
     }
+    if (!primaryLink) {
+      Alert.alert('Error', 'No athlete found. Complete onboarding first.');
+      return;
+    }
 
     setSending(true);
     const { data, error } = await supabase
-      .from('household_invites')
+      .from('athlete_invites')
       .insert({
-        owner_user_id: user!.id,
+        inviter_id: user!.id,
+        athlete_id: primaryLink.athlete_id,
         email: email.trim().toLowerCase(),
+        invite_type: inviteType,
+        permission: inviteType === 'athlete' ? 'view' : permission,
       } as any)
       .select()
       .single();
@@ -46,7 +64,7 @@ export default function InviteCoParentScreen() {
     if (!inviteCode) return;
     await Clipboard.setStringAsync(inviteCode);
     tapLight();
-    Alert.alert('Copied', 'Invite code copied to clipboard. Share it with your co-parent.');
+    Alert.alert('Copied', 'Invite code copied to clipboard. Share it with the invitee.');
   };
 
   return (
@@ -60,7 +78,7 @@ export default function InviteCoParentScreen() {
           <Pressable onPress={() => router.back()} className="p-1">
             <Ionicons name="close" size={24} color={ic.muted} />
           </Pressable>
-          <Text className="text-lg font-bold text-bark dark:text-cream">Invite Co-Parent</Text>
+          <Text className="text-lg font-bold text-bark dark:text-cream">Invite</Text>
           <View style={{ width: 32 }} />
         </View>
 
@@ -68,14 +86,76 @@ export default function InviteCoParentScreen() {
           {!inviteCode ? (
             <>
               <Text className="text-sm text-stone dark:text-parchment mb-4">
-                Enter your co-parent's email. They'll create their own account and use the invite code to link to your data.
+                Invite someone to access {primaryAthlete?.first_name ?? 'your athlete'}'s data. They'll create their own account and use the invite code to link.
               </Text>
 
+              {/* Invite type toggle */}
+              <Text className="text-xs text-stone uppercase tracking-wider font-bold mb-2">Invite Type</Text>
+              <View className="flex-row gap-2 mb-4">
+                <Pressable
+                  className={`flex-1 py-3 rounded-xl items-center border ${
+                    inviteType === 'admin' ? 'bg-rally-600 border-rally-600' : 'border-parchment dark:border-bark-light'
+                  }`}
+                  onPress={() => setInviteType('admin')}
+                >
+                  <Text className={`text-sm font-bold ${inviteType === 'admin' ? 'text-cream' : 'text-bark dark:text-cream'}`}>
+                    Co-Parent / Admin
+                  </Text>
+                </Pressable>
+                <Pressable
+                  className={`flex-1 py-3 rounded-xl items-center border ${
+                    inviteType === 'athlete' ? 'bg-rally-600 border-rally-600' : 'border-parchment dark:border-bark-light'
+                  }`}
+                  onPress={() => setInviteType('athlete')}
+                >
+                  <Text className={`text-sm font-bold ${inviteType === 'athlete' ? 'text-cream' : 'text-bark dark:text-cream'}`}>
+                    Athlete
+                  </Text>
+                </Pressable>
+              </View>
+
+              {/* Permission toggle (admin only) */}
+              {inviteType === 'admin' && (
+                <>
+                  <Text className="text-xs text-stone uppercase tracking-wider font-bold mb-2">Permission</Text>
+                  <View className="flex-row gap-2 mb-4">
+                    <Pressable
+                      className={`flex-1 py-3 rounded-xl items-center border ${
+                        permission === 'view' ? 'bg-rally-100 border-rally-300 dark:bg-rally-900/30 dark:border-rally-700' : 'border-parchment dark:border-bark-light'
+                      }`}
+                      onPress={() => setPermission('view')}
+                    >
+                      <Text className={`text-sm font-semibold ${permission === 'view' ? 'text-rally-600' : 'text-bark dark:text-cream'}`}>
+                        View Only
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      className={`flex-1 py-3 rounded-xl items-center border ${
+                        permission === 'manage' ? 'bg-rally-100 border-rally-300 dark:bg-rally-900/30 dark:border-rally-700' : 'border-parchment dark:border-bark-light'
+                      }`}
+                      onPress={() => setPermission('manage')}
+                    >
+                      <Text className={`text-sm font-semibold ${permission === 'manage' ? 'text-rally-600' : 'text-bark dark:text-cream'}`}>
+                        Full Access
+                      </Text>
+                    </Pressable>
+                  </View>
+                </>
+              )}
+
+              {inviteType === 'athlete' && (
+                <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-3 mb-4 border border-rally-200 dark:border-rally-800">
+                  <Text className="text-xs text-rally-600 dark:text-rally-300">
+                    The athlete will get their own login to view their schedule and team info.
+                  </Text>
+                </View>
+              )}
+
               <FormField
-                label="Co-Parent Email"
+                label="Email"
                 value={email}
                 onChangeText={setEmail}
-                placeholder="coparent@example.com"
+                placeholder="email@example.com"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
@@ -99,7 +179,7 @@ export default function InviteCoParentScreen() {
                   Invite Created
                 </Text>
                 <Text className="text-sm text-stone dark:text-parchment mt-2 text-center">
-                  Share this code with your co-parent. They'll enter it when creating their account.
+                  Share this code with the invitee. They'll enter it when creating their account.
                 </Text>
               </View>
 

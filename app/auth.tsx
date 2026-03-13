@@ -6,7 +6,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 export default function AuthScreen() {
-  const { signIn, signUp, resetPassword } = useAuth();
+  const { signIn, signUp, resetPassword, acceptInvite } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,11 +28,23 @@ export default function AuthScreen() {
     try {
       if (isSignUp) {
         const { error } = await signUp(email.trim(), password);
-        setLoading(false);
         if (error) {
+          setLoading(false);
           setMessage({ text: `Sign up error: ${error}`, type: 'error' });
           return;
         }
+
+        // If invite code provided, accept it after signup
+        if (hasInviteCode && inviteCode.trim()) {
+          const { error: inviteError } = await acceptInvite(inviteCode.trim());
+          if (inviteError) {
+            setLoading(false);
+            setMessage({ text: `Account created but invite failed: ${inviteError}`, type: 'error' });
+            return;
+          }
+        }
+
+        setLoading(false);
         setMessage({ text: 'Account created! Check your email for a confirmation link, then sign in.', type: 'success' });
         setIsSignUp(false);
       } else {

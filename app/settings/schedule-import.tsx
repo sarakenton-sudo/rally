@@ -9,7 +9,7 @@ import { tapLight } from '@/lib/haptics';
 
 export default function ScheduleImportScreen() {
   const ic = useIconColors();
-  const teamConfig = useSeasonStore((s) => s.teamConfig);
+  const adminConfig = useSeasonStore((s) => s.adminConfig);
 
   return (
     <SafeAreaView className="flex-1 bg-warm-white dark:bg-bark" edges={['bottom']}>
@@ -128,14 +128,14 @@ export default function ScheduleImportScreen() {
           <Text className="text-xs text-rally-500 dark:text-rally-400 ml-13 mb-3 italic">
             (note: your email needs to be connected in Email Sync first)
           </Text>
-          {teamConfig?.rally_forward_address && (
+          {adminConfig?.rally_forward_address && (
             <View className="bg-rally-50 dark:bg-rally-900/20 rounded-lg p-3 ml-13 flex-row items-center">
               <Text className="text-sm font-semibold text-rally-600 flex-1" numberOfLines={1}>
-                {teamConfig.rally_forward_address}
+                {adminConfig.rally_forward_address}
               </Text>
               <Pressable
                 onPress={async () => {
-                  await Clipboard.setStringAsync(teamConfig.rally_forward_address);
+                  await Clipboard.setStringAsync(adminConfig.rally_forward_address);
                   tapLight();
                   Alert.alert('Copied', 'Forward address copied to clipboard.');
                 }}

@@ -111,9 +111,9 @@ async function syncUser(
     accessToken = await refreshAccessToken(supabase, token);
   }
 
-  // Fetch team_config for sender filters
+  // Fetch admin_config for sender filters
   const { data: config } = await supabase
-    .from('team_config')
+    .from('admin_config')
     .select('trusted_sender_emails, travel_sync_emails')
     .eq('user_id', token.user_id)
     .single();

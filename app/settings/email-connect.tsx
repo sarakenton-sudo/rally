@@ -8,7 +8,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as WebBrowser from 'expo-web-browser';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useAuth } from '@/providers/AuthProvider';
-import { updateTeamConfig } from '@/hooks/useSupabaseData';
+import { updateAdminConfig } from '@/hooks/useSupabaseData';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess, tapLight } from '@/lib/haptics';
 
@@ -32,8 +32,8 @@ async function triggerGmailSync() {
 
 export default function EmailConnectScreen() {
   const ic = useIconColors();
-  const teamConfig = useSeasonStore((s) => s.teamConfig);
-  const setTeamConfig = useSeasonStore((s) => s.setTeamConfig);
+  const adminConfig = useSeasonStore((s) => s.adminConfig);
+  const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
   const { user, session } = useAuth();
   const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
@@ -42,12 +42,12 @@ export default function EmailConnectScreen() {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   // Trusted senders (from email-monitoring)
-  const [trustedEmails, setTrustedEmails] = useState<string[]>(teamConfig?.trusted_sender_emails ?? []);
-  const [vipEmails, setVipEmails] = useState<string[]>(teamConfig?.vip_sender_emails ?? []);
+  const [trustedEmails, setTrustedEmails] = useState<string[]>(adminConfig?.trusted_sender_emails ?? []);
+  const [vipEmails, setVipEmails] = useState<string[]>(adminConfig?.vip_sender_emails ?? []);
   const [newTrustedEmail, setNewTrustedEmail] = useState('');
 
   // Travel accounts (from travel-sync)
-  const [travelEmails, setTravelEmails] = useState<string[]>(teamConfig?.travel_sync_emails ?? []);
+  const [travelEmails, setTravelEmails] = useState<string[]>(adminConfig?.travel_sync_emails ?? []);
   const [newTravelEmail, setNewTravelEmail] = useState('');
 
   const [isSaving, setIsSaving] = useState(false);
@@ -64,8 +64,8 @@ export default function EmailConnectScreen() {
       const success = params.get('success');
       const email = params.get('email');
       const error = params.get('error');
-      if (success === 'true' && email && teamConfig) {
-        setTeamConfig({ ...teamConfig, gmail_connected: true, gmail_email: email });
+      if (success === 'true' && email && adminConfig) {
+        setAdminConfig({ ...adminConfig, gmail_connected: true, gmail_email: email });
         setStatusMsg({ text: `Gmail connected: ${email}. Syncing emails...`, type: 'success' });
         triggerGmailSync();
         // Clean up URL
@@ -75,7 +75,7 @@ export default function EmailConnectScreen() {
         window.history.replaceState({}, '', window.location.pathname);
       }
     }
-  }, [teamConfig, setTeamConfig]);
+  }, [adminConfig, setAdminConfig]);
 
   const connectGmail = useCallback(async () => {
     if (!user || !GOOGLE_CLIENT_ID) {
@@ -114,8 +114,8 @@ export default function EmailConnectScreen() {
         const email = url.searchParams.get('email');
         const error = url.searchParams.get('error');
 
-        if (success && email && teamConfig) {
-          setTeamConfig({ ...teamConfig, gmail_connected: true, gmail_email: email });
+        if (success && email && adminConfig) {
+          setAdminConfig({ ...adminConfig, gmail_connected: true, gmail_email: email });
           notifySuccess();
           setStatusMsg({ text: `Gmail connected: ${email}. Syncing emails...`, type: 'success' });
           triggerGmailSync();
@@ -129,7 +129,7 @@ export default function EmailConnectScreen() {
     } finally {
       setIsConnecting(false);
     }
-  }, [user, teamConfig, setTeamConfig]);
+  }, [user, adminConfig, setAdminConfig]);
 
   const disconnectGmail = useCallback(async () => {
     const doDisconnect = async () => {
@@ -145,8 +145,8 @@ export default function EmailConnectScreen() {
           body: JSON.stringify({ action: 'disconnect' }),
         });
 
-        if (response.ok && teamConfig) {
-          setTeamConfig({ ...teamConfig, gmail_connected: false, gmail_email: null });
+        if (response.ok && adminConfig) {
+          setAdminConfig({ ...adminConfig, gmail_connected: false, gmail_email: null });
           notifySuccess();
           setStatusMsg({ text: 'Gmail disconnected.', type: 'success' });
         } else {
@@ -170,7 +170,7 @@ export default function EmailConnectScreen() {
         { text: 'Disconnect', style: 'destructive', onPress: doDisconnect },
       ]);
     }
-  }, [session, teamConfig, setTeamConfig]);
+  }, [session, adminConfig, setAdminConfig]);
 
   // ============================================================
   // Trusted sender helpers
@@ -229,7 +229,7 @@ export default function EmailConnectScreen() {
   // Save all
   // ============================================================
   const handleSave = async () => {
-    if (!teamConfig) return;
+    if (!adminConfig) return;
     setIsSaving(true);
 
     const updates = {
@@ -240,13 +240,13 @@ export default function EmailConnectScreen() {
 
     try {
       if (isSupabaseConfigured && user) {
-        const { error } = await updateTeamConfig(teamConfig.id, updates);
+        const { error } = await updateAdminConfig(adminConfig.id, updates);
         if (error) {
           setStatusMsg({ text: `Save failed: ${error.message}`, type: 'error' });
           return;
         }
       }
-      setTeamConfig({ ...teamConfig, ...updates });
+      setAdminConfig({ ...adminConfig, ...updates });
       notifySuccess();
       router.back();
     } finally {
@@ -254,8 +254,8 @@ export default function EmailConnectScreen() {
     }
   };
 
-  const gmailConnected = teamConfig?.gmail_connected ?? false;
-  const gmailEmail = teamConfig?.gmail_email;
+  const gmailConnected = adminConfig?.gmail_connected ?? false;
+  const gmailEmail = adminConfig?.gmail_email;
 
   return (
     <SafeAreaView className="flex-1 bg-warm-white dark:bg-bark" edges={['bottom']}>
@@ -491,7 +491,7 @@ export default function EmailConnectScreen() {
             Manual Forward Fallback
           </Text>
 
-          {teamConfig?.rally_forward_address && (
+          {adminConfig?.rally_forward_address && (
             <View className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 mb-4">
               <View className="flex-row items-start mb-3">
                 <Ionicons name="bulb-outline" size={18} color="#d97706" />
@@ -501,11 +501,11 @@ export default function EmailConnectScreen() {
               </View>
               <View className="flex-row items-center bg-warm-white dark:bg-bark-light rounded-lg p-3">
                 <Text className="text-sm font-semibold text-rally-600 flex-1" numberOfLines={1}>
-                  {teamConfig.rally_forward_address}
+                  {adminConfig.rally_forward_address}
                 </Text>
                 <Pressable
                   onPress={async () => {
-                    await Clipboard.setStringAsync(teamConfig.rally_forward_address);
+                    await Clipboard.setStringAsync(adminConfig.rally_forward_address);
                     tapLight();
                     setStatusMsg({ text: 'Forward address copied to clipboard.', type: 'success' });
                   }}

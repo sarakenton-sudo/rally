@@ -54,7 +54,7 @@ serve(async (req: Request) => {
     // Look up the team by Rally forward address
     const forwardAddress = extractAddress(email.to);
     const { data: config } = await supabase
-      .from('team_config')
+      .from('admin_config')
       .select('id, user_id, trusted_sender_emails')
       .eq('rally_forward_address', forwardAddress)
       .single();

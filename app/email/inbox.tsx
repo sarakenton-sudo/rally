@@ -25,7 +25,7 @@ const ACTION_LABELS: Record<string, string> = {
 export default function EmailInboxScreen() {
   const ic = useIconColors();
   const emails = useSeasonStore((s) => s.forwardedEmails);
-  const teamConfig = useSeasonStore((s) => s.teamConfig);
+  const adminConfig = useSeasonStore((s) => s.adminConfig);
 
   const renderItem = ({ item }: { item: ForwardedEmail }) => {
     const cls = CLASS_CONFIG[item.classification] ?? CLASS_CONFIG.other;
@@ -99,12 +99,12 @@ export default function EmailInboxScreen() {
       </View>
 
       {/* Forward address banner */}
-      {teamConfig?.rally_forward_address && (
+      {adminConfig?.rally_forward_address && (
         <View className="mx-4 mt-3 bg-rally-50 dark:bg-rally-900/20 rounded-xl p-3 flex-row items-center">
           <Ionicons name="mail" size={16} color="#3B82B0" />
           <View className="ml-2 flex-1">
             <Text className="text-xs text-stone">Forward emails to:</Text>
-            <Text className="text-sm font-semibold text-rally-600">{teamConfig.rally_forward_address}</Text>
+            <Text className="text-sm font-semibold text-rally-600">{adminConfig.rally_forward_address}</Text>
           </View>
         </View>
       )}

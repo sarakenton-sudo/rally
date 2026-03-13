@@ -6,27 +6,49 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/providers/AuthProvider';
 import { useIconColors } from '@/lib/colors';
 import { supabase } from '@/lib/supabase';
-import type { HouseholdMember, HouseholdInvite } from '@/types/database';
+import { useSeasonStore } from '@/stores/useSeasonStore';
+import type { AdminAthlete, AthleteInvite, Athlete } from '@/types/database';
 
 export default function AccountScreen() {
   const ic = useIconColors();
-  const { user, signOut } = useAuth();
-  const [members, setMembers] = useState<HouseholdMember[]>([]);
-  const [invites, setInvites] = useState<HouseholdInvite[]>([]);
+  const { user, userProfile } = useAuth();
+  const { signOut } = useAuth();
+  const adminAthletes = useSeasonStore((s) => s.adminAthletes);
+  const athletes = useSeasonStore((s) => s.athletes);
+  const [linkedAdmins, setLinkedAdmins] = useState<AdminAthlete[]>([]);
+  const [invites, setInvites] = useState<AthleteInvite[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadHousehold();
+    loadSharing();
   }, []);
 
-  const loadHousehold = async () => {
+  const loadSharing = async () => {
     setLoading(true);
-    const [membersRes, invitesRes] = await Promise.all([
-      supabase.from('household_members').select('*').or(`owner_user_id.eq.${user?.id},member_user_id.eq.${user?.id}`),
-      supabase.from('household_invites').select('*').eq('owner_user_id', user?.id ?? '').eq('status', 'pending'),
-    ]);
-    if (membersRes.data) setMembers(membersRes.data as HouseholdMember[]);
-    if (invitesRes.data) setInvites(invitesRes.data as HouseholdInvite[]);
+
+    // Load admin_athletes for athletes this user manages (to see other admins)
+    const myAthleteIds = adminAthletes
+      .filter((aa) => aa.admin_id === user?.id && aa.is_primary)
+      .map((aa) => aa.athlete_id);
+
+    if (myAthleteIds.length > 0) {
+      // Get other admins linked to our athletes
+      const { data: otherAdmins } = await supabase
+        .from('admin_athletes')
+        .select('*')
+        .in('athlete_id', myAthleteIds)
+        .neq('admin_id', user?.id ?? '');
+      if (otherAdmins) setLinkedAdmins(otherAdmins as AdminAthlete[]);
+
+      // Get pending invites we've sent
+      const { data: pendingInvites } = await supabase
+        .from('athlete_invites')
+        .select('*')
+        .eq('inviter_id', user?.id ?? '')
+        .eq('status', 'pending');
+      if (pendingInvites) setInvites(pendingInvites as AthleteInvite[]);
+    }
+
     setLoading(false);
   };
 
@@ -37,28 +59,28 @@ export default function AccountScreen() {
     ]);
   };
 
-  const handleRevokeMember = (member: HouseholdMember) => {
-    Alert.alert('Remove Co-Parent', 'They will lose access to your data.', [
+  const handleRemoveAdmin = (aa: AdminAthlete) => {
+    const athlete = athletes.find((a) => a.id === aa.athlete_id);
+    Alert.alert('Remove Linked Admin', `They will lose access to ${athlete?.first_name ?? 'this athlete'}'s data.`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
         style: 'destructive',
         onPress: async () => {
-          await supabase.from('household_members').delete().eq('id', member.id);
-          loadHousehold();
+          await supabase.from('admin_athletes').delete().eq('id', aa.id);
+          loadSharing();
         },
       },
     ]);
   };
 
-  const handleRevokeInvite = async (invite: HouseholdInvite) => {
-    await (supabase.from('household_invites') as any).update({ status: 'revoked' }).eq('id', invite.id);
-    loadHousehold();
+  const handleRevokeInvite = async (invite: AthleteInvite) => {
+    await (supabase.from('athlete_invites') as any).update({ status: 'revoked' }).eq('id', invite.id);
+    loadSharing();
   };
 
-  // Is the current user the admin (owner) or a co-parent (member)?
-  const isOwner = members.length === 0 || members.some((m) => m.owner_user_id === user?.id);
-  const linkedOwner = members.find((m) => m.member_user_id === user?.id);
+  const isAdmin = userProfile?.role === 'admin';
+  const isPrimaryAdmin = adminAthletes.some((aa) => aa.admin_id === user?.id && aa.is_primary);
 
   return (
     <SafeAreaView className="flex-1 bg-warm-white dark:bg-bark" edges={['bottom']}>
@@ -80,6 +102,19 @@ export default function AccountScreen() {
           </Text>
         </View>
 
+        {/* Role badge */}
+        <View className="bg-cream dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 mb-3">
+          <Text className="text-xs text-stone uppercase tracking-wider mb-1">Role</Text>
+          <Text className="text-base text-bark dark:text-cream font-semibold capitalize">
+            {userProfile?.role ?? 'admin'}
+          </Text>
+          {userProfile?.role === 'athlete' && (
+            <Text className="text-xs text-stone mt-1">
+              You have athlete access. View your schedule and team info.
+            </Text>
+          )}
+        </View>
+
         {/* Change Password */}
         <Pressable
           className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 mb-3 flex-row items-center active:opacity-80"
@@ -90,43 +125,31 @@ export default function AccountScreen() {
           <Ionicons name="chevron-forward" size={18} color={ic.subtle} />
         </Pressable>
 
-        {/* Co-Parent Section */}
-        <View className="mt-6 mb-3">
-          <View className="flex-row items-center">
-            <Ionicons name="people" size={16} color={ic.muted} />
-            <Text className="text-sm font-semibold text-stone dark:text-parchment ml-1.5 uppercase tracking-wider">
-              Co-Parent Sharing
-            </Text>
-          </View>
-        </View>
-
-        {linkedOwner && (
-          <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 border border-rally-200 dark:border-rally-800 mb-3">
-            <Text className="text-xs text-stone uppercase tracking-wider mb-1">Linked to</Text>
-            <Text className="text-sm text-bark dark:text-cream font-semibold">
-              Owner account
-            </Text>
-            <Text className="text-xs text-stone mt-1">
-              You have co-parent access. You can view and edit, but not delete data.
-            </Text>
-          </View>
-        )}
-
-        {isOwner && (
+        {/* Sharing Section (admin only) */}
+        {isAdmin && isPrimaryAdmin && (
           <>
-            {/* Linked co-parents */}
-            {members.filter((m) => m.owner_user_id === user?.id).map((member) => (
+            <View className="mt-6 mb-3">
+              <View className="flex-row items-center">
+                <Ionicons name="people" size={16} color={ic.muted} />
+                <Text className="text-sm font-semibold text-stone dark:text-parchment ml-1.5 uppercase tracking-wider">
+                  Shared Access
+                </Text>
+              </View>
+            </View>
+
+            {/* Linked admins (co-parents who accepted invites) */}
+            {linkedAdmins.map((aa) => (
               <View
-                key={member.id}
+                key={aa.id}
                 className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 mb-2 flex-row items-center"
               >
                 <Ionicons name="person-circle-outline" size={24} color="#6A9E8A" />
                 <View className="ml-3 flex-1">
-                  <Text className="text-sm font-semibold text-bark dark:text-cream">Co-Parent Linked</Text>
-                  <Text className="text-xs text-stone mt-0.5">Role: {member.role}</Text>
+                  <Text className="text-sm font-semibold text-bark dark:text-cream">Linked Admin</Text>
+                  <Text className="text-xs text-stone mt-0.5">Permission: {aa.permission}</Text>
                 </View>
                 <Pressable
-                  onPress={() => handleRevokeMember(member)}
+                  onPress={() => handleRemoveAdmin(aa)}
                   className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 active:opacity-70"
                 >
                   <Text className="text-xs font-semibold text-red-600">Remove</Text>
@@ -143,7 +166,9 @@ export default function AccountScreen() {
                 <View className="flex-row items-center justify-between">
                   <View className="flex-1">
                     <Text className="text-sm font-semibold text-bark dark:text-cream">{invite.email}</Text>
-                    <Text className="text-xs text-stone mt-0.5">Invite pending</Text>
+                    <Text className="text-xs text-stone mt-0.5">
+                      {invite.invite_type === 'athlete' ? 'Athlete invite' : 'Admin invite'} pending
+                    </Text>
                   </View>
                   <Pressable
                     onPress={() => handleRevokeInvite(invite)}
@@ -160,9 +185,22 @@ export default function AccountScreen() {
               className="bg-rally-600 rounded-xl py-3.5 items-center mt-1 active:opacity-80"
               onPress={() => router.push('/settings/invite-coparent')}
             >
-              <Text className="text-sm font-semibold text-cream">Invite Co-Parent</Text>
+              <Text className="text-sm font-semibold text-cream">Invite Admin or Athlete</Text>
             </Pressable>
           </>
+        )}
+
+        {/* Non-primary admin info */}
+        {isAdmin && !isPrimaryAdmin && adminAthletes.length > 0 && (
+          <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 border border-rally-200 dark:border-rally-800 mt-6 mb-3">
+            <Text className="text-xs text-stone uppercase tracking-wider mb-1">Linked to</Text>
+            <Text className="text-sm text-bark dark:text-cream font-semibold">
+              Shared athlete access
+            </Text>
+            <Text className="text-xs text-stone mt-1">
+              You have {adminAthletes[0]?.permission ?? 'view'} access to this athlete's data.
+            </Text>
+          </View>
         )}
 
         {/* Sign Out */}

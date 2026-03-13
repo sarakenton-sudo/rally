@@ -1,13 +1,17 @@
 import { create } from 'zustand';
-import type { Tournament, HotelBooking, FlightBooking, TeamConfig, USAVProfile, ForwardedEmail } from '@/types/database';
+import type { Tournament, HotelBooking, FlightBooking, AdminConfig, USAVProfile, ForwardedEmail, Athlete, Season, AdminAthlete } from '@/types/database';
 
 interface SeasonState {
   tournaments: Tournament[];
   hotelBookings: HotelBooking[];
   flightBookings: FlightBooking[];
-  teamConfig: TeamConfig | null;
+  adminConfig: AdminConfig | null;
   usavProfiles: USAVProfile[];
   forwardedEmails: ForwardedEmail[];
+  athletes: Athlete[];
+  seasons: Season[];
+  adminAthletes: AdminAthlete[];
+  activeSeasonId: string | null;
   isLoading: boolean;
 
   setTournaments: (tournaments: Tournament[]) => void;
@@ -26,7 +30,7 @@ interface SeasonState {
 
   removeTournament: (id: string) => void;
 
-  setTeamConfig: (config: TeamConfig | null) => void;
+  setAdminConfig: (config: AdminConfig | null) => void;
   setUSAVProfiles: (profiles: USAVProfile[]) => void;
   addUSAVProfile: (profile: USAVProfile) => void;
   updateUSAVProfile: (id: string, updates: Partial<USAVProfile>) => void;
@@ -34,6 +38,10 @@ interface SeasonState {
   setForwardedEmails: (emails: ForwardedEmail[]) => void;
   addForwardedEmail: (email: ForwardedEmail) => void;
   updateForwardedEmail: (id: string, updates: Partial<ForwardedEmail>) => void;
+  setAthletes: (athletes: Athlete[]) => void;
+  setSeasons: (seasons: Season[]) => void;
+  setAdminAthletes: (adminAthletes: AdminAthlete[]) => void;
+  setActiveSeasonId: (id: string | null) => void;
   setLoading: (loading: boolean) => void;
 }
 
@@ -41,9 +49,13 @@ export const useSeasonStore = create<SeasonState>((set) => ({
   tournaments: [],
   hotelBookings: [],
   flightBookings: [],
-  teamConfig: null,
+  adminConfig: null,
   usavProfiles: [],
   forwardedEmails: [],
+  athletes: [],
+  seasons: [],
+  adminAthletes: [],
+  activeSeasonId: null,
   isLoading: false,
 
   setTournaments: (tournaments) => set({ tournaments }),
@@ -83,7 +95,7 @@ export const useSeasonStore = create<SeasonState>((set) => ({
   removeTournament: (id) =>
     set((state) => ({ tournaments: state.tournaments.filter((t) => t.id !== id) })),
 
-  setTeamConfig: (teamConfig) => set({ teamConfig }),
+  setAdminConfig: (adminConfig) => set({ adminConfig }),
   setUSAVProfiles: (usavProfiles) => set({ usavProfiles }),
   addUSAVProfile: (profile) =>
     set((state) => ({ usavProfiles: [...state.usavProfiles, profile] })),
@@ -104,5 +116,9 @@ export const useSeasonStore = create<SeasonState>((set) => ({
         e.id === id ? { ...e, ...updates } : e
       ),
     })),
+  setAthletes: (athletes) => set({ athletes }),
+  setSeasons: (seasons) => set({ seasons }),
+  setAdminAthletes: (adminAthletes) => set({ adminAthletes }),
+  setActiveSeasonId: (activeSeasonId) => set({ activeSeasonId }),
   setLoading: (isLoading) => set({ isLoading }),
 }));

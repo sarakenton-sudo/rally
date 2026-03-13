@@ -7,7 +7,7 @@ import * as Clipboard from 'expo-clipboard';
 import FormField from '@/components/FormField';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useAuth } from '@/providers/AuthProvider';
-import { updateTeamConfig } from '@/hooks/useSupabaseData';
+import { updateAdminConfig } from '@/hooks/useSupabaseData';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
@@ -37,12 +37,12 @@ export default function EditLinkScreen() {
   const { index: indexStr } = useLocalSearchParams<{ index?: string }>();
   const editIndex = indexStr != null ? parseInt(indexStr) : -1;
 
-  const teamConfig = useSeasonStore((s) => s.teamConfig);
-  const setTeamConfig = useSeasonStore((s) => s.setTeamConfig);
+  const adminConfig = useSeasonStore((s) => s.adminConfig);
+  const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
   const { user } = useAuth();
 
   const ic = useIconColors();
-  const existingLink = editIndex >= 0 ? teamConfig?.external_links[editIndex] : null;
+  const existingLink = editIndex >= 0 ? adminConfig?.external_links[editIndex] : null;
 
   const [label, setLabel] = useState(existingLink?.label ?? '');
   const [url, setUrl] = useState(existingLink?.url ?? '');
@@ -61,9 +61,9 @@ export default function EditLinkScreen() {
       return;
     }
 
-    if (!teamConfig) return;
+    if (!adminConfig) return;
 
-    const updatedLinks = [...teamConfig.external_links];
+    const updatedLinks = [...adminConfig.external_links];
     const linkData = {
       label: label.trim(),
       url: url.trim(),
@@ -81,19 +81,19 @@ export default function EditLinkScreen() {
     const updates = { external_links: updatedLinks };
 
     if (isSupabaseConfigured && user) {
-      const { error } = await updateTeamConfig(teamConfig.id, updates);
+      const { error } = await updateAdminConfig(adminConfig.id, updates);
       if (error) {
         Alert.alert('Save failed', error.message);
         return;
       }
     }
 
-    setTeamConfig({ ...teamConfig, ...updates });
+    setAdminConfig({ ...adminConfig, ...updates });
     router.back();
   };
 
   const handleDelete = () => {
-    if (editIndex < 0 || !teamConfig) return;
+    if (editIndex < 0 || !adminConfig) return;
 
     Alert.alert('Remove Link', `Remove "${existingLink?.label}"?`, [
       { text: 'Cancel', style: 'cancel' },
@@ -101,14 +101,14 @@ export default function EditLinkScreen() {
         text: 'Remove',
         style: 'destructive',
         onPress: async () => {
-          const updatedLinks = teamConfig.external_links.filter((_, i) => i !== editIndex);
+          const updatedLinks = adminConfig.external_links.filter((_, i) => i !== editIndex);
           const updates = { external_links: updatedLinks };
 
           if (isSupabaseConfigured && user) {
-            await updateTeamConfig(teamConfig.id, updates);
+            await updateAdminConfig(adminConfig.id, updates);
           }
 
-          setTeamConfig({ ...teamConfig, ...updates });
+          setAdminConfig({ ...adminConfig, ...updates });
           router.back();
         },
       },

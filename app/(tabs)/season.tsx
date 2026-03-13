@@ -12,7 +12,9 @@ type ListItem = { type: 'tournament'; data: Tournament } | { type: 'divider'; la
 
 export default function SeasonScreen() {
   const tournaments = useSeasonStore((s) => s.tournaments);
-  const teamConfig = useSeasonStore((s) => s.teamConfig);
+  const seasons = useSeasonStore((s) => s.seasons);
+  const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
+  const activeSeason = seasons.find((s) => s.id === activeSeasonId);
   const isLoading = useSeasonStore((s) => s.isLoading);
   const { refresh, isRefreshing } = useDataRefresh();
 
@@ -35,8 +37,8 @@ export default function SeasonScreen() {
     return items;
   }, [tournaments]);
 
-  const teamName = teamConfig?.team_name ?? '';
-  const seasonYear = teamConfig?.season_year ?? '';
+  const teamName = activeSeason?.team_name ?? '';
+  const seasonYear = activeSeason?.season_year ?? '';
 
   const renderItem = ({ item }: { item: ListItem }) => {
     if (item.type === 'divider') {

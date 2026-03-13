@@ -39,8 +39,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const setFlightBookings = useSeasonStore((s) => s.setFlightBookings);
   const setUSAVProfiles = useSeasonStore((s) => s.setUSAVProfiles);
   const setForwardedEmails = useSeasonStore((s) => s.setForwardedEmails);
-  const setTeamConfig = useSeasonStore((s) => s.setTeamConfig);
-  const teamConfig = useSeasonStore((s) => s.teamConfig);
+  const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
+  const adminConfig = useSeasonStore((s) => s.adminConfig);
+  const setActiveSeasonId = useSeasonStore((s) => s.setActiveSeasonId);
   const guests = useGuestStore((s) => s.guests);
   const setGuests = useGuestStore((s) => s.setGuests);
   const setTournamentGuests = useGuestStore((s) => s.setTournamentGuests);
@@ -52,14 +53,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setFlightBookings(MOCK_FLIGHT_BOOKINGS);
       setUSAVProfiles(MOCK_USAV_PROFILES);
       setForwardedEmails(MOCK_FORWARDED_EMAILS);
-      if (!teamConfig) {
-        setTeamConfig({
+      if (!adminConfig) {
+        const mockSeasonId = 'season-mock-001';
+        setAdminConfig({
           id: 'tc-mock-001',
           user_id: '00000000-0000-0000-0000-000000000001',
-          team_name: 'AJV Travel 14u',
-          season_year: '2025-2026',
-          team_code: 'AJV14U',
-          athlete_name: null,
           club_email_domain: 'austinjuniors.com',
           rally_forward_address: 'plans@rallyhub.com',
           trusted_sender_emails: [],
@@ -78,11 +76,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
           travel_sync_emails: [],
           gmail_connected: false,
           gmail_email: null,
-          schedule_import_source: null,
-          schedule_import_connected: false,
           external_links: MOCK_EXTERNAL_LINKS,
+          active_season_id: mockSeasonId,
           created_at: '',
         });
+        setActiveSeasonId(mockSeasonId);
       }
     }
   }, [isConfigured, tournaments.length]);

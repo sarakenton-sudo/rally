@@ -52,7 +52,10 @@ export default function TournamentDetailScreen() {
   const tournaments = useSeasonStore((s) => s.tournaments);
   const hotelBookings = useSeasonStore((s) => s.hotelBookings);
   const flightBookings = useSeasonStore((s) => s.flightBookings);
-  const teamConfig = useSeasonStore((s) => s.teamConfig);
+  const adminConfig = useSeasonStore((s) => s.adminConfig);
+  const seasons = useSeasonStore((s) => s.seasons);
+  const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
+  const activeSeason = seasons.find((s) => s.id === activeSeasonId);
 
   const tournament = useMemo(() => tournaments.find((t) => t.id === id) ?? null, [tournaments, id]);
   const hotels = useMemo(() => hotelBookings.filter((h) => h.tournament_id === id), [hotelBookings, id]);
@@ -64,7 +67,7 @@ export default function TournamentDetailScreen() {
     ? supabaseEvents
     : MOCK_TEAM_EVENTS.filter((e) => e.tournament_id === id);
 
-  const teamCode = teamConfig?.team_code;
+  const teamCode = activeSeason?.team_code;
   const ic = useIconColors();
   const { refresh, isRefreshing } = useDataRefresh();
   const { sendRSVPRequest, sendTournamentReminder } = useNotificationActions();
@@ -569,7 +572,7 @@ export default function TournamentDetailScreen() {
                 </View>
               </View>
             ))
-          ) : teamConfig?.default_stream_url ? (
+          ) : adminConfig?.default_stream_url ? (
             <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900">
               <View className="flex-row items-center mb-2">
                 <View className="bg-rally-50 dark:bg-rally-900/20 px-2 py-0.5 rounded-full">
@@ -578,14 +581,14 @@ export default function TournamentDetailScreen() {
               </View>
               <Pressable
                 className="flex-row items-center active:opacity-80"
-                onPress={() => Linking.openURL(teamConfig.default_stream_url!)}
+                onPress={() => Linking.openURL(adminConfig.default_stream_url!)}
               >
                 <Ionicons name="play-circle" size={24} color="#dc2626" />
                 <View className="ml-3 flex-1">
                   <Text className="text-sm font-semibold text-bark dark:text-cream">
-                    {teamConfig.default_streaming_platform ?? 'Stream'}
+                    {adminConfig.default_streaming_platform ?? 'Stream'}
                   </Text>
-                  <Text className="text-xs text-stone mt-0.5" numberOfLines={1}>{teamConfig.default_stream_url}</Text>
+                  <Text className="text-xs text-stone mt-0.5" numberOfLines={1}>{adminConfig.default_stream_url}</Text>
                 </View>
                 <Ionicons name="open-outline" size={16} color={ic.subtle} />
               </Pressable>

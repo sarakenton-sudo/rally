@@ -7,7 +7,7 @@ import type { Tournament, HotelBooking, FlightBooking, TeamEvent, Guest, Tournam
 export const MOCK_TOURNAMENTS: Tournament[] = [
   {
     id: 'a0000000-0000-0000-0000-000000000001',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    season_id: 'season-mock-001',
     name: 'Fast Warm-Up',
     start_date: '2025-12-13',
     end_date: '2025-12-14',
@@ -30,7 +30,7 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
   },
   {
     id: 'a0000000-0000-0000-0000-000000000002',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    season_id: 'season-mock-001',
     name: 'Tour of Texas Warm-Up',
     start_date: '2026-01-10',
     end_date: '2026-01-11',
@@ -53,7 +53,7 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
   },
   {
     id: 'a0000000-0000-0000-0000-000000000003',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    season_id: 'season-mock-001',
     name: 'Tour of Texas Stop #1',
     start_date: '2026-01-17',
     end_date: '2026-01-19',
@@ -76,7 +76,7 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
   },
   {
     id: 'a0000000-0000-0000-0000-000000000004',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    season_id: 'season-mock-001',
     name: 'Tour of Texas Stop #2',
     start_date: '2026-02-07',
     end_date: '2026-02-08',
@@ -99,7 +99,7 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
   },
   {
     id: 'a0000000-0000-0000-0000-000000000005',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    season_id: 'season-mock-001',
     name: 'ATX Showcase',
     start_date: '2026-02-14',
     end_date: '2026-02-15',
@@ -122,7 +122,7 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
   },
   {
     id: 'a0000000-0000-0000-0000-000000000006',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    season_id: 'season-mock-001',
     name: 'Northern Lights',
     start_date: '2026-03-20',
     end_date: '2026-03-22',
@@ -148,7 +148,7 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
   },
   {
     id: 'a0000000-0000-0000-0000-000000000007',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    season_id: 'season-mock-001',
     name: 'Lone Star Classic',
     start_date: '2026-04-03',
     end_date: '2026-04-05',
@@ -173,7 +173,7 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
   },
   {
     id: 'a0000000-0000-0000-0000-000000000008',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    season_id: 'season-mock-001',
     name: 'Show Me National Qualifier',
     start_date: '2026-04-17',
     end_date: '2026-04-19',
@@ -196,7 +196,7 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
   },
   {
     id: 'a0000000-0000-0000-0000-000000000009',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    season_id: 'season-mock-001',
     name: 'LSR Regional Championships',
     start_date: '2026-05-09',
     end_date: '2026-05-10',
@@ -219,7 +219,7 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
   },
   {
     id: 'a0000000-0000-0000-0000-00000000000a',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    season_id: 'season-mock-001',
     name: 'Fast Pre-JOs',
     start_date: '2026-06-20',
     end_date: '2026-06-21',
@@ -242,7 +242,7 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
   },
   {
     id: 'a0000000-0000-0000-0000-00000000000b',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    season_id: 'season-mock-001',
     name: 'USAV Nationals',
     start_date: '2026-06-25',
     end_date: '2026-06-28',
@@ -271,7 +271,7 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
 export const MOCK_HOTEL_BOOKINGS: HotelBooking[] = [
   {
     id: 'h0000000-0000-0000-0000-000000000001',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    created_by_user_id: '00000000-0000-0000-0000-000000000001',
     tournament_id: 'a0000000-0000-0000-0000-000000000004',
     hotel_name: 'Sheraton Dallas',
     platform: 'Other',
@@ -288,7 +288,7 @@ export const MOCK_HOTEL_BOOKINGS: HotelBooking[] = [
   },
   {
     id: 'h0000000-0000-0000-0000-000000000002',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    created_by_user_id: '00000000-0000-0000-0000-000000000001',
     tournament_id: 'a0000000-0000-0000-0000-000000000006',
     hotel_name: 'Hilton / AC Hotel Minneapolis',
     platform: 'Bonvoy',
@@ -305,7 +305,7 @@ export const MOCK_HOTEL_BOOKINGS: HotelBooking[] = [
   },
   {
     id: 'h0000000-0000-0000-0000-000000000003',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    created_by_user_id: '00000000-0000-0000-0000-000000000001',
     tournament_id: 'a0000000-0000-0000-0000-000000000007',
     hotel_name: 'Marriott Marquis Houston',
     platform: 'Bonvoy',
@@ -322,7 +322,7 @@ export const MOCK_HOTEL_BOOKINGS: HotelBooking[] = [
   },
   {
     id: 'h0000000-0000-0000-0000-000000000004',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    created_by_user_id: '00000000-0000-0000-0000-000000000001',
     tournament_id: 'a0000000-0000-0000-0000-000000000008',
     hotel_name: 'Hotel Indigo Kansas City',
     platform: 'Travel Source',
@@ -339,7 +339,7 @@ export const MOCK_HOTEL_BOOKINGS: HotelBooking[] = [
   },
   {
     id: 'h0000000-0000-0000-0000-000000000005',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    created_by_user_id: '00000000-0000-0000-0000-000000000001',
     tournament_id: 'a0000000-0000-0000-0000-000000000009',
     hotel_name: 'Marriott Marquis Houston',
     platform: 'Direct',
@@ -356,7 +356,7 @@ export const MOCK_HOTEL_BOOKINGS: HotelBooking[] = [
   },
   {
     id: 'h0000000-0000-0000-0000-000000000006',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    created_by_user_id: '00000000-0000-0000-0000-000000000001',
     tournament_id: 'a0000000-0000-0000-0000-00000000000b',
     hotel_name: 'Courtyard Marriott Indianapolis',
     platform: 'Bonvoy',
@@ -379,10 +379,11 @@ export const MOCK_HOTEL_BOOKINGS: HotelBooking[] = [
 export const MOCK_FLIGHT_BOOKINGS: FlightBooking[] = [
   {
     id: 'f0000000-0000-0000-0000-000000000001',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    created_by_user_id: '00000000-0000-0000-0000-000000000001',
     tournament_id: 'a0000000-0000-0000-0000-000000000006',
     airline: 'Delta',
     confirmation_code: 'GNEZJ9',
+    ticket_number: null,
     departure_date: '2026-03-19',
     return_date: '2026-03-23',
     booked_by: 'Adam + Kenton',
@@ -392,10 +393,11 @@ export const MOCK_FLIGHT_BOOKINGS: FlightBooking[] = [
   },
   {
     id: 'f0000000-0000-0000-0000-000000000002',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    created_by_user_id: '00000000-0000-0000-0000-000000000001',
     tournament_id: 'a0000000-0000-0000-0000-000000000008',
     airline: 'Southwest',
     confirmation_code: 'ATLALT / ATHAMF',
+    ticket_number: null,
     departure_date: '2026-04-16',
     return_date: '2026-04-19',
     booked_by: 'Sara + Kenton',
@@ -405,10 +407,11 @@ export const MOCK_FLIGHT_BOOKINGS: FlightBooking[] = [
   },
   {
     id: 'f0000000-0000-0000-0000-000000000003',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    created_by_user_id: '00000000-0000-0000-0000-000000000001',
     tournament_id: 'a0000000-0000-0000-0000-00000000000b',
     airline: 'Delta',
     confirmation_code: 'G5NLC8',
+    ticket_number: null,
     departure_date: '2026-06-24',
     return_date: '2026-06-29',
     booked_by: 'Sara',
@@ -424,7 +427,7 @@ export const MOCK_FLIGHT_BOOKINGS: FlightBooking[] = [
 export const MOCK_TEAM_EVENTS: TeamEvent[] = [
   {
     id: 'e0000000-0000-0000-0000-000000000001',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    season_id: 'season-mock-001',
     tournament_id: 'a0000000-0000-0000-0000-000000000006',
     name: 'Team Dinner',
     date: '2026-03-20',
@@ -440,7 +443,7 @@ export const MOCK_TEAM_EVENTS: TeamEvent[] = [
   },
   {
     id: 'e0000000-0000-0000-0000-000000000002',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    season_id: 'season-mock-001',
     tournament_id: 'a0000000-0000-0000-0000-000000000007',
     name: 'Pre-Game Lunch',
     date: '2026-04-03',
@@ -462,7 +465,7 @@ export const MOCK_TEAM_EVENTS: TeamEvent[] = [
 export const MOCK_GUESTS: Guest[] = [
   {
     id: 'g0000000-0000-0000-0000-000000000001',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    athlete_id: 'athlete-mock-001',
     name: 'Grandma Kenton',
     phone: '+15125551001',
     email: null,
@@ -473,7 +476,7 @@ export const MOCK_GUESTS: Guest[] = [
   },
   {
     id: 'g0000000-0000-0000-0000-000000000002',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    athlete_id: 'athlete-mock-001',
     name: 'Grandpa Kenton',
     phone: '+15125551002',
     email: null,
@@ -484,7 +487,7 @@ export const MOCK_GUESTS: Guest[] = [
   },
   {
     id: 'g0000000-0000-0000-0000-000000000003',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    athlete_id: 'athlete-mock-001',
     name: 'Uncle Mike',
     phone: '+15125551003',
     email: 'mike@example.com',
@@ -495,7 +498,7 @@ export const MOCK_GUESTS: Guest[] = [
   },
   {
     id: 'g0000000-0000-0000-0000-000000000004',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    athlete_id: 'athlete-mock-001',
     name: 'Aunt Linda',
     phone: '+15125551004',
     email: 'linda@example.com',
@@ -528,7 +531,7 @@ export const MOCK_TOURNAMENT_GUESTS: TournamentGuest[] = [
 export const MOCK_USAV_PROFILES: USAVProfile[] = [
   {
     id: 'u0000000-0000-0000-0000-000000000001',
-    user_id: '00000000-0000-0000-0000-000000000001',
+    athlete_id: 'athlete-mock-001',
     member_name: 'Avery Kenton',
     member_id: 'USAV-2026-1234567',
     club_affiliation: 'Austin Juniors Volleyball',
@@ -540,7 +543,7 @@ export const MOCK_USAV_PROFILES: USAVProfile[] = [
 ];
 
 /**
- * Mock external links for TeamConfig
+ * Mock external links for AdminConfig
  */
 export const MOCK_EXTERNAL_LINKS: ExternalLink[] = [
   { label: 'LeagueApps', url: 'https://leagueapps.com', icon_name: 'globe-outline', username: null, password: null },

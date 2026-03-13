@@ -85,7 +85,7 @@ export default function AddHotelBookingScreen() {
     setIsSaving(true);
 
     const bookingData = {
-      user_id: user?.id ?? '00000000-0000-0000-0000-000000000001',
+      created_by_user_id: user?.id ?? '00000000-0000-0000-0000-000000000001',
       tournament_id: selectedTournamentId,
       hotel_name: hotelName.trim(),
       platform: platform as BookingPlatform,

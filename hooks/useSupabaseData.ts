@@ -7,12 +7,15 @@ import type {
   Tournament,
   HotelBooking,
   FlightBooking,
-  TeamConfig,
+  AdminConfig,
   TeamEvent,
   Guest,
   TournamentGuest,
   USAVProfile,
   ForwardedEmail,
+  Athlete,
+  Season,
+  AdminAthlete,
 } from '@/types/database';
 
 const isConfigured = !!(
@@ -33,9 +36,13 @@ export function useSupabaseData() {
     setTournaments,
     setHotelBookings,
     setFlightBookings,
-    setTeamConfig,
+    setAdminConfig,
     setUSAVProfiles,
     setForwardedEmails,
+    setAthletes,
+    setSeasons,
+    setAdminAthletes,
+    setActiveSeasonId,
     setLoading,
   } = useSeasonStore();
 
@@ -59,6 +66,9 @@ export function useSupabaseData() {
         tgRes,
         usavRes,
         emailsRes,
+        athletesRes,
+        seasonsRes,
+        adminAthletesRes,
       ] = await Promise.all([
         supabase
           .from('tournaments')
@@ -73,7 +83,7 @@ export function useSupabaseData() {
           .select('*')
           .order('departure_date', { ascending: true }),
         supabase
-          .from('team_config')
+          .from('admin_config')
           .select('*')
           .limit(1)
           .single(),
@@ -93,6 +103,16 @@ export function useSupabaseData() {
           .select('*')
           .order('received_at', { ascending: false })
           .limit(50),
+        supabase
+          .from('athletes')
+          .select('*'),
+        supabase
+          .from('seasons')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('admin_athletes')
+          .select('*'),
       ]);
 
       if (tournamentsRes.error) throw tournamentsRes.error;
@@ -105,7 +125,7 @@ export function useSupabaseData() {
       setTournaments(tournamentsRes.data as Tournament[]);
       setHotelBookings(hotelsRes.data as HotelBooking[]);
       setFlightBookings(flightsRes.data as FlightBooking[]);
-      setTeamConfig((configRes.data as TeamConfig | null) ?? null);
+      setAdminConfig((configRes.data as AdminConfig | null) ?? null);
       setGuests(guestsRes.data as Guest[]);
       setTournamentGuests(tgRes.data as TournamentGuest[]);
       if (!usavRes.error && usavRes.data) {
@@ -113,6 +133,27 @@ export function useSupabaseData() {
       }
       if (!emailsRes.error && emailsRes.data) {
         setForwardedEmails(emailsRes.data as ForwardedEmail[]);
+      }
+      if (!athletesRes.error && athletesRes.data) {
+        setAthletes(athletesRes.data as Athlete[]);
+      }
+      if (!seasonsRes.error && seasonsRes.data) {
+        setSeasons(seasonsRes.data as Season[]);
+      }
+      if (!adminAthletesRes.error && adminAthletesRes.data) {
+        setAdminAthletes(adminAthletesRes.data as AdminAthlete[]);
+      }
+
+      // Set active season from admin_config
+      const config = configRes.data as AdminConfig | null;
+      if (config?.active_season_id) {
+        setActiveSeasonId(config.active_season_id);
+      } else if (seasonsRes.data && seasonsRes.data.length > 0) {
+        // Fallback: use first active season
+        const activeSeason = (seasonsRes.data as Season[]).find(s => s.is_active);
+        if (activeSeason) {
+          setActiveSeasonId(activeSeason.id);
+        }
       }
     } catch (err: any) {
       console.error('Failed to fetch data:', err);
@@ -159,22 +200,6 @@ export function useTeamEvents(tournamentId?: string) {
   }, [user, tournamentId]);
 
   return { events, isLoading };
-}
-
-/**
- * Returns the data-owning user_id for inserts.
- * If the current user is a co-parent, returns the admin owner's user_id.
- * Otherwise returns the current user's own id.
- */
-export async function getHouseholdOwnerId(currentUserId: string): Promise<string> {
-  if (!isConfigured) return currentUserId;
-  const { data } = await supabase
-    .from('household_members')
-    .select('owner_user_id')
-    .eq('member_user_id', currentUserId)
-    .limit(1)
-    .single();
-  return (data as any)?.owner_user_id ?? currentUserId;
 }
 
 // ============================================================
@@ -282,14 +307,14 @@ export async function upsertTournamentGuest(tg: TournamentGuest) {
   return { data: data as TournamentGuest | null, error };
 }
 
-export async function updateTeamConfig(id: string, updates: Partial<TeamConfig>) {
+export async function updateAdminConfig(id: string, updates: Partial<AdminConfig>) {
   const { data, error } = await (supabase
-    .from('team_config') as any)
+    .from('admin_config') as any)
     .update(updates)
     .eq('id', id)
     .select()
     .single();
-  return { data: data as TeamConfig | null, error };
+  return { data: data as AdminConfig | null, error };
 }
 
 export async function insertUSAVProfile(profile: Omit<USAVProfile, 'id' | 'created_at'>) {

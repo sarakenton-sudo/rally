@@ -100,9 +100,10 @@ const RallyDarkTheme: Theme = {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const { session, isLoading } = useAuth();
+  const { session, userProfile, isLoading } = useAuth();
   const segments = useSegments();
-  const teamConfig = useSeasonStore((s) => s.teamConfig);
+  const adminConfig = useSeasonStore((s) => s.adminConfig);
+  const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
   const storeLoading = useSeasonStore((s) => s.isLoading);
 
   useEffect(() => {
@@ -113,13 +114,22 @@ function RootLayoutNav() {
     const inOnboarding = segments[0] === 'onboarding';
 
     if (!session && !inAuthFlow) {
+      // No session — go to auth
       router.replace('/auth');
-    } else if (session && !teamConfig && !inOnboarding) {
+    } else if (session && userProfile?.role === 'admin' && !adminConfig && !inOnboarding) {
+      // Admin with no config — go to onboarding
       router.replace('/onboarding');
-    } else if (session && teamConfig && (inAuthFlow || inOnboarding)) {
+    } else if (session && userProfile?.role === 'admin' && adminConfig && !activeSeasonId && !inOnboarding) {
+      // Admin with config but no active season — go to onboarding
+      router.replace('/onboarding');
+    } else if (session && userProfile?.role === 'athlete' && (inAuthFlow || inOnboarding)) {
+      // Athlete — go straight to tabs (scoped view)
+      router.replace('/');
+    } else if (session && adminConfig && activeSeasonId && (inAuthFlow || inOnboarding)) {
+      // Fully configured admin — go to tabs
       router.replace('/');
     }
-  }, [session, isLoading, segments, teamConfig, storeLoading]);
+  }, [session, isLoading, segments, adminConfig, activeSeasonId, storeLoading, userProfile]);
 
   const theme = colorScheme === 'dark' ? RallyDarkTheme : RallyLightTheme;
 

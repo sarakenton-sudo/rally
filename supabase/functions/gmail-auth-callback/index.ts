@@ -117,9 +117,9 @@ serve(async (req: Request) => {
         return redirectToApp('rally://auth/gmail-callback?success=false&error=storage_failed', state);
       }
 
-      // Update team_config with connection status
+      // Update admin_config with connection status
       await supabase
-        .from('team_config')
+        .from('admin_config')
         .update({ gmail_connected: true, gmail_email: gmailEmail })
         .eq('user_id', userId);
 
@@ -167,9 +167,9 @@ serve(async (req: Request) => {
           .eq('user_id', user.id);
       }
 
-      // Update team_config
+      // Update admin_config
       await supabase
-        .from('team_config')
+        .from('admin_config')
         .update({ gmail_connected: false, gmail_email: null })
         .eq('user_id', user.id);
 
