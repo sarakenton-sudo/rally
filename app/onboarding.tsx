@@ -198,6 +198,7 @@ export default function OnboardingScreen() {
   const [guests, setGuests] = useState<GuestEntry[]>([{ name: '', relation: 'Grandparent', phone: '' }]);
 
   const [saving, setSaving] = useState(false);
+  const [finishError, setFinishError] = useState('');
 
   const goTo = (index: number) => {
     setStep(index);
@@ -367,13 +368,18 @@ export default function OnboardingScreen() {
         store.setSeasons([season]);
         store.setLoading(false);
 
-        // Navigate immediately — refresh in background
+        // Navigate to dashboard
+        console.log('[Onboarding] Setup complete, navigating to dashboard');
         router.replace('/');
-        refresh().catch(() => {});
       } catch (err: any) {
         setSaving(false);
-        console.error('Onboarding error:', err);
-        Alert.alert('Error', err.message ?? 'Something went wrong during setup.');
+        console.error('[Onboarding] Error:', err);
+        const msg = err?.message ?? 'Something went wrong during setup.';
+        if (Platform.OS === 'web') {
+          setFinishError(msg);
+        } else {
+          Alert.alert('Error', msg);
+        }
         return;
       }
     } else {
@@ -791,6 +797,12 @@ export default function OnboardingScreen() {
               {guests.some((g) => g.name.trim()) && <SummaryRow icon="checkmark-circle" text={`${guests.filter((g) => g.name.trim()).length} guest${guests.filter((g) => g.name.trim()).length !== 1 ? 's' : ''} invited`} color="#6A9E8A" />}
             </View>
 
+            {finishError ? (
+              <View style={{ backgroundColor: 'rgba(239,68,68,0.15)', borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1.5, borderColor: 'rgba(239,68,68,0.3)', width: '100%', maxWidth: 340 }}>
+                <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-SemiBold', color: '#fca5a5', textAlign: 'center' }}>{finishError}</Text>
+              </View>
+            ) : null}
+
             <View style={{ width: '100%', maxWidth: 340, gap: 12 }}>
               <Pressable
                 style={{
@@ -799,7 +811,7 @@ export default function OnboardingScreen() {
                   opacity: saving ? 0.6 : 1,
                 }}
                 className="active:opacity-80"
-                onPress={handleFinish} disabled={saving}
+                onPress={() => { setFinishError(''); handleFinish(); }} disabled={saving}
               >
                 {saving ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
