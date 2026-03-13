@@ -363,11 +363,28 @@ export default function OnboardingScreen() {
           schedule_import_connected: false, is_active: true,
           created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
         }]);
+        // Also populate tournaments we just created
+        if (extractedTournaments.length > 0) {
+          store.setTournaments(extractedTournaments.map((t, i) => ({
+            id: `pending-${i}`, // temporary IDs until refresh
+            season_id: result.season_id!,
+            name: t.name,
+            start_date: t.start_date,
+            end_date: t.end_date,
+            location_city: t.location_city || null,
+            venues: t.venue_name ? [{ label: t.venue_name, address: t.venue_address || '', is_confirmed: false }] : [],
+            status: 'upcoming' as const,
+            travel_required: true,
+            created_at: new Date().toISOString(),
+          } as any)));
+        }
         store.setLoading(false);
 
-        // Navigate to dashboard
+        // Navigate to dashboard, then refresh from DB to get real IDs
         console.log('[Onboarding] Setup complete, navigating to dashboard');
         router.replace('/');
+        // Delay refresh so nav gating doesn't see storeLoading=true and block
+        setTimeout(() => { refresh().catch(() => {}); }, 1500);
       } catch (err: any) {
         setSaving(false);
         console.error('[Onboarding] Error:', err);
@@ -457,8 +474,8 @@ export default function OnboardingScreen() {
               <StepHeader icon="person" title="Your Athlete" subtitle="Who's playing?" />
 
               <View style={{ marginBottom: 16 }}>
-                <FieldLabel label="Athlete's First Name" />
-                <TextInput value={athleteName} onChangeText={setAthleteName} placeholder="e.g. Sophie" placeholderTextColor="rgba(255,255,255,0.3)" style={INPUT_STYLE} />
+                <FieldLabel label="Athlete Name" />
+                <TextInput value={athleteName} onChangeText={setAthleteName} placeholder="e.g. Sophie Kenton" placeholderTextColor="rgba(255,255,255,0.3)" style={INPUT_STYLE} />
               </View>
 
               <View style={{ backgroundColor: 'rgba(59,130,176,0.1)', borderRadius: 20, padding: 16, borderWidth: 1.5, borderColor: 'rgba(59,130,176,0.2)' }}>
