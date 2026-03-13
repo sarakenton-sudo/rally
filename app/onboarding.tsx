@@ -245,7 +245,19 @@ export default function OnboardingScreen() {
         state: isWeb ? `${user.id}|web` : user.id,
       });
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-      if (isWeb) { window.location.href = authUrl; return; }
+      if (isWeb) {
+        // Open in popup to avoid navigating away and losing onboarding state
+        const popup = window.open(authUrl, 'gmail-connect', 'width=500,height=700,left=200,top=100');
+        // Poll for popup close / success
+        const poll = setInterval(() => {
+          if (!popup || popup.closed) {
+            clearInterval(poll);
+            setGmailConnecting(false);
+            // User can verify connection later in settings
+          }
+        }, 1000);
+        return;
+      }
       const result = await WebBrowser.openAuthSessionAsync(authUrl, 'rally://auth/gmail-callback');
       if (result.type === 'success' && result.url) {
         const url = new URL(result.url);
