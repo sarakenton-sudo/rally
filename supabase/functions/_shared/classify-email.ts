@@ -53,7 +53,12 @@ export async function classifyEmail(
     extractedData: {},
   };
 
-  if (!claudeApiKey) return result;
+  if (!claudeApiKey) {
+    console.error('[classify-email] CLAUDE_API_KEY is not set! All emails will be classified as "other"');
+    result.classification = 'unclassified';
+    result.summary = 'Classification unavailable — CLAUDE_API_KEY not configured';
+    return result;
+  }
 
   const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',

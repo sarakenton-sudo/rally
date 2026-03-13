@@ -82,8 +82,19 @@ serve(async (req: Request) => {
   }
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const url = new URL(req.url);
+  const forceReset = url.searchParams.get('reset') === 'true';
 
   try {
+    // If reset=true, clear last_sync_at to force full re-sync
+    if (forceReset) {
+      await supabase
+        .from('gmail_tokens')
+        .update({ last_sync_at: null })
+        .eq('is_active', true);
+      console.log('[gmail-sync] Reset: cleared last_sync_at for all active tokens');
+    }
+
     // Fetch all active Gmail tokens
     const { data: tokens, error: tokensError } = await supabase
       .from('gmail_tokens')
@@ -103,6 +114,7 @@ serve(async (req: Request) => {
 
     for (const token of tokens as GmailToken[]) {
       try {
+        console.log(`[gmail-sync] Starting sync for user ${token.user_id}, email: ${token.gmail_email}, has_refresh_token: ${!!token.refresh_token && token.refresh_token !== ''}, token_expires_at: ${token.token_expires_at}, last_sync_at: ${token.last_sync_at}`);
         const result = await syncUser(supabase, token);
         results.push(result);
       } catch (err) {
@@ -125,7 +137,27 @@ serve(async (req: Request) => {
     const today = new Date().toISOString().split('T')[0];
     await checkScheduleAndTicketDates(supabase, today);
 
-    return jsonResponse({ synced: results.length, results });
+    // Include diagnostic info in response
+    const diagnostics = (tokens as GmailToken[]).map((t) => ({
+      user_id: t.user_id,
+      gmail_email: t.gmail_email,
+      has_refresh_token: !!t.refresh_token && t.refresh_token !== '',
+      token_expires_at: t.token_expires_at,
+      token_expired: new Date(t.token_expires_at) <= new Date(),
+      last_sync_at: t.last_sync_at,
+      sync_errors: t.sync_errors,
+    }));
+    return jsonResponse({
+      synced: results.length,
+      results,
+      token_count: tokens.length,
+      diagnostics,
+      env_check: {
+        has_claude_api_key: !!CLAUDE_API_KEY,
+        has_google_client_id: !!GOOGLE_CLIENT_ID,
+        has_google_client_secret: !!GOOGLE_CLIENT_SECRET,
+      },
+    });
   } catch (err) {
     console.error('Gmail sync error:', err);
     return jsonResponse({ error: 'Internal server error' }, 500);
@@ -135,13 +167,17 @@ serve(async (req: Request) => {
 async function syncUser(
   supabase: ReturnType<typeof createClient>,
   token: GmailToken,
-): Promise<{ user_id: string; emails_processed: number }> {
+): Promise<{ user_id: string; emails_processed: number; gmail_messages_found?: number; already_processed?: number; token_refreshed?: boolean; error?: string }> {
   // Refresh access token if expired
   let accessToken = token.access_token;
   const expiresAt = new Date(token.token_expires_at);
+  let tokenRefreshed = false;
 
   if (expiresAt <= new Date()) {
+    console.log(`[gmail-sync] Token expired (${token.token_expires_at}), refreshing...`);
     accessToken = await refreshAccessToken(supabase, token);
+    tokenRefreshed = true;
+    console.log(`[gmail-sync] Token refreshed successfully`);
   }
 
   // Fetch admin_config for sender filters
@@ -199,13 +235,15 @@ async function syncUser(
   const listData = await listResponse.json();
   const messageIds: string[] = (listData.messages ?? []).map((m: { id: string }) => m.id);
 
+  console.log(`[gmail-sync] Gmail search returned ${messageIds.length} messages for user ${token.user_id}. Query: ${query.substring(0, 200)}...`);
+
   if (messageIds.length === 0) {
     // Update last_sync_at even when no new messages
     await supabase
       .from('gmail_tokens')
       .update({ last_sync_at: new Date().toISOString(), sync_errors: 0 })
       .eq('user_id', token.user_id);
-    return { user_id: token.user_id, emails_processed: 0 };
+    return { user_id: token.user_id, emails_processed: 0, gmail_messages_found: 0, token_refreshed: tokenRefreshed, query_preview: query.substring(0, 300) };
   }
 
   // Check which messages are already processed
@@ -217,9 +255,21 @@ async function syncUser(
   const existingIds = new Set((existing ?? []).map((e: { gmail_message_id: string }) => e.gmail_message_id));
   const newMessageIds = messageIds.filter((id) => !existingIds.has(id));
 
-  let processed = 0;
+  console.log(`[gmail-sync] ${messageIds.length} total, ${existingIds.size} already processed, ${newMessageIds.length} new messages to process`);
 
-  for (const msgId of newMessageIds) {
+  let processed = 0;
+  let lastStoreError: string | null = null;
+  let skippedOther = 0;
+  let skippedTravel = 0;
+  let fetchFailed = 0;
+  let classifyFailed = 0;
+  let storeFailed = 0;
+
+  // Limit to 10 messages per sync to avoid edge function timeout
+  const toProcess = newMessageIds.slice(0, 10);
+  console.log(`[gmail-sync] Processing ${toProcess.length} of ${newMessageIds.length} new messages`);
+
+  for (const msgId of toProcess) {
     try {
       // Fetch full message
       const msgResponse = await fetch(
@@ -227,7 +277,11 @@ async function syncUser(
         { headers: { Authorization: `Bearer ${accessToken}` } },
       );
 
-      if (!msgResponse.ok) continue;
+      if (!msgResponse.ok) {
+        console.error(`[gmail-sync] Gmail fetch failed for ${msgId}: ${msgResponse.status}`);
+        fetchFailed++;
+        continue;
+      }
 
       const msg: GmailMessage = await msgResponse.json();
       const from = getHeader(msg, 'From') ?? '';
@@ -242,9 +296,12 @@ async function syncUser(
         body,
       );
 
+      console.log(`[gmail-sync] Classified "${subject}" from ${from} as: ${classification}`);
+
       // Skip marketing / irrelevant emails — don't store "other"
       if (classification === 'other') {
         console.log(`Skipping irrelevant email: "${subject}" from ${from}`);
+        skippedOther++;
         continue;
       }
 
@@ -263,6 +320,7 @@ async function syncUser(
             });
             if (!isNearTournament) {
               console.log(`Skipping travel email not near any tournament: "${subject}" (travel date: ${travelDate})`);
+              skippedTravel++;
               continue;
             }
           }
@@ -289,7 +347,9 @@ async function syncUser(
         .single();
 
       if (storeError) {
-        console.error(`Failed to store email ${msgId}:`, storeError);
+        console.error(`[gmail-sync] Failed to store email ${msgId}:`, JSON.stringify(storeError));
+        if (!lastStoreError) lastStoreError = storeError.message || JSON.stringify(storeError);
+        storeFailed++;
         continue;
       }
 
@@ -331,17 +391,41 @@ async function syncUser(
 
       processed++;
     } catch (err) {
-      console.error(`Failed to process message ${msgId}:`, err);
+      console.error(`[gmail-sync] Failed to process message ${msgId}:`, err);
+      classifyFailed++;
     }
   }
 
-  // Update sync timestamp and reset errors
-  await supabase
-    .from('gmail_tokens')
-    .update({ last_sync_at: new Date().toISOString(), sync_errors: 0 })
-    .eq('user_id', token.user_id);
+  // Only update last_sync_at if we processed ALL new messages (no more in the backlog)
+  // Otherwise keep last_sync_at so the next sync picks up remaining messages
+  if (newMessageIds.length <= toProcess.length) {
+    await supabase
+      .from('gmail_tokens')
+      .update({ last_sync_at: new Date().toISOString(), sync_errors: 0 })
+      .eq('user_id', token.user_id);
+  } else {
+    // Still reset errors but don't advance the sync timestamp
+    await supabase
+      .from('gmail_tokens')
+      .update({ sync_errors: 0 })
+      .eq('user_id', token.user_id);
+    console.log(`[gmail-sync] ${newMessageIds.length - toProcess.length} messages remaining in backlog for user ${token.user_id}`);
+  }
 
-  return { user_id: token.user_id, emails_processed: processed };
+  return {
+    user_id: token.user_id,
+    emails_processed: processed,
+    gmail_messages_found: messageIds.length,
+    already_processed: existingIds.size,
+    attempted: toProcess.length,
+    token_refreshed: tokenRefreshed,
+    skipped_other: skippedOther,
+    skipped_travel_date: skippedTravel,
+    fetch_failed: fetchFailed,
+    classify_failed: classifyFailed,
+    store_failed: storeFailed,
+    last_store_error: lastStoreError,
+  };
 }
 
 // Auto-apply extracted email data to matching tournaments
@@ -585,6 +669,7 @@ async function refreshAccessToken(
 
   if (!response.ok) {
     const errorText = await response.text();
+    console.error(`[gmail-sync] Token refresh failed for user ${token.user_id}: ${errorText}`);
     throw new Error(`Token refresh failed: ${errorText}`);
   }
 
