@@ -291,93 +291,44 @@ export default function OnboardingScreen() {
 
     if (isSupabaseConfigured && user) {
       try {
-        // Ensure user_profiles row exists with role='admin'
-        // Check if row exists first
-        const { data: existingProfile } = await supabase
-          .from('user_profiles')
-          .select('id, role')
-          .eq('id', user.id)
-          .maybeSingle();
+        // Use SECURITY DEFINER RPC to bypass RLS for all onboarding inserts
+        const tournamentPayload = extractedTournaments.map((t) => ({
+          name: t.name, start_date: t.start_date, end_date: t.end_date,
+          location_city: t.location_city || null,
+          venues: t.venue_name ? [{ label: t.venue_name, address: t.venue_address || '', is_confirmed: false }] : [],
+        }));
 
-        if (existingProfile) {
-          // Row exists — ensure role is admin
-          if (existingProfile.role !== 'admin') {
-            const { error: updateErr } = await supabase
-              .from('user_profiles')
-              .update({ role: 'admin' } as any)
-              .eq('id', user.id);
-            if (updateErr) throw new Error(`Profile update failed: ${updateErr.message}`);
-          }
-        } else {
-          // No row — create it
-          const { error: insertErr } = await supabase
-            .from('user_profiles')
-            .insert({ id: user.id, role: 'admin' } as any);
-          if (insertErr) throw new Error(`Profile insert failed: ${insertErr.message}`);
-        }
+        const guestPayload = guests.filter((g) => g.name.trim()).map((g) => ({
+          name: g.name.trim(), relationship: g.relation, phone: g.phone.trim() || null,
+        }));
 
-        // Clean up any partial data from previous onboarding attempts
-        await supabase.from('admin_config').delete().eq('user_id', user.id);
-        const { data: existingLinks } = await supabase.from('admin_athletes').select('athlete_id').eq('admin_id', user.id);
-        if (existingLinks && existingLinks.length > 0) {
-          const existingAthleteIds = existingLinks.map((l: any) => l.athlete_id);
-          await supabase.from('seasons').delete().in('athlete_id', existingAthleteIds);
-          await supabase.from('guests').delete().in('athlete_id', existingAthleteIds);
-          await supabase.from('admin_athletes').delete().eq('admin_id', user.id);
-          await supabase.from('athletes').delete().in('id', existingAthleteIds);
-        }
+        const additionalPayload = additionalAthletes.filter((a) => a.firstName.trim()).map((a) => ({
+          firstName: a.firstName.trim(),
+        }));
 
-        const { data: athleteData, error: athleteError } = await supabase
-          .from('athletes').insert({ first_name: athleteName.trim() || 'My Athlete', last_name: null, can_edit: false } as any).select().single();
-        if (athleteError || !athleteData) throw new Error(athleteError?.message ?? 'Failed to create athlete');
-        const athlete = athleteData as Athlete;
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('setup_onboarding', {
+          p_athlete_name: athleteName.trim(),
+          p_team_name: teamName.trim(),
+          p_club_name: clubName.trim() || null,
+          p_season_year: seasonYear,
+          p_team_code: teamCode.trim() || null,
+          p_streaming_url: streamingUrl.trim() || null,
+          p_gmail_connected: gmailConnected,
+          p_gmail_email: gmailEmail || null,
+          p_trusted_sender_emails: trustedEmails,
+          p_tournaments: JSON.stringify(tournamentPayload),
+          p_additional_athletes: JSON.stringify(additionalPayload),
+          p_guests: JSON.stringify(guestPayload),
+        });
 
-        await supabase.from('admin_athletes').insert({ admin_id: user.id, athlete_id: athlete.id, permission: 'manage', is_primary: true } as any);
-
-        const { data: seasonData, error: seasonError } = await supabase
-          .from('seasons').insert({
-            athlete_id: athlete.id, team_name: teamName.trim(), club_name: clubName.trim() || null,
-            season_year: seasonYear, team_code: teamCode.trim() || null, schedule_import_source: null,
-            schedule_import_connected: false, is_active: true,
-          } as any).select().single();
-        if (seasonError || !seasonData) throw new Error(seasonError?.message ?? 'Failed to create season');
-        const season = seasonData as Season;
-
-        const { error: configError } = await supabase.from('admin_config').upsert({
-          user_id: user.id, active_season_id: season.id, trusted_sender_emails: trustedEmails,
-          default_stream_url: streamingUrl.trim() || null, gmail_connected: gmailConnected, gmail_email: gmailEmail || null,
-        } as any, { onConflict: 'user_id' });
-        if (configError) throw new Error(configError.message);
-
-        if (extractedTournaments.length > 0) {
-          await supabase.from('tournaments').insert(extractedTournaments.map((t) => ({
-            season_id: season.id, name: t.name, start_date: t.start_date, end_date: t.end_date,
-            location_city: t.location_city || null,
-            venues: t.venue_name ? [{ label: t.venue_name, address: t.venue_address || '', is_confirmed: false }] : [],
-            status: 'upcoming', travel_required: true,
-          })) as any);
-        }
-
-        for (const extra of additionalAthletes) {
-          if (!extra.firstName.trim()) continue;
-          const { data: extraAthlete } = await supabase.from('athletes').insert({ first_name: extra.firstName.trim(), last_name: null, can_edit: false } as any).select().single();
-          if (extraAthlete) {
-            await supabase.from('admin_athletes').insert({ admin_id: user.id, athlete_id: (extraAthlete as Athlete).id, permission: 'manage', is_primary: true } as any);
-          }
-        }
-
-        const validGuests = guests.filter((g) => g.name.trim());
-        if (validGuests.length > 0) {
-          await supabase.from('guests').insert(validGuests.map((g) => ({
-            athlete_id: athlete.id, name: g.name.trim(), relationship: g.relation, phone: g.phone.trim() || null, notify_sms: !!g.phone.trim(),
-          })) as any);
-        }
+        if (rpcError) throw new Error(rpcError.message);
+        const result = rpcResult as { success: boolean; error?: string; athlete_id?: string; season_id?: string; config_id?: string };
+        if (!result.success) throw new Error(result.error ?? 'Onboarding setup failed');
 
         // Directly populate the store with the data we just created
-        // (avoids race conditions with refresh/RLS on newly created rows)
         const store = useSeasonStore.getState();
         store.setAdminConfig({
-          id: user.id, // admin_config uses user_id as effective key
+          id: result.config_id ?? user.id,
           user_id: user.id,
           club_email_domain: null,
           rally_forward_address: 'plans@rally.app',
@@ -395,12 +346,23 @@ export default function OnboardingScreen() {
           gmail_connected: gmailConnected,
           gmail_email: gmailEmail || null,
           external_links: [],
-          active_season_id: season.id,
+          active_season_id: result.season_id!,
           created_at: new Date().toISOString(),
         });
-        store.setActiveSeasonId(season.id);
-        store.setAthletes([athlete]);
-        store.setSeasons([season]);
+        store.setActiveSeasonId(result.season_id!);
+        store.setAthletes([{
+          id: result.athlete_id!, user_id: null,
+          first_name: athleteName.trim() || 'My Athlete', last_name: null,
+          can_edit: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+        }]);
+        store.setSeasons([{
+          id: result.season_id!, athlete_id: result.athlete_id!,
+          team_name: teamName.trim(), club_name: clubName.trim() || null,
+          season_year: seasonYear, sport: 'volleyball',
+          team_code: teamCode.trim() || null, schedule_import_source: null,
+          schedule_import_connected: false, is_active: true,
+          created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+        }]);
         store.setLoading(false);
 
         // Navigate to dashboard
