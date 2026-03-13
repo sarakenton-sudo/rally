@@ -2,20 +2,34 @@
 -- Admin → Athlete → Season model
 -- Replaces household co-parent model with 3-tier system
 
+-- Ensure pgcrypto is available for gen_random_bytes
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+
 -- ============================================================
 -- NEW ENUMS
 -- ============================================================
 
-CREATE TYPE user_role AS ENUM ('admin', 'athlete');
-CREATE TYPE admin_permission AS ENUM ('manage', 'view');
-CREATE TYPE invite_type AS ENUM ('admin', 'athlete');
+DO $$ BEGIN
+    CREATE TYPE user_role AS ENUM ('admin', 'athlete');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE admin_permission AS ENUM ('manage', 'view');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE invite_type AS ENUM ('admin', 'athlete');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ============================================================
 -- NEW TABLES
 -- ============================================================
 
 -- User profiles (1:1 with auth.users, role tracking)
-CREATE TABLE user_profiles (
+CREATE TABLE IF NOT EXISTS user_profiles (
     id           UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     role         user_role NOT NULL DEFAULT 'admin',
     display_name TEXT,
@@ -24,7 +38,7 @@ CREATE TABLE user_profiles (
 );
 
 -- Athletes (represents a kid)
-CREATE TABLE athletes (
+CREATE TABLE IF NOT EXISTS athletes (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id    UUID UNIQUE REFERENCES auth.users(id) ON DELETE SET NULL,
     first_name TEXT NOT NULL,
@@ -35,7 +49,7 @@ CREATE TABLE athletes (
 );
 
 -- Admin-Athlete junction (replaces household_members)
-CREATE TABLE admin_athletes (
+CREATE TABLE IF NOT EXISTS admin_athletes (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     admin_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     athlete_id  UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
@@ -47,7 +61,7 @@ CREATE TABLE admin_athletes (
 );
 
 -- Seasons (split from team_config season-specific fields)
-CREATE TABLE seasons (
+CREATE TABLE IF NOT EXISTS seasons (
     id                        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     athlete_id                UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
     team_name                 TEXT NOT NULL,
@@ -63,14 +77,14 @@ CREATE TABLE seasons (
 );
 
 -- Athlete invites (replaces household_invites)
-CREATE TABLE athlete_invites (
+CREATE TABLE IF NOT EXISTS athlete_invites (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     inviter_id  UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     athlete_id  UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
     email       TEXT NOT NULL,
     invite_type invite_type NOT NULL DEFAULT 'admin',
     permission  admin_permission NOT NULL DEFAULT 'view',
-    invite_code TEXT NOT NULL DEFAULT encode(gen_random_bytes(6), 'hex'),
+    invite_code TEXT NOT NULL DEFAULT encode(extensions.gen_random_bytes(6), 'hex'),
     status      invite_status NOT NULL DEFAULT 'pending',
     expires_at  TIMESTAMPTZ NOT NULL DEFAULT (now() + INTERVAL '30 days'),
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -82,36 +96,42 @@ CREATE TABLE athlete_invites (
 -- INDEXES
 -- ============================================================
 
-CREATE INDEX idx_admin_athletes_admin ON admin_athletes(admin_id);
-CREATE INDEX idx_admin_athletes_athlete ON admin_athletes(athlete_id);
-CREATE INDEX idx_seasons_athlete ON seasons(athlete_id);
-CREATE INDEX idx_athlete_invites_code ON athlete_invites(invite_code);
-CREATE INDEX idx_athlete_invites_inviter ON athlete_invites(inviter_id);
+CREATE INDEX IF NOT EXISTS idx_admin_athletes_admin ON admin_athletes(admin_id);
+CREATE INDEX IF NOT EXISTS idx_admin_athletes_athlete ON admin_athletes(athlete_id);
+CREATE INDEX IF NOT EXISTS idx_seasons_athlete ON seasons(athlete_id);
+CREATE INDEX IF NOT EXISTS idx_athlete_invites_code ON athlete_invites(invite_code);
+CREATE INDEX IF NOT EXISTS idx_athlete_invites_inviter ON athlete_invites(inviter_id);
 
 -- ============================================================
 -- MODIFY EXISTING TABLES
 -- ============================================================
 
 -- tournaments: add season_id (nullable initially for migration)
-ALTER TABLE tournaments ADD COLUMN season_id UUID REFERENCES seasons(id) ON DELETE CASCADE;
+ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS season_id UUID REFERENCES seasons(id) ON DELETE CASCADE;
 
 -- hotel_bookings: rename user_id → created_by_user_id
-ALTER TABLE hotel_bookings RENAME COLUMN user_id TO created_by_user_id;
+DO $$ BEGIN
+    ALTER TABLE hotel_bookings RENAME COLUMN user_id TO created_by_user_id;
+EXCEPTION WHEN undefined_column THEN NULL;
+END $$;
 
 -- flight_bookings: rename user_id → created_by_user_id
-ALTER TABLE flight_bookings RENAME COLUMN user_id TO created_by_user_id;
+DO $$ BEGIN
+    ALTER TABLE flight_bookings RENAME COLUMN user_id TO created_by_user_id;
+EXCEPTION WHEN undefined_column THEN NULL;
+END $$;
 
 -- guests: add athlete_id (nullable initially for migration)
-ALTER TABLE guests ADD COLUMN athlete_id UUID REFERENCES athletes(id) ON DELETE CASCADE;
+ALTER TABLE guests ADD COLUMN IF NOT EXISTS athlete_id UUID REFERENCES athletes(id) ON DELETE CASCADE;
 
 -- usav_profiles: add athlete_id (nullable initially for migration)
-ALTER TABLE usav_profiles ADD COLUMN athlete_id UUID REFERENCES athletes(id) ON DELETE CASCADE;
+ALTER TABLE usav_profiles ADD COLUMN IF NOT EXISTS athlete_id UUID REFERENCES athletes(id) ON DELETE CASCADE;
 
 -- team_events: add season_id (nullable initially for migration)
-ALTER TABLE team_events ADD COLUMN season_id UUID REFERENCES seasons(id) ON DELETE CASCADE;
+ALTER TABLE team_events ADD COLUMN IF NOT EXISTS season_id UUID REFERENCES seasons(id) ON DELETE CASCADE;
 
 -- team_config: add active_season_id (will become admin_config)
-ALTER TABLE team_config ADD COLUMN active_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL;
+ALTER TABLE team_config ADD COLUMN IF NOT EXISTS active_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL;
 
 -- ============================================================
 -- DATA MIGRATION
@@ -194,9 +214,9 @@ BEGIN
     -- Migrate household_members → admin_athletes
     -- Co-parents become additional admins with 'view' permission
     FOR hm IN
-        SELECT hm.*, aa.athlete_id
-        FROM household_members hm
-        JOIN admin_athletes aa ON aa.admin_id = hm.owner_user_id AND aa.is_primary = true
+        SELECT h.owner_user_id, h.member_user_id, aa.athlete_id
+        FROM household_members h
+        JOIN admin_athletes aa ON aa.admin_id = h.owner_user_id AND aa.is_primary = true
     LOOP
         -- Create user_profiles for co-parent if not exists
         INSERT INTO user_profiles (id, role, display_name)
@@ -211,45 +231,7 @@ BEGIN
 END $$;
 
 -- ============================================================
--- NOW ENFORCE NOT NULL (after data migration)
--- ============================================================
-
--- tournaments.season_id: make NOT NULL
-ALTER TABLE tournaments ALTER COLUMN season_id SET NOT NULL;
-CREATE INDEX idx_tournaments_season ON tournaments(season_id);
-
--- Remove user_id from tournaments (data now accessed via season)
-ALTER TABLE tournaments DROP COLUMN user_id;
-
--- guests: make athlete_id NOT NULL, drop user_id
-ALTER TABLE guests ALTER COLUMN athlete_id SET NOT NULL;
-ALTER TABLE guests DROP COLUMN user_id;
-
--- usav_profiles: make athlete_id NOT NULL, drop user_id
-ALTER TABLE usav_profiles ALTER COLUMN athlete_id SET NOT NULL;
-ALTER TABLE usav_profiles DROP COLUMN user_id;
-
--- team_events: make season_id NOT NULL, drop user_id
-ALTER TABLE team_events ALTER COLUMN season_id SET NOT NULL;
-ALTER TABLE team_events DROP COLUMN user_id;
-
--- team_config: drop season-specific fields (now in seasons table)
-ALTER TABLE team_config DROP COLUMN team_name;
-ALTER TABLE team_config DROP COLUMN club_name;
-ALTER TABLE team_config DROP COLUMN season_year;
-ALTER TABLE team_config DROP COLUMN team_code;
-ALTER TABLE team_config DROP COLUMN athlete_name;
-ALTER TABLE team_config DROP COLUMN schedule_import_source;
-ALTER TABLE team_config DROP COLUMN schedule_import_connected;
-
--- Drop the unique constraint that referenced season_year
-ALTER TABLE team_config DROP CONSTRAINT IF EXISTS team_config_user_id_season_year_key;
-
--- Rename team_config → admin_config
-ALTER TABLE team_config RENAME TO admin_config;
-
--- ============================================================
--- DROP OLD HOUSEHOLD TABLES & FUNCTIONS
+-- DROP OLD HOUSEHOLD RLS POLICIES (must happen BEFORE dropping columns they reference)
 -- ============================================================
 
 -- Drop RLS policies on household tables first
@@ -259,10 +241,10 @@ DROP POLICY IF EXISTS "Owner manages invites" ON household_invites;
 
 -- Drop old household RLS policies from data tables
 -- (These were created in 00004_households.sql and will be replaced below)
-DROP POLICY IF EXISTS "Household reads team config" ON admin_config;
-DROP POLICY IF EXISTS "Household updates team config" ON admin_config;
-DROP POLICY IF EXISTS "Owner inserts team config" ON admin_config;
-DROP POLICY IF EXISTS "Owner deletes team config" ON admin_config;
+DROP POLICY IF EXISTS "Household reads team config" ON team_config;
+DROP POLICY IF EXISTS "Household updates team config" ON team_config;
+DROP POLICY IF EXISTS "Owner inserts team config" ON team_config;
+DROP POLICY IF EXISTS "Owner deletes team config" ON team_config;
 
 DROP POLICY IF EXISTS "Household reads tournaments" ON tournaments;
 DROP POLICY IF EXISTS "Household updates tournaments" ON tournaments;
@@ -314,6 +296,44 @@ DROP TABLE IF EXISTS household_members;
 
 -- Drop household_role enum (keep invite_status — reused by athlete_invites)
 DROP TYPE IF EXISTS household_role;
+
+-- ============================================================
+-- NOW ENFORCE NOT NULL (after data migration)
+-- ============================================================
+
+-- tournaments.season_id: make NOT NULL
+ALTER TABLE tournaments ALTER COLUMN season_id SET NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_tournaments_season ON tournaments(season_id);
+
+-- Remove user_id from tournaments (data now accessed via season)
+ALTER TABLE tournaments DROP COLUMN user_id;
+
+-- guests: make athlete_id NOT NULL, drop user_id
+ALTER TABLE guests ALTER COLUMN athlete_id SET NOT NULL;
+ALTER TABLE guests DROP COLUMN user_id;
+
+-- usav_profiles: make athlete_id NOT NULL, drop user_id
+ALTER TABLE usav_profiles ALTER COLUMN athlete_id SET NOT NULL;
+ALTER TABLE usav_profiles DROP COLUMN user_id;
+
+-- team_events: make season_id NOT NULL, drop user_id
+ALTER TABLE team_events ALTER COLUMN season_id SET NOT NULL;
+ALTER TABLE team_events DROP COLUMN user_id;
+
+-- team_config: drop season-specific fields (now in seasons table)
+ALTER TABLE team_config DROP COLUMN team_name;
+ALTER TABLE team_config DROP COLUMN club_name;
+ALTER TABLE team_config DROP COLUMN season_year;
+ALTER TABLE team_config DROP COLUMN team_code;
+ALTER TABLE team_config DROP COLUMN athlete_name;
+ALTER TABLE team_config DROP COLUMN schedule_import_source;
+ALTER TABLE team_config DROP COLUMN schedule_import_connected;
+
+-- Drop the unique constraint that referenced season_year
+ALTER TABLE team_config DROP CONSTRAINT IF EXISTS team_config_user_id_season_year_key;
+
+-- Rename team_config → admin_config
+ALTER TABLE team_config RENAME TO admin_config;
 
 -- ============================================================
 -- HELPER FUNCTIONS
