@@ -20,15 +20,19 @@
   --color-rally-800: #1C405A;
   --color-rally-900: #152F43;
 
-  /* Named colors */
+  /* Named colors — matching rally-hub.com homepage */
   --color-bark: #1E3A5F;
   --color-bark-light: #264B73;
   --color-cream: #F4F6F8;
   --color-warm-white: #FEFEFE;
   --color-sage: #6A9E8A;
+  --color-teal: #6A9E8A;
   --color-stone: #8FA8BF;
+  --color-mist: #8FA8BF;
   --color-parchment: #D8E2EC;
-  --color-gold: #6A9E8A;
+  --color-frost: #D8E2EC;
+  --color-ice: #F4F6F8;
+  --color-gold: #F59E0B;
 
   /* Font families */
   --font-nunito-extrabold: 'Nunito-ExtraBold';
@@ -37,10 +41,13 @@
   --font-nunito-sans-semibold: 'NunitoSans-SemiBold';
   --font-nunito-sans-bold: 'NunitoSans-Bold';
 
-  /* Border radius overrides */
+  /* Border radius — matching homepage */
   --radius-xl: 14px;
   --radius-2xl: 20px;
+  --radius-3xl: 28px;
 
-  /* Card shadow */
+  /* Shadows — matching homepage */
   --shadow-card: 0 2px 12px rgba(30, 58, 95, 0.08);
+  --shadow-card-hover: 0 12px 40px rgba(30, 58, 95, 0.09);
+  --shadow-button: 0 4px 20px rgba(59, 130, 176, 0.45);
 }

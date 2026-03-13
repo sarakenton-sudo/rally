@@ -11,18 +11,23 @@ function GlobalHeader() {
 
   return (
     <View
-      style={{ paddingTop: insets.top }}
-      className="bg-bark"
+      style={{
+        paddingTop: insets.top,
+        backgroundColor: 'rgba(30,58,95,0.97)',
+      }}
     >
       {/* Logo row */}
-      <View className="items-center px-4 pt-2 pb-1">
+      <View className="items-center px-5 pt-2 pb-2">
         {/* Account button (left) */}
         <Pressable
-          className="w-9 h-9 rounded-full items-center justify-center active:opacity-70 absolute left-4"
-          style={{ top: 8 + insets.top }}
+          className="w-10 h-10 rounded-xl items-center justify-center active:opacity-70 absolute left-4"
+          style={{
+            top: 6 + insets.top,
+            backgroundColor: 'rgba(255,255,255,0.08)',
+          }}
           onPress={() => router.push('/settings/account')}
         >
-          <Ionicons name="person-circle-outline" size={24} color="rgba(255,255,255,0.6)" />
+          <Ionicons name="person-circle-outline" size={22} color="rgba(255,255,255,0.65)" />
         </Pressable>
 
         <Pressable
@@ -35,18 +40,21 @@ function GlobalHeader() {
         >
           <Image
             source={logoWhite}
-            style={{ width: 240, height: 64 }}
+            style={{ width: 220, height: 56 }}
             resizeMode="contain"
           />
         </Pressable>
 
         {/* Notifications button (right) */}
         <Pressable
-          className="w-9 h-9 rounded-full items-center justify-center active:opacity-70 absolute right-4"
-          style={{ top: 8 + insets.top }}
+          className="w-10 h-10 rounded-xl items-center justify-center active:opacity-70 absolute right-4"
+          style={{
+            top: 6 + insets.top,
+            backgroundColor: 'rgba(255,255,255,0.08)',
+          }}
           onPress={() => router.push('/notifications')}
         >
-          <Ionicons name="notifications-outline" size={20} color="rgba(255,255,255,0.6)" />
+          <Ionicons name="notifications-outline" size={20} color="rgba(255,255,255,0.65)" />
         </Pressable>
       </View>
 
