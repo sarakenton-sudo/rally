@@ -1,19 +1,15 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
   Pressable,
   ScrollView,
-  Dimensions,
   Alert,
   KeyboardAvoidingView,
   Platform,
   TextInput,
   ActivityIndicator,
   Image,
-  type NativeSyntheticEvent,
-  type NativeScrollEvent,
-  type TextInputProps,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,7 +26,6 @@ const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? '';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SEASON_OPTIONS = ['2025-2026', '2026-2027'];
 const TOTAL_STEPS = 8;
 
@@ -169,7 +164,6 @@ const INPUT_STYLE = {
 type GuestEntry = { name: string; relation: string; phone: string };
 
 export default function OnboardingScreen() {
-  const scrollRef = useRef<ScrollView>(null);
   const [step, setStep] = useState(0);
   const { user } = useAuth();
   const { refresh } = useDataRefresh();
@@ -206,13 +200,7 @@ export default function OnboardingScreen() {
   const [saving, setSaving] = useState(false);
 
   const goTo = (index: number) => {
-    scrollRef.current?.scrollTo({ x: index * SCREEN_WIDTH, animated: true });
     setStep(index);
-  };
-
-  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-    if (page !== step) setStep(page);
   };
 
   // ---- Schedule extraction ----
@@ -276,6 +264,10 @@ export default function OnboardingScreen() {
     if (!email || !email.includes('@')) return;
     if (!trustedEmails.includes(email)) setTrustedEmails([...trustedEmails, email]);
     setTrustedEmailInput('');
+  };
+
+  const addGuest = () => {
+    setGuests([...guests, { name: '', relation: 'Grandparent', phone: '' }]);
   };
 
   // ---- FINISH ----
@@ -407,13 +399,9 @@ export default function OnboardingScreen() {
           ))}
         </View>
 
-        {/* Pages */}
-        <ScrollView
-          ref={scrollRef} horizontal pagingEnabled showsHorizontalScrollIndicator={false}
-          scrollEventThrottle={16} onMomentumScrollEnd={handleScroll} scrollEnabled={false} keyboardShouldPersistTaps="handled"
-        >
-          {/* ===== Step 0: Welcome ===== */}
-          <View style={{ width: SCREEN_WIDTH }} className="flex-1 justify-center items-center px-8">
+        {/* Pages — conditional render to avoid focus issues on web */}
+        {step === 0 && (
+          <View className="flex-1 justify-center items-center px-8">
             <Image source={require('@/assets/images/rallyhub_lockup_white.png')} style={{ width: 220, height: 64 }} resizeMode="contain" />
             <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: 12, marginBottom: 8, maxWidth: 280, lineHeight: 22 }}>
               Your family's command center for travel volleyball. Let's get you set up — it only takes a minute.
@@ -446,9 +434,10 @@ export default function OnboardingScreen() {
               <Text style={{ fontSize: 16, fontFamily: 'Nunito-ExtraBold', color: '#FEFEFE' }}>Let's Go</Text>
             </Pressable>
           </View>
+        )}
 
-          {/* ===== Step 1: Athlete ===== */}
-          <View style={{ width: SCREEN_WIDTH }} className="flex-1 px-6 pt-4">
+        {step === 1 && (
+          <View className="flex-1 px-6 pt-4">
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <StepHeader icon="person" title="Your Athlete" subtitle="Who's playing?" />
 
@@ -469,9 +458,10 @@ export default function OnboardingScreen() {
               goTo(2);
             }} nextDisabled={!athleteName.trim()} />
           </View>
+        )}
 
-          {/* ===== Step 2: Season ===== */}
-          <View style={{ width: SCREEN_WIDTH }} className="flex-1 px-6 pt-4">
+        {step === 2 && (
+          <View className="flex-1 px-6 pt-4">
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <StepHeader icon="trophy" title="Season Details" subtitle={`${athleteName.trim() || 'Your athlete'}'s team`} />
 
@@ -516,9 +506,10 @@ export default function OnboardingScreen() {
               goTo(3);
             }} nextDisabled={!teamName.trim()} />
           </View>
+        )}
 
-          {/* ===== Step 3: Schedule Import ===== */}
-          <View style={{ width: SCREEN_WIDTH }} className="flex-1 px-6 pt-4">
+        {step === 3 && (
+          <View className="flex-1 px-6 pt-4">
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <StepHeader icon="calendar" title="Tournament Schedule" subtitle="Add your upcoming tournaments" />
 
@@ -600,9 +591,10 @@ export default function OnboardingScreen() {
             </ScrollView>
             <NavButtons onBack={() => goTo(2)} onNext={() => goTo(4)} showSkip onSkip={() => goTo(4)} />
           </View>
+        )}
 
-          {/* ===== Step 4: Email & Travel ===== */}
-          <View style={{ width: SCREEN_WIDTH }} className="flex-1 px-6 pt-4">
+        {step === 4 && (
+          <View className="flex-1 px-6 pt-4">
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <StepHeader icon="mail" title="Travel Email" subtitle="Auto-capture booking confirmations" />
 
@@ -666,9 +658,10 @@ export default function OnboardingScreen() {
             </ScrollView>
             <NavButtons onBack={() => goTo(3)} onNext={() => goTo(5)} showSkip onSkip={() => goTo(5)} />
           </View>
+        )}
 
-          {/* ===== Step 5: Additional Athletes ===== */}
-          <View style={{ width: SCREEN_WIDTH }} className="flex-1 px-6 pt-4">
+        {step === 5 && (
+          <View className="flex-1 px-6 pt-4">
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <StepHeader icon="people" title="More Athletes?" subtitle="Have another player? Add them here." />
 
@@ -708,9 +701,10 @@ export default function OnboardingScreen() {
             </ScrollView>
             <NavButtons onBack={() => goTo(4)} onNext={() => goTo(6)} showSkip onSkip={() => goTo(6)} />
           </View>
+        )}
 
-          {/* ===== Step 6: Guests ===== */}
-          <View style={{ width: SCREEN_WIDTH }} className="flex-1 px-6 pt-4">
+        {step === 6 && (
+          <View className="flex-1 px-6 pt-4">
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <StepHeader icon="heart" title="Invite Family" subtitle="Who else follows along?" />
 
@@ -760,9 +754,10 @@ export default function OnboardingScreen() {
             </ScrollView>
             <NavButtons onBack={() => goTo(5)} onNext={() => goTo(7)} showSkip onSkip={() => { setGuests([{ name: '', relation: 'Grandparent', phone: '' }]); goTo(7); }} />
           </View>
+        )}
 
-          {/* ===== Step 7: All Set ===== */}
-          <View style={{ width: SCREEN_WIDTH }} className="flex-1 justify-center items-center px-8">
+        {step === 7 && (
+          <View className="flex-1 justify-center items-center px-8">
             <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(106,158,138,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
               <Ionicons name="checkmark-circle" size={52} color="#6A9E8A" />
             </View>
@@ -808,7 +803,7 @@ export default function OnboardingScreen() {
               </Pressable>
             </View>
           </View>
-        </ScrollView>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
