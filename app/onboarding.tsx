@@ -227,6 +227,11 @@ export default function OnboardingScreen() {
     setSaving(true);
 
     if (isSupabaseConfigured && user) {
+      // 0. Ensure user_profiles row exists (trigger may not have fired yet)
+      await supabase
+        .from('user_profiles')
+        .upsert({ id: user.id, role: 'admin' }, { onConflict: 'id', ignoreDuplicates: true });
+
       // 1. Create athlete
       const { data: athleteData, error: athleteError } = await supabase
         .from('athletes')

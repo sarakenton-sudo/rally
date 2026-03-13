@@ -16,6 +16,15 @@ function GlobalHeader() {
     >
       {/* Logo row */}
       <View className="items-center px-4 pt-2 pb-1">
+        {/* Account button (left) */}
+        <Pressable
+          className="w-9 h-9 rounded-full items-center justify-center active:opacity-70 absolute left-4"
+          style={{ top: 8 + insets.top }}
+          onPress={() => router.push('/settings/account')}
+        >
+          <Ionicons name="person-circle-outline" size={24} color="rgba(255,255,255,0.6)" />
+        </Pressable>
+
         <Pressable
           onPress={() => {
             if (Platform.OS === 'web') {
@@ -30,6 +39,8 @@ function GlobalHeader() {
             resizeMode="contain"
           />
         </Pressable>
+
+        {/* Notifications button (right) */}
         <Pressable
           className="w-9 h-9 rounded-full items-center justify-center active:opacity-70 absolute right-4"
           style={{ top: 8 + insets.top }}

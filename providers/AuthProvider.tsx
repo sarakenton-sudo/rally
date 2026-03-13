@@ -1,6 +1,9 @@
 import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react';
+import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import type { Session, User } from '@supabase/supabase-js';
 import type { UserProfile } from '@/types/database';
 
@@ -11,6 +14,7 @@ interface AuthContextType {
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
+  signInWithGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
@@ -24,6 +28,7 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   signIn: async () => ({ error: null }),
   signUp: async () => ({ error: null }),
+  signInWithGoogle: async () => ({ error: null }),
   signOut: async () => {},
   resetPassword: async () => ({ error: null }),
   updatePassword: async () => ({ error: null }),
@@ -122,6 +127,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   };
 
+  const signInWithGoogle = async () => {
+    try {
+      const redirectUrl = Linking.createURL('google-callback');
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          scopes: [
+            'email',
+            'profile',
+            'https://www.googleapis.com/auth/gmail.readonly',
+          ].join(' '),
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+      if (error) return { error: error.message };
+      if (data.url) {
+        if (Platform.OS === 'web') {
+          window.location.href = data.url;
+        } else {
+          const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+          if (result.type !== 'success') {
+            return { error: 'Google sign-in was cancelled' };
+          }
+        }
+      }
+      return { error: null };
+    } catch (err: any) {
+      return { error: err?.message ?? 'Google sign-in failed' };
+    }
+  };
+
   const signOut = async () => {
     setUserProfile(null);
     await supabase.auth.signOut();
@@ -152,7 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, userProfile, isLoading, signIn, signUp, signOut, resetPassword, updatePassword, acceptInvite }}>
+    <AuthContext.Provider value={{ session, user: session?.user ?? null, userProfile, isLoading, signIn, signUp, signInWithGoogle, signOut, resetPassword, updatePassword, acceptInvite }}>
       {children}
     </AuthContext.Provider>
   );

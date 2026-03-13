@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import { View, Text, Pressable, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import FormField from '@/components/FormField';
 import { useAuth } from '@/providers/AuthProvider';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { isSupabaseConfigured } from '@/lib/supabase';
 
 export default function AuthScreen() {
-  const { signIn, signUp, resetPassword, acceptInvite } = useAuth();
+  const { signIn, signUp, signInWithGoogle, resetPassword, acceptInvite } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [hasInviteCode, setHasInviteCode] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
 
   const handleSubmit = async () => {
@@ -55,11 +57,20 @@ export default function AuthScreen() {
           return;
         }
         setMessage({ text: 'Signed in! Redirecting...', type: 'success' });
-        // Navigation happens automatically via _layout.tsx auth gating
       }
     } catch (err: any) {
       setLoading(false);
       setMessage({ text: `Unexpected error: ${err?.message ?? String(err)}`, type: 'error' });
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setMessage(null);
+    setGoogleLoading(true);
+    const { error } = await signInWithGoogle();
+    setGoogleLoading(false);
+    if (error) {
+      setMessage({ text: error, type: 'error' });
     }
   };
 
@@ -110,6 +121,26 @@ export default function AuthScreen() {
             </Text>
           </View>
         )}
+
+        {/* Google Sign-In Button */}
+        <Pressable
+          className={`bg-white rounded-xl py-3.5 items-center mb-4 flex-row justify-center ${googleLoading ? 'opacity-60' : 'active:opacity-80'}`}
+          style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }}
+          onPress={handleGoogleSignIn}
+          disabled={googleLoading || loading}
+        >
+          <Ionicons name="logo-google" size={20} color="#4285F4" style={{ marginRight: 10 }} />
+          <Text className="text-base font-semibold text-gray-700">
+            {googleLoading ? 'Please wait...' : 'Continue with Google'}
+          </Text>
+        </Pressable>
+
+        {/* Divider */}
+        <View className="flex-row items-center mb-4">
+          <View className="flex-1 h-px" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }} />
+          <Text className="mx-4 text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>or</Text>
+          <View className="flex-1 h-px" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }} />
+        </View>
 
         {/* Form */}
         <FormField
@@ -170,7 +201,7 @@ export default function AuthScreen() {
           className={`bg-rally-500 rounded-xl py-4 items-center mt-2 ${loading ? 'opacity-60' : 'active:opacity-80'}`}
           style={{ shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 4 }}
           onPress={handleSubmit}
-          disabled={loading}
+          disabled={loading || googleLoading}
         >
           <Text className="text-base font-bold text-cream">
             {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Sign In'}
