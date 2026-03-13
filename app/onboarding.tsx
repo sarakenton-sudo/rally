@@ -316,9 +316,9 @@ export default function OnboardingScreen() {
           p_gmail_connected: gmailConnected,
           p_gmail_email: gmailEmail || null,
           p_trusted_sender_emails: trustedEmails,
-          p_tournaments: JSON.stringify(tournamentPayload),
-          p_additional_athletes: JSON.stringify(additionalPayload),
-          p_guests: JSON.stringify(guestPayload),
+          p_tournaments: tournamentPayload,
+          p_additional_athletes: additionalPayload,
+          p_guests: guestPayload,
         });
 
         if (rpcError) throw new Error(rpcError.message);
