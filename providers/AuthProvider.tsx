@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
+import { router } from 'expo-router';
 import type { Session, User } from '@supabase/supabase-js';
 import type { UserProfile } from '@/types/database';
 
@@ -93,13 +94,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Step 2: Listen for FUTURE auth changes (sign in, sign out, token refresh)
     // But ignore events until initial validation is done
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (validatedRef.current) {
         setSession(newSession);
         if (newSession?.user) {
           fetchUserProfile(newSession.user.id);
         } else {
           setUserProfile(null);
+        }
+        // Navigate to change-password screen on password recovery
+        if (event === 'PASSWORD_RECOVERY') {
+          router.replace('/settings/change-password');
         }
       }
     });
@@ -123,7 +128,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'rally://reset-callback',
+    });
     return { error: error?.message ?? null };
   };
 

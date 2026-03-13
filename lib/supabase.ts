@@ -1,6 +1,7 @@
 import 'react-native-url-polyfill/auto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
+import * as Linking from 'expo-linking';
 import { Platform } from 'react-native';
 import type { Database } from '@/types/database';
 
@@ -57,7 +58,27 @@ export const supabase: SupabaseClient<Database> = isSupabaseConfigured
         storage: storage as any,
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: false,
+        detectSessionInUrl: Platform.OS === 'web',
       },
     })
   : createSupabaseStub();
+
+// Handle deep links with auth tokens (password reset, email confirm, etc.)
+if (isSupabaseConfigured && Platform.OS !== 'web') {
+  const handleDeepLink = (url: string) => {
+    // Supabase redirects with fragment: #access_token=...&type=recovery
+    const fragment = url.split('#')[1];
+    if (!fragment) return;
+    const params = new URLSearchParams(fragment);
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    if (accessToken && refreshToken) {
+      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+    }
+  };
+
+  // Handle URL that launched the app
+  Linking.getInitialURL().then((url) => { if (url) handleDeepLink(url); });
+  // Handle URLs while app is running
+  Linking.addEventListener('url', (event) => handleDeepLink(event.url));
+}
