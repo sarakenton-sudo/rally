@@ -1,15 +1,17 @@
-import { View, Text, ScrollView, RefreshControl, Pressable, Linking } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import USAVProfileCard from '@/components/USAVProfileCard';
 import HubSectionHeader from '@/components/HubSectionHeader';
 import HubSettingsRow from '@/components/HubSettingsRow';
+import AthleteCredentialCard from '@/components/AthleteCredentialCard';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { updateAdminConfig } from '@/hooks/useSupabaseData';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
-import { openDeepLink } from '@/lib/deepLink';
+
+// Default athlete-scoped services — always shown even if not yet configured
+const ATHLETE_SERVICES = ['SportsRecruits', 'Hudl', 'University Athlete', 'Instagram'];
 
 export default function AthleteScreen() {
   const athletes = useSeasonStore((s) => s.athletes);
@@ -19,7 +21,6 @@ export default function AthleteScreen() {
   const setActiveSeasonId = useSeasonStore((s) => s.setActiveSeasonId);
   const adminConfig = useSeasonStore((s) => s.adminConfig);
   const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
-  const usavProfiles = useSeasonStore((s) => s.usavProfiles);
   const ic = useIconColors();
   const { refresh, isRefreshing } = useDataRefresh();
 
@@ -27,14 +28,38 @@ export default function AthleteScreen() {
   const activeAthlete = athletes.find((a) => a.id === activeSeason?.athlete_id);
   const externalLinks = adminConfig?.external_links ?? [];
 
-  // Athlete-scoped links
-  const athleteLinks = externalLinks.filter((l) => {
-    if (l.scope === 'athlete') return true;
-    if (!l.scope) {
+  // Build credential cards: merge saved links with default services
+  const credentialCards = ATHLETE_SERVICES.map((serviceName) => {
+    const lower = serviceName.toLowerCase();
+    const existing = externalLinks.find((l) => l.label.toLowerCase() === lower);
+    const originalIndex = existing ? externalLinks.indexOf(existing) : -1;
+    return {
+      label: existing?.label ?? serviceName,
+      url: existing?.url ?? '',
+      username: existing?.username ?? null,
+      password: existing?.password ?? null,
+      originalIndex,
+    };
+  });
+
+  // Also include any extra athlete-scoped links not in the default list
+  const extraLinks = externalLinks.filter((l) => {
+    if (l.scope !== 'athlete') {
       const lower = l.label.toLowerCase();
-      return ['sportsrecruits', 'university athlete', 'hudl'].some((k) => lower.includes(k));
+      if (!['sportsrecruits', 'university athlete', 'hudl', 'instagram'].some((k) => lower.includes(k))) return false;
     }
-    return false;
+    const lower = l.label.toLowerCase();
+    return !ATHLETE_SERVICES.some((s) => s.toLowerCase() === lower);
+  });
+
+  extraLinks.forEach((link) => {
+    credentialCards.push({
+      label: link.label,
+      url: link.url,
+      username: link.username,
+      password: link.password,
+      originalIndex: externalLinks.indexOf(link),
+    });
   });
 
   // Group seasons by athlete
@@ -44,9 +69,6 @@ export default function AthleteScreen() {
       .filter((s) => s.athlete_id === athlete.id)
       .sort((a, b) => b.season_year.localeCompare(a.season_year)),
   }));
-
-  // USAV profiles for active athlete
-  const athleteUsavProfiles = usavProfiles.filter((p) => p.athlete_id === activeAthlete?.id);
 
   const handleSeasonTap = async (seasonId: string) => {
     tapLight();
@@ -59,6 +81,15 @@ export default function AthleteScreen() {
     router.push('/(tabs)/season');
   };
 
+  const handleEditLink = (originalIndex: number, label: string) => {
+    if (originalIndex >= 0) {
+      router.push({ pathname: '/profile/edit-link', params: { index: String(originalIndex) } });
+    } else {
+      // Create new link with this label pre-filled
+      router.push({ pathname: '/profile/edit-link', params: { newLabel: label } });
+    }
+  };
+
   return (
     <View className="flex-1 bg-cream dark:bg-bark">
       <ScrollView
@@ -66,16 +97,66 @@ export default function AthleteScreen() {
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor="#3B82B0" />}
       >
-        <Text className="text-2xl font-bold text-bark dark:text-cream font-nunito-extrabold">
-          {activeAthlete?.first_name}{activeAthlete?.last_name ? ` ${activeAthlete.last_name}` : ''}
-        </Text>
-        <Text className="text-sm text-stone dark:text-parchment mt-1 mb-6">
+        {/* Athlete name + edit */}
+        <View className="flex-row items-center justify-between mb-1">
+          <Text className="text-2xl font-bold text-bark dark:text-cream font-nunito-extrabold">
+            {activeAthlete?.first_name}{activeAthlete?.last_name ? ` ${activeAthlete.last_name}` : ''}
+          </Text>
+          {activeAthlete && (
+            <Pressable
+              className="p-2 active:opacity-60"
+              onPress={() => router.push({ pathname: '/settings/edit-athlete', params: { athleteId: activeAthlete.id } })}
+            >
+              <Ionicons name="pencil" size={18} color={ic.muted} />
+            </Pressable>
+          )}
+        </View>
+        <Text className="text-sm text-stone dark:text-parchment mb-6">
           {seasons.filter((s) => s.athlete_id === activeAthlete?.id).length} season{seasons.filter((s) => s.athlete_id === activeAthlete?.id).length !== 1 ? 's' : ''}
         </Text>
 
         {/* ============================================================ */}
+        {/* LOGINS & CREDENTIALS */}
+        {/* ============================================================ */}
+        <HubSectionHeader
+          icon="key"
+          title="Logins & Credentials"
+          iconColor="#3B82B0"
+        />
+
+        {credentialCards.map((card) => (
+          <AthleteCredentialCard
+            key={card.label}
+            label={card.label}
+            url={card.url}
+            username={card.username}
+            password={card.password}
+            onEdit={() => handleEditLink(card.originalIndex, card.label)}
+          />
+        ))}
+
+        {/* ============================================================ */}
+        {/* USAV MEMBERSHIP — inline as a credential row */}
+        {/* ============================================================ */}
+        <HubSettingsRow
+          icon="shield-checkmark"
+          iconColor="#dc2626"
+          title="USAV Membership"
+          subtitle="Member ID for tournament check-in"
+          onPress={() => router.push('/profile/add-usav')}
+        />
+
+        {/* ============================================================ */}
         {/* SEASONS — grouped by athlete */}
         {/* ============================================================ */}
+        <View className="mt-6">
+          <HubSectionHeader
+            icon="calendar"
+            title="Seasons"
+            iconColor={ic.muted}
+          />
+        </View>
+
         {athleteSeasons.map(({ athlete, seasons: athleteSeasonList }) => (
           <View key={athlete.id} className="mb-4">
             {/* Athlete header — only if multiple athletes */}
@@ -151,87 +232,6 @@ export default function AthleteScreen() {
             </Pressable>
           </View>
         ))}
-
-
-        {/* ============================================================ */}
-        {/* USAV MEMBERSHIP */}
-        {/* ============================================================ */}
-        <View className="mt-6">
-          <HubSectionHeader
-            icon="shield-checkmark"
-            title="USAV Membership"
-            iconColor="#dc2626"
-            action={{ label: 'Add', onPress: () => router.push('/profile/add-usav') }}
-          />
-        </View>
-
-        {athleteUsavProfiles.length > 0 ? (
-          athleteUsavProfiles.map((profile) => (
-            <View key={profile.id} className="mb-3">
-              <USAVProfileCard
-                profile={profile}
-                onPress={() => router.push({ pathname: '/profile/add-usav', params: { editId: profile.id } })}
-              />
-            </View>
-          ))
-        ) : (
-          <Pressable
-            className="bg-red-50 dark:bg-red-900/20 rounded-xl p-5 mb-3 border border-dashed border-red-200 dark:border-red-800 items-center active:opacity-80"
-            onPress={() => router.push('/profile/add-usav')}
-          >
-            <Ionicons name="shield-outline" size={28} color="#dc2626" />
-            <Text className="text-sm font-semibold text-red-700 dark:text-red-300 mt-2">
-              Add USAV Membership
-            </Text>
-            <Text className="text-xs text-red-500 dark:text-red-400 mt-1 text-center">
-              Quick check-in at tournaments with your member ID
-            </Text>
-          </Pressable>
-        )}
-
-        {/* ============================================================ */}
-        {/* ATHLETE LINKS */}
-        {/* ============================================================ */}
-        {athleteLinks.length > 0 && (
-          <>
-            <View className="mt-4">
-              <HubSectionHeader
-                icon="link"
-                title="Athlete Links"
-                iconColor={ic.muted}
-              />
-            </View>
-            <View className="flex-row flex-wrap gap-3 mb-4">
-              {athleteLinks.map((link, i) => {
-                const originalIndex = externalLinks.indexOf(link);
-                return (
-                  <Pressable
-                    key={`${link.label}-${i}`}
-                    className={`rounded-xl p-4 items-center justify-center border active:opacity-70 ${
-                      link.url
-                        ? 'bg-warm-white dark:bg-bark-light border-parchment dark:border-rally-900'
-                        : 'bg-cream dark:bg-bark-light/50 border-dashed border-parchment dark:border-rally-900'
-                    }`}
-                    style={{ width: '47%', shadowColor: link.url ? '#1E3A5F' : 'transparent', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: link.url ? 2 : 0 }}
-                    onPress={() => link.url ? openDeepLink(link) : router.push({ pathname: '/profile/edit-link', params: { index: String(originalIndex) } })}
-                  >
-                    <Ionicons
-                      name={link.icon_name as keyof typeof Ionicons.glyphMap}
-                      size={28}
-                      color={link.url ? '#3B82B0' : ic.placeholder}
-                    />
-                    <Text className={`text-sm font-medium mt-2 text-center ${link.url ? 'text-bark dark:text-parchment' : 'text-stone'}`}>
-                      {link.label}
-                    </Text>
-                    {!link.url && (
-                      <Text className="text-xs text-parchment mt-0.5">Tap to set up</Text>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </View>
-          </>
-        )}
 
         {/* ============================================================ */}
         {/* ADD ATHLETE — secondary action at bottom */}

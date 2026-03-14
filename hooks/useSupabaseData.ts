@@ -329,6 +329,16 @@ export async function updateSeason(id: string, updates: Partial<Season>) {
   return { data: data as Season | null, error };
 }
 
+export async function updateAthlete(id: string, updates: Partial<Athlete>) {
+  const { data, error } = await (supabase
+    .from('athletes') as any)
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  return { data: data as Athlete | null, error };
+}
+
 export async function insertUSAVProfile(profile: Omit<USAVProfile, 'id' | 'created_at'>) {
   const { data, error } = await supabase
     .from('usav_profiles')

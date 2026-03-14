@@ -22,11 +22,12 @@ const ICON_MAP: Record<string, string> = {
   'usa volleyball': 'shield-outline',
   'hudl': 'videocam-outline',
   'university athlete': 'trophy-outline',
+  'instagram': 'logo-instagram',
   'youtube': 'logo-youtube',
 };
 
 // Auto-infer scope from label
-const ATHLETE_SCOPED_LABELS = ['sportsrecruits', 'university athlete', 'hudl'];
+const ATHLETE_SCOPED_LABELS = ['sportsrecruits', 'university athlete', 'hudl', 'instagram'];
 
 function inferScope(label: string): 'admin' | 'athlete' {
   const lower = label.toLowerCase();
@@ -42,7 +43,7 @@ function getIconForLabel(label: string): string {
 }
 
 export default function EditLinkScreen() {
-  const { index: indexStr } = useLocalSearchParams<{ index?: string }>();
+  const { index: indexStr, newLabel } = useLocalSearchParams<{ index?: string; newLabel?: string }>();
   const editIndex = indexStr != null ? parseInt(indexStr) : -1;
 
   const adminConfig = useSeasonStore((s) => s.adminConfig);
@@ -55,7 +56,7 @@ export default function EditLinkScreen() {
   const ic = useIconColors();
   const existingLink = editIndex >= 0 ? adminConfig?.external_links[editIndex] : null;
 
-  const [label, setLabel] = useState(existingLink?.label ?? '');
+  const [label, setLabel] = useState(existingLink?.label ?? newLabel ?? '');
   const [url, setUrl] = useState(existingLink?.url ?? '');
   const [username, setUsername] = useState(existingLink?.username ?? '');
   const [password, setPassword] = useState(existingLink?.password ?? '');
