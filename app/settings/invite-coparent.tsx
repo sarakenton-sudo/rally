@@ -23,18 +23,22 @@ export default function InviteCoParentScreen() {
   const [sending, setSending] = useState(false);
   const [inviteType, setInviteType] = useState<InviteType>('admin');
   const [permission, setPermission] = useState<AdminPermission>('view');
+  const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
 
   // Get the primary athlete for this admin
   const primaryLink = adminAthletes.find((aa) => aa.admin_id === user?.id && aa.is_primary);
-  const primaryAthlete = athletes.find((a) => a.id === primaryLink?.athlete_id);
+
+  // Default to primary athlete if none selected
+  const effectiveAthleteId = selectedAthleteId ?? primaryLink?.athlete_id ?? null;
+  const selectedAthlete = athletes.find((a) => a.id === effectiveAthleteId);
 
   const handleSendInvite = async () => {
     if (!email.trim()) {
       Alert.alert('Missing field', 'Please enter an email address.');
       return;
     }
-    if (!primaryLink) {
-      Alert.alert('Error', 'No athlete found. Complete onboarding first.');
+    if (!effectiveAthleteId) {
+      Alert.alert('Error', 'Please select an athlete.');
       return;
     }
 
@@ -43,7 +47,7 @@ export default function InviteCoParentScreen() {
       .from('athlete_invites')
       .insert({
         inviter_id: user!.id,
-        athlete_id: primaryLink.athlete_id,
+        athlete_id: effectiveAthleteId,
         email: email.trim().toLowerCase(),
         invite_type: inviteType,
         permission: inviteType === 'athlete' ? 'view' : permission,
@@ -86,8 +90,33 @@ export default function InviteCoParentScreen() {
           {!inviteCode ? (
             <>
               <Text className="text-sm text-stone dark:text-parchment mb-4">
-                Invite someone to access {primaryAthlete?.first_name ?? 'your athlete'}'s data. They'll create their own account and use the invite code to link.
+                Invite someone to access {selectedAthlete?.first_name ?? 'your athlete'}'s data. They'll create their own account and use the invite code to link.
               </Text>
+
+              {/* Athlete selector */}
+              {athletes.length > 1 && (
+                <>
+                  <Text className="text-xs text-stone uppercase tracking-wider font-bold mb-2">Athlete</Text>
+                  <View className="flex-row gap-2 mb-4">
+                    {athletes.map((ath) => {
+                      const isSelected = ath.id === effectiveAthleteId;
+                      return (
+                        <Pressable
+                          key={ath.id}
+                          className={`flex-1 py-3 rounded-xl items-center border ${
+                            isSelected ? 'bg-rally-600 border-rally-600' : 'border-parchment dark:border-bark-light'
+                          }`}
+                          onPress={() => setSelectedAthleteId(ath.id)}
+                        >
+                          <Text className={`text-sm font-bold ${isSelected ? 'text-cream' : 'text-bark dark:text-cream'}`}>
+                            {ath.first_name}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </>
+              )}
 
               {/* Invite type toggle */}
               <Text className="text-xs text-stone uppercase tracking-wider font-bold mb-2">Invite Type</Text>
