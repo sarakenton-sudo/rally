@@ -469,6 +469,27 @@ export default function TournamentDetailScreen() {
                   )}
                 </View>
               )}
+
+              {/* Quick import helpers */}
+              <View className="mt-3 bg-rally-50 dark:bg-rally-900/20 rounded-xl p-3 border border-rally-100 dark:border-rally-800">
+                <Text className="text-xs font-semibold text-rally-700 dark:text-rally-300 mb-2">Quick Add</Text>
+                <View className="flex-row gap-2">
+                  <Pressable
+                    className="flex-1 flex-row items-center justify-center bg-warm-white dark:bg-bark-light rounded-lg py-2.5 active:opacity-70 border border-parchment dark:border-rally-900"
+                    onPress={() => router.push('/import/paste-travel')}
+                  >
+                    <Ionicons name="sparkles" size={14} color="#7c3aed" />
+                    <Text className="text-xs font-semibold text-bark dark:text-cream ml-1.5">Paste Confirmation</Text>
+                  </Pressable>
+                  <Pressable
+                    className="flex-1 flex-row items-center justify-center bg-warm-white dark:bg-bark-light rounded-lg py-2.5 active:opacity-70 border border-parchment dark:border-rally-900"
+                    onPress={() => router.push('/settings/email-connect')}
+                  >
+                    <Ionicons name="mail" size={14} color="#3B82B0" />
+                    <Text className="text-xs font-semibold text-bark dark:text-cream ml-1.5">Forward Email</Text>
+                  </Pressable>
+                </View>
+              </View>
             </>
 
           {/* Non-travel tournament bookings (if any exist — legacy fallback, hidden since travel always shows) */}
