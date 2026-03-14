@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, Pressable, Platform } from 'react-native';
+import { View, Text, Pressable, Platform, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { tapLight } from '@/lib/haptics';
@@ -10,6 +10,7 @@ const BRAND_STYLES: Record<string, { bg: string; color: string; icon: keyof type
   'university athlete': { bg: '#E8520E', color: '#FFFFFF', icon: 'trophy' },
   hudl: { bg: '#FF6600', color: '#FFFFFF', icon: 'videocam' },
   instagram: { bg: '#E1306C', color: '#FFFFFF', icon: 'logo-instagram' },
+  usav: { bg: '#dc2626', color: '#FFFFFF', icon: 'shield-checkmark' },
 };
 
 function getBrand(label: string) {
@@ -31,6 +32,7 @@ interface Props {
 export default function AthleteCredentialCard({ label, url, username, password, onEdit }: Props) {
   const brand = getBrand(label);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const isLoaded = !!(url || username || password);
 
   const handleCopy = async (value: string, field: string) => {
     if (Platform.OS === 'web') {
@@ -43,91 +45,96 @@ export default function AthleteCredentialCard({ label, url, username, password, 
     setTimeout(() => setCopiedField(null), 1500);
   };
 
-  const hasCredentials = username || password;
+  const handleOpen = () => {
+    if (url) {
+      const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+      Linking.openURL(fullUrl);
+    }
+  };
 
   return (
-    <View
-      className="bg-warm-white dark:bg-bark-light rounded-2xl mb-3 border border-parchment dark:border-rally-900 overflow-hidden"
-      style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 3 }}
+    <Pressable
+      className="bg-warm-white dark:bg-bark-light rounded-xl border border-parchment dark:border-rally-900 overflow-hidden active:opacity-90"
+      style={{
+        shadowColor: '#1E3A5F',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+        elevation: 2,
+      }}
+      onPress={isLoaded ? handleOpen : onEdit}
     >
-      {/* Brand header */}
-      <View className="flex-row items-center p-4 pb-3">
-        <View
-          className="w-10 h-10 rounded-xl items-center justify-center mr-3"
-          style={{ backgroundColor: brand.bg }}
-        >
-          <Ionicons name={brand.icon} size={22} color={brand.color} />
-        </View>
-        <View className="flex-1">
-          <Text className="text-base font-bold text-bark dark:text-cream">{label}</Text>
-          {url ? (
-            <Text className="text-xs text-rally-600 dark:text-rally-400 mt-0.5" numberOfLines={1}>
-              {url.replace(/^https?:\/\//, '')}
-            </Text>
-          ) : (
-            <Text className="text-xs text-stone mt-0.5">No link set</Text>
+      {/* Brand icon + status dot */}
+      <View className="items-center pt-4 pb-2">
+        <View className="relative">
+          <View
+            className="w-12 h-12 rounded-2xl items-center justify-center"
+            style={{ backgroundColor: brand.bg }}
+          >
+            <Ionicons name={brand.icon} size={24} color={brand.color} />
+          </View>
+          {/* Green dot = credentials loaded */}
+          {isLoaded && (
+            <View
+              className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-warm-white dark:border-bark-light"
+            />
           )}
         </View>
-        <Pressable onPress={onEdit} className="p-2 active:opacity-60">
-          <Ionicons name="pencil" size={16} color="#8FA8BF" />
-        </Pressable>
+        <Text className="text-xs font-bold text-bark dark:text-cream mt-2 text-center" numberOfLines={1}>
+          {label}
+        </Text>
       </View>
 
-      {/* Credentials */}
-      {hasCredentials ? (
-        <View className="px-4 pb-4">
-          <View className="bg-cream dark:bg-bark rounded-xl p-3">
-            {username ? (
-              <Pressable
-                className="flex-row items-center justify-between py-1.5 active:opacity-70"
-                onPress={() => handleCopy(username, 'username')}
-              >
-                <View className="flex-row items-center flex-1 mr-2">
-                  <Ionicons name="person-outline" size={14} color="#8FA8BF" />
-                  <Text className="text-sm text-bark dark:text-parchment ml-2" numberOfLines={1}>
-                    {username}
-                  </Text>
-                </View>
-                <Ionicons
-                  name={copiedField === 'username' ? 'checkmark' : 'copy-outline'}
-                  size={14}
-                  color={copiedField === 'username' ? '#16a34a' : '#8FA8BF'}
-                />
-              </Pressable>
-            ) : null}
+      {/* Credential rows */}
+      {(username || password) ? (
+        <View className="px-2.5 pb-2.5">
+          {username ? (
+            <Pressable
+              className="flex-row items-center bg-cream dark:bg-bark rounded-lg px-2.5 py-1.5 mb-1 active:opacity-70"
+              onPress={() => handleCopy(username, 'username')}
+            >
+              <Ionicons name="person-outline" size={11} color="#8FA8BF" />
+              <Text className="text-[11px] text-bark dark:text-parchment ml-1.5 flex-1" numberOfLines={1}>
+                {username}
+              </Text>
+              <Ionicons
+                name={copiedField === 'username' ? 'checkmark' : 'copy-outline'}
+                size={11}
+                color={copiedField === 'username' ? '#16a34a' : '#8FA8BF'}
+              />
+            </Pressable>
+          ) : null}
 
-            {username && password ? (
-              <View className="h-px bg-parchment dark:bg-bark-light my-1" />
-            ) : null}
-
-            {password ? (
-              <Pressable
-                className="flex-row items-center justify-between py-1.5 active:opacity-70"
-                onPress={() => handleCopy(password, 'password')}
-              >
-                <View className="flex-row items-center flex-1 mr-2">
-                  <Ionicons name="key-outline" size={14} color="#8FA8BF" />
-                  <Text className="text-sm text-bark dark:text-parchment ml-2">
-                    {'•'.repeat(Math.min(password.length, 12))}
-                  </Text>
-                </View>
-                <Ionicons
-                  name={copiedField === 'password' ? 'checkmark' : 'copy-outline'}
-                  size={14}
-                  color={copiedField === 'password' ? '#16a34a' : '#8FA8BF'}
-                />
-              </Pressable>
-            ) : null}
-          </View>
+          {password ? (
+            <Pressable
+              className="flex-row items-center bg-cream dark:bg-bark rounded-lg px-2.5 py-1.5 mb-1 active:opacity-70"
+              onPress={() => handleCopy(password, 'password')}
+            >
+              <Ionicons name="key-outline" size={11} color="#8FA8BF" />
+              <Text className="text-[11px] text-bark dark:text-parchment ml-1.5 flex-1">
+                {'•'.repeat(Math.min(password.length, 10))}
+              </Text>
+              <Ionicons
+                name={copiedField === 'password' ? 'checkmark' : 'copy-outline'}
+                size={11}
+                color={copiedField === 'password' ? '#16a34a' : '#8FA8BF'}
+              />
+            </Pressable>
+          ) : null}
         </View>
       ) : (
-        <Pressable onPress={onEdit} className="px-4 pb-4">
-          <View className="bg-cream dark:bg-bark rounded-xl p-3 flex-row items-center justify-center border border-dashed border-parchment dark:border-rally-900">
-            <Ionicons name="add" size={14} color="#8FA8BF" />
-            <Text className="text-xs text-stone ml-1">Add credentials</Text>
-          </View>
-        </Pressable>
+        <View className="px-2.5 pb-3">
+          <Text className="text-[10px] text-stone text-center">Tap to set up</Text>
+        </View>
       )}
-    </View>
+
+      {/* Edit link */}
+      <Pressable
+        className="border-t border-parchment dark:border-rally-900 py-1.5 active:opacity-60"
+        onPress={onEdit}
+      >
+        <Text className="text-[10px] text-rally-600 font-semibold text-center">Edit</Text>
+      </Pressable>
+    </Pressable>
   );
 }

@@ -29,7 +29,12 @@ export default function AthleteProfileScreen() {
   const athlete = athletes.find((a) => a.id === id);
   const athleteSeasons = seasons
     .filter((s) => s.athlete_id === id)
-    .sort((a, b) => b.season_year.localeCompare(a.season_year));
+    .sort((a, b) => {
+      // Active season first, then most recent
+      if (a.id === activeSeasonId) return -1;
+      if (b.id === activeSeasonId) return 1;
+      return b.season_year.localeCompare(a.season_year);
+    });
   const athleteUsavProfiles = usavProfiles.filter((p) => p.athlete_id === id);
   const externalLinks = adminConfig?.external_links ?? [];
 
@@ -102,52 +107,13 @@ export default function AthleteProfileScreen() {
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor="#3B82B0" />}
       >
         {/* ============================================================ */}
-        {/* LOGINS & CREDENTIALS */}
+        {/* SEASONS — at top, current/most recent first */}
         {/* ============================================================ */}
         <HubSectionHeader
-          icon="key"
-          title="Logins & Credentials"
-          iconColor="#3B82B0"
+          icon="calendar"
+          title="Seasons"
+          iconColor={ic.muted}
         />
-
-        {credentialCards.map((card) => (
-          <AthleteCredentialCard
-            key={card.label}
-            label={card.label}
-            url={card.url}
-            username={card.username}
-            password={card.password}
-            onEdit={() => handleEditLink(card.originalIndex, card.label)}
-          />
-        ))}
-
-        {/* ============================================================ */}
-        {/* USAV MEMBERSHIP */}
-        {/* ============================================================ */}
-        <View className="mt-2">
-          <HubSettingsRow
-            icon="shield-checkmark"
-            iconColor="#dc2626"
-            title="USAV Membership"
-            subtitle={
-              athleteUsavProfiles.length > 0
-                ? `${athleteUsavProfiles.length} profile${athleteUsavProfiles.length !== 1 ? 's' : ''} saved`
-                : 'Add member ID for tournament check-in'
-            }
-            onPress={() => router.push('/profile/add-usav')}
-          />
-        </View>
-
-        {/* ============================================================ */}
-        {/* SEASONS */}
-        {/* ============================================================ */}
-        <View className="mt-6">
-          <HubSectionHeader
-            icon="calendar"
-            title="Seasons"
-            iconColor={ic.muted}
-          />
-        </View>
 
         {athleteSeasons.map((season) => {
           const isActive = season.id === activeSeasonId;
@@ -209,6 +175,48 @@ export default function AthleteProfileScreen() {
           <Ionicons name="add" size={16} color="#3B82B0" />
           <Text className="text-sm font-semibold text-rally-600 ml-2">Add Season</Text>
         </Pressable>
+
+        {/* ============================================================ */}
+        {/* USAV MEMBERSHIP */}
+        {/* ============================================================ */}
+        <View className="mt-6">
+          <HubSettingsRow
+            icon="shield-checkmark"
+            iconColor="#dc2626"
+            title="USAV Membership"
+            subtitle={
+              athleteUsavProfiles.length > 0
+                ? `${athleteUsavProfiles.length} profile${athleteUsavProfiles.length !== 1 ? 's' : ''} saved`
+                : 'Add member ID for tournament check-in'
+            }
+            onPress={() => router.push('/profile/add-usav')}
+          />
+        </View>
+
+        {/* ============================================================ */}
+        {/* ACCOUNTS & LOGINS — compact tile grid */}
+        {/* ============================================================ */}
+        <View className="mt-6">
+          <HubSectionHeader
+            icon="key"
+            title="Accounts & Logins"
+            iconColor="#3B82B0"
+          />
+        </View>
+
+        <View className="flex-row flex-wrap" style={{ gap: 10 }}>
+          {credentialCards.map((card) => (
+            <View key={card.label} style={{ width: '48%' }}>
+              <AthleteCredentialCard
+                label={card.label}
+                url={card.url}
+                username={card.username}
+                password={card.password}
+                onEdit={() => handleEditLink(card.originalIndex, card.label)}
+              />
+            </View>
+          ))}
+        </View>
       </ScrollView>
     </View>
   );
