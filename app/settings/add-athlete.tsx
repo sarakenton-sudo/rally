@@ -52,6 +52,7 @@ export default function AddAthleteScreen() {
     }
 
     setSaving(true);
+    console.log('[add-athlete] Starting create for:', firstName.trim(), 'user:', user.id);
     try {
       // Create athlete
       const { data: athlete, error: athleteErr } = await supabase
@@ -64,6 +65,7 @@ export default function AddAthleteScreen() {
         .select()
         .single();
 
+      console.log('[add-athlete] Athlete result:', athlete, 'error:', athleteErr);
       if (athleteErr) throw athleteErr;
 
       // Link admin to athlete
@@ -76,6 +78,7 @@ export default function AddAthleteScreen() {
           is_primary: true,
         });
 
+      console.log('[add-athlete] Link result, error:', linkErr);
       if (linkErr) throw linkErr;
 
       // Create first season for this athlete
@@ -92,6 +95,7 @@ export default function AddAthleteScreen() {
         .select()
         .single();
 
+      console.log('[add-athlete] Season result:', season, 'error:', seasonErr);
       if (seasonErr) throw seasonErr;
 
       // Switch to the new season
