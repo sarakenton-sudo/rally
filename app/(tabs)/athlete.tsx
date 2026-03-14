@@ -152,68 +152,6 @@ export default function AthleteScreen() {
           </View>
         ))}
 
-        {/* ============================================================ */}
-        {/* SEASON SETTINGS — for active season */}
-        {/* ============================================================ */}
-        {activeSeason && (
-          <>
-            <View className="mt-4">
-              <HubSectionHeader
-                icon="settings"
-                title={`${activeSeason.team_name} Settings`}
-                iconColor={ic.muted}
-              />
-            </View>
-
-            {/* Team Details */}
-            <HubSettingsRow
-              icon="information-circle"
-              iconColor="#3B82B0"
-              title="Team Details"
-              subtitle={`${activeSeason.club_name ? activeSeason.club_name + ' · ' : ''}${activeSeason.season_year}`}
-              onPress={() => router.push('/settings/team-details')}
-            />
-
-            {/* Schedule Import */}
-            <HubSettingsRow
-              icon="calendar"
-              iconColor="#6A9E8A"
-              title="Tournament Schedule Import"
-              subtitle="Import from coach emails, copy/paste, or direct sync"
-              onPress={() => router.push('/settings/schedule-import')}
-            />
-
-            {/* Default Stream Channel */}
-            {activeSeason.default_stream_url ? (
-              <Pressable
-                className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900 active:opacity-80"
-                style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
-                onPress={() => router.push('/settings/streaming-hub')}
-              >
-                <View className="flex-row items-center">
-                  <Ionicons name="play-circle" size={24} color="#dc2626" />
-                  <View className="ml-3 flex-1">
-                    <Text className="text-sm font-semibold text-bark dark:text-cream">
-                      {activeSeason.default_streaming_platform ?? 'Stream'}
-                    </Text>
-                    <Text className="text-xs text-stone mt-0.5" numberOfLines={1}>
-                      {activeSeason.default_stream_url}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
-                </View>
-              </Pressable>
-            ) : (
-              <HubSettingsRow
-                icon="videocam"
-                iconColor="#dc2626"
-                title="Default Stream Channel"
-                subtitle="YouTube, GameChanger, Baller.tv, or other"
-                onPress={() => router.push('/settings/streaming-hub')}
-              />
-            )}
-          </>
-        )}
 
         {/* ============================================================ */}
         {/* USAV MEMBERSHIP */}
