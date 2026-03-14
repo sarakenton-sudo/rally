@@ -4,12 +4,19 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { tapLight } from '@/lib/haptics';
 
+// App deep link schemes (iOS/Android) — tries app first, falls back to web
+const APP_SCHEMES: Record<string, string> = {
+  sportsrecruits: 'sportsrecruits://',
+  hudl: 'hudl://',
+  instagram: 'instagram://',
+};
+
 // Brand colors for known services
-const BRAND_STYLES: Record<string, { bg: string; color: string; icon: keyof typeof Ionicons.glyphMap }> = {
-  sportsrecruits: { bg: '#1B4D7E', color: '#FFFFFF', icon: 'school' },
-  'university athlete': { bg: '#E8520E', color: '#FFFFFF', icon: 'trophy' },
-  hudl: { bg: '#FF6600', color: '#FFFFFF', icon: 'videocam' },
-  instagram: { bg: '#E1306C', color: '#FFFFFF', icon: 'logo-instagram' },
+const BRAND_STYLES: Record<string, { bg: string; color: string; icon: keyof typeof Ionicons.glyphMap; defaultUrl?: string }> = {
+  sportsrecruits: { bg: '#1B4D7E', color: '#FFFFFF', icon: 'school', defaultUrl: 'https://my.sportsrecruits.com/login' },
+  'university athlete': { bg: '#E8520E', color: '#FFFFFF', icon: 'trophy', defaultUrl: 'https://www.universityathlete.com/login' },
+  hudl: { bg: '#FF6600', color: '#FFFFFF', icon: 'videocam', defaultUrl: 'https://www.hudl.com/login' },
+  instagram: { bg: '#E1306C', color: '#FFFFFF', icon: 'logo-instagram', defaultUrl: 'https://www.instagram.com' },
   usav: { bg: '#dc2626', color: '#FFFFFF', icon: 'shield-checkmark' },
 };
 
@@ -18,7 +25,7 @@ function getBrand(label: string) {
   for (const [key, style] of Object.entries(BRAND_STYLES)) {
     if (lower.includes(key)) return style;
   }
-  return { bg: '#3B82B0', color: '#FFFFFF', icon: 'globe' as keyof typeof Ionicons.glyphMap };
+  return { bg: '#3B82B0', color: '#FFFFFF', icon: 'globe' as keyof typeof Ionicons.glyphMap, defaultUrl: undefined };
 }
 
 interface Props {
@@ -33,6 +40,7 @@ export default function AthleteCredentialCard({ label, url, username, password, 
   const brand = getBrand(label);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const isLoaded = !!(url || username || password);
+  const hasLink = !!(url || brand.defaultUrl);
 
   const handleCopy = async (value: string, field: string) => {
     if (Platform.OS === 'web') {
@@ -45,11 +53,22 @@ export default function AthleteCredentialCard({ label, url, username, password, 
     setTimeout(() => setCopiedField(null), 1500);
   };
 
-  const handleOpen = () => {
-    if (url) {
-      const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-      Linking.openURL(fullUrl);
+  const handleOpen = async () => {
+    const targetUrl = url || brand.defaultUrl;
+    if (!targetUrl) return;
+    const fullUrl = targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`;
+    // Try app scheme first on mobile, fall back to web URL
+    if (Platform.OS !== 'web') {
+      const appScheme = APP_SCHEMES[label.toLowerCase()];
+      if (appScheme) {
+        const canOpen = await Linking.canOpenURL(appScheme);
+        if (canOpen) {
+          await Linking.openURL(appScheme);
+          return;
+        }
+      }
     }
+    await Linking.openURL(fullUrl);
   };
 
   return (
@@ -62,7 +81,7 @@ export default function AthleteCredentialCard({ label, url, username, password, 
         shadowRadius: 8,
         elevation: 2,
       }}
-      onPress={isLoaded ? handleOpen : onEdit}
+      onPress={hasLink ? handleOpen : onEdit}
     >
       {/* Brand icon + status dot */}
       <View className="items-center pt-4 pb-2">
