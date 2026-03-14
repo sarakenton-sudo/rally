@@ -1,11 +1,13 @@
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import TournamentCard from '@/components/TournamentCard';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { daysUntil } from '@/lib/dates';
 import { useIconColors } from '@/lib/colors';
+import { tapLight } from '@/lib/haptics';
 
 export default function HomeScreen() {
   const tournaments = useSeasonStore((s) => s.tournaments);
@@ -59,21 +61,34 @@ export default function HomeScreen() {
           {teamName}{seasonYear ? ` — ${seasonYear}` : ''}
         </Text>
 
-        {/* Team Code Vault */}
-        <View
-          className="bg-rally-600 rounded-2xl p-5 mt-5"
-          style={{ shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 4 }}
-        >
-          <Text className="text-xs font-medium text-rally-200 uppercase tracking-wider">
-            Team Code
-          </Text>
-          <Text className="text-4xl font-bold text-cream mt-1 tracking-widest">
-            {teamCode ?? '------'}
-          </Text>
-          <Text className="text-xs text-rally-200 mt-2">
-            {teamCode ? 'Tap to copy' : 'Tap to set your team\'s annual ticket code'}
-          </Text>
-        </View>
+        {/* Team Code Vault — only show if a code is set */}
+        {teamCode ? (
+          <Pressable
+            className="bg-rally-600 rounded-2xl p-5 mt-5 active:opacity-90"
+            style={{ shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 4 }}
+            onPress={async () => {
+              if (Platform.OS === 'web') {
+                await navigator.clipboard.writeText(teamCode);
+              } else {
+                await Clipboard.setStringAsync(teamCode);
+              }
+              tapLight();
+              if (Platform.OS !== 'web') {
+                Alert.alert('Copied', 'Team code copied to clipboard.');
+              }
+            }}
+          >
+            <Text className="text-xs font-medium text-rally-200 uppercase tracking-wider">
+              Team Code
+            </Text>
+            <Text className="text-4xl font-bold text-cream mt-1 tracking-widest">
+              {teamCode}
+            </Text>
+            <Text className="text-xs text-rally-200 mt-2">
+              Tap to copy
+            </Text>
+          </Pressable>
+        ) : null}
 
         {/* Email Activity */}
         {forwardedEmails.length > 0 && (
@@ -96,6 +111,26 @@ export default function HomeScreen() {
             <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
           </Pressable>
         )}
+
+        {/* Schedule Import */}
+        <Pressable
+          className="bg-warm-white dark:bg-bark-light rounded-2xl p-4 mt-4 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
+          style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
+          onPress={() => router.push('/settings/email-connect')}
+        >
+          <View className="w-10 h-10 rounded-full bg-rally-50 dark:bg-rally-900/30 items-center justify-center mr-3">
+            <Ionicons name="calendar-outline" size={20} color="#3B82B0" />
+          </View>
+          <View className="flex-1">
+            <Text className="text-sm font-semibold text-bark dark:text-cream">
+              Schedule Import
+            </Text>
+            <Text className="text-xs text-stone dark:text-parchment mt-0.5">
+              Forward travel emails to auto-populate your dashboard
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
+        </Pressable>
 
         {/* Next 30 Days */}
         <View className="mt-5">

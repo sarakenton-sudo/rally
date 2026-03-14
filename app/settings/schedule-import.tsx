@@ -132,9 +132,6 @@ export default function ScheduleImportScreen() {
           <Text className="text-sm text-stone ml-13 mb-1">
             Forward a schedule email and AI will extract tournaments.
           </Text>
-          <Text className="text-xs text-rally-500 dark:text-rally-400 ml-13 mb-3 italic">
-            (note: your email needs to be connected in Email Sync first)
-          </Text>
           {adminConfig?.rally_forward_address && (
             <View className="bg-rally-50 dark:bg-rally-900/20 rounded-lg p-3 ml-13 flex-row items-center">
               <Text className="text-sm font-semibold text-rally-600 flex-1" numberOfLines={1}>
