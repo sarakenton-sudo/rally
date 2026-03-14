@@ -184,13 +184,64 @@ export default function AthleteCredentialCard({ label, url, username, password, 
         </View>
       )}
 
-      {/* Edit link */}
-      <Pressable
-        className="border-t border-parchment dark:border-rally-900 py-1.5 active:opacity-60"
-        onPress={onEdit}
-      >
-        <Text className="text-[10px] text-rally-600 font-semibold text-center">Edit</Text>
-      </Pressable>
+      {/* Bottom action bar */}
+      {(isUsav ? username : (username || password)) ? (
+        // Credentials loaded: UN | PW | Edit (3-column split)
+        <View className="flex-row border-t border-parchment dark:border-rally-900">
+          {username ? (
+            <Pressable
+              className="flex-1 flex-row items-center justify-center py-2 active:opacity-60"
+              style={{ borderRightWidth: 1, borderRightColor: 'rgba(0,0,0,0.06)' }}
+              onPress={() => handleCopy(username, 'username')}
+            >
+              <Ionicons
+                name={copiedField === 'username' ? 'checkmark' : 'person-outline'}
+                size={12}
+                color={copiedField === 'username' ? '#16a34a' : '#8FA8BF'}
+              />
+              <Ionicons
+                name={copiedField === 'username' ? 'checkmark' : 'copy-outline'}
+                size={10}
+                color={copiedField === 'username' ? '#16a34a' : '#8FA8BF'}
+                style={{ marginLeft: 3 }}
+              />
+            </Pressable>
+          ) : null}
+          {password && !isUsav ? (
+            <Pressable
+              className="flex-1 flex-row items-center justify-center py-2 active:opacity-60"
+              style={{ borderRightWidth: 1, borderRightColor: 'rgba(0,0,0,0.06)' }}
+              onPress={() => handleCopy(password, 'password')}
+            >
+              <Ionicons
+                name={copiedField === 'password' ? 'checkmark' : 'key-outline'}
+                size={12}
+                color={copiedField === 'password' ? '#16a34a' : '#8FA8BF'}
+              />
+              <Ionicons
+                name={copiedField === 'password' ? 'checkmark' : 'copy-outline'}
+                size={10}
+                color={copiedField === 'password' ? '#16a34a' : '#8FA8BF'}
+                style={{ marginLeft: 3 }}
+              />
+            </Pressable>
+          ) : null}
+          <Pressable
+            className="flex-1 items-center justify-center py-2 active:opacity-60"
+            onPress={onEdit}
+          >
+            <Ionicons name="pencil" size={12} color="#3B82B0" />
+          </Pressable>
+        </View>
+      ) : (
+        // No credentials: Add Credentials button
+        <Pressable
+          className="border-t border-parchment dark:border-rally-900 py-2 active:opacity-60"
+          onPress={onEdit}
+        >
+          <Text className="text-[10px] text-rally-600 font-semibold text-center">Add Credentials</Text>
+        </Pressable>
+      )}
     </Pressable>
   );
 }
