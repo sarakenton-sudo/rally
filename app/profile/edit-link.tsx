@@ -44,7 +44,7 @@ function getIconForLabel(label: string): string {
 }
 
 export default function EditLinkScreen() {
-  const { index: indexStr, newLabel } = useLocalSearchParams<{ index?: string; newLabel?: string }>();
+  const { index: indexStr, newLabel, athleteId } = useLocalSearchParams<{ index?: string; newLabel?: string; athleteId?: string }>();
   const editIndex = indexStr != null ? parseInt(indexStr) : -1;
 
   const adminConfig = useSeasonStore((s) => s.adminConfig);
@@ -85,7 +85,7 @@ export default function EditLinkScreen() {
       username: username.trim() || null,
       password: password.trim() || null,
       scope: inferScope(trimmedLabel),
-      athlete_id: inferScope(trimmedLabel) === 'athlete' ? (activeSeason?.athlete_id ?? null) : null,
+      athlete_id: inferScope(trimmedLabel) === 'athlete' ? (athleteId ?? activeSeason?.athlete_id ?? null) : null,
     };
 
     if (editIndex >= 0) {

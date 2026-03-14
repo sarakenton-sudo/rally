@@ -39,7 +39,9 @@ export default function AthleteProfileScreen() {
   const credentialCards = ATHLETE_SERVICES.map((serviceName) => {
     const lower = serviceName.toLowerCase();
     const existing = externalLinks.find(
-      (l) => l.label.toLowerCase() === lower && (!l.athlete_id || l.athlete_id === id)
+      (l) => l.label.toLowerCase() === lower && l.athlete_id === id
+    ) ?? externalLinks.find(
+      (l) => l.label.toLowerCase() === lower && !l.athlete_id
     );
     const originalIndex = existing ? externalLinks.indexOf(existing) : -1;
     return {
@@ -64,9 +66,9 @@ export default function AthleteProfileScreen() {
 
   const handleEditLink = (originalIndex: number, label: string) => {
     if (originalIndex >= 0) {
-      router.push({ pathname: '/profile/edit-link', params: { index: String(originalIndex) } });
+      router.push({ pathname: '/profile/edit-link', params: { index: String(originalIndex), athleteId: id } });
     } else {
-      router.push({ pathname: '/profile/edit-link', params: { newLabel: label } });
+      router.push({ pathname: '/profile/edit-link', params: { newLabel: label, athleteId: id } });
     }
   };
 
