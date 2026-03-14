@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import FormField from '@/components/FormField';
 import DropdownField from '@/components/DropdownField'; // for relationship
 import { useGuestStore } from '@/stores/useGuestStore';
+import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useAuth } from '@/providers/AuthProvider';
 import { insertGuest, updateGuest as updateGuestDB, deleteGuest as deleteGuestDB } from '@/hooks/useSupabaseData';
 import { useIconColors } from '@/lib/colors';
@@ -32,26 +33,44 @@ export default function AddGuestScreen() {
   const updateGuestStore = useGuestStore((s) => s.updateGuest);
   const removeGuest = useGuestStore((s) => s.removeGuest);
   const { user } = useAuth();
+  const athletes = useSeasonStore((s) => s.athletes);
   const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const showError = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      setSaveError(message);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
 
   const handleSave = async () => {
+    setSaveError(null);
     if (!name.trim()) {
-      Alert.alert('Missing field', 'Please enter a name.');
+      showError('Missing field', 'Please enter a name.');
       return;
     }
     if (!phone.trim()) {
-      Alert.alert('Missing field', 'Please enter a phone number for SMS notifications.');
+      showError('Missing field', 'Please enter a phone number for SMS notifications.');
       return;
     }
     if (!relationship) {
-      Alert.alert('Missing field', 'Please select a relationship.');
+      showError('Missing field', 'Please select a relationship.');
+      return;
+    }
+
+    // Get athlete_id — guests are linked to athletes, not users
+    const athleteId = athletes[0]?.id;
+    if (!athleteId) {
+      showError('Setup required', 'No athlete found. Please complete onboarding first.');
       return;
     }
 
     setIsSaving(true);
 
     const guestData = {
-      user_id: user?.id ?? '00000000-0000-0000-0000-000000000001',
+      athlete_id: athleteId,
       name: name.trim(),
       phone: phone.trim(),
       email: email.trim() || null,
@@ -72,7 +91,7 @@ export default function AddGuestScreen() {
         if (isSupabaseConfigured && user) {
           const { error } = await updateGuestDB(editId!, updates);
           if (error) {
-            Alert.alert('Save failed', error.message);
+            showError('Save failed', error.message);
             return;
           }
         }
@@ -82,7 +101,7 @@ export default function AddGuestScreen() {
         if (isSupabaseConfigured && user) {
           const { data, error } = await insertGuest(guestData);
           if (error) {
-            Alert.alert('Save failed', error.message);
+            showError('Save failed', error.message);
             return;
           }
           if (data) { addGuest(data); notifySuccess(); }
@@ -170,6 +189,14 @@ export default function AddGuestScreen() {
               thumbColor={defaultInvited ? '#3B82B0' : '#FEFEFE'}
             />
           </View>
+
+          {/* Error display for web */}
+          {saveError && (
+            <View className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 mb-4 flex-row items-start">
+              <Ionicons name="alert-circle" size={18} color="#dc2626" />
+              <Text className="text-sm text-red-700 dark:text-red-300 ml-2 flex-1">{saveError}</Text>
+            </View>
+          )}
 
           {/* Info card */}
           <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 mb-8">

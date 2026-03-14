@@ -379,17 +379,28 @@ export default function EmailDetailScreen() {
     if (!isSupabaseConfigured || !user) return;
     setIsReExtracting(true);
     try {
-      // Call classify-email edge function to re-process with updated AI
-      // Truncate body to avoid request size limits
-      const { data, error } = await supabase.functions.invoke('classify-email', {
-        body: {
+      // Call classify-email edge function directly via fetch (avoids supabase client overhead)
+      const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+      const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/classify-email`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           from: email.from_address,
           subject: email.subject,
           body: email.body_text.slice(0, 10000),
-        },
+        }),
       });
-      if (error) throw new Error(error.message);
 
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Classification failed (${response.status}): ${errText.slice(0, 200)}`);
+      }
+
+      const data = await response.json();
       const newClassification = data?.classification ?? email.classification;
       const newExtractedData = data?.extracted_data ?? {};
       const newSummary = data?.summary ?? '';

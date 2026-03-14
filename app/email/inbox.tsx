@@ -12,6 +12,7 @@ const CLASS_CONFIG: Record<string, { icon: keyof typeof Ionicons.glyphMap; color
   coach_announcement: { icon: 'megaphone', color: '#d97706', label: 'Coach', bg: 'bg-amber-100' },
   schedule_change: { icon: 'swap-horizontal', color: '#dc2626', label: 'Schedule', bg: 'bg-red-100' },
   tournament_info: { icon: 'trophy', color: '#16a34a', label: 'Tournament', bg: 'bg-green-100' },
+  unclassified: { icon: 'help-circle', color: '#8FA8BF', label: 'Review', bg: 'bg-gray-100' },
   other: { icon: 'mail', color: '#8FA8BF', label: 'Other', bg: 'bg-cream' },
 };
 
@@ -90,10 +91,10 @@ export default function EmailInboxScreen() {
         </Pressable>
         <View className="flex-1">
           <Text className="text-lg font-bold text-bark dark:text-cream">
-            Forwarded Emails
+            Email Inbox
           </Text>
           <Text className="text-xs text-stone">
-            {emails.length} email{emails.length !== 1 ? 's' : ''} processed
+            {emails.length} email{emails.length !== 1 ? 's' : ''} synced
           </Text>
         </View>
       </View>
@@ -119,7 +120,7 @@ export default function EmailInboxScreen() {
             <Ionicons name="mail-unread-outline" size={48} color={ic.placeholder} />
             <Text className="text-lg font-semibold text-stone mt-4">No emails yet</Text>
             <Text className="text-sm text-stone mt-1 text-center px-8">
-              Forward hotel confirmations, coach messages, or schedule updates to your Rally address. AI will classify and extract the details.
+              Rally automatically syncs booking confirmations, coach messages, and schedule updates from your Gmail. You can also forward emails to your Rally address.
             </Text>
           </View>
         }

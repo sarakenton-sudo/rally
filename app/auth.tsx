@@ -174,26 +174,22 @@ export default function AuthScreen() {
             darkBg
           />
 
-          {/* Invite code toggle (sign-up only) */}
-          {isSignUp && (
-            <>
-              <Pressable className="mb-3 active:opacity-70" onPress={() => setHasInviteCode(!hasInviteCode)}>
-                <Text style={{ fontSize: 13, color: '#7DBDD9', fontFamily: 'NunitoSans-SemiBold' }}>
-                  {hasInviteCode ? 'Remove invite code' : 'Have an invite code?'}
-                </Text>
-              </Pressable>
-              {hasInviteCode && (
-                <FormField
-                  label="Invite Code"
-                  value={inviteCode}
-                  onChangeText={setInviteCode}
-                  placeholder="e.g. a1b2c3d4e5f6"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  darkBg
-                />
-              )}
-            </>
+          {/* Invite code toggle */}
+          <Pressable className="mb-3 active:opacity-70" onPress={() => setHasInviteCode(!hasInviteCode)}>
+            <Text style={{ fontSize: 13, color: '#7DBDD9', fontFamily: 'NunitoSans-SemiBold' }}>
+              {hasInviteCode ? 'Remove invite code' : 'Have an invite code?'}
+            </Text>
+          </Pressable>
+          {hasInviteCode && (
+            <FormField
+              label="Invite Code"
+              value={inviteCode}
+              onChangeText={setInviteCode}
+              placeholder="e.g. a1b2c3d4e5f6"
+              autoCapitalize="none"
+              autoCorrect={false}
+              darkBg
+            />
           )}
 
           {/* Forgot password (sign-in only) */}

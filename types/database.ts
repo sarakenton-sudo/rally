@@ -3,7 +3,7 @@ export type BookingPlatform = 'Bonvoy' | 'Booking.com' | 'Travel Source' | 'Expe
 export type BookingStatus = 'tentative' | 'confirmed' | 'cancelled';
 export type RSVPStatus = 'pending' | 'yes' | 'no' | 'maybe';
 export type NotificationPref = 'sms';
-export type EmailClassification = 'stay_and_play' | 'travel_confirmation' | 'coach_announcement' | 'schedule_change' | 'tournament_info' | 'other';
+export type EmailClassification = 'stay_and_play' | 'travel_confirmation' | 'coach_announcement' | 'schedule_change' | 'tournament_info' | 'unclassified' | 'other';
 export type EmailAction = 'booking_alert_sent' | 'travel_import_queued' | 'notification_sent' | 'none';
 export type StreamingPlatform = 'YouTube' | 'GameChanger' | 'Baller.tv' | 'Other';
 

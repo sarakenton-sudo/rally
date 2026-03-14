@@ -171,6 +171,16 @@ export default function HubScreen() {
           onPress={() => router.push('/booking/add-hotel')}
         />
 
+        {/* 5. Email Inbox */}
+        <HubSettingsRow
+          icon="mail-unread"
+          iconColor="#3B82B0"
+          title="Email Inbox"
+          subtitle="Emails synced from Gmail & forwarded to Rally"
+          badge={forwardedEmails.length}
+          onPress={() => router.push('/email/inbox')}
+        />
+
         {/* ============================================================ */}
         {/* SECTION 3: VIP PUSH NOTIFICATIONS */}
         {/* ============================================================ */}
@@ -196,15 +206,7 @@ export default function HubScreen() {
           onPress={() => router.push('/settings/email-connect')}
         />
 
-        {/* Forwarded Email Inbox */}
-        <HubSettingsRow
-          icon="mail-unread"
-          iconColor="#3B82B0"
-          title="Forwarded Email Inbox"
-          subtitle="View emails forwarded to Rally"
-          badge={forwardedEmails.length}
-          onPress={() => router.push('/email/inbox')}
-        />
+        {/* (Email Inbox moved to Travel Information section) */}
 
         {/* ============================================================ */}
         {/* SECTION 4: STREAMING HUB */}

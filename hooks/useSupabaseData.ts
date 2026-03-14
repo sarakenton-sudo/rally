@@ -133,6 +133,8 @@ export function useSupabaseData() {
       }
       if (!emailsRes.error && emailsRes.data) {
         setForwardedEmails(emailsRes.data as ForwardedEmail[]);
+      } else if (emailsRes.error) {
+        console.error('[Data] Failed to fetch forwarded emails:', emailsRes.error);
       }
       if (!athletesRes.error && athletesRes.data) {
         setAthletes(athletesRes.data as Athlete[]);

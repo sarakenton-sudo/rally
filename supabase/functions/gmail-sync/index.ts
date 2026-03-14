@@ -84,15 +84,95 @@ serve(async (req: Request) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
   const url = new URL(req.url);
   const forceReset = url.searchParams.get('reset') === 'true';
+  const diagnose = url.searchParams.get('diagnose') === 'true';
+
+  // Quick diagnostic mode — show DB state without syncing
+  if (diagnose) {
+    const { data: emails } = await supabase.from('forwarded_emails').select('user_id').limit(200);
+    const emailsByUser: Record<string, number> = {};
+    (emails ?? []).forEach((e: any) => { emailsByUser[e.user_id] = (emailsByUser[e.user_id] || 0) + 1; });
+
+    const { data: configs } = await supabase.from('admin_config').select('user_id, gmail_connected, gmail_email');
+    const { data: tokens } = await supabase.from('gmail_tokens').select('user_id, gmail_email, is_active, last_sync_at, sync_errors');
+    const { data: profiles } = await supabase.from('user_profiles').select('id, role, display_name');
+    const { data: authUsers } = await supabase.auth.admin.listUsers();
+    const users = (authUsers?.users ?? []).map((u: any) => ({ id: u.id, email: u.email, provider: u.app_metadata?.provider }));
+
+    // If fix param is set, reassign emails from old user to new user
+    const fixFrom = url.searchParams.get('fix_from');
+    const fixTo = url.searchParams.get('fix_to');
+    if (fixFrom && fixTo) {
+      const { data: fixed, error: fixError } = await supabase
+        .from('forwarded_emails')
+        .update({ user_id: fixTo })
+        .eq('user_id', fixFrom);
+      // Also deactivate old token
+      await supabase.from('gmail_tokens').update({ is_active: false }).eq('user_id', fixFrom);
+      return jsonResponse({ fixed: true, fix_error: fixError?.message ?? null, emails_by_user: emailsByUser, admin_configs: configs });
+    }
+
+    // Fetch a specific email by ID for debugging
+    const emailId = url.searchParams.get('email_id');
+    if (emailId) {
+      const { data: emailRow } = await supabase
+        .from('forwarded_emails')
+        .select('id, subject, from_address, classification, extracted_data, body_text')
+        .eq('id', emailId)
+        .single();
+      if (emailRow) {
+        // Truncate body for response size
+        emailRow.body_text = (emailRow.body_text ?? '').slice(0, 2000);
+      }
+      return jsonResponse({ email: emailRow });
+    }
+
+    // Wipe emails only — delete all forwarded_emails so they get re-synced with updated AI
+    if (url.searchParams.get('wipe_emails') === 'true') {
+      const { error } = await supabase.from('forwarded_emails').delete().not('id', 'is', null);
+      // Reset ALL tokens: clear sync timestamp AND reactivate any deactivated tokens
+      await supabase.from('gmail_tokens').update({ last_sync_at: null, sync_errors: 0, is_active: true }).not('user_id', 'is', null);
+      return jsonResponse({ wiped_emails: true, error: error?.message ?? null });
+    }
+
+    // Full reset mode — wipe all data and auth users
+    if (url.searchParams.get('full_reset') === 'true') {
+      // Delete data tables in dependency order
+      await supabase.from('tournament_guests').delete().neq('tournament_id', '');
+      await supabase.from('forwarded_emails').delete().neq('id', '');
+      await supabase.from('hotel_bookings').delete().neq('id', '');
+      await supabase.from('flight_bookings').delete().neq('id', '');
+      await supabase.from('guests').delete().neq('id', '');
+      await supabase.from('usav_profiles').delete().neq('id', '');
+      await supabase.from('team_events').delete().neq('id', '');
+      await supabase.from('tournaments').delete().neq('id', '');
+      await supabase.from('gmail_tokens').delete().neq('user_id', '');
+      await supabase.from('seasons').delete().neq('id', '');
+      await supabase.from('admin_athletes').delete().neq('admin_id', '');
+      await supabase.from('athletes').delete().neq('id', '');
+      await supabase.from('admin_config').delete().neq('id', '');
+      await supabase.from('user_profiles').delete().neq('id', '');
+      await supabase.from('athlete_invites').delete().neq('id', '');
+
+      // Delete all auth users
+      const { data: authData } = await supabase.auth.admin.listUsers();
+      for (const u of authData?.users ?? []) {
+        await supabase.auth.admin.deleteUser(u.id);
+      }
+
+      return jsonResponse({ reset: true, deleted_users: (authData?.users ?? []).length });
+    }
+
+    return jsonResponse({ emails_by_user: emailsByUser, admin_configs: configs, gmail_tokens: tokens, user_profiles: profiles, auth_users: users });
+  }
 
   try {
-    // If reset=true, clear last_sync_at to force full re-sync
+    // If reset=true, clear last_sync_at and force token refresh
     if (forceReset) {
       await supabase
         .from('gmail_tokens')
-        .update({ last_sync_at: null })
-        .eq('is_active', true);
-      console.log('[gmail-sync] Reset: cleared last_sync_at for all active tokens');
+        .update({ last_sync_at: null, sync_errors: 0, is_active: true, token_expires_at: '2000-01-01T00:00:00Z' })
+        .not('user_id', 'is', null);
+      console.log('[gmail-sync] Reset: cleared last_sync_at, reset errors, forced token refresh');
     }
 
     // Fetch all active Gmail tokens
@@ -187,31 +267,84 @@ async function syncUser(
     .eq('user_id', token.user_id)
     .single();
 
+  // Fetch club name and team name from user's seasons for search keywords
+  const { data: adminAthletes } = await supabase
+    .from('admin_athletes')
+    .select('athlete_id')
+    .eq('admin_id', token.user_id);
+  const athleteIds = (adminAthletes ?? []).map((r: { athlete_id: string }) => r.athlete_id);
+  let clubName = '';
+  let teamName = '';
+  if (athleteIds.length > 0) {
+    const { data: seasons } = await supabase
+      .from('seasons')
+      .select('team_name, club_name')
+      .in('athlete_id', athleteIds)
+      .eq('is_active', true)
+      .limit(1);
+    if (seasons && seasons.length > 0) {
+      clubName = seasons[0].club_name ?? '';
+      teamName = seasons[0].team_name ?? '';
+    }
+  }
+
   // Build Gmail search query
   const afterEpoch = token.last_sync_at
     ? Math.floor(new Date(token.last_sync_at).getTime() / 1000)
-    : Math.floor(new Date('2025-08-01').getTime() / 1000); // First sync: go back to Aug 2025
+    : Math.floor((Date.now() - 365 * 24 * 60 * 60 * 1000) / 1000); // First sync: go back 1 year
 
-  // Build two query strategies:
-  // 1. Travel domains — only booking/confirmation emails (not marketing)
-  // 2. VIP/trusted senders — all emails from those people (coach, etc.)
+  // Build search strategies:
+  // 1. Travel brand domains — booking/confirmation emails
+  // 2. Tournament/volleyball keywords — from any sender
+  // 3. Club/team name — catches org-specific emails
+  // 4. VIP/trusted senders — everything from these people
   const userVipSenders = config?.trusted_sender_emails ?? [];
   const userTravelSenders = config?.travel_sync_emails ?? [];
 
-  const excludeMarketing = '-subject:unsubscribe -subject:"limited time" -subject:"% off" -subject:newsletter -subject:"bonus points" -subject:"credit card"';
+  // Exclude obvious spam — but NOT unsubscribe (tournament emails have that too)
+  const excludeMarketing = '-subject:"limited time" -subject:"% off" -subject:"bonus points" -subject:"credit card" -subject:"earn miles" -subject:"upgrade your card" -label:promotions -label:social -category:promotions -category:social';
 
-  // Tournament/event keywords — catch emails from any organizer (not just known domains)
-  const tournamentKeywords = '"tournament" OR "pool play" OR "bracket" OR "court assignment" OR "wave" OR "stay and play" OR "stay-and-play" OR "team check-in"';
+  // Travel brand senders — airlines, hotels, OTAs
+  const travelBrands = [
+    // Airlines
+    'delta.com', 'united.com', 'aa.com', 'southwest.com', 'jetblue.com', 'spirit.com',
+    'frontier.com', 'allegiantair.com', 'alaskaair.com', 'hawaiianairlines.com', 'sun-country.com',
+    // Hotels
+    'marriott.com', 'hilton.com', 'ihg.com', 'hyatt.com', 'wyndham.com', 'choicehotels.com',
+    'bestwestern.com', 'accor.com', 'radissonhotels.com', 'omnihotels.com', 'sonesta.com',
+    'fourseasons.com', 'extendedstayamerica.com', 'drury-hotels.com', 'laQuintainn.com',
+    'hamptoninn.com', 'holidayinn.com', 'crowneplaza.com', 'staybridge.com',
+    // OTAs & Travel
+    'expedia.com', 'hotels.com', 'booking.com', 'priceline.com', 'kayak.com',
+    'tripadvisor.com', 'hotwire.com', 'orbitz.com', 'travelocity.com',
+    'airbnb.com', 'vrbo.com', 'homeaway.com',
+    // Volleyball orgs
+    'leagueapps.com', 'sportsengine.com', 'teamsnap.com', 'aesathletics.com',
+    'usavolleyball.org', 'jvavolleyball.org', 'avca.org',
+  ];
+  const brandClauses = travelBrands.map((d) => `from:${d}`).join(' OR ');
 
-  // Booking keywords — broad enough to catch all travel confirmations
-  // AI classification + tournament date filter handle relevance
-  const bookingKeywords = 'subject:confirmation OR subject:reservation OR subject:receipt OR subject:itinerary OR subject:booking OR subject:"e-ticket" OR subject:"check-in" OR subject:"flight" OR subject:"your trip" OR subject:"your stay"';
+  // Booking subject keywords
+  const bookingSubjects = 'subject:confirmation OR subject:itinerary OR subject:"e-ticket" OR subject:"booking confirmation" OR subject:"reservation confirmation" OR subject:"flight receipt" OR subject:"trip confirmation" OR subject:"your trip" OR subject:"your reservation"';
+
+  // Tournament/event keywords — catch emails from any organizer
+  const tournamentKeywords = '"tournament" OR "pool play" OR "bracket" OR "court assignment" OR "wave" OR "stay and play" OR "stay-and-play" OR "team check-in" OR "qualifier" OR "volleyball" OR "spectator tickets"';
 
   let query = `after:${afterEpoch} ${excludeMarketing} (`;
-  // Travel/booking emails by subject keywords
-  query += `(${bookingKeywords})`;
+  // Travel brand senders (airlines, hotels, OTAs, volleyball orgs)
+  query += `(${brandClauses})`;
+  // Booking confirmation subject keywords from any sender
+  query += ` OR (${bookingSubjects})`;
   // Tournament/event emails from anyone
   query += ` OR (${tournamentKeywords})`;
+
+  // Club name and team name — catch org-specific emails
+  if (clubName) {
+    query += ` OR "${clubName}"`;
+  }
+  if (teamName && teamName !== clubName) {
+    query += ` OR "${teamName}"`;
+  }
 
   // VIP senders — get everything from these (coach messages, etc.)
   const vipSenders = [...userVipSenders, ...userTravelSenders];
@@ -315,8 +448,8 @@ async function syncUser(
             const isNearTournament = tournamentDates.some((td) => {
               const diffStart = Math.abs(new Date(travelDate).getTime() - new Date(td.start).getTime());
               const diffEnd = Math.abs(new Date(travelDate).getTime() - new Date(td.end).getTime());
-              const threeDays = 3 * 24 * 60 * 60 * 1000;
-              return diffStart <= threeDays || diffEnd <= threeDays;
+              const fiveDays = 5 * 24 * 60 * 60 * 1000;
+              return diffStart <= fiveDays || diffEnd <= fiveDays;
             });
             if (!isNearTournament) {
               console.log(`Skipping travel email not near any tournament: "${subject}" (travel date: ${travelDate})`);
@@ -447,9 +580,9 @@ function findNearestTournament(
     if (nameMatch) return nameMatch;
   }
 
-  // Fall back to nearest by date (within 3 days)
+  // Fall back to nearest by date (within 5 days)
   if (!travelDate) return undefined;
-  const threeDays = 3 * 24 * 60 * 60 * 1000;
+  const threeDays = 5 * 24 * 60 * 60 * 1000;
   let best: Record<string, unknown> | undefined;
   let bestDiff = Infinity;
 

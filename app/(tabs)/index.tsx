@@ -12,6 +12,7 @@ export default function HomeScreen() {
   const hotelBookings = useSeasonStore((s) => s.hotelBookings);
   const flightBookings = useSeasonStore((s) => s.flightBookings);
   const adminConfig = useSeasonStore((s) => s.adminConfig);
+  const forwardedEmails = useSeasonStore((s) => s.forwardedEmails);
   const seasons = useSeasonStore((s) => s.seasons);
   const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
   const activeSeason = seasons.find((s) => s.id === activeSeasonId);
@@ -67,6 +68,28 @@ export default function HomeScreen() {
             {teamCode ? 'Tap to copy' : 'Tap to set your team\'s annual ticket code'}
           </Text>
         </View>
+
+        {/* Email Activity */}
+        {forwardedEmails.length > 0 && (
+          <Pressable
+            className="bg-warm-white dark:bg-bark-light rounded-2xl p-4 mt-4 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
+            style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
+            onPress={() => router.push('/email/inbox')}
+          >
+            <View className="w-10 h-10 rounded-full bg-rally-50 dark:bg-rally-900/30 items-center justify-center mr-3">
+              <Ionicons name="mail" size={20} color="#3B82B0" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-sm font-semibold text-bark dark:text-cream">
+                Email Inbox
+              </Text>
+              <Text className="text-xs text-stone dark:text-parchment mt-0.5">
+                {forwardedEmails.length} email{forwardedEmails.length !== 1 ? 's' : ''} synced from Gmail
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
+          </Pressable>
+        )}
 
         {/* Next 30 Days */}
         <View className="mt-5">

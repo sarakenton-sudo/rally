@@ -380,6 +380,18 @@ export default function OnboardingScreen() {
         }
         store.setLoading(false);
 
+        // Trigger initial Gmail sync if connected during onboarding
+        if (gmailConnected) {
+          console.log('[Onboarding] Gmail connected — triggering initial sync');
+          fetch(`${SUPABASE_URL}/functions/v1/gmail-sync`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+            },
+          }).catch((err) => console.warn('[Onboarding] Initial gmail sync failed:', err));
+        }
+
         // Navigate to dashboard, then refresh from DB to get real IDs
         console.log('[Onboarding] Setup complete, navigating to dashboard');
         router.replace('/');
@@ -479,7 +491,7 @@ export default function OnboardingScreen() {
               </View>
 
               <View style={{ backgroundColor: 'rgba(59,130,176,0.1)', borderRadius: 20, padding: 16, borderWidth: 1.5, borderColor: 'rgba(59,130,176,0.2)' }}>
-                <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.5)', lineHeight: 20 }}>
+                <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Regular', color: '#FEFEFE', lineHeight: 22 }}>
                   This is the player whose tournaments, travel, and schedule you'll be managing. You can add more players later.
                 </Text>
               </View>
