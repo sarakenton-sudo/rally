@@ -92,6 +92,26 @@ export default function HubScreen() {
           onPress={() => router.push('/settings/schedule-import')}
         />
 
+        {/* Add Season */}
+        {activeSeason && (
+          <HubSettingsRow
+            icon="add-circle"
+            iconColor="#3B82B0"
+            title="Add New Season"
+            subtitle={`Add another season for ${activeAthlete?.first_name ?? 'your athlete'}`}
+            onPress={() => router.push({ pathname: '/settings/add-season', params: { athleteId: activeSeason.athlete_id } })}
+          />
+        )}
+
+        {/* Add Athlete */}
+        <HubSettingsRow
+          icon="person-add"
+          iconColor="#6A9E8A"
+          title="Add Another Athlete"
+          subtitle="Manage a second player with their own seasons"
+          onPress={() => router.push('/settings/add-athlete')}
+        />
+
         {/* Notification Preferences */}
         <HubSettingsRow
           icon="notifications-outline"
@@ -108,13 +128,12 @@ export default function HubScreen() {
           <HubSectionHeader icon="airplane" title="Travel Information" iconColor={ic.muted} />
         </View>
 
-        {/* 1. Email & Sync */}
+        {/* 1. Email Forwarding */}
         <HubSettingsRow
-          icon="sync"
+          icon="mail-open"
           iconColor="#3B82B0"
-          title="Email & Sync"
-          subtitle={adminConfig?.gmail_connected ? `Gmail: ${adminConfig.gmail_email}` : 'Connect Gmail for auto-import'}
-          badge={adminConfig?.gmail_connected ? undefined : 0}
+          title="Email Forwarding"
+          subtitle="Forward travel & tournament emails to RALLY"
           onPress={() => router.push('/settings/email-connect')}
         />
 
@@ -185,28 +204,36 @@ export default function HubScreen() {
         {/* SECTION 3: VIP PUSH NOTIFICATIONS */}
         {/* ============================================================ */}
         <View className="mt-6">
-          <HubSectionHeader icon="notifications" title="VIP Push Notifications" iconColor="#6A9E8A" />
+          <View className="flex-row items-center mb-2">
+            <Ionicons name="notifications" size={16} color="#6A9E8A" />
+            <Text className="text-sm font-semibold text-stone dark:text-parchment ml-1.5 uppercase tracking-wider">
+              VIP Push Notifications
+            </Text>
+            <View className="bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full ml-2">
+              <Text className="text-xs font-semibold text-amber-700 dark:text-amber-300">Coming Soon</Text>
+            </View>
+          </View>
         </View>
 
         {/* Guidance card */}
-        <View className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 mb-3 flex-row items-start">
+        <View className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 mb-3 flex-row items-start opacity-60">
           <Ionicons name="information-circle" size={20} color="#d97706" />
           <Text className="text-xs text-amber-700 dark:text-amber-300 ml-3 flex-1">
             We hate being the last to know about a stay-and-play booking block or a schedule change. Add your coach and club as VIP senders to get instant push alerts.
           </Text>
         </View>
 
-        {/* VIP Email Alerts */}
-        <HubSettingsRow
-          icon="star"
-          iconColor="#6A9E8A"
-          title="VIP Email Alerts"
-          subtitle="Coach & club email senders that trigger push notifications"
-          badge={adminConfig?.vip_sender_emails?.length || 0}
-          onPress={() => router.push('/settings/email-connect')}
-        />
-
-        {/* (Email Inbox moved to Travel Information section) */}
+        {/* VIP Email Alerts — Coming Soon */}
+        <View className="opacity-60">
+          <HubSettingsRow
+            icon="star"
+            iconColor="#6A9E8A"
+            title="VIP Email Alerts"
+            subtitle="Coach & club email senders that trigger push notifications"
+            badge={0}
+            onPress={() => Alert.alert('Coming Soon', 'VIP push notifications will be available in a future release.')}
+          />
+        </View>
 
         {/* ============================================================ */}
         {/* SECTION 4: STREAMING HUB */}

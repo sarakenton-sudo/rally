@@ -79,19 +79,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setSession(cached);
             await fetchUserProfile(user.id);
 
-            // If this session has Google provider tokens, store them for Gmail sync
-            if (cached.provider_token && user.app_metadata?.provider === 'google') {
-              console.log('[Auth] Found Google provider tokens in session, storing for Gmail sync');
-              supabase.rpc('store_google_auth_tokens', {
-                p_access_token: cached.provider_token,
-                p_refresh_token: cached.provider_refresh_token || '',
-                p_expires_in: 3600,
-                p_gmail_email: user.email || null,
-              }).then(({ error }) => {
-                if (error) console.error('[Auth] Failed to store Gmail tokens:', error);
-                else console.log('[Auth] Gmail tokens stored from initial session');
-              });
-            }
           }
         } else {
           console.log('[Auth] No cached session');
@@ -119,19 +106,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (newSession?.user) {
           fetchUserProfile(newSession.user.id);
 
-          // Store Google OAuth tokens for Gmail sync (one-time after sign-in)
-          if (event === 'SIGNED_IN' && newSession.provider_token) {
-            console.log('[Auth] Storing Google OAuth tokens for Gmail sync');
-            supabase.rpc('store_google_auth_tokens', {
-              p_access_token: newSession.provider_token,
-              p_refresh_token: newSession.provider_refresh_token || '',
-              p_expires_in: 3600,
-              p_gmail_email: newSession.user.email || null,
-            }).then(({ error }) => {
-              if (error) console.error('[Auth] Failed to store Gmail tokens:', error);
-              else console.log('[Auth] Gmail tokens stored successfully');
-            });
-          }
         } else {
           setUserProfile(null);
         }
@@ -164,15 +138,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         provider: 'google',
         options: {
           redirectTo: redirectUrl,
-          scopes: [
-            'email',
-            'profile',
-            'https://www.googleapis.com/auth/gmail.readonly',
-          ].join(' '),
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
         },
       });
       if (error) return { error: error.message };

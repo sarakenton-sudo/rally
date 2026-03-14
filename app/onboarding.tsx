@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
+import * as Clipboard from 'expo-clipboard';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 import { useDataRefresh } from '@/providers/DataProvider';
@@ -184,13 +185,8 @@ export default function OnboardingScreen() {
   const [extractedTournaments, setExtractedTournaments] = useState<any[]>([]);
   const [extractError, setExtractError] = useState('');
 
-  // Step 4: Email & Travel — auto-detect if signed in with Google
-  const signedInWithGoogle = user?.app_metadata?.provider === 'google';
-  const [gmailConnecting, setGmailConnecting] = useState(false);
-  const [gmailConnected, setGmailConnected] = useState(signedInWithGoogle);
-  const [gmailEmail, setGmailEmail] = useState(signedInWithGoogle ? (user?.email ?? '') : '');
-  const [trustedEmails, setTrustedEmails] = useState<string[]>([]);
-  const [trustedEmailInput, setTrustedEmailInput] = useState('');
+  // Step 4: Email Forwarding
+  const [forwardAddressCopied, setForwardAddressCopied] = useState(false);
 
   // Step 5: Additional Athletes
   const [additionalAthletes, setAdditionalAthletes] = useState<{ firstName: string }[]>([]);
@@ -234,51 +230,7 @@ export default function OnboardingScreen() {
     finally { setIsExtracting(false); }
   };
 
-  // ---- Gmail connect ----
-  const handleConnectGmail = useCallback(async () => {
-    if (!user || !GOOGLE_CLIENT_ID) return;
-    setGmailConnecting(true);
-    try {
-      const redirectUri = `${SUPABASE_URL}/functions/v1/gmail-auth-callback`;
-      const isWeb = Platform.OS === 'web';
-      const params = new URLSearchParams({
-        client_id: GOOGLE_CLIENT_ID, redirect_uri: redirectUri, response_type: 'code',
-        scope: 'https://www.googleapis.com/auth/gmail.readonly', access_type: 'offline', prompt: 'consent',
-        state: isWeb ? `${user.id}|web` : user.id,
-      });
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-      if (isWeb) {
-        // Open in popup to avoid navigating away and losing onboarding state
-        const popup = window.open(authUrl, 'gmail-connect', 'width=500,height=700,left=200,top=100');
-        // Poll for popup close / success
-        const poll = setInterval(() => {
-          if (!popup || popup.closed) {
-            clearInterval(poll);
-            setGmailConnecting(false);
-            // User can verify connection later in settings
-          }
-        }, 1000);
-        return;
-      }
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, 'rally://auth/gmail-callback');
-      if (result.type === 'success' && result.url) {
-        const url = new URL(result.url);
-        if (url.searchParams.get('success') === 'true') {
-          setGmailConnected(true);
-          setGmailEmail(url.searchParams.get('email') ?? '');
-        }
-      }
-    } catch (err) { console.error('Gmail connect error:', err); }
-    finally { setGmailConnecting(false); }
-  }, [user]);
-
   // ---- Helpers ----
-  const addTrustedEmail = () => {
-    const email = trustedEmailInput.trim().toLowerCase();
-    if (!email || !email.includes('@')) return;
-    if (!trustedEmails.includes(email)) setTrustedEmails([...trustedEmails, email]);
-    setTrustedEmailInput('');
-  };
 
   const addGuest = () => {
     setGuests([...guests, { name: '', relation: 'Grandparent', phone: '' }]);
@@ -313,9 +265,9 @@ export default function OnboardingScreen() {
           p_season_year: seasonYear,
           p_team_code: teamCode.trim() || null,
           p_streaming_url: streamingUrl.trim() || null,
-          p_gmail_connected: gmailConnected,
-          p_gmail_email: gmailEmail || null,
-          p_trusted_sender_emails: trustedEmails,
+          p_gmail_connected: false,
+          p_gmail_email: null,
+          p_trusted_sender_emails: [],
           p_tournaments: tournamentPayload,
           p_additional_athletes: additionalPayload,
           p_guests: guestPayload,
@@ -343,8 +295,8 @@ export default function OnboardingScreen() {
           default_streaming_platform: null,
           default_stream_url: streamingUrl.trim() || null,
           travel_sync_emails: [],
-          gmail_connected: gmailConnected,
-          gmail_email: gmailEmail || null,
+          gmail_connected: false,
+          gmail_email: null,
           external_links: [],
           active_season_id: result.season_id!,
           created_at: new Date().toISOString(),
@@ -379,18 +331,6 @@ export default function OnboardingScreen() {
           } as any)));
         }
         store.setLoading(false);
-
-        // Trigger initial Gmail sync if connected during onboarding
-        if (gmailConnected) {
-          console.log('[Onboarding] Gmail connected — triggering initial sync');
-          fetch(`${SUPABASE_URL}/functions/v1/gmail-sync`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json',
-            },
-          }).catch((err) => console.warn('[Onboarding] Initial gmail sync failed:', err));
-        }
 
         // Navigate to dashboard, then refresh from DB to get real IDs
         console.log('[Onboarding] Setup complete, navigating to dashboard');
@@ -640,65 +580,56 @@ export default function OnboardingScreen() {
         {step === 4 && (
           <View className="flex-1 px-6 pt-4">
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              <StepHeader icon="mail" title="Travel Email" subtitle="Auto-capture booking confirmations" />
+              <StepHeader icon="mail" title="Email Forwarding" subtitle="Forward travel emails to RALLY" />
 
-              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>
-                Connect Gmail to auto-detect hotel and flight confirmations. RALLY only reads — never sends.
+              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.5)', marginBottom: 20, lineHeight: 20 }}>
+                Forward hotel confirmations, flight bookings, and tournament emails to your RALLY address. Our AI will automatically extract the details.
               </Text>
 
-              {gmailConnected ? (
-                <View style={{ backgroundColor: 'rgba(106,158,138,0.15)', borderWidth: 1.5, borderColor: 'rgba(106,158,138,0.35)', borderRadius: 20, padding: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <Ionicons name="checkmark-circle" size={24} color="#6A9E8A" />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#FEFEFE' }}>Gmail Connected</Text>
-                    {gmailEmail ? <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{gmailEmail}</Text> : null}
-                  </View>
-                </View>
-              ) : (
+              {/* Forwarding address card */}
+              <View style={{ backgroundColor: 'rgba(59,130,176,0.12)', borderWidth: 1.5, borderColor: 'rgba(59,130,176,0.3)', borderRadius: 20, padding: 20, marginBottom: 20 }}>
+                <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: 'rgba(255,255,255,0.5)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Your Forwarding Address</Text>
+                <Text selectable style={{ fontSize: 16, fontFamily: 'NunitoSans-Bold', color: '#7DBDD9', marginBottom: 12 }}>
+                  plans@rally.app
+                </Text>
                 <Pressable
                   style={{
-                    backgroundColor: '#FEFEFE', borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginBottom: 16,
+                    backgroundColor: forwardAddressCopied ? 'rgba(106,158,138,0.2)' : 'rgba(59,130,176,0.2)',
+                    borderRadius: 12, paddingVertical: 10, alignItems: 'center',
                     flexDirection: 'row', justifyContent: 'center', gap: 8,
-                    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 4,
-                    opacity: gmailConnecting ? 0.6 : 1,
+                    borderWidth: 1.5, borderColor: forwardAddressCopied ? 'rgba(106,158,138,0.4)' : 'rgba(59,130,176,0.3)',
                   }}
-                  onPress={handleConnectGmail} disabled={gmailConnecting}
+                  className="active:opacity-70"
+                  onPress={() => {
+                    if (Platform.OS === 'web') {
+                      navigator.clipboard.writeText('plans@rally.app');
+                    } else {
+                      Clipboard.setStringAsync('plans@rally.app');
+                    }
+                    setForwardAddressCopied(true);
+                    setTimeout(() => setForwardAddressCopied(false), 2000);
+                  }}
                 >
-                  {gmailConnecting ? <ActivityIndicator size="small" color="#3B82B0" /> : <Ionicons name="logo-google" size={18} color="#4285F4" />}
-                  <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#3a5a7a' }}>{gmailConnecting ? 'Connecting...' : 'Connect Gmail'}</Text>
+                  <Ionicons name={forwardAddressCopied ? 'checkmark' : 'copy-outline'} size={16} color={forwardAddressCopied ? '#6A9E8A' : '#7DBDD9'} />
+                  <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Bold', color: forwardAddressCopied ? '#6A9E8A' : '#7DBDD9' }}>
+                    {forwardAddressCopied ? 'Copied!' : 'Copy Address'}
+                  </Text>
                 </Pressable>
-              )}
-
-              {/* Trusted sender emails */}
-              <View style={{ marginTop: 8, marginBottom: 16 }}>
-                <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#FEFEFE', marginBottom: 4 }}>Recognized Email Addresses</Text>
-                <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.4)', marginBottom: 12, lineHeight: 20 }}>
-                  Add other email addresses you might forward travel confirmations from (e.g. your work email).
-                </Text>
-
-                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-                  <TextInput
-                    value={trustedEmailInput} onChangeText={setTrustedEmailInput}
-                    placeholder="work@company.com" placeholderTextColor="rgba(255,255,255,0.25)"
-                    keyboardType="email-address" autoCapitalize="none"
-                    style={{ ...INPUT_STYLE, flex: 1 }}
-                    onSubmitEditing={addTrustedEmail} returnKeyType="done"
-                  />
-                  <Pressable style={{ backgroundColor: 'rgba(59,130,176,0.2)', borderRadius: 14, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(59,130,176,0.3)' }} className="active:opacity-70" onPress={addTrustedEmail}>
-                    <Ionicons name="add" size={20} color="#7DBDD9" />
-                  </Pressable>
-                </View>
-
-                {trustedEmails.map((email) => (
-                  <View key={email} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
-                    <Ionicons name="mail-outline" size={14} color="rgba(255,255,255,0.5)" />
-                    <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#FEFEFE', flex: 1, marginLeft: 8 }}>{email}</Text>
-                    <Pressable onPress={() => setTrustedEmails(trustedEmails.filter((e) => e !== email))} className="active:opacity-70" style={{ padding: 4 }}>
-                      <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.4)" />
-                    </Pressable>
-                  </View>
-                ))}
               </View>
+
+              {/* What to forward */}
+              <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#FEFEFE', marginBottom: 12 }}>What to forward</Text>
+              {[
+                { icon: 'bed-outline' as const, text: 'Hotel confirmations & stay-and-play info' },
+                { icon: 'airplane-outline' as const, text: 'Flight bookings & itineraries' },
+                { icon: 'trophy-outline' as const, text: 'Tournament info & schedule updates' },
+                { icon: 'people-outline' as const, text: 'Coach announcements & team emails' },
+              ].map((item) => (
+                <View key={item.text} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                  <Ionicons name={item.icon} size={18} color="rgba(255,255,255,0.5)" />
+                  <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.7)', flex: 1 }}>{item.text}</Text>
+                </View>
+              ))}
             </ScrollView>
             <NavButtons onBack={() => goTo(3)} onNext={() => goTo(5)} showSkip onSkip={() => goTo(5)} />
           </View>
@@ -817,8 +748,7 @@ export default function OnboardingScreen() {
               <SummaryRow icon="calendar" text={seasonYear} />
               {teamCode.trim() ? <SummaryRow icon="key" text={teamCode.trim()} /> : null}
               {extractedTournaments.length > 0 && <SummaryRow icon="checkmark-circle" text={`${extractedTournaments.length} tournament${extractedTournaments.length !== 1 ? 's' : ''} ready`} color="#6A9E8A" />}
-              {gmailConnected && <SummaryRow icon="checkmark-circle" text={`Gmail: ${gmailEmail || 'connected'}`} color="#6A9E8A" />}
-              {trustedEmails.length > 0 && <SummaryRow icon="checkmark-circle" text={`${trustedEmails.length} trusted email${trustedEmails.length !== 1 ? 's' : ''}`} color="#6A9E8A" />}
+              <SummaryRow icon="mail" text="Forward emails to plans@rally.app" />
               {additionalAthletes.filter((a) => a.firstName.trim()).length > 0 && <SummaryRow icon="checkmark-circle" text={`${additionalAthletes.filter((a) => a.firstName.trim()).length} additional player${additionalAthletes.filter((a) => a.firstName.trim()).length !== 1 ? 's' : ''}`} color="#6A9E8A" />}
               {guests.some((g) => g.name.trim()) && <SummaryRow icon="checkmark-circle" text={`${guests.filter((g) => g.name.trim()).length} guest${guests.filter((g) => g.name.trim()).length !== 1 ? 's' : ''} invited`} color="#6A9E8A" />}
             </View>

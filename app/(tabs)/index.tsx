@@ -18,19 +18,25 @@ export default function HomeScreen() {
   const activeSeason = seasons.find((s) => s.id === activeSeasonId);
   const teamCode = activeSeason?.team_code;
 
+  // Filter tournaments to active season
+  const seasonTournaments = useMemo(() =>
+    activeSeasonId ? tournaments.filter((t) => t.season_id === activeSeasonId) : tournaments,
+    [tournaments, activeSeasonId]
+  );
+
   const next30Days = useMemo(() => {
-    return tournaments
+    return seasonTournaments
       .filter((t) => daysUntil(t.end_date) >= 0 && daysUntil(t.start_date) <= 30)
       .sort((a, b) => a.start_date.localeCompare(b.start_date));
-  }, [tournaments]);
+  }, [seasonTournaments]);
 
   const actionItems = useMemo(() => {
     const items: string[] = [];
-    const needsBooking = tournaments.filter((t) => t.status === 'travel_needed');
+    const needsBooking = seasonTournaments.filter((t) => t.status === 'travel_needed');
     if (needsBooking.length > 0) {
       items.push(`${needsBooking.length} tournament${needsBooking.length > 1 ? 's' : ''} still need hotel bookings`);
     }
-    const noTickets = tournaments.filter(
+    const noTickets = seasonTournaments.filter(
       (t) => !t.tickets_purchased && daysUntil(t.start_date) > 0 && daysUntil(t.start_date) <= 7
     );
     if (noTickets.length > 0) {
@@ -40,7 +46,7 @@ export default function HomeScreen() {
       items.push('Set your team ticket code for quick access');
     }
     return items;
-  }, [tournaments, teamCode]);
+  }, [seasonTournaments, teamCode]);
 
   const ic = useIconColors();
   const teamName = activeSeason?.team_name ?? 'RallyHUB';

@@ -33,10 +33,13 @@ export default function ScheduleImportScreen() {
           </Text>
         </View>
 
-        {/* Card A1 — LeagueApps */}
+        {/* Card A1 — LeagueApps (Coming Soon) */}
         <Pressable
-          className="bg-warm-white dark:bg-bark-light rounded-xl p-5 mb-3 border border-parchment dark:border-rally-900 active:opacity-80"
-          onPress={() => router.push('/settings/leagueapps-connect')}
+          className="bg-warm-white dark:bg-bark-light rounded-xl p-5 mb-3 border border-parchment dark:border-rally-900 opacity-60"
+          onPress={() => Alert.alert(
+            'Coming Soon',
+            'Direct import from LeagueApps is planned for a future release. Use Copy/Paste or Forward Email for now.'
+          )}
         >
           <View className="flex-row items-center mb-2">
             <View
@@ -46,9 +49,13 @@ export default function ScheduleImportScreen() {
               <Ionicons name="trophy" size={20} color="#6A9E8A" />
             </View>
             <View className="flex-1">
-              <Text className="text-base font-semibold text-bark dark:text-cream">LeagueApps</Text>
+              <View className="flex-row items-center">
+                <Text className="text-base font-semibold text-bark dark:text-cream">LeagueApps</Text>
+                <View className="bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full ml-2">
+                  <Text className="text-xs font-semibold text-amber-700 dark:text-amber-300">Coming Soon</Text>
+                </View>
+              </View>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={ic.subtle} />
           </View>
           <Text className="text-sm text-stone ml-13">
             Import tournaments automatically from LeagueApps.

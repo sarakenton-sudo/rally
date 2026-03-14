@@ -3,6 +3,7 @@ import { View, Image, Pressable, Platform, Linking } from 'react-native';
 import { Tabs, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import SeasonSwitcher from '@/components/SeasonSwitcher';
 
 const logoWhite = require('@/assets/images/rallyhub_lockup_white.png');
 
@@ -57,6 +58,9 @@ function GlobalHeader() {
           <Ionicons name="notifications-outline" size={20} color="rgba(255,255,255,0.65)" />
         </Pressable>
       </View>
+
+      {/* Season switcher — only visible when multiple athletes/seasons */}
+      <SeasonSwitcher />
 
       {/* Bottom border */}
       <View className="h-px" style={{ backgroundColor: 'rgba(255,255,255,0.07)' }} />

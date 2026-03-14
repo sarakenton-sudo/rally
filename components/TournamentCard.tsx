@@ -13,10 +13,10 @@ interface TournamentCardProps {
 
 const STATUS_CONFIG = {
   upcoming: { label: 'Upcoming', bg: 'bg-cream', text: 'text-stone', dot: 'bg-stone' },
-  travel_needed: { label: 'Needs Booking', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
-  partial: { label: 'Partial', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
-  booked: { label: 'Booked', bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-  complete: { label: 'Complete', bg: 'bg-rally-50', text: 'text-rally-600', dot: 'bg-rally-400' },
+  travel_needed: { label: 'Needs Booking', bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-400' },
+  partial: { label: 'Partially Booked', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
+  booked: { label: 'Ready to Go', bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
+  complete: { label: 'Complete', bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
 } as const;
 
 function openDirections(address: string) {
@@ -52,12 +52,12 @@ export default function TournamentCard({ tournament, hotelCount = 0, flightCount
       style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
       onPress={onPress}
     >
-      {/* Top accent bar — color-coded by status */}
+      {/* Top accent bar — color-coded by booking readiness */}
       <View
-        className={`h-1 ${
-          tournament.status === 'booked' ? 'bg-green-500' :
-          tournament.status === 'travel_needed' ? 'bg-amber-400' :
-          tournament.status === 'complete' ? 'bg-rally-400' :
+        className={`h-1.5 ${
+          displayStatus === 'booked' || displayStatus === 'complete' ? 'bg-green-500' :
+          displayStatus === 'partial' ? 'bg-amber-400' :
+          displayStatus === 'travel_needed' ? 'bg-red-400' :
           'bg-stone'
         }`}
       />

@@ -21,11 +21,17 @@ export default function SeasonScreen() {
   const hotelBookings = useSeasonStore((s) => s.hotelBookings);
   const flightBookings = useSeasonStore((s) => s.flightBookings);
 
+  // Filter tournaments to active season
+  const seasonTournaments = useMemo(() =>
+    activeSeasonId ? tournaments.filter((t) => t.season_id === activeSeasonId) : tournaments,
+    [tournaments, activeSeasonId]
+  );
+
   const listItems = useMemo(() => {
-    const upcoming = tournaments
+    const upcoming = seasonTournaments
       .filter((t) => daysUntil(t.end_date) >= 0)
       .sort((a, b) => a.start_date.localeCompare(b.start_date));
-    const past = tournaments
+    const past = seasonTournaments
       .filter((t) => daysUntil(t.end_date) < 0)
       .sort((a, b) => a.start_date.localeCompare(b.start_date));
 
@@ -35,7 +41,7 @@ export default function SeasonScreen() {
       past.forEach((t) => items.push({ type: 'tournament' as const, data: t }));
     }
     return items;
-  }, [tournaments]);
+  }, [seasonTournaments]);
 
   const teamName = activeSeason?.team_name ?? '';
   const seasonYear = activeSeason?.season_year ?? '';

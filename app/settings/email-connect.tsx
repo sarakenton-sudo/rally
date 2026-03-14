@@ -1,525 +1,118 @@
-import { useState, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, Switch, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { useEffect } from 'react';
+import { useState } from 'react';
+import { View, Text, ScrollView, Pressable, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import * as WebBrowser from 'expo-web-browser';
 import { useSeasonStore } from '@/stores/useSeasonStore';
-import { useAuth } from '@/providers/AuthProvider';
-import { updateAdminConfig } from '@/hooks/useSupabaseData';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess, tapLight } from '@/lib/haptics';
-
-const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? '';
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
-
-async function triggerGmailSync() {
-  try {
-    await fetch(`${SUPABASE_URL}/functions/v1/gmail-sync`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json',
-      },
-    });
-  } catch (err) {
-    console.warn('Initial Gmail sync failed:', err);
-  }
-}
 
 export default function EmailConnectScreen() {
   const ic = useIconColors();
   const adminConfig = useSeasonStore((s) => s.adminConfig);
-  const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
-  const { user, session } = useAuth();
-  const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
+  const [copied, setCopied] = useState(false);
 
-  // Gmail connection state
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const forwardAddress = adminConfig?.rally_forward_address || 'plans@rally.app';
 
-  // Trusted senders (from email-monitoring)
-  const [trustedEmails, setTrustedEmails] = useState<string[]>(adminConfig?.trusted_sender_emails ?? []);
-  const [vipEmails, setVipEmails] = useState<string[]>(adminConfig?.vip_sender_emails ?? []);
-  const [newTrustedEmail, setNewTrustedEmail] = useState('');
-
-  // Travel accounts (from travel-sync)
-  const [travelEmails, setTravelEmails] = useState<string[]>(adminConfig?.travel_sync_emails ?? []);
-  const [newTravelEmail, setNewTravelEmail] = useState('');
-
-  const [isSaving, setIsSaving] = useState(false);
-
-  // ============================================================
-  // Gmail OAuth
-  // ============================================================
-  const [statusMsg, setStatusMsg] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
-
-  // On web, check URL params for OAuth callback result
-  useEffect(() => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const success = params.get('success');
-      const email = params.get('email');
-      const error = params.get('error');
-      if (success === 'true' && email && adminConfig) {
-        setAdminConfig({ ...adminConfig, gmail_connected: true, gmail_email: email });
-        setStatusMsg({ text: `Gmail connected: ${email}. Syncing emails...`, type: 'success' });
-        triggerGmailSync();
-        // Clean up URL
-        window.history.replaceState({}, '', window.location.pathname);
-      } else if (success === 'false' && error) {
-        setStatusMsg({ text: `Connection failed: ${error}`, type: 'error' });
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-    }
-  }, [adminConfig, setAdminConfig]);
-
-  const connectGmail = useCallback(async () => {
-    if (!user || !GOOGLE_CLIENT_ID) {
-      setStatusMsg({ text: 'Google Client ID is not configured.', type: 'error' });
-      return;
-    }
-
-    setIsConnecting(true);
-    setStatusMsg(null);
-    try {
-      const redirectUri = `${SUPABASE_URL}/functions/v1/gmail-auth-callback`;
-      const isWeb = Platform.OS === 'web';
-      const params = new URLSearchParams({
-        client_id: GOOGLE_CLIENT_ID,
-        redirect_uri: redirectUri,
-        response_type: 'code',
-        scope: 'https://www.googleapis.com/auth/gmail.readonly',
-        access_type: 'offline',
-        prompt: 'consent',
-        state: isWeb ? `${user.id}|web` : user.id,
-      });
-
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-
-      if (isWeb) {
-        // On web, redirect the whole page to Google OAuth
-        window.location.href = authUrl;
-        return;
-      }
-
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, 'rally://auth/gmail-callback');
-
-      if (result.type === 'success' && result.url) {
-        const url = new URL(result.url);
-        const success = url.searchParams.get('success') === 'true';
-        const email = url.searchParams.get('email');
-        const error = url.searchParams.get('error');
-
-        if (success && email && adminConfig) {
-          setAdminConfig({ ...adminConfig, gmail_connected: true, gmail_email: email });
-          notifySuccess();
-          setStatusMsg({ text: `Gmail connected: ${email}. Syncing emails...`, type: 'success' });
-          triggerGmailSync();
-        } else {
-          setStatusMsg({ text: error ?? 'Unable to connect Gmail. Please try again.', type: 'error' });
-        }
-      }
-    } catch (err) {
-      console.error('Gmail connect error:', err);
-      setStatusMsg({ text: 'An error occurred while connecting Gmail.', type: 'error' });
-    } finally {
-      setIsConnecting(false);
-    }
-  }, [user, adminConfig, setAdminConfig]);
-
-  const disconnectGmail = useCallback(async () => {
-    const doDisconnect = async () => {
-      setIsDisconnecting(true);
-      setStatusMsg(null);
-      try {
-        const response = await fetch(`${SUPABASE_URL}/functions/v1/gmail-auth-callback`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.access_token}`,
-          },
-          body: JSON.stringify({ action: 'disconnect' }),
-        });
-
-        if (response.ok && adminConfig) {
-          setAdminConfig({ ...adminConfig, gmail_connected: false, gmail_email: null });
-          notifySuccess();
-          setStatusMsg({ text: 'Gmail disconnected.', type: 'success' });
-        } else {
-          setStatusMsg({ text: 'Failed to disconnect Gmail.', type: 'error' });
-        }
-      } catch (err) {
-        console.error('Gmail disconnect error:', err);
-        setStatusMsg({ text: 'An error occurred while disconnecting Gmail.', type: 'error' });
-      } finally {
-        setIsDisconnecting(false);
-      }
-    };
-
+  const handleCopy = async () => {
     if (Platform.OS === 'web') {
-      if (window.confirm('Stop auto-syncing emails from Gmail?')) {
-        doDisconnect();
-      }
+      await navigator.clipboard.writeText(forwardAddress);
     } else {
-      Alert.alert('Disconnect Gmail', 'Stop auto-syncing emails from Gmail?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Disconnect', style: 'destructive', onPress: doDisconnect },
-      ]);
+      await Clipboard.setStringAsync(forwardAddress);
     }
-  }, [session, adminConfig, setAdminConfig]);
-
-  // ============================================================
-  // Trusted sender helpers
-  // ============================================================
-  const isVip = (email: string) => vipEmails.includes(email);
-
-  const toggleVip = (email: string) => {
-    setVipEmails((prev) =>
-      prev.includes(email) ? prev.filter((e) => e !== email) : [...prev, email]
-    );
+    tapLight();
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
-
-  const addTrustedEmail = () => {
-    const email = newTrustedEmail.trim().toLowerCase();
-    if (!email) return;
-    if (!email.includes('@')) {
-      setStatusMsg({ text: 'Please enter a valid email address.', type: 'error' });
-      return;
-    }
-    if (trustedEmails.includes(email)) {
-      setStatusMsg({ text: 'This email is already in the list.', type: 'error' });
-      return;
-    }
-    setTrustedEmails((prev) => [...prev, email]);
-    setNewTrustedEmail('');
-  };
-
-  const removeTrustedEmail = (email: string) => {
-    setTrustedEmails((prev) => prev.filter((e) => e !== email));
-    setVipEmails((prev) => prev.filter((e) => e !== email));
-  };
-
-  // ============================================================
-  // Travel email helpers
-  // ============================================================
-  const addTravelEmail = () => {
-    const email = newTravelEmail.trim().toLowerCase();
-    if (!email) return;
-    if (!email.includes('@')) {
-      setStatusMsg({ text: 'Please enter a valid email address.', type: 'error' });
-      return;
-    }
-    if (travelEmails.includes(email)) {
-      setStatusMsg({ text: 'This email is already in the list.', type: 'error' });
-      return;
-    }
-    setTravelEmails((prev) => [...prev, email]);
-    setNewTravelEmail('');
-  };
-
-  const removeTravelEmail = (email: string) => {
-    setTravelEmails((prev) => prev.filter((e) => e !== email));
-  };
-
-  // ============================================================
-  // Save all
-  // ============================================================
-  const handleSave = async () => {
-    if (!adminConfig) return;
-    setIsSaving(true);
-
-    const updates = {
-      trusted_sender_emails: trustedEmails,
-      vip_sender_emails: vipEmails,
-      travel_sync_emails: travelEmails,
-    };
-
-    try {
-      if (isSupabaseConfigured && user) {
-        const { error } = await updateAdminConfig(adminConfig.id, updates);
-        if (error) {
-          setStatusMsg({ text: `Save failed: ${error.message}`, type: 'error' });
-          return;
-        }
-      }
-      setAdminConfig({ ...adminConfig, ...updates });
-      notifySuccess();
-      router.back();
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const gmailConnected = adminConfig?.gmail_connected ?? false;
-  const gmailEmail = adminConfig?.gmail_email;
 
   return (
     <SafeAreaView className="flex-1 bg-warm-white dark:bg-bark" edges={['bottom']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
-      >
-        {/* Header */}
-        <View className="flex-row items-center justify-between px-4 py-3 border-b border-parchment dark:border-bark-light">
-          <Pressable onPress={() => router.back()} className="p-1">
-            <Ionicons name="close" size={24} color={ic.muted} />
-          </Pressable>
-          <Text className="text-lg font-bold text-bark dark:text-cream">
-            Email & Sync
+      {/* Header */}
+      <View className="flex-row items-center justify-between px-4 py-3 border-b border-parchment dark:border-bark-light">
+        <Pressable onPress={() => router.back()} className="p-1">
+          <Ionicons name="close" size={24} color={ic.muted} />
+        </Pressable>
+        <Text className="text-lg font-bold text-bark dark:text-cream">
+          Email Forwarding
+        </Text>
+        <View style={{ width: 32 }} />
+      </View>
+
+      <ScrollView className="flex-1 px-4 pt-6" contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* Forwarding address card */}
+        <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-5 mb-4 border border-rally-200 dark:border-rally-800">
+          <Text className="text-xs font-semibold text-stone dark:text-parchment uppercase tracking-wider mb-3">
+            Your Forwarding Address
+          </Text>
+          <Text selectable className="text-lg font-bold text-rally-600 dark:text-rally-300 mb-4">
+            {forwardAddress}
           </Text>
           <Pressable
-            onPress={handleSave}
-            disabled={isSaving}
-            className={`px-4 py-1.5 rounded-lg ${isSaving ? 'bg-parchment' : 'bg-rally-600 active:opacity-80'}`}
+            onPress={handleCopy}
+            className={`rounded-lg py-3 items-center flex-row justify-center ${copied ? 'bg-green-100 dark:bg-green-900/30' : 'bg-rally-600'} active:opacity-80`}
           >
-            <Text className="text-sm font-semibold text-cream">{isSaving ? 'Saving...' : 'Save'}</Text>
+            <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={16} color={copied ? '#16a34a' : '#FEFEFE'} />
+            <Text className={`text-sm font-semibold ml-2 ${copied ? 'text-green-700 dark:text-green-300' : 'text-cream'}`}>
+              {copied ? 'Copied!' : 'Copy Address'}
+            </Text>
           </Pressable>
         </View>
 
-        <ScrollView className="flex-1 px-4 pt-4" keyboardShouldPersistTaps="handled">
-          {/* Status message */}
-          {statusMsg && (
-            <View className={`rounded-xl p-3 mb-3 ${statusMsg.type === 'error' ? 'bg-red-50' : 'bg-green-50'}`}>
-              <Text className={`text-sm font-semibold text-center ${statusMsg.type === 'error' ? 'text-red-600' : 'text-green-700'}`}>
-                {statusMsg.text}
-              </Text>
-            </View>
-          )}
+        {/* How it works */}
+        <Text className="text-xs font-semibold text-stone dark:text-parchment uppercase tracking-wider mb-3 ml-1">
+          How It Works
+        </Text>
 
-          {/* ============================================================ */}
-          {/* GMAIL CONNECTION */}
-          {/* ============================================================ */}
-          <Text className="text-xs font-semibold text-stone dark:text-parchment uppercase tracking-wider mb-2 ml-1">
-            Gmail Connection
-          </Text>
-
-          {gmailConnected && gmailEmail ? (
-            <View className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 mb-4 border border-green-200 dark:border-green-800">
-              <View className="flex-row items-center mb-2">
-                <View className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/40 items-center justify-center mr-3">
-                  <Ionicons name="checkmark-circle" size={20} color="#16a34a" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-sm font-semibold text-green-800 dark:text-green-200">
-                    Connected
-                  </Text>
-                  <Text className="text-xs text-green-600 dark:text-green-400 mt-0.5">
-                    {gmailEmail}
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={disconnectGmail}
-                  disabled={isDisconnecting}
-                  className="px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-900/30 active:opacity-80"
-                >
-                  <Text className="text-xs font-semibold text-red-600 dark:text-red-400">
-                    {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
-                  </Text>
-                </Pressable>
+        <View className="bg-cream dark:bg-bark-light rounded-xl p-4 mb-4 border border-parchment dark:border-rally-900">
+          {[
+            { step: '1', icon: 'mail-outline' as const, text: 'Forward any travel or tournament email to the address above' },
+            { step: '2', icon: 'sparkles' as const, text: 'RALLY\'s AI reads the email and extracts key details' },
+            { step: '3', icon: 'checkmark-circle' as const, text: 'Hotel bookings, flights, and tournament info auto-populate in your dashboard' },
+          ].map((item, i) => (
+            <View key={item.step} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: i < 2 ? 16 : 0 }}>
+              <View className="w-7 h-7 rounded-full bg-rally-100 dark:bg-rally-900/30 items-center justify-center mr-3 mt-0.5">
+                <Text className="text-xs font-bold text-rally-600">{item.step}</Text>
               </View>
-              <Pressable
-                onPress={() => router.push('/email/inbox')}
-                className="flex-row items-center justify-center py-2.5 mt-1 bg-rally-600 rounded-lg active:opacity-80"
-              >
-                <Ionicons name="mail-unread" size={16} color="#FEFEFE" />
-                <Text className="text-sm font-semibold text-cream ml-2">View Email Inbox</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 mb-4 border border-rally-200 dark:border-rally-800">
-              <View className="flex-row items-start mb-3">
-                <Ionicons name="mail-outline" size={20} color="#3B82B0" />
-                <Text className="text-xs text-rally-700 dark:text-rally-300 ml-3 flex-1">
-                  Connect Gmail to auto-detect travel confirmations and team emails. Rally scans every 15 minutes — read-only, we never send emails.
-                </Text>
-              </View>
-              <Pressable
-                onPress={connectGmail}
-                disabled={isConnecting}
-                className={`rounded-lg py-3 items-center ${isConnecting ? 'bg-parchment' : 'bg-rally-600 active:opacity-80'}`}
-              >
-                <View className="flex-row items-center">
-                  <Ionicons name="logo-google" size={16} color="#FEFEFE" />
-                  <Text className="text-sm font-semibold text-cream ml-2">
-                    {isConnecting ? 'Connecting...' : 'Connect Gmail'}
-                  </Text>
-                </View>
-              </Pressable>
-            </View>
-          )}
-
-          {/* ============================================================ */}
-          {/* TRUSTED SENDERS */}
-          {/* ============================================================ */}
-          <Text className="text-xs font-semibold text-stone dark:text-parchment uppercase tracking-wider mb-2 ml-1 mt-4">
-            Trusted Senders
-          </Text>
-
-          <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 mb-3 flex-row items-start">
-            <Ionicons name="information-circle" size={18} color="#3B82B0" />
-            <Text className="text-xs text-rally-700 dark:text-rally-300 ml-3 flex-1">
-              Emails from these senders are processed. Toggle VIP to trigger push notifications. Leave empty to scan all incoming emails.
-            </Text>
-          </View>
-
-          {trustedEmails.map((email) => (
-            <View
-              key={email}
-              className="bg-cream dark:bg-bark-light rounded-xl px-4 py-3 mb-2 flex-row items-center"
-            >
-              <View className="flex-1 mr-3">
-                <Text className="text-sm font-medium text-bark dark:text-cream">{email}</Text>
-              </View>
-              <View className="flex-row items-center">
-                <Text className="text-xs text-stone mr-2">VIP</Text>
-                <Switch
-                  value={isVip(email)}
-                  onValueChange={() => toggleVip(email)}
-                  trackColor={{ false: '#D8E2EC', true: '#7DBDD9' }}
-                  thumbColor={isVip(email) ? '#3B82B0' : '#FEFEFE'}
-                />
-                <Pressable
-                  onPress={() => removeTrustedEmail(email)}
-                  className="ml-3 p-1 active:opacity-60"
-                  hitSlop={8}
-                >
-                  <Ionicons name="trash-outline" size={18} color="#dc2626" />
-                </Pressable>
+              <View className="flex-1">
+                <Text className="text-sm text-bark dark:text-cream leading-5">{item.text}</Text>
               </View>
             </View>
           ))}
+        </View>
 
-          {trustedEmails.length === 0 && (
-            <View className="bg-cream dark:bg-bark-light rounded-xl p-5 mb-2 items-center">
-              <Ionicons name="mail-outline" size={28} color={ic.placeholder} />
-              <Text className="text-sm text-stone mt-2">No trusted senders — all emails will be scanned</Text>
-            </View>
-          )}
+        {/* What to forward */}
+        <Text className="text-xs font-semibold text-stone dark:text-parchment uppercase tracking-wider mb-3 ml-1">
+          What to Forward
+        </Text>
 
-          <View className="flex-row items-center mt-2 mb-4">
-            <View className="flex-1 mr-2">
-              <TextInput
-                className="bg-cream dark:bg-bark-light rounded-xl px-4 py-3 text-sm text-bark dark:text-cream"
-                placeholder="coach@example.com"
-                placeholderTextColor="#8FA8BF"
-                value={newTrustedEmail}
-                onChangeText={setNewTrustedEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                onSubmitEditing={addTrustedEmail}
-                returnKeyType="done"
-              />
-            </View>
-            <Pressable
-              onPress={addTrustedEmail}
-              className="bg-rally-600 rounded-xl px-4 py-3 active:opacity-80"
-            >
-              <Text className="text-sm font-semibold text-cream">Add</Text>
-            </Pressable>
-          </View>
-
-          {/* ============================================================ */}
-          {/* TRAVEL ACCOUNTS */}
-          {/* ============================================================ */}
-          <Text className="text-xs font-semibold text-stone dark:text-parchment uppercase tracking-wider mb-2 ml-1 mt-4">
-            Travel Accounts
-          </Text>
-
-          <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 mb-3 flex-row items-start">
-            <Ionicons name="information-circle" size={18} color="#3B82B0" />
-            <Text className="text-xs text-rally-700 dark:text-rally-300 ml-3 flex-1">
-              Email accounts that book travel — yours, co-parent's, grandparents. Rally watches for hotel and flight confirmations.
-            </Text>
-          </View>
-
-          {travelEmails.map((email) => (
-            <View
-              key={email}
-              className="bg-cream dark:bg-bark-light rounded-xl px-4 py-3 mb-2 flex-row items-center"
-            >
-              <Ionicons name="airplane-outline" size={18} color="#3B82B0" />
-              <Text className="text-sm font-medium text-bark dark:text-cream flex-1 ml-3">{email}</Text>
-              <Pressable
-                onPress={() => removeTravelEmail(email)}
-                className="p-1 active:opacity-60"
-                hitSlop={8}
-              >
-                <Ionicons name="trash-outline" size={18} color="#dc2626" />
-              </Pressable>
+        <View className="bg-cream dark:bg-bark-light rounded-xl p-4 mb-4 border border-parchment dark:border-rally-900">
+          {[
+            { icon: 'bed-outline' as const, label: 'Hotel confirmations', desc: 'Stay-and-play, Marriott, Hilton, Airbnb, etc.' },
+            { icon: 'airplane-outline' as const, label: 'Flight bookings', desc: 'Delta, United, Southwest, etc.' },
+            { icon: 'trophy-outline' as const, label: 'Tournament emails', desc: 'Schedule updates, venue info, check-in details' },
+            { icon: 'megaphone-outline' as const, label: 'Coach announcements', desc: 'Practice changes, team updates' },
+          ].map((item) => (
+            <View key={item.label} className="flex-row items-start mb-3 last:mb-0">
+              <Ionicons name={item.icon} size={20} color={ic.muted} style={{ marginTop: 2 }} />
+              <View className="flex-1 ml-3">
+                <Text className="text-sm font-semibold text-bark dark:text-cream">{item.label}</Text>
+                <Text className="text-xs text-stone mt-0.5">{item.desc}</Text>
+              </View>
             </View>
           ))}
+        </View>
 
-          {travelEmails.length === 0 && (
-            <View className="bg-cream dark:bg-bark-light rounded-xl p-5 mb-2 items-center">
-              <Ionicons name="airplane-outline" size={28} color={ic.placeholder} />
-              <Text className="text-sm text-stone mt-2">No travel email accounts added</Text>
-            </View>
-          )}
-
-          <View className="flex-row items-center mt-2 mb-4">
-            <View className="flex-1 mr-2">
-              <TextInput
-                className="bg-cream dark:bg-bark-light rounded-xl px-4 py-3 text-sm text-bark dark:text-cream"
-                placeholder="parent@email.com"
-                placeholderTextColor="#8FA8BF"
-                value={newTravelEmail}
-                onChangeText={setNewTravelEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                onSubmitEditing={addTravelEmail}
-                returnKeyType="done"
-              />
-            </View>
-            <Pressable
-              onPress={addTravelEmail}
-              className="bg-rally-600 rounded-xl px-4 py-3 active:opacity-80"
-            >
-              <Text className="text-sm font-semibold text-cream">Add</Text>
-            </Pressable>
-          </View>
-
-          {/* ============================================================ */}
-          {/* MANUAL FORWARD FALLBACK */}
-          {/* ============================================================ */}
-          <Text className="text-xs font-semibold text-stone dark:text-parchment uppercase tracking-wider mb-2 ml-1 mt-4">
-            Manual Forward Fallback
-          </Text>
-
-          {adminConfig?.rally_forward_address && (
-            <View className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 mb-4">
-              <View className="flex-row items-start mb-3">
-                <Ionicons name="bulb-outline" size={18} color="#d97706" />
-                <Text className="text-xs text-amber-700 dark:text-amber-300 ml-3 flex-1">
-                  Forward emails here if Gmail sync misses something.
-                </Text>
-              </View>
-              <View className="flex-row items-center bg-warm-white dark:bg-bark-light rounded-lg p-3">
-                <Text className="text-sm font-semibold text-rally-600 flex-1" numberOfLines={1}>
-                  {adminConfig.rally_forward_address}
-                </Text>
-                <Pressable
-                  onPress={async () => {
-                    await Clipboard.setStringAsync(adminConfig.rally_forward_address);
-                    tapLight();
-                    setStatusMsg({ text: 'Forward address copied to clipboard.', type: 'success' });
-                  }}
-                  className="bg-rally-600 px-3 py-1.5 rounded-lg active:opacity-80 ml-2"
-                >
-                  <Text className="text-xs font-semibold text-cream">Copy</Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
-
-          <View className="h-8" />
-        </ScrollView>
-      </KeyboardAvoidingView>
+        {/* View inbox */}
+        <Pressable
+          onPress={() => router.push('/email/inbox')}
+          className="bg-cream dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 mb-3 flex-row items-center active:opacity-80"
+        >
+          <Ionicons name="mail-unread-outline" size={20} color={ic.muted} />
+          <Text className="text-sm font-semibold text-bark dark:text-cream ml-3 flex-1">View Email Inbox</Text>
+          <Ionicons name="chevron-forward" size={18} color={ic.subtle} />
+        </Pressable>
+      </ScrollView>
     </SafeAreaView>
   );
 }

@@ -111,8 +111,9 @@ serve(async (req: Request) => {
       return jsonResponse({ fixed: true, fix_error: fixError?.message ?? null, emails_by_user: emailsByUser, admin_configs: configs });
     }
 
-    // Fetch a specific email by ID for debugging
+    // Fetch a specific email by ID or search by subject
     const emailId = url.searchParams.get('email_id');
+    const emailSearch = url.searchParams.get('email_search');
     if (emailId) {
       const { data: emailRow } = await supabase
         .from('forwarded_emails')
@@ -120,10 +121,58 @@ serve(async (req: Request) => {
         .eq('id', emailId)
         .single();
       if (emailRow) {
-        // Truncate body for response size
         emailRow.body_text = (emailRow.body_text ?? '').slice(0, 2000);
       }
       return jsonResponse({ email: emailRow });
+    }
+    if (emailSearch) {
+      const { data: results } = await supabase
+        .from('forwarded_emails')
+        .select('id, subject, classification, extracted_data')
+        .ilike('subject', `%${emailSearch}%`)
+        .limit(10);
+      return jsonResponse({ results: (results ?? []).map((r: any) => ({ id: r.id, subject: r.subject, classification: r.classification, fields: Object.keys(r.extracted_data ?? {}).length })) });
+    }
+
+    // Re-classify all unclassified emails with updated AI
+    if (url.searchParams.get('reclassify') === 'true') {
+      const { data: unclassified } = await supabase
+        .from('forwarded_emails')
+        .select('id, from_address, subject, body_text')
+        .eq('classification', 'unclassified')
+        .limit(10);
+      if (!unclassified || unclassified.length === 0) {
+        return jsonResponse({ reclassified: 0, message: 'No unclassified emails found' });
+      }
+      let reclassified = 0;
+      const details: Array<{ id: string; subject: string; new_classification: string }> = [];
+      for (const email of unclassified) {
+        // Strip HTML to plain text before sending to classifier — large HTML bodies can cause timeouts
+        let bodyForClassify = (email.body_text ?? '').slice(0, 10000);
+        if (bodyForClassify.includes('<')) {
+          bodyForClassify = bodyForClassify
+            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+            .replace(/<a\s[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, '$2 ($1)')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 8000);
+        }
+        const result = await classifyEmail(CLAUDE_API_KEY, email.from_address, email.subject, bodyForClassify);
+        if (result.classification !== 'unclassified') {
+          await supabase.from('forwarded_emails').update({
+            classification: result.classification,
+            extracted_data: result.extractedData,
+            action_taken: result.action,
+          }).eq('id', email.id);
+          reclassified++;
+        }
+        details.push({ id: email.id, subject: email.subject, new_classification: result.classification });
+      }
+      return jsonResponse({ reclassified, total_unclassified: unclassified.length, details });
     }
 
     // Wipe emails only — delete all forwarded_emails so they get re-synced with updated AI

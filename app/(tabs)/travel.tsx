@@ -36,9 +36,24 @@ const SECTION_ACCENTS = [
 export default function TravelScreen() {
   const ic = useIconColors();
   const [showAddMenu, setShowAddMenu] = useState(false);
-  const tournaments = useSeasonStore((s) => s.tournaments);
-  const hotelBookings = useSeasonStore((s) => s.hotelBookings);
-  const flightBookings = useSeasonStore((s) => s.flightBookings);
+  const allTournaments = useSeasonStore((s) => s.tournaments);
+  const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
+  const tournaments = useMemo(() =>
+    activeSeasonId ? allTournaments.filter((t) => t.season_id === activeSeasonId) : allTournaments,
+    [allTournaments, activeSeasonId]
+  );
+  const allHotelBookings = useSeasonStore((s) => s.hotelBookings);
+  const allFlightBookings = useSeasonStore((s) => s.flightBookings);
+  // Filter bookings to tournaments in active season
+  const seasonTournamentIds = useMemo(() => new Set(tournaments.map((t) => t.id)), [tournaments]);
+  const hotelBookings = useMemo(() =>
+    allHotelBookings.filter((h) => seasonTournamentIds.has(h.tournament_id)),
+    [allHotelBookings, seasonTournamentIds]
+  );
+  const flightBookings = useMemo(() =>
+    allFlightBookings.filter((f) => seasonTournamentIds.has(f.tournament_id)),
+    [allFlightBookings, seasonTournamentIds]
+  );
   const isLoading = useSeasonStore((s) => s.isLoading);
   const { refresh, isRefreshing } = useDataRefresh();
 
