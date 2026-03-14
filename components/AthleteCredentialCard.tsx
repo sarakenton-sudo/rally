@@ -6,16 +6,17 @@ import { tapLight } from '@/lib/haptics';
 
 // App deep link schemes (iOS/Android) — tries app first, falls back to web
 const APP_SCHEMES: Record<string, string> = {
-  sportsrecruits: 'sportsrecruits://',
-  hudl: 'hudl://',
   instagram: 'instagram://',
 };
 
+// Services that only store a membership/ID number (no URL, no password)
+const MEMBERSHIP_ONLY = ['usa volleyball', 'university athlete'];
+
 // Brand colors for known services
 const BRAND_STYLES: Record<string, { bg: string; color: string; icon: keyof typeof Ionicons.glyphMap; defaultUrl?: string }> = {
-  sportsrecruits: { bg: '#1B4D7E', color: '#FFFFFF', icon: 'school', defaultUrl: 'https://my.sportsrecruits.com/login' },
-  'university athlete': { bg: '#E8520E', color: '#FFFFFF', icon: 'trophy', defaultUrl: 'https://auth.universityathlete.com/realms/ua/protocol/openid-connect/auth?scope=openid&response_type=code&approval_prompt=auto&redirect_uri=https%3A%2F%2Funiversityathlete.com%2Fauth%2Fkc-plugin-callback&client_id=ua_2fa_login' },
-  hudl: { bg: '#FF6600', color: '#FFFFFF', icon: 'videocam', defaultUrl: 'https://identity.hudl.com/u/login' },
+  sportsrecruits: { bg: '#1B4D7E', color: '#FFFFFF', icon: 'school' },
+  'university athlete': { bg: '#E8520E', color: '#FFFFFF', icon: 'trophy' },
+  hudl: { bg: '#FF6600', color: '#FFFFFF', icon: 'videocam' },
   instagram: { bg: '#E1306C', color: '#FFFFFF', icon: 'logo-instagram', defaultUrl: 'https://www.instagram.com' },
   'usa volleyball': { bg: '#dc2626', color: '#FFFFFF', icon: 'shield-checkmark' },
 };
@@ -39,8 +40,9 @@ interface Props {
 export default function AthleteCredentialCard({ label, url, username, password, onEdit }: Props) {
   const brand = getBrand(label);
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const isUsav = label.toLowerCase().includes('usa volleyball');
-  const isLoaded = isUsav ? !!username : !!(url || username || password);
+  const lower = label.toLowerCase();
+  const isMembershipOnly = MEMBERSHIP_ONLY.some((k) => lower.includes(k));
+  const isLoaded = isMembershipOnly ? !!username : !!(username || password);
   const hasLink = !!(url || brand.defaultUrl);
 
   const handleCopy = async (value: string, field: string) => {
@@ -59,7 +61,7 @@ export default function AthleteCredentialCard({ label, url, username, password, 
     if (!targetUrl) return;
     const fullUrl = targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`;
     if (Platform.OS !== 'web') {
-      const appScheme = APP_SCHEMES[label.toLowerCase()];
+      const appScheme = APP_SCHEMES[lower];
       if (appScheme) {
         const canOpen = await Linking.canOpenURL(appScheme);
         if (canOpen) {
@@ -72,12 +74,10 @@ export default function AthleteCredentialCard({ label, url, username, password, 
   };
 
   const handleTileTap = () => {
-    // USAV: tap to copy membership #
-    if (isUsav && username) {
+    if (isMembershipOnly && username) {
       handleCopy(username, 'username');
       return;
     }
-    // Others: open link or edit
     if (hasLink) {
       handleOpen();
     } else {
@@ -98,7 +98,7 @@ export default function AthleteCredentialCard({ label, url, username, password, 
       onPress={handleTileTap}
     >
       {/* Brand icon + status dot */}
-      <View className="items-center pt-4 pb-2">
+      <View className="items-center pt-4 pb-3">
         <View className="relative">
           <View
             className="w-12 h-12 rounded-2xl items-center justify-center"
@@ -117,65 +117,65 @@ export default function AthleteCredentialCard({ label, url, username, password, 
         </Text>
       </View>
 
-      {/* Spacer before action bar */}
-      <View className="pb-1" />
-
       {/* Bottom action bar */}
-      {(isUsav ? username : (username || password)) ? (
-        // Credentials loaded: UN | PW | Edit (3-column split)
-        <View className="flex-row border-t border-parchment dark:border-rally-900">
+      {isLoaded ? (
+        // Loaded: light green bar with UN | PW | Edit
+        <View
+          className="flex-row"
+          style={{ backgroundColor: 'rgba(22,163,106,0.08)', borderTopWidth: 1, borderTopColor: 'rgba(22,163,106,0.15)' }}
+        >
           {username ? (
             <Pressable
-              className="flex-1 flex-row items-center justify-center py-2 active:opacity-60"
-              style={{ borderRightWidth: 1, borderRightColor: 'rgba(0,0,0,0.06)' }}
+              className="flex-1 flex-row items-center justify-center py-2.5 active:opacity-60"
+              style={{ borderRightWidth: 1, borderRightColor: 'rgba(22,163,106,0.15)' }}
               onPress={() => handleCopy(username, 'username')}
             >
               <Ionicons
-                name={copiedField === 'username' ? 'checkmark' : 'person-outline'}
-                size={12}
-                color={copiedField === 'username' ? '#16a34a' : '#8FA8BF'}
+                name={copiedField === 'username' ? 'checkmark-circle' : (isMembershipOnly ? 'card-outline' : 'person-outline')}
+                size={14}
+                color={copiedField === 'username' ? '#16a34a' : '#22c55e'}
               />
               <Ionicons
                 name={copiedField === 'username' ? 'checkmark' : 'copy-outline'}
-                size={10}
-                color={copiedField === 'username' ? '#16a34a' : '#8FA8BF'}
-                style={{ marginLeft: 3 }}
+                size={11}
+                color={copiedField === 'username' ? '#16a34a' : '#22c55e'}
+                style={{ marginLeft: 4 }}
               />
             </Pressable>
           ) : null}
-          {password && !isUsav ? (
+          {password && !isMembershipOnly ? (
             <Pressable
-              className="flex-1 flex-row items-center justify-center py-2 active:opacity-60"
-              style={{ borderRightWidth: 1, borderRightColor: 'rgba(0,0,0,0.06)' }}
+              className="flex-1 flex-row items-center justify-center py-2.5 active:opacity-60"
+              style={{ borderRightWidth: 1, borderRightColor: 'rgba(22,163,106,0.15)' }}
               onPress={() => handleCopy(password, 'password')}
             >
               <Ionicons
-                name={copiedField === 'password' ? 'checkmark' : 'key-outline'}
-                size={12}
-                color={copiedField === 'password' ? '#16a34a' : '#8FA8BF'}
+                name={copiedField === 'password' ? 'checkmark-circle' : 'key-outline'}
+                size={14}
+                color={copiedField === 'password' ? '#16a34a' : '#22c55e'}
               />
               <Ionicons
                 name={copiedField === 'password' ? 'checkmark' : 'copy-outline'}
-                size={10}
-                color={copiedField === 'password' ? '#16a34a' : '#8FA8BF'}
-                style={{ marginLeft: 3 }}
+                size={11}
+                color={copiedField === 'password' ? '#16a34a' : '#22c55e'}
+                style={{ marginLeft: 4 }}
               />
             </Pressable>
           ) : null}
           <Pressable
-            className="flex-1 items-center justify-center py-2 active:opacity-60"
+            className="flex-1 items-center justify-center py-2.5 active:opacity-60"
             onPress={onEdit}
           >
-            <Ionicons name="pencil" size={12} color="#3B82B0" />
+            <Ionicons name="pencil" size={13} color="#22c55e" />
           </Pressable>
         </View>
       ) : (
-        // No credentials: Add Credentials button
+        // Empty: Add Credentials button
         <Pressable
-          className="border-t border-parchment dark:border-rally-900 py-2 active:opacity-60"
+          className="border-t border-parchment dark:border-rally-900 py-2.5 active:opacity-60"
           onPress={onEdit}
         >
-          <Text className="text-[10px] text-rally-600 font-semibold text-center">Add Credentials</Text>
+          <Text className="text-[11px] text-rally-600 font-semibold text-center">Add Credentials</Text>
         </Pressable>
       )}
     </Pressable>
