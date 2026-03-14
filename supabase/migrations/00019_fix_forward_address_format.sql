@@ -1,60 +1,12 @@
--- Guests are now admin-scoped (tied to the parent user, not a specific athlete).
--- They can be invited to any athlete's tournament via tournament_guests.
+-- Fix forward address format: use plans@rally-hub.com (no subdomain)
+-- The MX record points rally-hub.com to SendGrid, not plans.rally-hub.com
 
--- 1. Add user_id column back (populated from admin_athletes link)
-ALTER TABLE guests ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+UPDATE admin_config
+SET rally_forward_address = 'plans@rally-hub.com';
 
--- 2. Backfill user_id from athlete → admin_athletes (try primary first, then any)
-UPDATE guests g
-SET user_id = aa.admin_id
-FROM admin_athletes aa
-WHERE aa.athlete_id = g.athlete_id
-  AND aa.is_primary = true
-  AND g.user_id IS NULL;
+ALTER TABLE admin_config ALTER COLUMN rally_forward_address SET DEFAULT 'plans@rally-hub.com';
 
-UPDATE guests g
-SET user_id = (
-    SELECT aa.admin_id FROM admin_athletes aa
-    WHERE aa.athlete_id = g.athlete_id
-    LIMIT 1
-)
-WHERE g.user_id IS NULL;
-
--- 2b. Delete orphaned guests that have no admin link
-DELETE FROM guests WHERE user_id IS NULL;
-
--- 3. Make user_id NOT NULL now that it's populated
-ALTER TABLE guests ALTER COLUMN user_id SET NOT NULL;
-
--- 4. Make athlete_id nullable (no longer the ownership key)
-ALTER TABLE guests ALTER COLUMN athlete_id DROP NOT NULL;
-
--- 5. Create index on user_id for efficient lookups
-CREATE INDEX IF NOT EXISTS idx_guests_user_id ON guests(user_id);
-
--- 6. Drop old RLS policies and create new user_id-based ones
-DROP POLICY IF EXISTS "Users read accessible guests" ON guests;
-DROP POLICY IF EXISTS "Users insert guests" ON guests;
-DROP POLICY IF EXISTS "Users update guests" ON guests;
-DROP POLICY IF EXISTS "Admins delete guests" ON guests;
-
-CREATE POLICY "Users read own guests"
-    ON guests FOR SELECT
-    USING (auth.uid() = user_id);
-
-CREATE POLICY "Users insert own guests"
-    ON guests FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users update own guests"
-    ON guests FOR UPDATE
-    USING (auth.uid() = user_id);
-
-CREATE POLICY "Users delete own guests"
-    ON guests FOR DELETE
-    USING (auth.uid() = user_id);
-
--- 7. Update setup_onboarding to use user_id for guests
+-- Update setup_onboarding to use the shared address
 CREATE OR REPLACE FUNCTION setup_onboarding(
     p_athlete_name TEXT,
     p_team_name TEXT,
@@ -112,12 +64,10 @@ BEGIN
     DELETE FROM admin_config WHERE user_id = v_user_id;
     DELETE FROM user_profiles WHERE id = v_user_id;
 
-    -- 1. User profile
     INSERT INTO user_profiles (id, role, display_name)
     VALUES (v_user_id, 'admin', NULL)
     ON CONFLICT (id) DO NOTHING;
 
-    -- 2. Athlete
     v_name_parts := string_to_array(p_athlete_name, ' ');
     v_first_name := v_name_parts[1];
     v_last_name := CASE WHEN array_length(v_name_parts, 1) > 1 THEN array_to_string(v_name_parts[2:], ' ') ELSE NULL END;
@@ -126,16 +76,13 @@ BEGIN
     VALUES (gen_random_uuid(), v_first_name, v_last_name, false)
     RETURNING id INTO v_athlete_id;
 
-    -- 3. Admin-athlete link
     INSERT INTO admin_athletes (admin_id, athlete_id, permission, is_primary)
     VALUES (v_user_id, v_athlete_id, 'manage', true);
 
-    -- 4. Season
     INSERT INTO seasons (id, athlete_id, team_name, club_name, season_year, sport, team_code, is_active)
     VALUES (gen_random_uuid(), v_athlete_id, p_team_name, p_club_name, p_season_year, 'volleyball', p_team_code, true)
     RETURNING id INTO v_season_id;
 
-    -- 5. Admin config
     INSERT INTO admin_config (id, user_id, rally_forward_address, ical_feed_token, active_season_id, gmail_connected, gmail_email, trusted_sender_emails, external_links)
     VALUES (
         gen_random_uuid(), v_user_id,
@@ -153,7 +100,6 @@ BEGIN
         ]'::jsonb
     );
 
-    -- 6. Tournaments
     v_tournaments_arr := COALESCE(p_tournaments, '[]'::jsonb);
     IF jsonb_array_length(v_tournaments_arr) > 0 THEN
         FOR v_tournament IN SELECT * FROM jsonb_array_elements(v_tournaments_arr)
@@ -182,7 +128,6 @@ BEGIN
         END LOOP;
     END IF;
 
-    -- 7. Additional athletes
     IF jsonb_array_length(COALESCE(p_additional_athletes, '[]'::jsonb)) > 0 THEN
         FOR v_extra IN SELECT * FROM jsonb_array_elements(p_additional_athletes)
         LOOP
@@ -199,7 +144,6 @@ BEGIN
         END LOOP;
     END IF;
 
-    -- 8. Guests (now user_id scoped, not athlete_id)
     v_guests_arr := COALESCE(p_guests, '[]'::jsonb);
     IF jsonb_array_length(v_guests_arr) > 0 THEN
         FOR v_guest IN SELECT * FROM jsonb_array_elements(v_guests_arr)
