@@ -92,32 +92,22 @@ export default function SeasonScreen() {
         ListHeaderComponent={
           <View className="mb-4">
             <View className="flex-row items-center justify-between">
-              <Text className="text-2xl font-bold text-bark dark:text-cream font-nunito-extrabold">
-                Season
-              </Text>
-              <View className="flex-row items-center gap-2">
-                <Pressable
-                  className="flex-row items-center bg-rally-50 dark:bg-rally-900/30 px-3 py-1.5 rounded-lg active:opacity-70"
-                  onPress={() => router.push('/import/paste')}
-                >
-                  <Ionicons name="sparkles" size={14} color="#3B82B0" />
-                  <Text className="text-xs font-semibold text-rally-600 ml-1">Paste</Text>
-                </Pressable>
-                <Pressable
-                  className="flex-row items-center bg-rally-50 dark:bg-rally-900/30 px-3 py-1.5 rounded-lg active:opacity-70"
-                  onPress={() => router.push('/settings/schedule-import')}
-                >
-                  <Ionicons name="mail" size={14} color="#3B82B0" />
-                  <Text className="text-xs font-semibold text-rally-600 ml-1">Auto Import</Text>
-                </Pressable>
+              <View className="flex-1 mr-3">
+                <Text className="text-lg font-bold text-rally-700 dark:text-rally-300 font-nunito-extrabold" numberOfLines={1}>
+                  {teamName}
+                </Text>
+                <Text className="text-xs text-stone dark:text-parchment mt-0.5">
+                  {seasonYear ? `${seasonYear} · ` : ''}{seasonTournaments.length} tournament{seasonTournaments.length !== 1 ? 's' : ''}
+                </Text>
               </View>
+              <Pressable
+                className="flex-row items-center bg-rally-50 dark:bg-rally-900/30 px-3 py-1.5 rounded-lg active:opacity-70"
+                onPress={() => router.push('/settings/schedule-import')}
+              >
+                <Ionicons name="add-circle" size={14} color="#3B82B0" />
+                <Text className="text-xs font-semibold text-rally-600 ml-1">Add</Text>
+              </Pressable>
             </View>
-            <Text className="text-sm text-stone dark:text-parchment mt-1">
-              {teamName}{seasonYear ? ` — ${seasonYear}` : ''} — {tournaments.length} tournaments
-            </Text>
-            <Text className="text-xs font-semibold text-stone uppercase tracking-wider mt-4">
-              Tournaments
-            </Text>
           </View>
         }
         ListFooterComponent={
@@ -140,8 +130,8 @@ export default function SeasonScreen() {
               <HubSettingsRow
                 icon="calendar"
                 iconColor="#6A9E8A"
-                title="Tournament Schedule Import"
-                subtitle="Import from coach emails, copy/paste, or direct sync"
+                title="Add Tournaments & Travel"
+                subtitle="Paste schedules, hotel/flight confirmations, or auto-import"
                 onPress={() => router.push('/settings/schedule-import')}
               />
 

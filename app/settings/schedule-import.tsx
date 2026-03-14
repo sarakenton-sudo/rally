@@ -19,19 +19,14 @@ export default function ScheduleImportScreen() {
           <Ionicons name="close" size={24} color={ic.muted} />
         </Pressable>
         <Text className="text-lg font-bold text-bark dark:text-cream">
-          Schedule Import
+          Add to Season
         </Text>
         <View style={{ width: 32 }} />
       </View>
 
       <ScrollView className="flex-1 px-4 pt-4" keyboardShouldPersistTaps="handled">
-        {/* Info banner */}
-        <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 mb-6 flex-row items-start">
-          <Ionicons name="information-circle" size={20} color="#3B82B0" />
-          <Text className="text-xs text-rally-700 dark:text-rally-300 ml-3 flex-1">
-            Choose how you'd like to import your tournament schedule. Practices are excluded — only tournaments are imported.
-          </Text>
-        </View>
+        {/* Section: Tournament Schedule */}
+        <Text className="text-xs font-semibold text-stone uppercase tracking-wider mb-3">Tournament Schedule</Text>
 
         {/* Card A1 — LeagueApps (Coming Soon) */}
         <Pressable
@@ -150,6 +145,53 @@ export default function ScheduleImportScreen() {
             </View>
           )}
         </View>
+
+        {/* Section: Travel Details */}
+        <Text className="text-xs font-semibold text-stone uppercase tracking-wider mt-6 mb-3">Travel Details</Text>
+
+        {/* Card D — Paste Travel */}
+        <Pressable
+          className="bg-warm-white dark:bg-bark-light rounded-xl p-5 mb-3 border border-parchment dark:border-rally-900 active:opacity-80"
+          onPress={() => router.push('/import/paste-travel')}
+        >
+          <View className="flex-row items-center mb-2">
+            <View
+              className="w-10 h-10 rounded-full items-center justify-center mr-3"
+              style={{ backgroundColor: '#7c3aed15' }}
+            >
+              <Ionicons name="sparkles" size={20} color="#7c3aed" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-base font-semibold text-bark dark:text-cream">Paste Hotel / Flight</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={ic.subtle} />
+          </View>
+          <Text className="text-sm text-stone ml-13">
+            Paste a hotel or flight confirmation email. AI extracts booking details and matches to tournaments.
+          </Text>
+        </Pressable>
+
+        {/* Card E — Gmail Auto-Import */}
+        <Pressable
+          className="bg-warm-white dark:bg-bark-light rounded-xl p-5 mb-3 border border-parchment dark:border-rally-900 active:opacity-80"
+          onPress={() => router.push('/settings/email-connect')}
+        >
+          <View className="flex-row items-center mb-2">
+            <View
+              className="w-10 h-10 rounded-full items-center justify-center mr-3"
+              style={{ backgroundColor: '#3B82B015' }}
+            >
+              <Ionicons name="mail" size={20} color="#3B82B0" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-base font-semibold text-bark dark:text-cream">Gmail Auto-Import</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={ic.subtle} />
+          </View>
+          <Text className="text-sm text-stone ml-13">
+            Connect Gmail to automatically detect hotel and flight confirmations and add them to your season.
+          </Text>
+        </Pressable>
 
         <View className="h-8" />
       </ScrollView>
