@@ -54,49 +54,20 @@ export default function AddAthleteScreen() {
     setSaving(true);
     console.log('[add-athlete] Starting create for:', firstName.trim(), 'user:', user.id);
     try {
-      // Create athlete
-      const { data: athlete, error: athleteErr } = await supabase
-        .from('athletes')
-        .insert({
-          first_name: firstName.trim(),
-          last_name: lastName.trim() || null,
-          can_edit: false,
-        })
-        .select()
-        .single();
+      // Use RPC to create athlete + link + season in one call (avoids RLS chicken-and-egg)
+      const { data: result, error: rpcErr } = await supabase.rpc('create_athlete_with_season', {
+        p_first_name: firstName.trim(),
+        p_last_name: lastName.trim() || null,
+        p_team_name: teamName.trim(),
+        p_club_name: clubName.trim() || null,
+        p_season_year: seasonYear.trim(),
+      });
 
-      console.log('[add-athlete] Athlete result:', athlete, 'error:', athleteErr);
-      if (athleteErr) throw athleteErr;
+      console.log('[add-athlete] RPC result:', result, 'error:', rpcErr);
+      if (rpcErr) throw rpcErr;
 
-      // Link admin to athlete
-      const { error: linkErr } = await supabase
-        .from('admin_athletes')
-        .insert({
-          admin_id: user.id,
-          athlete_id: athlete.id,
-          permission: 'manage',
-          is_primary: true,
-        });
-
-      console.log('[add-athlete] Link result, error:', linkErr);
-      if (linkErr) throw linkErr;
-
-      // Create first season for this athlete
-      const { data: season, error: seasonErr } = await supabase
-        .from('seasons')
-        .insert({
-          athlete_id: athlete.id,
-          team_name: teamName.trim(),
-          club_name: clubName.trim() || null,
-          season_year: seasonYear.trim(),
-          sport: 'volleyball',
-          is_active: true,
-        })
-        .select()
-        .single();
-
-      console.log('[add-athlete] Season result:', season, 'error:', seasonErr);
-      if (seasonErr) throw seasonErr;
+      const athlete = { id: result.athlete_id };
+      const season = { id: result.season_id };
 
       // Switch to the new season
       setActiveSeasonId(season.id);
