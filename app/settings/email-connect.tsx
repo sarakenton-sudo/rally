@@ -13,7 +13,7 @@ export default function EmailConnectScreen() {
   const adminConfig = useSeasonStore((s) => s.adminConfig);
   const [copied, setCopied] = useState(false);
 
-  const forwardAddress = adminConfig?.rally_forward_address || 'plans@rally.app';
+  const forwardAddress = adminConfig?.rally_forward_address || 'plans@rally-hub.com';
 
   const handleCopy = async () => {
     if (Platform.OS === 'web') {

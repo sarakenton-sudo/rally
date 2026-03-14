@@ -283,7 +283,7 @@ export default function OnboardingScreen() {
           id: result.config_id ?? user.id,
           user_id: user.id,
           club_email_domain: null,
-          rally_forward_address: 'plans@rally.app',
+          rally_forward_address: 'plans@rally-hub.com',
           trusted_sender_emails: trustedEmails,
           vip_sender_emails: [],
           notification_preferences: {
@@ -353,7 +353,7 @@ export default function OnboardingScreen() {
       const mockSeasonId = 'season-dev-001';
       const mockAthleteId = 'athlete-dev-001';
       store.setAdminConfig({
-        id: 'onboarding-dev', user_id: 'dev', club_email_domain: null, rally_forward_address: 'plans@rally.app',
+        id: 'onboarding-dev', user_id: 'dev', club_email_domain: null, rally_forward_address: 'plans@rally-hub.com',
         trusted_sender_emails: trustedEmails, vip_sender_emails: [], notification_preferences: {
           tournament_reminders: true, cancellation_deadlines: true, email_arrivals: true, rsvp_responses: true, schedule_changes: true,
         }, ical_feed_token: '', youtube_channel_id: null, default_streaming_platform: null,

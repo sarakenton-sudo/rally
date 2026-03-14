@@ -59,7 +59,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           id: 'tc-mock-001',
           user_id: '00000000-0000-0000-0000-000000000001',
           club_email_domain: 'austinjuniors.com',
-          rally_forward_address: 'plans@rallyhub.com',
+          rally_forward_address: 'plans@rally-hub.com',
           trusted_sender_emails: [],
           vip_sender_emails: [],
           notification_preferences: {

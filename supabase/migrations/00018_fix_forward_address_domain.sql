@@ -1,60 +1,16 @@
--- Guests are now admin-scoped (tied to the parent user, not a specific athlete).
--- They can be invited to any athlete's tournament via tournament_guests.
+-- Update default forward address domain to rally-hub.com
+ALTER TABLE admin_config ALTER COLUMN rally_forward_address SET DEFAULT 'plans@rally-hub.com';
 
--- 1. Add user_id column back (populated from admin_athletes link)
-ALTER TABLE guests ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
-
--- 2. Backfill user_id from athlete → admin_athletes (try primary first, then any)
-UPDATE guests g
-SET user_id = aa.admin_id
-FROM admin_athletes aa
-WHERE aa.athlete_id = g.athlete_id
-  AND aa.is_primary = true
-  AND g.user_id IS NULL;
-
-UPDATE guests g
-SET user_id = (
-    SELECT aa.admin_id FROM admin_athletes aa
-    WHERE aa.athlete_id = g.athlete_id
-    LIMIT 1
+-- Update any existing records still using old domains
+UPDATE admin_config
+SET rally_forward_address = REPLACE(
+    REPLACE(rally_forward_address, '@plans.rally.app', '@plans.rally-hub.com'),
+    '@rallyhub.com', '@rally-hub.com'
 )
-WHERE g.user_id IS NULL;
+WHERE rally_forward_address LIKE '%@plans.rally.app'
+   OR rally_forward_address LIKE '%@rallyhub.com';
 
--- 2b. Delete orphaned guests that have no admin link
-DELETE FROM guests WHERE user_id IS NULL;
-
--- 3. Make user_id NOT NULL now that it's populated
-ALTER TABLE guests ALTER COLUMN user_id SET NOT NULL;
-
--- 4. Make athlete_id nullable (no longer the ownership key)
-ALTER TABLE guests ALTER COLUMN athlete_id DROP NOT NULL;
-
--- 5. Create index on user_id for efficient lookups
-CREATE INDEX IF NOT EXISTS idx_guests_user_id ON guests(user_id);
-
--- 6. Drop old RLS policies and create new user_id-based ones
-DROP POLICY IF EXISTS "Users read accessible guests" ON guests;
-DROP POLICY IF EXISTS "Users insert guests" ON guests;
-DROP POLICY IF EXISTS "Users update guests" ON guests;
-DROP POLICY IF EXISTS "Admins delete guests" ON guests;
-
-CREATE POLICY "Users read own guests"
-    ON guests FOR SELECT
-    USING (auth.uid() = user_id);
-
-CREATE POLICY "Users insert own guests"
-    ON guests FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users update own guests"
-    ON guests FOR UPDATE
-    USING (auth.uid() = user_id);
-
-CREATE POLICY "Users delete own guests"
-    ON guests FOR DELETE
-    USING (auth.uid() = user_id);
-
--- 7. Update setup_onboarding to use user_id for guests
+-- Re-create setup_onboarding with corrected forward address domain
 CREATE OR REPLACE FUNCTION setup_onboarding(
     p_athlete_name TEXT,
     p_team_name TEXT,
@@ -199,7 +155,7 @@ BEGIN
         END LOOP;
     END IF;
 
-    -- 8. Guests (now user_id scoped, not athlete_id)
+    -- 8. Guests (user_id scoped, not athlete_id)
     v_guests_arr := COALESCE(p_guests, '[]'::jsonb);
     IF jsonb_array_length(v_guests_arr) > 0 THEN
         FOR v_guest IN SELECT * FROM jsonb_array_elements(v_guests_arr)
