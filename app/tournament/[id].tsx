@@ -175,7 +175,21 @@ export default function TournamentDetailScreen() {
             const hasVenue = tournament.venues.length > 0 && (tournament.venues[0]?.label || tournament.venues[0]?.address);
             return (
               <>
-                <SectionHeader icon="location" title="Venue" iconColor={hasVenue ? '#6A9E8A' : ic.muted} />
+                <View className="flex-row items-center justify-between mt-6 mb-3">
+                  <View className="flex-row items-center">
+                    <Ionicons name="location" size={18} color={hasVenue ? '#6A9E8A' : ic.muted} />
+                    <Text className="text-sm font-semibold text-stone dark:text-parchment ml-2 uppercase tracking-wider">
+                      Venue
+                    </Text>
+                  </View>
+                  <Pressable
+                    className="flex-row items-center active:opacity-70"
+                    onPress={() => router.push({ pathname: '/tournament/edit', params: { editId: tournament.id } })}
+                  >
+                    <Ionicons name="create-outline" size={16} color="#3B82B0" />
+                    <Text className="text-xs font-semibold text-rally-600 ml-1">Edit</Text>
+                  </Pressable>
+                </View>
                 {hasVenue ? (
                   <>
                     {tournament.venues.map((venue, i) => (
@@ -211,11 +225,15 @@ export default function TournamentDetailScreen() {
                     )}
                   </>
                 ) : (
-                  <View className="bg-cream dark:bg-bark-light/50 rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900">
-                    <Text className="text-sm text-stone text-center">
-                      No venue set yet. Will appear when extracted from emails.
-                    </Text>
-                  </View>
+                  <Pressable
+                    className="bg-cream dark:bg-bark-light/50 rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900 active:opacity-70"
+                    onPress={() => router.push({ pathname: '/tournament/edit', params: { editId: tournament.id } })}
+                  >
+                    <View className="flex-row items-center justify-center">
+                      <Ionicons name="add-circle-outline" size={18} color="#3B82B0" />
+                      <Text className="text-sm text-rally-600 font-semibold ml-2">Add Venue</Text>
+                    </View>
+                  </Pressable>
                 )}
               </>
             );
@@ -226,7 +244,21 @@ export default function TournamentDetailScreen() {
             const hasScheduleData = !!(tournament.schedule_link || tournament.aes_tournament_id || tournament.schedule_available_date || tournament.ticket_sales_date);
             return (
               <>
-                <SectionHeader icon="list" title="Schedule" iconColor={hasScheduleData ? '#3B82B0' : ic.muted} />
+                <View className="flex-row items-center justify-between mt-6 mb-3">
+                  <View className="flex-row items-center">
+                    <Ionicons name="list" size={18} color={hasScheduleData ? '#3B82B0' : ic.muted} />
+                    <Text className="text-sm font-semibold text-stone dark:text-parchment ml-2 uppercase tracking-wider">
+                      Schedule
+                    </Text>
+                  </View>
+                  <Pressable
+                    className="flex-row items-center active:opacity-70"
+                    onPress={() => router.push({ pathname: '/tournament/edit', params: { editId: tournament.id } })}
+                  >
+                    <Ionicons name="create-outline" size={16} color="#3B82B0" />
+                    <Text className="text-xs font-semibold text-rally-600 ml-1">Edit</Text>
+                  </Pressable>
+                </View>
                 <View className={`rounded-xl p-4 border overflow-hidden ${
                   hasScheduleData
                     ? 'bg-warm-white dark:bg-bark-light border-parchment dark:border-rally-900'
@@ -294,9 +326,15 @@ export default function TournamentDetailScreen() {
 
                   {/* Dormant state */}
                   {!hasScheduleData && (
-                    <Text className="text-sm text-stone text-center">
-                      No schedule info yet. Link or dates will appear when extracted from emails.
-                    </Text>
+                    <Pressable
+                      className="active:opacity-70"
+                      onPress={() => router.push({ pathname: '/tournament/edit', params: { editId: tournament.id } })}
+                    >
+                      <View className="flex-row items-center justify-center">
+                        <Ionicons name="add-circle-outline" size={18} color="#3B82B0" />
+                        <Text className="text-sm text-rally-600 font-semibold ml-2">Add Schedule Link</Text>
+                      </View>
+                    </Pressable>
                   )}
                 </View>
               </>
