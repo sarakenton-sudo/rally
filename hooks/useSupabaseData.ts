@@ -254,6 +254,10 @@ export async function deleteTournament(id: string) {
   return supabase.from('tournaments').delete().eq('id', id);
 }
 
+export async function deleteSeason(id: string) {
+  return supabase.from('seasons').delete().eq('id', id);
+}
+
 export async function updateFlightBooking(id: string, updates: Partial<FlightBooking>) {
   const { data, error } = await (supabase
     .from('flight_bookings') as any)

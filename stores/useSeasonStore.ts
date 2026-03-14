@@ -40,6 +40,7 @@ interface SeasonState {
   updateForwardedEmail: (id: string, updates: Partial<ForwardedEmail>) => void;
   setAthletes: (athletes: Athlete[]) => void;
   setSeasons: (seasons: Season[]) => void;
+  removeSeason: (id: string) => void;
   setAdminAthletes: (adminAthletes: AdminAthlete[]) => void;
   setActiveSeasonId: (id: string | null) => void;
   setLoading: (loading: boolean) => void;
@@ -118,6 +119,8 @@ export const useSeasonStore = create<SeasonState>((set) => ({
     })),
   setAthletes: (athletes) => set({ athletes }),
   setSeasons: (seasons) => set({ seasons }),
+  removeSeason: (id) =>
+    set((state) => ({ seasons: state.seasons.filter((s) => s.id !== id) })),
   setAdminAthletes: (adminAthletes) => set({ adminAthletes }),
   setActiveSeasonId: (activeSeasonId) => set({ activeSeasonId }),
   setLoading: (isLoading) => set({ isLoading }),

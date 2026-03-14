@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, RefreshControl, Pressable } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, Pressable, Alert, Platform } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,7 +6,8 @@ import HubSectionHeader from '@/components/HubSectionHeader';
 import AthleteCredentialCard from '@/components/AthleteCredentialCard';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
-import { updateAdminConfig } from '@/hooks/useSupabaseData';
+import { updateAdminConfig, deleteSeason as deleteSeasonDB } from '@/hooks/useSupabaseData';
+import { useAuth } from '@/providers/AuthProvider';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
 
@@ -21,8 +22,11 @@ export default function AthleteProfileScreen() {
   const setActiveSeasonId = useSeasonStore((s) => s.setActiveSeasonId);
   const adminConfig = useSeasonStore((s) => s.adminConfig);
   const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
+  const removeSeason = useSeasonStore((s) => s.removeSeason);
   const ic = useIconColors();
   const { refresh, isRefreshing } = useDataRefresh();
+  const { user } = useAuth();
+  const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
   const athlete = athletes.find((a) => a.id === id);
   const athleteSeasons = seasons
@@ -62,6 +66,30 @@ export default function AthleteProfileScreen() {
       await updateAdminConfig(adminConfig.id, { active_season_id: seasonId });
     }
     router.push('/(tabs)/season');
+  };
+
+  const handleDeleteSeason = (seasonId: string, seasonName: string) => {
+    const doDelete = async () => {
+      if (isSupabaseConfigured && user) {
+        await deleteSeasonDB(seasonId);
+      }
+      removeSeason(seasonId);
+      if (activeSeasonId === seasonId) {
+        const remaining = seasons.filter((s) => s.id !== seasonId);
+        setActiveSeasonId(remaining.length > 0 ? remaining[0].id : null);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Delete "${seasonName}"? All tournaments in this season will remain but the season will be removed.`)) {
+        doDelete();
+      }
+    } else {
+      Alert.alert('Delete Season', `Delete "${seasonName}"? All tournaments in this season will remain but the season will be removed.`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: doDelete },
+      ]);
+    }
   };
 
   const handleEditLink = (originalIndex: number, label: string) => {
@@ -139,7 +167,18 @@ export default function AthleteProfileScreen() {
                     {season.team_name}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
+                <View className="flex-row items-center">
+                  <Pressable
+                    className="p-1.5 mr-1 active:opacity-60"
+                    onPress={(e) => {
+                      e.stopPropagation?.();
+                      handleDeleteSeason(season.id, season.team_name);
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={14} color="#ef4444" />
+                  </Pressable>
+                  <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
+                </View>
               </View>
               <Text className="text-xs text-stone dark:text-parchment">
                 {season.club_name ? `${season.club_name} · ` : ''}{season.season_year}

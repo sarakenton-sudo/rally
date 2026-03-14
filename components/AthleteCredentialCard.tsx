@@ -7,6 +7,7 @@ import { tapLight } from '@/lib/haptics';
 // App deep link schemes (iOS/Android) — tries app first, falls back to web
 const APP_SCHEMES: Record<string, string> = {
   instagram: 'instagram://',
+  hudl: 'hudl://',
 };
 
 // Services that only store a membership/ID number (no URL, no password)
@@ -14,9 +15,9 @@ const MEMBERSHIP_ONLY = ['usa volleyball', 'university athlete'];
 
 // Brand colors for known services
 const BRAND_STYLES: Record<string, { bg: string; color: string; icon: keyof typeof Ionicons.glyphMap; defaultUrl?: string }> = {
-  sportsrecruits: { bg: '#1B4D7E', color: '#FFFFFF', icon: 'school' },
+  sportsrecruits: { bg: '#1B4D7E', color: '#FFFFFF', icon: 'school', defaultUrl: 'https://my.sportsrecruits.com/login' },
   'university athlete': { bg: '#E8520E', color: '#FFFFFF', icon: 'trophy' },
-  hudl: { bg: '#FF6600', color: '#FFFFFF', icon: 'videocam' },
+  hudl: { bg: '#FF6600', color: '#FFFFFF', icon: 'videocam', defaultUrl: 'https://identity.hudl.com/u/login/identifier' },
   instagram: { bg: '#E1306C', color: '#FFFFFF', icon: 'logo-instagram', defaultUrl: 'https://www.instagram.com' },
   'usa volleyball': { bg: '#dc2626', color: '#FFFFFF', icon: 'shield-checkmark' },
 };
@@ -73,7 +74,7 @@ export default function AthleteCredentialCard({ label, url, username, password, 
     await Linking.openURL(fullUrl);
   };
 
-  const handleTileTap = () => {
+  const handleIconTap = () => {
     if (isMembershipOnly && username) {
       handleCopy(username, 'username');
       return;
@@ -86,8 +87,8 @@ export default function AthleteCredentialCard({ label, url, username, password, 
   };
 
   return (
-    <Pressable
-      className="bg-warm-white dark:bg-bark-light rounded-xl border border-parchment dark:border-rally-900 overflow-hidden active:opacity-90"
+    <View
+      className="bg-warm-white dark:bg-bark-light rounded-xl border border-parchment dark:border-rally-900 overflow-hidden"
       style={{
         shadowColor: '#1E3A5F',
         shadowOffset: { width: 0, height: 1 },
@@ -95,10 +96,9 @@ export default function AthleteCredentialCard({ label, url, username, password, 
         shadowRadius: 8,
         elevation: 2,
       }}
-      onPress={handleTileTap}
     >
-      {/* Brand icon + status dot */}
-      <View className="items-center pt-4 pb-3">
+      {/* Brand icon + status dot — tapping opens the service URL */}
+      <Pressable className="items-center pt-4 pb-3 active:opacity-80" onPress={handleIconTap}>
         <View className="relative">
           <View
             className="w-12 h-12 rounded-2xl items-center justify-center"
@@ -115,7 +115,13 @@ export default function AthleteCredentialCard({ label, url, username, password, 
         <Text className="text-xs font-bold text-bark dark:text-cream mt-2 text-center" numberOfLines={1}>
           {label}
         </Text>
-      </View>
+        {hasLink && (
+          <View className="flex-row items-center mt-1">
+            <Ionicons name="open-outline" size={10} color="#8FA8BF" />
+            <Text className="text-[9px] text-stone ml-0.5">Open</Text>
+          </View>
+        )}
+      </Pressable>
 
       {/* Bottom action bar */}
       {isLoaded ? (
@@ -178,6 +184,6 @@ export default function AthleteCredentialCard({ label, url, username, password, 
           <Text className="text-[11px] text-rally-600 font-semibold text-center">Add Credentials</Text>
         </Pressable>
       )}
-    </Pressable>
+    </View>
   );
 }
