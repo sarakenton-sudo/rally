@@ -14,7 +14,7 @@ const APP_SCHEMES: Record<string, string> = {
 // Brand colors for known services
 const BRAND_STYLES: Record<string, { bg: string; color: string; icon: keyof typeof Ionicons.glyphMap; defaultUrl?: string }> = {
   sportsrecruits: { bg: '#1B4D7E', color: '#FFFFFF', icon: 'school', defaultUrl: 'https://my.sportsrecruits.com/login' },
-  'university athlete': { bg: '#E8520E', color: '#FFFFFF', icon: 'trophy', defaultUrl: 'https://www.universityathlete.com/login' },
+  'university athlete': { bg: '#E8520E', color: '#FFFFFF', icon: 'trophy', defaultUrl: 'https://auth.universityathlete.com/realms/ua/protocol/openid-connect/auth?scope=openid&response_type=code&approval_prompt=auto&redirect_uri=https%3A%2F%2Funiversityathlete.com%2Fauth%2Fkc-plugin-callback&client_id=ua_2fa_login' },
   hudl: { bg: '#FF6600', color: '#FFFFFF', icon: 'videocam', defaultUrl: 'https://identity.hudl.com/u/login' },
   instagram: { bg: '#E1306C', color: '#FFFFFF', icon: 'logo-instagram', defaultUrl: 'https://www.instagram.com' },
   usav: { bg: '#dc2626', color: '#FFFFFF', icon: 'shield-checkmark' },
