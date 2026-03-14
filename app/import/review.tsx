@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +30,8 @@ export default function PasteReviewScreen() {
   const [aesIds, setAesIds] = useState<Record<number, string>>({});
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const addTournament = useSeasonStore((s) => s.addTournament);
   const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
@@ -47,21 +49,28 @@ export default function PasteReviewScreen() {
     setItems((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
+  const showError = (message: string) => {
+    setErrorMsg(message);
+    if (Platform.OS !== 'web') Alert.alert('Error', message);
+  };
+
   const handleSaveAll = async () => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
     if (items.length === 0) {
-      Alert.alert('No tournaments', 'Add at least one tournament to save.');
+      showError('Add at least one tournament to save.');
+      return;
+    }
+
+    if (!activeSeasonId) {
+      showError('No active season. Please select a season before importing.');
       return;
     }
 
     setIsSaving(true);
 
     try {
-      if (!activeSeasonId) {
-        Alert.alert('No active season', 'Please select a season before importing tournaments.');
-        setIsSaving(false);
-        return;
-      }
-
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const tournamentData = {
@@ -93,7 +102,7 @@ export default function PasteReviewScreen() {
         if (isSupabaseConfigured && user) {
           const { data, error } = await insertTournament(tournamentData);
           if (error) {
-            Alert.alert('Save failed', `Failed to save "${item.name}": ${error.message}`);
+            showError(`Failed to save "${item.name}": ${error.message}`);
             setIsSaving(false);
             return;
           }
@@ -109,13 +118,17 @@ export default function PasteReviewScreen() {
       }
 
       notifySuccess();
-      Alert.alert(
-        'Imported!',
-        `${items.length} tournament${items.length !== 1 ? 's' : ''} added to your season.`,
-        [{ text: 'OK', onPress: () => router.dismissAll() }]
-      );
+      const msg = `${items.length} tournament${items.length !== 1 ? 's' : ''} added to your season.`;
+      if (Platform.OS === 'web') {
+        setSuccessMsg(msg);
+        setTimeout(() => {
+          try { router.dismissAll(); } catch { router.replace('/(tabs)/season'); }
+        }, 1500);
+      } else {
+        Alert.alert('Imported!', msg, [{ text: 'OK', onPress: () => router.dismissAll() }]);
+      }
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to save tournaments.');
+      showError(err.message || 'Failed to save tournaments.');
     } finally {
       setIsSaving(false);
     }
@@ -145,6 +158,22 @@ export default function PasteReviewScreen() {
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        {/* Error banner */}
+        {errorMsg && (
+          <View className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 mb-3 flex-row items-start">
+            <Ionicons name="alert-circle" size={18} color="#dc2626" />
+            <Text className="text-sm text-red-700 dark:text-red-300 ml-2 flex-1">{errorMsg}</Text>
+          </View>
+        )}
+
+        {/* Success banner */}
+        {successMsg && (
+          <View className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 mb-3 flex-row items-start">
+            <Ionicons name="checkmark-circle" size={18} color="#16a34a" />
+            <Text className="text-sm text-green-700 dark:text-green-300 ml-2 flex-1">{successMsg}</Text>
+          </View>
+        )}
+
         {/* Info banner */}
         <View className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 mb-4 flex-row items-start">
           <Ionicons name="checkmark-circle" size={18} color="#16a34a" />
