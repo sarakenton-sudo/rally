@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Image, Pressable, Platform, Linking } from 'react-native';
-import { Tabs, router } from 'expo-router';
+import { Tabs, router, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import SeasonSwitcher from '@/components/SeasonSwitcher';
@@ -9,6 +9,7 @@ const logoWhite = require('@/assets/images/rallyhub_lockup_white.png');
 
 function GlobalHeader() {
   const insets = useSafeAreaInsets();
+  const pathname = usePathname();
 
   return (
     <View
@@ -59,8 +60,8 @@ function GlobalHeader() {
         </Pressable>
       </View>
 
-      {/* Season switcher — only visible when multiple athletes/seasons */}
-      <SeasonSwitcher />
+      {/* Season switcher — hidden on Athlete tab (has its own season management) */}
+      {pathname !== '/athlete' && <SeasonSwitcher />}
 
       {/* Bottom border */}
       <View className="h-px" style={{ backgroundColor: 'rgba(255,255,255,0.07)' }} />
