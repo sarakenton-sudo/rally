@@ -32,6 +32,7 @@ export default function PasteReviewScreen() {
   const [isSaving, setIsSaving] = useState(false);
 
   const addTournament = useSeasonStore((s) => s.addTournament);
+  const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
   const { user } = useAuth();
 
   const updateField = useCallback((index: number, field: keyof ExtractedTournament, value: string) => {
@@ -55,10 +56,16 @@ export default function PasteReviewScreen() {
     setIsSaving(true);
 
     try {
+      if (!activeSeasonId) {
+        Alert.alert('No active season', 'Please select a season before importing tournaments.');
+        setIsSaving(false);
+        return;
+      }
+
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const tournamentData = {
-          user_id: user?.id ?? '00000000-0000-0000-0000-000000000001',
+          season_id: activeSeasonId,
           name: item.name,
           start_date: item.start_date,
           end_date: item.end_date,
