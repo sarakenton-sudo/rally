@@ -70,12 +70,27 @@ function stripHtml(html: string): string {
   return html
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    // Preserve links: convert <a href="url">text</a> → text (url)
+    .replace(/<a[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_, url, text) => {
+      const cleanText = text.replace(/<[^>]+>/g, '').trim();
+      // Skip tracking/unsubscribe links
+      if (url.includes('unsubscribe') || url.includes('optout') || url.includes('manage-preferences')) return cleanText;
+      // Skip if URL is same as text (redundant)
+      if (cleanText === url) return `🔗 ${url}`;
+      return cleanText ? `${cleanText} (${url})` : `🔗 ${url}`;
+    })
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n\n')
     .replace(/<\/div>/gi, '\n')
     .replace(/<\/tr>/gi, '\n')
+    .replace(/<\/td>/gi, ' | ')
+    .replace(/<\/th>/gi, ' | ')
     .replace(/<\/li>/gi, '\n')
     .replace(/<li[^>]*>/gi, '• ')
+    .replace(/<hr[^>]*>/gi, '\n---\n')
+    .replace(/<h[1-6][^>]*>/gi, '\n')
+    .replace(/<\/h[1-6]>/gi, '\n')
     .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
@@ -90,12 +105,15 @@ function stripHtml(html: string): string {
     .replace(/&mdash;/g, '—')
     .replace(/&ndash;/g, '–')
     .replace(/&#\d+;/g, '')
+    // Clean up whitespace: collapse runs of spaces, limit newlines
+    .replace(/[ \t]+/g, ' ')
+    .replace(/ *\n */g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
 function cleanEmailBody(text: string): string {
-  // If it looks like HTML, strip tags
+  // If it looks like HTML, strip tags but preserve links
   if (/<[a-z][\s\S]*>/i.test(text)) {
     return stripHtml(text);
   }
@@ -731,13 +749,13 @@ export default function EmailDetailScreen() {
         )}
 
         <Pressable
-          className={`bg-warm-white dark:bg-bark-light rounded-xl py-3.5 items-center flex-row justify-center border border-parchment dark:border-rally-900 ${isReExtracting ? 'opacity-60' : 'active:opacity-80'}`}
+          className={`rounded-xl py-3.5 items-center flex-row justify-center ${hasExtractedData ? 'bg-warm-white dark:bg-bark-light border border-parchment dark:border-rally-900' : 'bg-rally-600'} ${isReExtracting ? 'opacity-60' : 'active:opacity-80'}`}
           onPress={handleReExtract}
           disabled={isReExtracting}
         >
-          <Ionicons name="sparkles" size={18} color={ic.muted} />
-          <Text className="text-sm font-semibold text-stone dark:text-parchment ml-2">
-            {isReExtracting ? 'Re-extracting...' : 'Re-extract with AI'}
+          <Ionicons name="sparkles" size={18} color={hasExtractedData ? ic.muted : '#FEFEFE'} />
+          <Text className={`text-sm font-semibold ml-2 ${hasExtractedData ? 'text-stone dark:text-parchment' : 'text-cream'}`}>
+            {isReExtracting ? 'Extracting...' : hasExtractedData ? 'Re-extract with AI' : 'Extract Details'}
           </Text>
         </Pressable>
       </ScrollView>
