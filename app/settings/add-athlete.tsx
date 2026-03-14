@@ -142,6 +142,18 @@ export default function AddAthleteScreen() {
             After creating, you can add tournaments and travel details from the main dashboard.
           </Text>
 
+          <Pressable
+            onPress={handleSave}
+            disabled={saving}
+            className={`mt-6 py-3.5 rounded-xl items-center ${saving ? 'bg-parchment' : 'bg-rally-600 active:opacity-80'}`}
+          >
+            {saving ? (
+              <ActivityIndicator size="small" color="#FEFEFE" />
+            ) : (
+              <Text className="text-base font-bold text-cream">Create Athlete</Text>
+            )}
+          </Pressable>
+
           <View className="h-8" />
         </ScrollView>
       </KeyboardAvoidingView>
