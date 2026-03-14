@@ -26,17 +26,30 @@ export default function AddAthleteScreen() {
   const [clubName, setClubName] = useState('');
   const [seasonYear, setSeasonYear] = useState('2026-2027');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const showError = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      setError(message);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
 
   const handleSave = async () => {
+    setError(null);
     if (!firstName.trim()) {
-      Alert.alert('Missing field', 'First name is required.');
+      showError('Missing field', 'First name is required.');
       return;
     }
     if (!teamName.trim()) {
-      Alert.alert('Missing field', 'Team name is required.');
+      showError('Missing field', 'Team name is required.');
       return;
     }
-    if (!user) return;
+    if (!user) {
+      showError('Not signed in', 'Please sign in first.');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -93,7 +106,7 @@ export default function AddAthleteScreen() {
       await refresh();
       router.back();
     } catch (err: any) {
-      Alert.alert('Error', err.message ?? 'Failed to create athlete');
+      showError('Error', err.message ?? 'Failed to create athlete');
     } finally {
       setSaving(false);
     }
@@ -137,6 +150,13 @@ export default function AddAthleteScreen() {
           <FormField label="Team Name" value={teamName} onChangeText={setTeamName} placeholder="e.g. CEVA 12u" />
           <FormField label="Club Name" value={clubName} onChangeText={setClubName} placeholder="e.g. Central Texas VB" />
           <FormField label="Season Year" value={seasonYear} onChangeText={setSeasonYear} placeholder="e.g. 2026-2027" />
+
+          {error && (
+            <View className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 mt-4 flex-row items-start">
+              <Ionicons name="alert-circle" size={18} color="#dc2626" />
+              <Text className="text-sm text-red-700 dark:text-red-300 ml-2 flex-1">{error}</Text>
+            </View>
+          )}
 
           <Text className="text-xs text-stone mt-4 leading-5">
             After creating, you can add tournaments and travel details from the main dashboard.
