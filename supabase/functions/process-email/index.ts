@@ -127,7 +127,7 @@ async function processForUser(
       action_taken: action,
       extracted_data: extractedData,
       raw_storage_url: null,
-      source: 'forwarded',
+      source: 'forward',
     })
     .select()
     .single();

@@ -108,9 +108,19 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="athlete"
+        options={{
+          title: 'Athlete',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="guests"
         options={{
           title: 'Guests',
+          href: null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people" size={size} color={color} />
           ),
