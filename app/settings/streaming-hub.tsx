@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useAuth } from '@/providers/AuthProvider';
-import { updateAdminConfig } from '@/hooks/useSupabaseData';
+import { updateSeason } from '@/hooks/useSupabaseData';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 import type { StreamingPlatform } from '@/types/database';
@@ -19,17 +19,20 @@ const PLATFORMS: { label: string; value: StreamingPlatform }[] = [
 
 export default function StreamingHubScreen() {
   const ic = useIconColors();
-  const adminConfig = useSeasonStore((s) => s.adminConfig);
-  const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
+  const seasons = useSeasonStore((s) => s.seasons);
+  const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
+  const setSeasons = useSeasonStore((s) => s.setSeasons);
   const { user } = useAuth();
   const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
-  const [platform, setPlatform] = useState<StreamingPlatform | null>(adminConfig?.default_streaming_platform ?? null);
-  const [url, setUrl] = useState(adminConfig?.default_stream_url ?? '');
+  const activeSeason = seasons.find((s) => s.id === activeSeasonId);
+
+  const [platform, setPlatform] = useState<StreamingPlatform | null>(activeSeason?.default_streaming_platform ?? null);
+  const [url, setUrl] = useState(activeSeason?.default_stream_url ?? '');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!adminConfig) return;
+    if (!activeSeason) return;
     if (url.trim() && !url.trim().startsWith('http')) {
       Alert.alert('Invalid URL', 'Please enter a valid URL starting with http:// or https://');
       return;
@@ -43,13 +46,13 @@ export default function StreamingHubScreen() {
 
     try {
       if (isSupabaseConfigured && user) {
-        const { error } = await updateAdminConfig(adminConfig.id, updates);
+        const { error } = await updateSeason(activeSeason.id, updates);
         if (error) {
           Alert.alert('Save failed', error.message);
           return;
         }
       }
-      setAdminConfig({ ...adminConfig, ...updates });
+      setSeasons(seasons.map((s) => s.id === activeSeason.id ? { ...s, ...updates } : s));
       notifySuccess();
       router.back();
     } finally {
@@ -69,7 +72,7 @@ export default function StreamingHubScreen() {
             <Ionicons name="close" size={24} color={ic.muted} />
           </Pressable>
           <Text className="text-lg font-bold text-bark dark:text-cream">
-            Streaming Hub
+            Default Stream Channel
           </Text>
           <Pressable
             onPress={handleSave}
@@ -88,6 +91,14 @@ export default function StreamingHubScreen() {
               This link appears on tournament pages when no specific stream is added. Set your team's default YouTube channel or streaming platform.
             </Text>
           </View>
+
+          {activeSeason && (
+            <View className="bg-rally-50 dark:bg-rally-900/20 rounded-lg p-3 mb-4">
+              <Text className="text-xs text-rally-600 font-semibold">
+                Season: {activeSeason.team_name} · {activeSeason.season_year}
+              </Text>
+            </View>
+          )}
 
           {/* Platform picker */}
           <Text className="text-xs text-stone uppercase tracking-wider mb-2 ml-1">Platform</Text>

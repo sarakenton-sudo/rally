@@ -33,12 +33,20 @@ export default function TournamentCard({ tournament, hotelCount = 0, flightCount
   const hasHotel = hotelCount > 0;
   const hasFlight = flightCount > 0;
   const hasMultipleBookings = backupHotelCount > 0 || hotelCount > 1 || flightCount > 1;
-  // Compute display status: override with "partial" when only some travel is resolved
+  // Compute display status based on actual booking state for upcoming tournaments
   const hotelResolved = tournament.hotel_not_needed || hasHotel;
   const airResolved = tournament.air_not_needed || hasFlight;
-  const displayStatus = tournament.travel_required && (tournament.status === 'booked' || tournament.status === 'travel_needed')
-    ? (hotelResolved && airResolved ? 'booked' : hotelResolved || airResolved ? 'partial' : 'travel_needed')
-    : tournament.status;
+  const isPast = daysUntil(tournament.end_date) < 0;
+  let displayStatus: keyof typeof STATUS_CONFIG;
+  if (isPast) {
+    displayStatus = 'complete';
+  } else if (hotelResolved && airResolved) {
+    displayStatus = 'booked';
+  } else if (hotelResolved || airResolved) {
+    displayStatus = 'partial';
+  } else {
+    displayStatus = 'travel_needed';
+  }
   const status = STATUS_CONFIG[displayStatus];
   const days = daysUntil(tournament.start_date);
   const countdown = countdownText(tournament.start_date, tournament.end_date);

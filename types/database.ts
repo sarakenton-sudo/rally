@@ -30,6 +30,8 @@ export interface ExternalLink {
   icon_name: string;
   username: string | null;
   password: string | null;
+  scope?: 'admin' | 'athlete';
+  athlete_id?: string | null;
 }
 
 export interface UserProfile {
@@ -69,6 +71,8 @@ export interface Season {
   team_code: string | null;
   schedule_import_source: 'leagueapps' | 'teamsnap' | 'manual' | null;
   schedule_import_connected: boolean;
+  default_streaming_platform: StreamingPlatform | null;
+  default_stream_url: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -148,13 +152,14 @@ export interface FlightBooking {
 
 export interface Guest {
   id: string;
+  user_id: string;
   name: string;
   phone: string;
   email: string | null;
   relationship: string;
   notification_pref: NotificationPref;
   default_invited: boolean;
-  athlete_id: string;
+  athlete_id: string | null;
   created_at: string;
 }
 

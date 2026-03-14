@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import USAVProfileCard from '@/components/USAVProfileCard';
 import HubSectionHeader from '@/components/HubSectionHeader';
 import HubSettingsRow from '@/components/HubSettingsRow';
+import HubScopeDivider from '@/components/HubScopeDivider';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { useIconColors } from '@/lib/colors';
@@ -23,10 +24,21 @@ export default function HubScreen() {
   const { refresh, isRefreshing } = useDataRefresh();
   const externalLinks = adminConfig?.external_links ?? [];
 
-  const configuredLinks = externalLinks.filter((l) => l.url);
-  const unconfiguredLinks = externalLinks.filter((l) => !l.url);
+  // Split links by scope
+  const athleteLinks = externalLinks.filter((l) => {
+    if (l.scope === 'athlete') return true;
+    if (!l.scope) {
+      const lower = l.label.toLowerCase();
+      return ['sportsrecruits', 'university athlete', 'hudl'].some((k) => lower.includes(k));
+    }
+    return false;
+  });
+  const adminLinks = externalLinks.filter((l) => !athleteLinks.includes(l));
+  const configuredAdminLinks = adminLinks.filter((l) => l.url);
+  const unconfiguredAdminLinks = adminLinks.filter((l) => !l.url);
 
-  const streamPlatformLabel = adminConfig?.default_streaming_platform ?? 'Stream';
+  const streamPlatformLabel = activeSeason?.default_streaming_platform ?? 'Stream';
+  const hasMultipleAthletes = athletes.length > 1;
 
   return (
     <View className="flex-1 bg-cream dark:bg-bark">
@@ -43,8 +55,10 @@ export default function HubScreen() {
         </Text>
 
         {/* ============================================================ */}
-        {/* SECTION 0: ACCOUNT */}
+        {/* ZONE 1: ADMIN (universal — never changes with season) */}
         {/* ============================================================ */}
+
+        {/* Account */}
         <HubSectionHeader icon="person-circle" title="Account" iconColor={ic.muted} />
 
         <HubSettingsRow
@@ -55,80 +69,12 @@ export default function HubScreen() {
           onPress={() => router.push('/settings/account')}
         />
 
-        {/* ============================================================ */}
-        {/* SECTION 1: SETTINGS */}
-        {/* ============================================================ */}
+        {/* Travel Import */}
         <View className="mt-6">
-          <HubSectionHeader icon="settings" title="Settings" iconColor={ic.muted} />
+          <HubSectionHeader icon="airplane" title="Travel Import" iconColor={ic.muted} />
         </View>
 
-        {/* Team Details */}
-        {activeSeason && (
-          <Pressable
-            className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 mb-2 active:opacity-80"
-            style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
-            onPress={() => router.push('/settings/team-details')}
-          >
-            <View className="flex-row items-center justify-between mb-1">
-              <Text className="text-sm font-semibold text-bark dark:text-cream">{activeSeason.team_name}</Text>
-              <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
-            </View>
-            <Text className="text-xs text-stone dark:text-parchment">{activeSeason.season_year}</Text>
-            {activeAthlete?.first_name && (
-              <Text className="text-xs text-stone dark:text-parchment mt-0.5">{activeAthlete.first_name}</Text>
-            )}
-            {activeSeason.team_code && (
-              <Text className="text-xs text-stone dark:text-parchment mt-0.5">Code: {activeSeason.team_code}</Text>
-            )}
-          </Pressable>
-        )}
-
-        {/* Schedule Import */}
-        <HubSettingsRow
-          icon="calendar"
-          iconColor="#6A9E8A"
-          title="Tournament Schedule Import"
-          subtitle="Import from coach emails, copy/paste, or direct sync"
-          onPress={() => router.push('/settings/schedule-import')}
-        />
-
-        {/* Add Season */}
-        {activeSeason && (
-          <HubSettingsRow
-            icon="add-circle"
-            iconColor="#3B82B0"
-            title="Add New Season"
-            subtitle={`Add another season for ${activeAthlete?.first_name ?? 'your athlete'}`}
-            onPress={() => router.push({ pathname: '/settings/add-season', params: { athleteId: activeSeason.athlete_id } })}
-          />
-        )}
-
-        {/* Add Athlete */}
-        <HubSettingsRow
-          icon="person-add"
-          iconColor="#6A9E8A"
-          title="Add Another Athlete"
-          subtitle="Manage a second player with their own seasons"
-          onPress={() => router.push('/settings/add-athlete')}
-        />
-
-        {/* Notification Preferences */}
-        <HubSettingsRow
-          icon="notifications-outline"
-          iconColor="#3B82B0"
-          title="Notification Preferences"
-          subtitle="Manage push notification categories"
-          onPress={() => router.push('/settings/notifications')}
-        />
-
-        {/* ============================================================ */}
-        {/* SECTION 2: TRAVEL INFORMATION */}
-        {/* ============================================================ */}
-        <View className="mt-6">
-          <HubSectionHeader icon="airplane" title="Travel Information" iconColor={ic.muted} />
-        </View>
-
-        {/* 1. Email Forwarding */}
+        {/* Email Forwarding */}
         <HubSettingsRow
           icon="mail-open"
           iconColor="#3B82B0"
@@ -137,7 +83,7 @@ export default function HubScreen() {
           onPress={() => router.push('/settings/email-connect')}
         />
 
-        {/* 2. Copy / Paste + AI */}
+        {/* Copy / Paste + AI */}
         <HubSettingsRow
           icon="sparkles"
           iconColor="#7c3aed"
@@ -146,7 +92,7 @@ export default function HubScreen() {
           onPress={() => router.push('/import/paste-travel')}
         />
 
-        {/* 3. Forward Email */}
+        {/* Forward Email card */}
         <View
           className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 mb-2"
           style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
@@ -181,7 +127,7 @@ export default function HubScreen() {
           )}
         </View>
 
-        {/* 4. Manual Entry */}
+        {/* Manual Entry */}
         <HubSettingsRow
           icon="add-circle"
           iconColor="#6A9E8A"
@@ -190,7 +136,7 @@ export default function HubScreen() {
           onPress={() => router.push('/booking/add-hotel')}
         />
 
-        {/* 5. Email Inbox */}
+        {/* Email Inbox */}
         <HubSettingsRow
           icon="mail-unread"
           iconColor="#3B82B0"
@@ -200,30 +146,20 @@ export default function HubScreen() {
           onPress={() => router.push('/email/inbox')}
         />
 
-        {/* ============================================================ */}
-        {/* SECTION 3: VIP PUSH NOTIFICATIONS */}
-        {/* ============================================================ */}
+        {/* Notifications */}
         <View className="mt-6">
-          <View className="flex-row items-center mb-2">
-            <Ionicons name="notifications" size={16} color="#6A9E8A" />
-            <Text className="text-sm font-semibold text-stone dark:text-parchment ml-1.5 uppercase tracking-wider">
-              VIP Push Notifications
-            </Text>
-            <View className="bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full ml-2">
-              <Text className="text-xs font-semibold text-amber-700 dark:text-amber-300">Coming Soon</Text>
-            </View>
-          </View>
+          <HubSectionHeader icon="notifications" title="Notifications" iconColor={ic.muted} />
         </View>
 
-        {/* Guidance card */}
-        <View className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 mb-3 flex-row items-start opacity-60">
-          <Ionicons name="information-circle" size={20} color="#d97706" />
-          <Text className="text-xs text-amber-700 dark:text-amber-300 ml-3 flex-1">
-            We hate being the last to know about a stay-and-play booking block or a schedule change. Add your coach and club as VIP senders to get instant push alerts.
-          </Text>
-        </View>
+        <HubSettingsRow
+          icon="notifications-outline"
+          iconColor="#3B82B0"
+          title="Notification Preferences"
+          subtitle="Manage push notification categories"
+          onPress={() => router.push('/settings/notifications')}
+        />
 
-        {/* VIP Email Alerts — Coming Soon */}
+        {/* VIP Alerts — Coming Soon */}
         <View className="opacity-60">
           <HubSettingsRow
             icon="star"
@@ -236,70 +172,19 @@ export default function HubScreen() {
         </View>
 
         {/* ============================================================ */}
-        {/* SECTION 4: STREAMING HUB */}
+        {/* ZONE 2: ATHLETE scope */}
         {/* ============================================================ */}
-        <View className="mt-6">
-          <HubSectionHeader icon="videocam" title="Streaming Hub" iconColor="#dc2626" />
-        </View>
+        <HubScopeDivider
+          scope="Athlete"
+          label={activeAthlete?.first_name ?? 'Athlete'}
+          hidden={!hasMultipleAthletes}
+        />
 
-        {/* Guidance card */}
-        <View className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 mb-3 flex-row items-start">
-          <Ionicons name="information-circle" size={20} color="#dc2626" />
-          <Text className="text-xs text-red-700 dark:text-red-300 ml-3 flex-1">
-            Set a default channel so grandparents always have a place to watch, even when a specific tournament stream isn't added yet.
-          </Text>
-        </View>
-
-        {adminConfig?.default_stream_url ? (
-          <View
-            className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900"
-            style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
-          >
-            <View className="flex-row items-center justify-between mb-2">
-              <View className="flex-row items-center flex-1">
-                <Ionicons name="play-circle" size={24} color="#dc2626" />
-                <View className="ml-3 flex-1">
-                  <Text className="text-sm font-semibold text-bark dark:text-cream">{streamPlatformLabel}</Text>
-                  <Text className="text-xs text-stone mt-0.5" numberOfLines={1}>{adminConfig.default_stream_url}</Text>
-                </View>
-              </View>
-              <Pressable
-                onPress={() => router.push('/settings/streaming-hub')}
-                className="p-1 active:opacity-60"
-                hitSlop={8}
-              >
-                <Text className="text-xs font-semibold text-rally-600">Edit</Text>
-              </Pressable>
-            </View>
-            <Pressable
-              className="bg-red-600 rounded-lg py-2.5 items-center active:opacity-80 mt-1"
-              onPress={() => Linking.openURL(adminConfig.default_stream_url!)}
-            >
-              <Text className="text-sm font-semibold text-white">Watch Now</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <Pressable
-            className="bg-cream dark:bg-bark-light/50 rounded-xl p-5 mb-2 border border-dashed border-red-200 dark:border-red-800 items-center active:opacity-80"
-            onPress={() => router.push('/settings/streaming-hub')}
-          >
-            <Ionicons name="videocam-outline" size={28} color="#dc2626" />
-            <Text className="text-sm font-semibold text-red-700 dark:text-red-300 mt-2">
-              Set Default Stream Channel
-            </Text>
-            <Text className="text-xs text-stone mt-1 text-center">
-              YouTube, GameChanger, Baller.tv, or other
-            </Text>
-          </Pressable>
-        )}
-
-        {/* ============================================================ */}
-        {/* SECTION 5: USAV ATHLETE */}
-        {/* ============================================================ */}
-        <View className="mt-6">
+        {/* USAV Membership */}
+        <View className={hasMultipleAthletes ? '' : 'mt-6'}>
           <HubSectionHeader
             icon="shield-checkmark"
-            title="USAV Athlete"
+            title="USAV Membership"
             iconColor="#dc2626"
             action={{ label: 'Add', onPress: () => router.push('/profile/add-usav') }}
           />
@@ -329,21 +214,147 @@ export default function HubScreen() {
           </Pressable>
         )}
 
+        {/* Athlete-scoped quick links (SportsRecruits, University Athlete, Hudl) */}
+        {athleteLinks.length > 0 && (
+          <View className="flex-row flex-wrap gap-3 mb-2">
+            {athleteLinks.map((link, i) => {
+              const originalIndex = externalLinks.indexOf(link);
+              return (
+                <Pressable
+                  key={`${link.label}-${i}`}
+                  className={`rounded-xl p-4 items-center justify-center border active:opacity-70 ${
+                    link.url
+                      ? 'bg-warm-white dark:bg-bark-light border-parchment dark:border-rally-900'
+                      : 'bg-cream dark:bg-bark-light/50 border-dashed border-parchment dark:border-rally-900'
+                  }`}
+                  style={{ width: '47%', shadowColor: link.url ? '#1E3A5F' : 'transparent', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: link.url ? 2 : 0 }}
+                  onPress={() => link.url ? openDeepLink(link) : router.push({ pathname: '/profile/edit-link', params: { index: String(originalIndex) } })}
+                >
+                  <Ionicons
+                    name={link.icon_name as keyof typeof Ionicons.glyphMap}
+                    size={28}
+                    color={link.url ? '#3B82B0' : ic.placeholder}
+                  />
+                  <Text className={`text-sm font-medium mt-2 text-center ${link.url ? 'text-bark dark:text-parchment' : 'text-stone'}`}>
+                    {link.label}
+                  </Text>
+                  {!link.url && (
+                    <Text className="text-xs text-parchment mt-0.5">Tap to set up</Text>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+
         {/* ============================================================ */}
-        {/* SECTION 6: QUICK LINKS */}
+        {/* ZONE 3: SEASON scope */}
+        {/* ============================================================ */}
+        <HubScopeDivider
+          scope="Season"
+          label={activeSeason ? `${activeSeason.team_name} ${activeSeason.season_year}` : 'No season'}
+        />
+
+        {/* Team Details card */}
+        {activeSeason && (
+          <Pressable
+            className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 mb-2 active:opacity-80"
+            style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
+            onPress={() => router.push('/settings/team-details')}
+          >
+            <View className="flex-row items-center justify-between mb-1">
+              <Text className="text-sm font-semibold text-bark dark:text-cream">{activeSeason.team_name}</Text>
+              <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
+            </View>
+            <Text className="text-xs text-stone dark:text-parchment">{activeSeason.season_year}</Text>
+            {activeAthlete?.first_name && (
+              <Text className="text-xs text-stone dark:text-parchment mt-0.5">{activeAthlete.first_name}</Text>
+            )}
+            {activeSeason.team_code && (
+              <Text className="text-xs text-stone dark:text-parchment mt-0.5">Code: {activeSeason.team_code}</Text>
+            )}
+          </Pressable>
+        )}
+
+        {/* Schedule Import */}
+        <HubSettingsRow
+          icon="calendar"
+          iconColor="#6A9E8A"
+          title="Tournament Schedule Import"
+          subtitle="Import from coach emails, copy/paste, or direct sync"
+          onPress={() => router.push('/settings/schedule-import')}
+        />
+
+        {/* Default Stream Channel */}
+        {activeSeason?.default_stream_url ? (
+          <View
+            className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900"
+            style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
+          >
+            <View className="flex-row items-center justify-between mb-2">
+              <View className="flex-row items-center flex-1">
+                <Ionicons name="play-circle" size={24} color="#dc2626" />
+                <View className="ml-3 flex-1">
+                  <Text className="text-sm font-semibold text-bark dark:text-cream">{streamPlatformLabel}</Text>
+                  <Text className="text-xs text-stone mt-0.5" numberOfLines={1}>{activeSeason.default_stream_url}</Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => router.push('/settings/streaming-hub')}
+                className="p-1 active:opacity-60"
+                hitSlop={8}
+              >
+                <Text className="text-xs font-semibold text-rally-600">Edit</Text>
+              </Pressable>
+            </View>
+            <Pressable
+              className="bg-red-600 rounded-lg py-2.5 items-center active:opacity-80 mt-1"
+              onPress={() => Linking.openURL(activeSeason.default_stream_url!)}
+            >
+              <Text className="text-sm font-semibold text-white">Watch Now</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable
+            className="bg-cream dark:bg-bark-light/50 rounded-xl p-5 mb-2 border border-dashed border-red-200 dark:border-red-800 items-center active:opacity-80"
+            onPress={() => router.push('/settings/streaming-hub')}
+          >
+            <Ionicons name="videocam-outline" size={28} color="#dc2626" />
+            <Text className="text-sm font-semibold text-red-700 dark:text-red-300 mt-2">
+              Set Default Stream Channel
+            </Text>
+            <Text className="text-xs text-stone mt-1 text-center">
+              YouTube, GameChanger, Baller.tv, or other
+            </Text>
+          </Pressable>
+        )}
+
+        {/* Add New Season */}
+        {activeSeason && (
+          <HubSettingsRow
+            icon="add-circle"
+            iconColor="#3B82B0"
+            title="Add New Season"
+            subtitle={`Add another season for ${activeAthlete?.first_name ?? 'your athlete'}`}
+            onPress={() => router.push({ pathname: '/settings/add-season', params: { athleteId: activeSeason.athlete_id } })}
+          />
+        )}
+
+        {/* ============================================================ */}
+        {/* ZONE 4: QUICK LINKS (admin-scoped, bottom) */}
         {/* ============================================================ */}
         <View className="mt-6">
           <HubSectionHeader
             icon="link"
             title="Quick Links"
             iconColor={ic.muted}
-            subtitle="Connect GroupMe, SportsRecruits, University Athlete, or other one-click access systems"
+            subtitle="GroupMe, LeagueApps, and other team tools"
             action={{ label: 'Add', onPress: () => router.push('/profile/edit-link') }}
           />
         </View>
 
         <View className="flex-row flex-wrap gap-3 mb-4">
-          {configuredLinks.map((link, i) => {
+          {configuredAdminLinks.map((link, i) => {
             const originalIndex = externalLinks.indexOf(link);
             const hasCredentials = !!(link.username || link.password);
             return (
@@ -424,14 +435,14 @@ export default function HubScreen() {
           })}
         </View>
 
-        {/* Unconfigured links */}
-        {unconfiguredLinks.length > 0 && (
+        {/* Unconfigured admin links */}
+        {unconfiguredAdminLinks.length > 0 && (
           <>
             <Text className="text-xs text-stone uppercase tracking-wider mb-2 ml-1">
               Not configured
             </Text>
             <View className="flex-row flex-wrap gap-3 mb-6">
-              {unconfiguredLinks.map((link, i) => {
+              {unconfiguredAdminLinks.map((link, i) => {
                 const originalIndex = externalLinks.indexOf(link);
                 return (
                   <Pressable
@@ -455,6 +466,15 @@ export default function HubScreen() {
             </View>
           </>
         )}
+
+        {/* Add Another Athlete — secondary action at bottom */}
+        <HubSettingsRow
+          icon="person-add"
+          iconColor="#6A9E8A"
+          title="Add Another Athlete"
+          subtitle="Manage a second player with their own seasons"
+          onPress={() => router.push('/settings/add-athlete')}
+        />
       </ScrollView>
     </View>
   );

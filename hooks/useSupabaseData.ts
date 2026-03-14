@@ -319,6 +319,16 @@ export async function updateAdminConfig(id: string, updates: Partial<AdminConfig
   return { data: data as AdminConfig | null, error };
 }
 
+export async function updateSeason(id: string, updates: Partial<Season>) {
+  const { data, error } = await (supabase
+    .from('seasons') as any)
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  return { data: data as Season | null, error };
+}
+
 export async function insertUSAVProfile(profile: Omit<USAVProfile, 'id' | 'created_at'>) {
   const { data, error } = await supabase
     .from('usav_profiles')

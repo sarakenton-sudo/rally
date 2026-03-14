@@ -254,6 +254,14 @@ function RootLayoutNav() {
           name="settings/email-connect"
           options={{ presentation: 'modal', headerShown: false }}
         />
+        <Stack.Screen
+          name="settings/add-season"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="settings/add-athlete"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
       </Stack>
     </ThemeProvider>
   );

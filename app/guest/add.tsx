@@ -6,7 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 import FormField from '@/components/FormField';
 import DropdownField from '@/components/DropdownField'; // for relationship
 import { useGuestStore } from '@/stores/useGuestStore';
-import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useAuth } from '@/providers/AuthProvider';
 import { insertGuest, updateGuest as updateGuestDB, deleteGuest as deleteGuestDB } from '@/hooks/useSupabaseData';
 import { useIconColors } from '@/lib/colors';
@@ -33,7 +32,6 @@ export default function AddGuestScreen() {
   const updateGuestStore = useGuestStore((s) => s.updateGuest);
   const removeGuest = useGuestStore((s) => s.removeGuest);
   const { user } = useAuth();
-  const athletes = useSeasonStore((s) => s.athletes);
   const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -60,23 +58,22 @@ export default function AddGuestScreen() {
       return;
     }
 
-    // Get athlete_id — guests are linked to athletes, not users
-    const athleteId = athletes[0]?.id;
-    if (!athleteId) {
-      showError('Setup required', 'No athlete found. Please complete onboarding first.');
+    if (!user) {
+      showError('Not signed in', 'Please sign in to add guests.');
       return;
     }
 
     setIsSaving(true);
 
     const guestData = {
-      athlete_id: athleteId,
+      user_id: user.id,
       name: name.trim(),
       phone: phone.trim(),
       email: email.trim() || null,
       relationship,
       notification_pref: 'sms' as NotificationPref,
       default_invited: defaultInvited,
+      athlete_id: null as string | null,
     };
 
     try {
@@ -108,6 +105,7 @@ export default function AddGuestScreen() {
         } else {
           const guest: Guest = {
             ...guestData,
+            user_id: user!.id,
             id: `g-${Date.now()}`,
             created_at: new Date().toISOString(),
           };

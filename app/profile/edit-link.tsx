@@ -25,6 +25,14 @@ const ICON_MAP: Record<string, string> = {
   'youtube': 'logo-youtube',
 };
 
+// Auto-infer scope from label
+const ATHLETE_SCOPED_LABELS = ['sportsrecruits', 'university athlete', 'hudl'];
+
+function inferScope(label: string): 'admin' | 'athlete' {
+  const lower = label.toLowerCase();
+  return ATHLETE_SCOPED_LABELS.some((k) => lower.includes(k)) ? 'athlete' : 'admin';
+}
+
 function getIconForLabel(label: string): string {
   const lower = label.toLowerCase();
   for (const [key, icon] of Object.entries(ICON_MAP)) {
@@ -39,6 +47,9 @@ export default function EditLinkScreen() {
 
   const adminConfig = useSeasonStore((s) => s.adminConfig);
   const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
+  const seasons = useSeasonStore((s) => s.seasons);
+  const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
+  const activeSeason = seasons.find((s) => s.id === activeSeasonId);
   const { user } = useAuth();
 
   const ic = useIconColors();
@@ -64,12 +75,15 @@ export default function EditLinkScreen() {
     if (!adminConfig) return;
 
     const updatedLinks = [...adminConfig.external_links];
+    const trimmedLabel = label.trim();
     const linkData = {
-      label: label.trim(),
+      label: trimmedLabel,
       url: url.trim(),
-      icon_name: getIconForLabel(label.trim()),
+      icon_name: getIconForLabel(trimmedLabel),
       username: username.trim() || null,
       password: password.trim() || null,
+      scope: inferScope(trimmedLabel),
+      athlete_id: inferScope(trimmedLabel) === 'athlete' ? (activeSeason?.athlete_id ?? null) : null,
     };
 
     if (editIndex >= 0) {
