@@ -23,11 +23,12 @@ const ICON_MAP: Record<string, string> = {
   'hudl': 'videocam-outline',
   'university athlete': 'trophy-outline',
   'instagram': 'logo-instagram',
+  'usa volleyball': 'shield-checkmark',
   'youtube': 'logo-youtube',
 };
 
 // Auto-infer scope from label
-const ATHLETE_SCOPED_LABELS = ['sportsrecruits', 'university athlete', 'hudl', 'instagram'];
+const ATHLETE_SCOPED_LABELS = ['sportsrecruits', 'university athlete', 'hudl', 'instagram', 'usa volleyball'];
 
 function inferScope(label: string): 'admin' | 'athlete' {
   const lower = label.toLowerCase();

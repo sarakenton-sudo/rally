@@ -17,7 +17,7 @@ const BRAND_STYLES: Record<string, { bg: string; color: string; icon: keyof type
   'university athlete': { bg: '#E8520E', color: '#FFFFFF', icon: 'trophy', defaultUrl: 'https://auth.universityathlete.com/realms/ua/protocol/openid-connect/auth?scope=openid&response_type=code&approval_prompt=auto&redirect_uri=https%3A%2F%2Funiversityathlete.com%2Fauth%2Fkc-plugin-callback&client_id=ua_2fa_login' },
   hudl: { bg: '#FF6600', color: '#FFFFFF', icon: 'videocam', defaultUrl: 'https://identity.hudl.com/u/login' },
   instagram: { bg: '#E1306C', color: '#FFFFFF', icon: 'logo-instagram', defaultUrl: 'https://www.instagram.com' },
-  usav: { bg: '#dc2626', color: '#FFFFFF', icon: 'shield-checkmark' },
+  'usa volleyball': { bg: '#dc2626', color: '#FFFFFF', icon: 'shield-checkmark' },
 };
 
 function getBrand(label: string) {
@@ -39,7 +39,8 @@ interface Props {
 export default function AthleteCredentialCard({ label, url, username, password, onEdit }: Props) {
   const brand = getBrand(label);
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const isLoaded = !!(url || username || password);
+  const isUsav = label.toLowerCase().includes('usa volleyball');
+  const isLoaded = isUsav ? !!username : !!(url || username || password);
   const hasLink = !!(url || brand.defaultUrl);
 
   const handleCopy = async (value: string, field: string) => {
@@ -57,7 +58,6 @@ export default function AthleteCredentialCard({ label, url, username, password, 
     const targetUrl = url || brand.defaultUrl;
     if (!targetUrl) return;
     const fullUrl = targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`;
-    // Try app scheme first on mobile, fall back to web URL
     if (Platform.OS !== 'web') {
       const appScheme = APP_SCHEMES[label.toLowerCase()];
       if (appScheme) {
@@ -71,6 +71,20 @@ export default function AthleteCredentialCard({ label, url, username, password, 
     await Linking.openURL(fullUrl);
   };
 
+  const handleTileTap = () => {
+    // USAV: tap to copy membership #
+    if (isUsav && username) {
+      handleCopy(username, 'username');
+      return;
+    }
+    // Others: open link or edit
+    if (hasLink) {
+      handleOpen();
+    } else {
+      onEdit();
+    }
+  };
+
   return (
     <Pressable
       className="bg-warm-white dark:bg-bark-light rounded-xl border border-parchment dark:border-rally-900 overflow-hidden active:opacity-90"
@@ -81,7 +95,7 @@ export default function AthleteCredentialCard({ label, url, username, password, 
         shadowRadius: 8,
         elevation: 2,
       }}
-      onPress={hasLink ? handleOpen : onEdit}
+      onPress={handleTileTap}
     >
       {/* Brand icon + status dot */}
       <View className="items-center pt-4 pb-2">
@@ -92,7 +106,6 @@ export default function AthleteCredentialCard({ label, url, username, password, 
           >
             <Ionicons name={brand.icon} size={24} color={brand.color} />
           </View>
-          {/* Green dot = credentials loaded */}
           {isLoaded && (
             <View
               className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-warm-white dark:border-bark-light"
@@ -105,7 +118,31 @@ export default function AthleteCredentialCard({ label, url, username, password, 
       </View>
 
       {/* Credential rows */}
-      {(username || password) ? (
+      {isUsav ? (
+        // USA Volleyball — just membership #
+        username ? (
+          <View className="px-2.5 pb-2.5">
+            <Pressable
+              className="flex-row items-center bg-cream dark:bg-bark rounded-lg px-2.5 py-1.5 mb-1 active:opacity-70"
+              onPress={() => handleCopy(username, 'username')}
+            >
+              <Ionicons name="card-outline" size={11} color="#8FA8BF" />
+              <Text className="text-[11px] text-bark dark:text-parchment ml-1.5 flex-1" numberOfLines={1}>
+                #{username}
+              </Text>
+              <Ionicons
+                name={copiedField === 'username' ? 'checkmark' : 'copy-outline'}
+                size={11}
+                color={copiedField === 'username' ? '#16a34a' : '#8FA8BF'}
+              />
+            </Pressable>
+          </View>
+        ) : (
+          <View className="px-2.5 pb-3">
+            <Text className="text-[10px] text-stone text-center">Tap to add Member #</Text>
+          </View>
+        )
+      ) : (username || password) ? (
         <View className="px-2.5 pb-2.5">
           {username ? (
             <Pressable

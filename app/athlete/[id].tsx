@@ -3,7 +3,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import HubSectionHeader from '@/components/HubSectionHeader';
-import HubSettingsRow from '@/components/HubSettingsRow';
 import AthleteCredentialCard from '@/components/AthleteCredentialCard';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
@@ -11,7 +10,7 @@ import { updateAdminConfig } from '@/hooks/useSupabaseData';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
 
-const ATHLETE_SERVICES = ['SportsRecruits', 'Hudl', 'University Athlete', 'Instagram'];
+const ATHLETE_SERVICES = ['SportsRecruits', 'Hudl', 'University Athlete', 'Instagram', 'USA Volleyball'];
 
 export default function AthleteProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -22,7 +21,6 @@ export default function AthleteProfileScreen() {
   const setActiveSeasonId = useSeasonStore((s) => s.setActiveSeasonId);
   const adminConfig = useSeasonStore((s) => s.adminConfig);
   const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
-  const usavProfiles = useSeasonStore((s) => s.usavProfiles);
   const ic = useIconColors();
   const { refresh, isRefreshing } = useDataRefresh();
 
@@ -35,7 +33,6 @@ export default function AthleteProfileScreen() {
       if (b.id === activeSeasonId) return 1;
       return b.season_year.localeCompare(a.season_year);
     });
-  const athleteUsavProfiles = usavProfiles.filter((p) => p.athlete_id === id);
   const externalLinks = adminConfig?.external_links ?? [];
 
   // Build credential cards for this athlete
@@ -175,23 +172,6 @@ export default function AthleteProfileScreen() {
           <Ionicons name="add" size={16} color="#3B82B0" />
           <Text className="text-sm font-semibold text-rally-600 ml-2">Add Season</Text>
         </Pressable>
-
-        {/* ============================================================ */}
-        {/* USAV MEMBERSHIP */}
-        {/* ============================================================ */}
-        <View className="mt-6">
-          <HubSettingsRow
-            icon="shield-checkmark"
-            iconColor="#dc2626"
-            title="USAV Membership"
-            subtitle={
-              athleteUsavProfiles.length > 0
-                ? `${athleteUsavProfiles.length} profile${athleteUsavProfiles.length !== 1 ? 's' : ''} saved`
-                : 'Add member ID for tournament check-in'
-            }
-            onPress={() => router.push('/profile/add-usav')}
-          />
-        </View>
 
         {/* ============================================================ */}
         {/* ACCOUNTS & LOGINS — compact tile grid */}
