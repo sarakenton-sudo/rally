@@ -264,20 +264,22 @@ export default function TournamentDetailScreen() {
               <View className="bg-warm-white dark:bg-bark-light rounded-2xl w-72 overflow-hidden">
                 <Text className="text-base font-bold text-bark dark:text-cream p-4 pb-2">Add Manually</Text>
                 {[
-                  { label: 'Hotel', icon: 'bed' as const, path: '/booking/add-hotel' as const },
-                  { label: 'Flight', icon: 'airplane' as const, path: '/booking/add-flight' as const },
-                  { label: 'Team Event', icon: 'restaurant' as const, path: '/booking/add-team-event' as const },
+                  { label: 'Hotel', icon: 'bed' as const, path: '/booking/add-hotel' as const, color: '#7c3aed', bg: 'bg-purple-50', activeBg: 'active:bg-purple-50' },
+                  { label: 'Flight', icon: 'airplane' as const, path: '/booking/add-flight' as const, color: '#3B82B0', bg: 'bg-rally-50', activeBg: 'active:bg-rally-50' },
+                  { label: 'Team Event', icon: 'restaurant' as const, path: '/booking/add-team-event' as const, color: '#d97706', bg: 'bg-amber-50', activeBg: 'active:bg-amber-50' },
                 ].map((item) => (
                   <Pressable
                     key={item.label}
-                    className="px-4 py-3 border-t border-parchment dark:border-rally-900 flex-row items-center active:bg-rally-50"
+                    className={`px-4 py-3 border-t border-parchment dark:border-rally-900 flex-row items-center ${item.activeBg}`}
                     onPress={() => {
                       setShowManualMenu(false);
                       router.push({ pathname: item.path, params: { tournamentId: tournament.id } });
                     }}
                   >
-                    <Ionicons name={item.icon} size={18} color="#3B82B0" />
-                    <Text className="text-sm text-bark dark:text-cream ml-3">{item.label}</Text>
+                    <View className={`w-8 h-8 rounded-full items-center justify-center ${item.bg}`}>
+                      <Ionicons name={item.icon} size={16} color={item.color} />
+                    </View>
+                    <Text style={{ color: item.color }} className="text-sm font-semibold ml-3">{item.label}</Text>
                   </Pressable>
                 ))}
                 <Pressable
