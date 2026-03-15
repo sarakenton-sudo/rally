@@ -233,7 +233,7 @@ export default function TravelScreen() {
               <View className={`px-2 pb-1 ${accent.bg}`}>
                 <HotelBookingCard
                   booking={item.data}
-                  onPress={() => router.push({ pathname: '/booking/add-hotel', params: { editId: item.data.id } })}
+                  onPress={() => router.push({ pathname: '/booking/hotel-detail', params: { id: item.data.id } })}
                   onDelete={() => handleDeleteHotel(item.data.id, item.data.hotel_name)}
                 />
               </View>
@@ -243,7 +243,7 @@ export default function TravelScreen() {
             <View className={`px-2 pb-1 ${accent.bg}`}>
               <FlightBookingCard
                 booking={item.data}
-                onPress={() => router.push({ pathname: '/booking/add-flight', params: { editId: item.data.id } })}
+                onPress={() => router.push({ pathname: '/booking/flight-detail', params: { id: item.data.id } })}
                 onDelete={() => handleDeleteFlight(item.data.id, item.data.airline)}
               />
             </View>

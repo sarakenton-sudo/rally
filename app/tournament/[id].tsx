@@ -515,7 +515,7 @@ export default function TournamentDetailScreen() {
                     <View key={h.id} className="mb-2">
                       <HotelBookingCard
                         booking={h}
-                        onPress={() => router.push({ pathname: '/booking/add-hotel', params: { editId: h.id } })}
+                        onPress={() => router.push({ pathname: '/booking/hotel-detail', params: { id: h.id } })}
                         onDelete={() => handleDeleteHotel(h.id, h.hotel_name)}
                       />
                     </View>
@@ -544,7 +544,7 @@ export default function TournamentDetailScreen() {
                     <View key={f.id} className="mb-2">
                       <FlightBookingCard
                         booking={f}
-                        onPress={() => router.push({ pathname: '/booking/add-flight', params: { editId: f.id } })}
+                        onPress={() => router.push({ pathname: '/booking/flight-detail', params: { id: f.id } })}
                         onDelete={() => handleDeleteFlight(f.id, f.airline)}
                       />
                     </View>
@@ -685,14 +685,14 @@ export default function TournamentDetailScreen() {
                 <HotelBookingCard
                   key={h.id}
                   booking={h}
-                  onPress={() => router.push({ pathname: '/booking/add-hotel', params: { editId: h.id } })}
+                  onPress={() => router.push({ pathname: '/booking/hotel-detail', params: { id: h.id } })}
                 />
               ))}
               {flights.map((f) => (
                 <FlightBookingCard
                   key={f.id}
                   booking={f}
-                  onPress={() => router.push({ pathname: '/booking/add-flight', params: { editId: f.id } })}
+                  onPress={() => router.push({ pathname: '/booking/flight-detail', params: { id: f.id } })}
                 />
               ))}
             </>

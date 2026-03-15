@@ -166,6 +166,14 @@ function RootLayoutNav() {
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
+          name="booking/hotel-detail"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="booking/flight-detail"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="booking/add-team-event"
           options={{ presentation: 'modal', headerShown: false }}
         />
