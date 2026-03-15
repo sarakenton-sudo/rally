@@ -280,7 +280,7 @@ export default function TournamentDetailScreen() {
                                   className="bg-green-100 dark:bg-green-900/30 px-3 py-2 rounded-lg active:opacity-70"
                                   onPress={() => openDirections(venue.address)}
                                 >
-                                  <Ionicons name="navigate" size={18} color="#16a34a" />
+                                  <Ionicons name="navigate" size={18} color="#3B82B0" />
                                 </Pressable>
                               ) : null}
                             </View>
@@ -602,7 +602,7 @@ export default function TournamentDetailScreen() {
                                   className="bg-amber-100 dark:bg-amber-900/30 px-3 py-2 rounded-lg active:opacity-70"
                                   onPress={(e) => { e.stopPropagation(); openDirections(event.address); }}
                                 >
-                                  <Ionicons name="navigate" size={18} color="#d97706" />
+                                  <Ionicons name="navigate" size={18} color="#3B82B0" />
                                 </Pressable>
                               ) : null}
                               <Pressable
