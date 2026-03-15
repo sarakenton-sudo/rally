@@ -686,8 +686,11 @@ export default function OnboardingScreen() {
 
               {/* Forward email hint */}
               <View style={{ backgroundColor: '#1E4468', borderWidth: 1.5, borderColor: '#2E5A82', borderRadius: 16, padding: 16, marginBottom: 16 }}>
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#D4E3F0', marginBottom: 8 }}>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#D4E3F0', marginBottom: 4 }}>
                   Or forward an email to:
+                </Text>
+                <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Regular', color: '#9AB5CC', marginBottom: 10 }}>
+                  We'll create your tournament weekend itinerary like magic.
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Text selectable style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#7DBDD9', flex: 1 }}>
@@ -795,8 +798,11 @@ export default function OnboardingScreen() {
 
               {/* Forward email hint */}
               <View style={{ backgroundColor: '#1E4468', borderWidth: 1.5, borderColor: '#2E5A82', borderRadius: 16, padding: 16, marginBottom: 16 }}>
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#D4E3F0', marginBottom: 8 }}>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#D4E3F0', marginBottom: 4 }}>
                   Or forward confirmations to:
+                </Text>
+                <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Regular', color: '#9AB5CC', marginBottom: 10 }}>
+                  We'll create your tournament weekend itinerary like magic.
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Text selectable style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#7DBDD9', flex: 1 }}>
