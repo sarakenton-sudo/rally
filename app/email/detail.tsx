@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DropdownField from '@/components/DropdownField';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { updateTournament as updateTournamentDB } from '@/hooks/useSupabaseData';
+import { updateTournament as updateTournamentDB, insertHotelBooking, insertFlightBooking } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/providers/AuthProvider';
 import { useIconColors } from '@/lib/colors';
 import type { Tournament } from '@/types/database';
@@ -368,6 +368,83 @@ export default function EmailDetailScreen() {
     }
   };
 
+  const [savedBooking, setSavedBooking] = useState<'flight' | 'hotel' | null>(null);
+  const [isSavingBooking, setIsSavingBooking] = useState(false);
+
+  const handleSaveFlightBooking = async () => {
+    if (!activeMatch || !extractedData || !user) return;
+    setIsSavingBooking(true);
+    try {
+      const d = extractedData;
+      const outbound = d.outbound as Record<string, unknown> | undefined;
+      const returnLeg = (d.return ?? d.return_flight ?? d.return_leg) as Record<string, unknown> | undefined;
+      const activeSeasonId = useSeasonStore.getState().activeSeasonId;
+
+      const { error } = await insertFlightBooking({
+        tournament_id: activeMatch.id,
+        created_by_user_id: user.id,
+        season_id: activeSeasonId ?? '',
+        airline: String(d.airline ?? outbound?.airline ?? ''),
+        confirmation_code: String(d.confirmation_number ?? d.confirmation_code ?? d.booking_reference ?? ''),
+        departure_date: String(d.departure_date ?? outbound?.departure_date ?? ''),
+        return_date: String(d.return_date ?? returnLeg?.departure_date ?? ''),
+        booked_by: String(d.passenger_name ?? d.traveler_name ?? ''),
+        traveler_names: d.passenger_name ? [String(d.passenger_name)] : [],
+        cost: d.total_cost ? Number(d.total_cost) : null,
+        ticket_number: String(d.ticket_number ?? ''),
+        departure_time: String(d.departure_time ?? outbound?.departure_time ?? ''),
+        arrival_time: String(d.arrival_time ?? outbound?.arrival_time ?? ''),
+        seat_number: String(d.seat_number ?? outbound?.seat_number ?? ''),
+        flight_number: String(d.flight_number ?? outbound?.flight_number ?? ''),
+      });
+      if (error) throw error;
+      setSavedBooking('flight');
+      if (Platform.OS === 'web') window.alert('Flight booking saved!');
+      else Alert.alert('Saved', 'Flight booking created and linked to tournament.');
+    } catch (err: any) {
+      if (Platform.OS === 'web') window.alert(`Save failed: ${err.message}`);
+      else Alert.alert('Save Failed', err.message);
+    } finally {
+      setIsSavingBooking(false);
+    }
+  };
+
+  const handleSaveHotelBooking = async () => {
+    if (!activeMatch || !extractedData || !user) return;
+    setIsSavingBooking(true);
+    try {
+      const d = extractedData;
+      const activeSeasonId = useSeasonStore.getState().activeSeasonId;
+
+      const { error } = await insertHotelBooking({
+        tournament_id: activeMatch.id,
+        created_by_user_id: user.id,
+        season_id: activeSeasonId ?? '',
+        hotel_name: String(d.hotel_name ?? ''),
+        platform: 'Other',
+        booking_name: String(d.hotel_name ?? ''),
+        booked_by: String(d.passenger_name ?? d.guest_name ?? ''),
+        reservation_number: String(d.confirmation_number ?? d.reservation_number ?? ''),
+        check_in: String(d.check_in_date ?? ''),
+        check_out: String(d.check_out_date ?? ''),
+        cancellation_deadline: String(d.cancellation_deadline ?? ''),
+        cost: d.total_cost ? Number(d.total_cost) : (d.nightly_rate ? Number(d.nightly_rate) : null),
+        is_backup: false,
+        status: 'confirmed',
+        address: String(d.address ?? d.hotel_address ?? ''),
+      });
+      if (error) throw error;
+      setSavedBooking('hotel');
+      if (Platform.OS === 'web') window.alert('Hotel booking saved!');
+      else Alert.alert('Saved', 'Hotel booking created and linked to tournament.');
+    } catch (err: any) {
+      if (Platform.OS === 'web') window.alert(`Save failed: ${err.message}`);
+      else Alert.alert('Save Failed', err.message);
+    } finally {
+      setIsSavingBooking(false);
+    }
+  };
+
   const handleExtractSchedule = async () => {
     if (isSupabaseConfigured && user) {
       try {
@@ -692,6 +769,50 @@ export default function EmailDetailScreen() {
 
             {activeMatch && suggestedUpdates.length === 0 && (
               <Text className="text-xs text-stone mt-2">No new data to update for this tournament.</Text>
+            )}
+
+            {/* Save booking directly to matched tournament */}
+            {activeMatch && hasExtractedData && (
+              <View className="mt-3">
+                {email.classification === 'travel_confirmation' && (
+                  savedBooking === 'flight' ? (
+                    <View className="flex-row items-center justify-center py-3">
+                      <Ionicons name="checkmark-circle" size={20} color="#16a34a" />
+                      <Text className="text-sm font-semibold text-green-600 ml-2">Flight Booking Saved</Text>
+                    </View>
+                  ) : (
+                    <Pressable
+                      onPress={handleSaveFlightBooking}
+                      disabled={isSavingBooking}
+                      className={`rounded-lg py-3 items-center flex-row justify-center active:opacity-80 ${isSavingBooking ? 'bg-purple-400' : 'bg-purple-600'}`}
+                    >
+                      <Ionicons name="airplane" size={18} color="white" />
+                      <Text className="text-sm font-semibold text-white ml-2">
+                        {isSavingBooking ? 'Saving...' : `Save Flight to "${activeMatch.name}"`}
+                      </Text>
+                    </Pressable>
+                  )
+                )}
+                {email.classification === 'stay_and_play' && (
+                  savedBooking === 'hotel' ? (
+                    <View className="flex-row items-center justify-center py-3">
+                      <Ionicons name="checkmark-circle" size={20} color="#16a34a" />
+                      <Text className="text-sm font-semibold text-green-600 ml-2">Hotel Booking Saved</Text>
+                    </View>
+                  ) : (
+                    <Pressable
+                      onPress={handleSaveHotelBooking}
+                      disabled={isSavingBooking}
+                      className={`rounded-lg py-3 items-center flex-row justify-center active:opacity-80 ${isSavingBooking ? 'bg-purple-400' : 'bg-purple-600'}`}
+                    >
+                      <Ionicons name="bed" size={18} color="white" />
+                      <Text className="text-sm font-semibold text-white ml-2">
+                        {isSavingBooking ? 'Saving...' : `Save Hotel to "${activeMatch.name}"`}
+                      </Text>
+                    </Pressable>
+                  )
+                )}
+              </View>
             )}
           </View>
         )}

@@ -20,7 +20,7 @@ KEY RULES:
 
 Extract ALL pertinent structured data from the email. Be thorough:
 - For stay_and_play: hotel_name, check_in_date (YYYY-MM-DD), check_out_date (YYYY-MM-DD), confirmation_number, nightly_rate, total_cost, cancellation_deadline (YYYY-MM-DD), address, phone, booking_url, number_of_nights
-- For travel_confirmation (flights): airline, flight_number, departure_date (YYYY-MM-DD), departure_time (HH:MM), arrival_time (HH:MM), departure_airport (3-letter code), arrival_airport (3-letter code), departure_city, arrival_city, confirmation_number, passenger_name, booking_url. For round trips, extract BOTH legs as "outbound" and "return" objects with the same fields. Parse dates from ANY format (e.g., "19MAR26" = 2026-03-19, "Mar 19, 2026" = 2026-03-19).
+- For travel_confirmation (flights): airline, flight_number, departure_date (YYYY-MM-DD), departure_time (HH:MM), arrival_time (HH:MM), departure_airport (3-letter code), arrival_airport (3-letter code), departure_city, arrival_city, confirmation_number, passenger_name, seat_number, ticket_number, total_cost, booking_url. For round trips, extract BOTH legs as "outbound" and "return" objects each containing: airline, flight_number, departure_date, departure_time, arrival_time, departure_airport, arrival_airport, departure_city, arrival_city, seat_number. Also extract top-level: confirmation_number, passenger_name, ticket_number, total_cost. Parse dates from ANY format (e.g., "19MAR26" = 2026-03-19, "Mar 19, 2026" = 2026-03-19).
 - For schedule_change/tournament_info: tournament_name, start_date, end_date, location_city, venue_name, venue_address, pool_info, check_in_time, schedule_url
 - For tournament_info: also extract ticket_code, ticket_url (URLs containing "ticket", "aes", "gofan", "aesathletics", or similar), registration_deadline, entry_fee
 - For coach_announcement: key message summary, any dates/times mentioned, action_items
@@ -82,7 +82,7 @@ export async function classifyEmail(
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
       system: CLASSIFICATION_PROMPT,
       messages: [{
