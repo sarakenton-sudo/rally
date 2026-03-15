@@ -160,7 +160,7 @@ async function processForUser(
       body_text: email.html ?? email.text,
       received_at: new Date().toISOString(),
       classification,
-      action_taken: action,
+      action_taken: 'none',
       extracted_data: extractedData,
       raw_storage_url: null,
       source: 'forward',
@@ -173,8 +173,8 @@ async function processForUser(
     return jsonResponse({ error: 'Failed to store email' }, 500);
   }
 
-  // Auto-apply extracted data to matching tournaments
-  await autoApplyToTournament(supabase, config.user_id, classification, extractedData);
+  // No auto-import: user must review AI extraction and explicitly import from email detail page
+  // (Previously: autoApplyToTournament was called here to auto-create bookings)
 
   // Trigger notifications for actionable classifications
   if (classification === 'stay_and_play' || classification === 'travel_confirmation') {

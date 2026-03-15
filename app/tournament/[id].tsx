@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { View, Text, ScrollView, RefreshControl, Pressable, Linking, Platform, Share, Alert, Switch, ActionSheetIOS, Modal } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, Pressable, Linking, Platform, Share, Alert, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,7 @@ import { useDataRefresh } from '@/providers/DataProvider';
 import { useTeamEvents, deleteTournament as deleteTournamentDB, updateTournament as updateTournamentDB, deleteHotelBooking as deleteHotelBookingDB, deleteFlightBooking as deleteFlightBookingDB, deleteTeamEvent as deleteTeamEventDB } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/providers/AuthProvider';
 
+import GlobalAddFAB from '@/components/GlobalAddFAB';
 import { MOCK_TEAM_EVENTS } from '@/lib/mock-data';
 import { formatDateRange, countdownText, daysUntil } from '@/lib/dates';
 import { useIconColors } from '@/lib/colors';
@@ -90,22 +91,6 @@ export default function TournamentDetailScreen() {
   const removeHotelBooking = useSeasonStore((s) => s.removeHotelBooking);
   const removeFlightBooking = useSeasonStore((s) => s.removeFlightBooking);
 
-  const [showManualMenu, setShowManualMenu] = useState(false);
-
-  const handleManualAdd = () => {
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        { options: ['Add Hotel', 'Add Flight', 'Add Team Event', 'Cancel'], cancelButtonIndex: 3, title: 'Add Manually' },
-        (index) => {
-          if (index === 0) router.push({ pathname: '/booking/add-hotel', params: { tournamentId: id } });
-          if (index === 1) router.push({ pathname: '/booking/add-flight', params: { tournamentId: id } });
-          if (index === 2) router.push({ pathname: '/booking/add-team-event', params: { tournamentId: id } });
-        }
-      );
-    } else {
-      setShowManualMenu(true);
-    }
-  };
 
   const handleDeleteHotel = (hotelId: string, hotelName: string) => {
     const doDelete = async () => {
@@ -246,66 +231,6 @@ export default function TournamentDetailScreen() {
         </View>
 
         <View className="px-4">
-          {/* ADD DETAILS — 3 options near top */}
-          <View className="flex-row gap-2 mt-4">
-            <Pressable
-              className="flex-1 bg-rally-600 rounded-xl py-3 flex-row items-center justify-center active:opacity-80"
-              style={{ shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3 }}
-              onPress={() => router.push('/import/paste-combined')}
-            >
-              <Ionicons name="sparkles" size={14} color="#FEFEFE" />
-              <Text className="text-xs font-semibold text-cream ml-1.5">Paste + AI</Text>
-            </Pressable>
-            <Pressable
-              className="flex-1 bg-warm-white dark:bg-bark-light rounded-xl py-3 flex-row items-center justify-center active:opacity-80 border border-parchment dark:border-rally-900"
-              onPress={() => router.push('/settings/email-forward')}
-            >
-              <Ionicons name="mail-open" size={14} color="#3B82B0" />
-              <Text className="text-xs font-semibold text-bark dark:text-cream ml-1.5">Forward</Text>
-            </Pressable>
-            <Pressable
-              className="flex-1 bg-warm-white dark:bg-bark-light rounded-xl py-3 flex-row items-center justify-center active:opacity-80 border border-parchment dark:border-rally-900"
-              onPress={handleManualAdd}
-            >
-              <Ionicons name="add" size={16} color="#3B82B0" />
-              <Text className="text-xs font-semibold text-bark dark:text-cream ml-1">Manual</Text>
-            </Pressable>
-          </View>
-
-          {/* Manual add menu modal (Android + Web) */}
-          <Modal visible={showManualMenu} transparent animationType="fade" onRequestClose={() => setShowManualMenu(false)}>
-            <Pressable className="flex-1 bg-black/50 justify-center items-center" onPress={() => setShowManualMenu(false)}>
-              <View className="bg-warm-white dark:bg-bark-light rounded-2xl w-72 overflow-hidden">
-                <Text className="text-base font-bold text-bark dark:text-cream p-4 pb-2">Add Manually</Text>
-                {[
-                  { label: 'Hotel', icon: 'bed' as const, path: '/booking/add-hotel' as const, color: '#7c3aed', bg: 'bg-purple-50', activeBg: 'active:bg-purple-50' },
-                  { label: 'Flight', icon: 'airplane' as const, path: '/booking/add-flight' as const, color: '#3B82B0', bg: 'bg-rally-50', activeBg: 'active:bg-rally-50' },
-                  { label: 'Team Event', icon: 'restaurant' as const, path: '/booking/add-team-event' as const, color: '#d97706', bg: 'bg-amber-50', activeBg: 'active:bg-amber-50' },
-                ].map((item) => (
-                  <Pressable
-                    key={item.label}
-                    className={`px-4 py-3 border-t border-parchment dark:border-rally-900 flex-row items-center ${item.activeBg}`}
-                    onPress={() => {
-                      setShowManualMenu(false);
-                      router.push({ pathname: item.path, params: { tournamentId: tournament.id } });
-                    }}
-                  >
-                    <View className={`w-8 h-8 rounded-full items-center justify-center ${item.bg}`}>
-                      <Ionicons name={item.icon} size={16} color={item.color} />
-                    </View>
-                    <Text style={{ color: item.color }} className="text-sm font-semibold ml-3">{item.label}</Text>
-                  </Pressable>
-                ))}
-                <Pressable
-                  className="px-4 py-3 border-t border-parchment dark:border-rally-900 items-center active:bg-rally-50"
-                  onPress={() => setShowManualMenu(false)}
-                >
-                  <Text className="text-sm font-semibold text-stone">Cancel</Text>
-                </Pressable>
-              </View>
-            </Pressable>
-          </Modal>
-
           {/* ── Tournament Info (Green) — Venue, Schedule, Tickets ── */}
           <SectionHeader icon="trophy" title="Tournament Info" iconColor="#16a34a" />
           <View className="rounded-xl overflow-hidden mb-3">
@@ -695,27 +620,6 @@ export default function TournamentDetailScreen() {
                 </>
               )}
 
-              {/* Quick import helpers */}
-              <View className="mt-3 bg-rally-50 dark:bg-rally-900/20 rounded-xl p-3 border border-rally-100 dark:border-rally-800">
-                <Text className="text-xs font-semibold text-rally-700 dark:text-rally-300 mb-2">Quick Add</Text>
-                <View className="flex-row gap-2">
-                  <Pressable
-                    className="flex-1 flex-row items-center justify-center bg-warm-white dark:bg-bark-light rounded-lg py-2.5 active:opacity-70 border border-parchment dark:border-rally-900"
-                    onPress={() => router.push('/import/paste-travel')}
-                  >
-                    <Ionicons name="sparkles" size={14} color="#7c3aed" />
-                    <Text className="text-xs font-semibold text-bark dark:text-cream ml-1.5">Paste Confirmation</Text>
-                  </Pressable>
-                  <Pressable
-                    className="flex-1 flex-row items-center justify-center bg-warm-white dark:bg-bark-light rounded-lg py-2.5 active:opacity-70 border border-parchment dark:border-rally-900"
-                    onPress={() => router.push('/settings/email-forward')}
-                  >
-                    <Ionicons name="mail" size={14} color="#3B82B0" />
-                    <Text className="text-xs font-semibold text-bark dark:text-cream ml-1.5">Forward Email</Text>
-                  </Pressable>
-                </View>
-              </View>
-
               {/* Not needed toggles — hidden when bookings exist */}
               {hotels.length === 0 && (
                 <View className="flex-row items-center justify-between mt-3 mb-2 bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 border border-parchment dark:border-rally-900">
@@ -981,6 +885,7 @@ export default function TournamentDetailScreen() {
           </Pressable>
         </View>
       </ScrollView>
+      <GlobalAddFAB />
     </SafeAreaView>
   );
 }

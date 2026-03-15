@@ -117,9 +117,9 @@ export default function HubScreen() {
         <HubSettingsRow
           icon="add-circle"
           iconColor="#6A9E8A"
-          title="Manual Entry"
-          subtitle="Add a hotel or flight booking manually"
-          onPress={() => router.push('/booking/add-hotel')}
+          title="Add Tournament & Travel Details"
+          subtitle="Add tournaments, hotels, flights, events, and guests"
+          onPress={() => router.push('/settings/schedule-import')}
         />
 
         {/* Email Inbox */}
@@ -188,9 +188,9 @@ export default function HubScreen() {
         <View className="mt-6">
           <HubSectionHeader
             icon="link"
-            title="Quick Links"
+            title="Quick Links & Credential Vault"
             iconColor={ic.muted}
-            subtitle="GroupMe, LeagueApps, and other team tools"
+            subtitle="GroupMe, LeagueApps, SportsEngine, and other team tools"
             action={{ label: 'Add', onPress: () => router.push('/profile/edit-link') }}
           />
         </View>

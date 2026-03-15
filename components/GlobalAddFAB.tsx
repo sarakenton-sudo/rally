@@ -40,7 +40,7 @@ export default function GlobalAddFAB() {
               <Ionicons name="close" size={24} color="#8FA8BF" />
             </Pressable>
             <Text className="text-lg font-bold text-bark dark:text-cream">
-              Add to Rally
+              Add Tournament & Travel Details
             </Text>
             <View style={{ width: 32 }} />
           </View>
