@@ -163,6 +163,10 @@ function RootLayoutNav() {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="athlete/[id]"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="guest/add"
           options={{ presentation: 'modal', headerShown: false }}
         />
@@ -260,6 +264,10 @@ function RootLayoutNav() {
         />
         <Stack.Screen
           name="settings/add-athlete"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="settings/edit-athlete"
           options={{ presentation: 'modal', headerShown: false }}
         />
       </Stack>
