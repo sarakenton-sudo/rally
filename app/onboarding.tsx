@@ -157,8 +157,29 @@ type GuestEntry = { name: string; relation: string; phone: string };
 
 export default function OnboardingScreen() {
   const [step, setStep] = useState(0);
-  const { user } = useAuth();
+  const { user, acceptInvite } = useAuth();
   const { refresh } = useDataRefresh();
+
+  // Invite code (for athletes/co-parents joining via Google auth)
+  const [inviteCode, setInviteCode] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState('');
+
+  const handleAcceptInvite = async () => {
+    const code = inviteCode.trim();
+    if (!code) { setInviteError('Please enter your invite code.'); return; }
+    setInviteLoading(true);
+    setInviteError('');
+    const { error } = await acceptInvite(code);
+    setInviteLoading(false);
+    if (error) {
+      setInviteError(error);
+    } else {
+      // Invite accepted — refresh data and go to tabs
+      await refresh();
+      router.replace('/(tabs)');
+    }
+  };
 
   // Step 1: Athlete
   const AVATAR_COLORS = [
@@ -529,6 +550,48 @@ export default function OnboardingScreen() {
             >
               <Text style={{ fontSize: 16, fontFamily: 'Nunito-ExtraBold', color: '#FEFEFE' }}>Let's Go</Text>
             </Pressable>
+
+            {/* Invite code section */}
+            <View style={{ marginTop: 32, width: '100%', maxWidth: 320 }}>
+              <View style={{ height: 1, backgroundColor: '#D8E2EC', marginBottom: 20 }} />
+              <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-SemiBold', color: '#6B8BA8', textAlign: 'center', marginBottom: 12 }}>
+                Were you invited to join someone's RALLY?
+              </Text>
+              <TextInput
+                style={{
+                  ...INPUT_STYLE,
+                  textAlign: 'center',
+                  marginBottom: 10,
+                }}
+                placeholder="Enter invite code"
+                placeholderTextColor="#8FA8BF"
+                value={inviteCode}
+                onChangeText={(t) => { setInviteCode(t); setInviteError(''); }}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {inviteError ? (
+                <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-SemiBold', color: '#dc2626', textAlign: 'center', marginBottom: 8 }}>
+                  {inviteError}
+                </Text>
+              ) : null}
+              <Pressable
+                style={{
+                  backgroundColor: inviteCode.trim() ? '#6A9E8A' : '#D8E2EC',
+                  borderRadius: 14,
+                  paddingVertical: 14,
+                  alignItems: 'center',
+                  opacity: inviteLoading ? 0.6 : 1,
+                }}
+                className="active:opacity-80"
+                onPress={handleAcceptInvite}
+                disabled={inviteLoading || !inviteCode.trim()}
+              >
+                <Text style={{ fontSize: 14, fontFamily: 'Nunito-ExtraBold', color: inviteCode.trim() ? '#FEFEFE' : '#8FA8BF' }}>
+                  {inviteLoading ? 'Joining...' : 'Join with Invite Code'}
+                </Text>
+              </Pressable>
+            </View>
 
             <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-SemiBold', color: '#8FA8BF', textAlign: 'center', marginTop: 24, maxWidth: 280 }}>
               RALLY is for tournaments, not practices.{'\n'}Plenty of apps exist for that.
