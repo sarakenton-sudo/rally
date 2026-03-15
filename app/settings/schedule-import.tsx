@@ -26,7 +26,7 @@ export default function ScheduleImportScreen() {
 
       <ScrollView className="flex-1 px-4 pt-4" keyboardShouldPersistTaps="handled">
         {/* Section: Tournament Schedule */}
-        <Text className="text-xs font-semibold text-stone uppercase tracking-wider mb-3">Tournament Schedule</Text>
+        <Text className="text-base font-bold text-bark mb-3">Tournament Schedule</Text>
 
         {/* Card A — Copy/Paste + AI */}
         <Pressable
@@ -129,7 +129,7 @@ export default function ScheduleImportScreen() {
         </Pressable>
 
         {/* Section: Travel Details */}
-        <Text className="text-xs font-semibold text-stone uppercase tracking-wider mt-6 mb-3">Travel Details</Text>
+        <Text className="text-base font-bold text-bark mt-6 mb-3">Travel Details</Text>
 
         {/* Card D — Paste Travel */}
         <Pressable
