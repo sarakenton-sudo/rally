@@ -235,12 +235,12 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-cream dark:bg-bark">
-      <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 60 }}>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 60 }}>
 
         {/* ============================================================ */}
         {/* SECTION 1: Add to Tourney Itineraries                       */}
         {/* ============================================================ */}
-        <View className="mt-4">
+        <View className="px-4 pt-4 pb-5 bg-warm-white dark:bg-bark-light">
           <SectionHeader
             icon="add-circle"
             iconColor="#3B82B0"
@@ -257,14 +257,16 @@ export default function HomeScreen() {
               <Text className="text-xs font-semibold text-cream mt-1">Paste</Text>
             </Pressable>
             <Pressable
-              className="flex-1 bg-warm-white dark:bg-bark-light rounded-xl py-3.5 items-center justify-center active:opacity-80 border border-parchment dark:border-rally-900"
+              className="flex-1 rounded-xl py-3.5 items-center justify-center active:opacity-80 border border-parchment dark:border-rally-900"
+              style={{ backgroundColor: '#F5F0E8' }}
               onPress={() => router.push('/settings/email-forward')}
             >
               <Ionicons name="mail-open" size={20} color="#3B82B0" />
               <Text className="text-xs font-semibold text-bark dark:text-cream mt-1">Forward</Text>
             </Pressable>
             <Pressable
-              className="flex-1 bg-warm-white dark:bg-bark-light rounded-xl py-3.5 items-center justify-center active:opacity-80 border border-parchment dark:border-rally-900"
+              className="flex-1 rounded-xl py-3.5 items-center justify-center active:opacity-80 border border-parchment dark:border-rally-900"
+              style={{ backgroundColor: '#F5F0E8' }}
               onPress={handlePlusPress}
             >
               <Ionicons name="create-outline" size={20} color="#6A9E8A" />
@@ -276,7 +278,7 @@ export default function HomeScreen() {
         {/* ============================================================ */}
         {/* SECTION 2: Actions                                           */}
         {/* ============================================================ */}
-        <View className="mt-7">
+        <View className="px-4 pt-5 pb-5" style={{ backgroundColor: '#F5F0E8' }}>
           <SectionHeader
             icon="flash"
             iconColor="#d97706"
@@ -311,7 +313,7 @@ export default function HomeScreen() {
         {/* ============================================================ */}
         {/* SECTION 3: Next 30 Days                                      */}
         {/* ============================================================ */}
-        <View className="mt-7">
+        <View className="px-4 pt-5 pb-5 bg-warm-white dark:bg-bark-light">
           <SectionHeader
             icon="calendar"
             iconColor="#7c3aed"
@@ -328,8 +330,9 @@ export default function HomeScreen() {
                 className={`px-3 py-1.5 rounded-full border ${
                   athleteFilter === 'all'
                     ? 'bg-rally-600 border-rally-600'
-                    : 'bg-warm-white dark:bg-bark-light border-parchment dark:border-rally-900'
+                    : 'border-parchment dark:border-rally-900'
                 }`}
+                style={athleteFilter !== 'all' ? { backgroundColor: '#F5F0E8' } : undefined}
                 onPress={() => setAthleteFilter('all')}
               >
                 <Text className={`text-xs font-semibold ${
@@ -344,8 +347,8 @@ export default function HomeScreen() {
                 return (
                   <Pressable
                     key={a.id}
-                    style={isSelected ? { backgroundColor: avatarColor, borderColor: avatarColor, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999 } : undefined}
-                    className={isSelected ? undefined : 'px-3 py-1.5 rounded-full border bg-warm-white border-parchment'}
+                    style={isSelected ? { backgroundColor: avatarColor, borderColor: avatarColor, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999 } : { backgroundColor: '#F5F0E8' }}
+                    className={isSelected ? undefined : 'px-3 py-1.5 rounded-full border border-parchment'}
                     onPress={() => setAthleteFilter(a.id)}
                   >
                     <Text className={`text-xs font-semibold ${isSelected ? 'text-cream' : 'text-bark'}`}>
@@ -371,8 +374,8 @@ export default function HomeScreen() {
             ))
           ) : (
             <View
-              className="bg-warm-white dark:bg-bark-light rounded-2xl p-5 border border-parchment dark:border-rally-900"
-              style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
+              className="rounded-2xl p-5 border border-parchment dark:border-rally-900"
+              style={{ backgroundColor: '#F5F0E8' }}
             >
               <View className="items-center py-4">
                 <Ionicons name="calendar-outline" size={32} color={ic.placeholder} />
@@ -388,7 +391,7 @@ export default function HomeScreen() {
         {/* SECTION 4: Athletes                                          */}
         {/* ============================================================ */}
         {athletes.length > 0 && (
-          <View className="mt-7">
+          <View className="px-4 pt-5 pb-5" style={{ backgroundColor: '#F5F0E8' }}>
             <SectionHeader
               icon="people-circle"
               iconColor="#0d9488"
@@ -431,14 +434,15 @@ export default function HomeScreen() {
         {/* ============================================================ */}
         {/* SECTION 5: Guests                                            */}
         {/* ============================================================ */}
-        <View className="mt-7">
+        <View className="px-4 pt-5 pb-5 bg-warm-white dark:bg-bark-light">
           <SectionHeader
             icon="people"
             iconColor="#7c3aed"
             title="Guests"
           />
           <Pressable
-            className="bg-warm-white dark:bg-bark-light rounded-xl p-4 flex-row items-center border border-parchment dark:border-rally-900 active:opacity-80"
+            className="rounded-xl p-4 flex-row items-center border border-parchment dark:border-rally-900 active:opacity-80"
+            style={{ backgroundColor: '#F5F0E8' }}
             onPress={() => router.push('/(tabs)/guests')}
           >
             <View className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 items-center justify-center mr-3">
@@ -459,7 +463,7 @@ export default function HomeScreen() {
         {/* ============================================================ */}
         {/* SECTION 6: Credential Vault                                  */}
         {/* ============================================================ */}
-        <View className="mt-7">
+        <View className="px-4 pt-5 pb-5" style={{ backgroundColor: '#F5F0E8' }}>
           <SectionHeader
             icon="key"
             iconColor="#ca8a04"
@@ -515,13 +519,13 @@ export default function HomeScreen() {
         {/* ============================================================ */}
         {/* SECTION 7: Feature Request                                   */}
         {/* ============================================================ */}
-        <View className="mt-7">
+        <View className="px-4 pt-5 pb-5 bg-warm-white dark:bg-bark-light">
           <SectionHeader
             icon="bulb"
             iconColor="#6A9E8A"
             title="New Feature Request"
           />
-          <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900">
+          <View className="rounded-xl p-4 border border-parchment dark:border-rally-900" style={{ backgroundColor: '#F5F0E8' }}>
             <TextInput
               className="text-sm text-bark dark:text-cream min-h-[60px]"
               placeholder="What would make Rally even better?"
@@ -555,30 +559,28 @@ export default function HomeScreen() {
         {/* ============================================================ */}
         {/* SECTION 8: Need Help?                                        */}
         {/* ============================================================ */}
-        <View className="mt-7">
+        <View className="px-4 pt-5 pb-6" style={{ backgroundColor: '#F5F0E8' }}>
           <SectionHeader
             icon="help-circle"
             iconColor="#3B82B0"
             title="Need Help?"
           />
+          <Pressable
+            className="bg-warm-white dark:bg-bark-light rounded-xl p-4 flex-row items-center border border-parchment dark:border-rally-900 active:opacity-80"
+            onPress={() => Linking.openURL('mailto:hello@rally-hub.com')}
+          >
+            <View className="w-10 h-10 rounded-full bg-rally-50 dark:bg-rally-900/30 items-center justify-center mr-3">
+              <Ionicons name="help-circle" size={20} color="#3B82B0" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-sm font-semibold text-bark dark:text-cream">Need Help?</Text>
+              <Text className="text-xs text-stone dark:text-parchment mt-0.5">
+                Reach out to hello@rally-hub.com
+              </Text>
+            </View>
+            <Ionicons name="mail-outline" size={18} color="#3B82B0" />
+          </Pressable>
         </View>
-        <Pressable
-          className="bg-warm-white dark:bg-bark-light rounded-xl p-4 flex-row items-center border border-parchment dark:border-rally-900 active:opacity-80"
-          onPress={() => Linking.openURL('mailto:hello@rally-hub.com')}
-        >
-          <View className="w-10 h-10 rounded-full bg-rally-50 dark:bg-rally-900/30 items-center justify-center mr-3">
-            <Ionicons name="help-circle" size={20} color="#3B82B0" />
-          </View>
-          <View className="flex-1">
-            <Text className="text-sm font-semibold text-bark dark:text-cream">Need Help?</Text>
-            <Text className="text-xs text-stone dark:text-parchment mt-0.5">
-              Reach out to hello@rally-hub.com
-            </Text>
-          </View>
-          <Ionicons name="mail-outline" size={18} color="#3B82B0" />
-        </Pressable>
-
-        <View className="h-6" />
       </ScrollView>
 
       {/* Add menu modal (Android/web fallback) */}
