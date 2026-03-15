@@ -6,6 +6,7 @@ interface FlightBookingCardProps {
   booking: FlightBooking;
   tournamentName?: string;
   onPress?: () => void;
+  onDelete?: () => void;
 }
 
 function formatDate(dateStr: string): string {
@@ -13,7 +14,7 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export default function FlightBookingCard({ booking, tournamentName, onPress }: FlightBookingCardProps) {
+export default function FlightBookingCard({ booking, tournamentName, onPress, onDelete }: FlightBookingCardProps) {
   return (
     <Pressable
       className="bg-warm-white dark:bg-bark-light rounded-2xl mb-3 overflow-hidden border border-parchment dark:border-rally-900 active:opacity-90"
@@ -21,15 +22,22 @@ export default function FlightBookingCard({ booking, tournamentName, onPress }: 
       onPress={onPress}
     >
       <View className="p-4">
-        <View className="flex-row items-center mb-2">
-          <Ionicons name="airplane" size={18} color="#8FA8BF" />
-          <Text className="text-lg font-bold text-bark dark:text-cream ml-2">
-            {booking.airline}
-          </Text>
-          {tournamentName && (
-            <Text className="text-xs text-stone ml-2" numberOfLines={1}>
-              {tournamentName}
+        <View className="flex-row items-center justify-between mb-2">
+          <View className="flex-row items-center flex-1">
+            <Ionicons name="airplane" size={18} color="#8FA8BF" />
+            <Text className="text-lg font-bold text-bark dark:text-cream ml-2">
+              {booking.airline}
             </Text>
+            {tournamentName && (
+              <Text className="text-xs text-stone ml-2" numberOfLines={1}>
+                {tournamentName}
+              </Text>
+            )}
+          </View>
+          {onDelete && (
+            <Pressable onPress={onDelete} className="p-1.5 active:opacity-60">
+              <Ionicons name="trash-outline" size={16} color="#ef4444" />
+            </Pressable>
           )}
         </View>
 

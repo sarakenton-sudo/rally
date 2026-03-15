@@ -243,6 +243,14 @@ function RootLayoutNav() {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="import/paste-tournament-details"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="import/review-tournament-details"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="settings/account"
           options={{ presentation: 'modal', headerShown: false }}
         />

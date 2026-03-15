@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, SectionList, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, SectionList, Pressable, ActivityIndicator, Alert, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,8 @@ import HotelBookingCard from '@/components/HotelBookingCard';
 import FlightBookingCard from '@/components/FlightBookingCard';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
+import { useAuth } from '@/providers/AuthProvider';
+import { deleteHotelBooking as deleteHotelBookingDB, deleteFlightBooking as deleteFlightBookingDB } from '@/hooks/useSupabaseData';
 import { formatDateRange } from '@/lib/dates';
 import type { HotelBooking, FlightBooking } from '@/types/database';
 
@@ -55,7 +57,41 @@ export default function TravelScreen() {
     [allFlightBookings, seasonTournamentIds]
   );
   const isLoading = useSeasonStore((s) => s.isLoading);
+  const removeHotelBooking = useSeasonStore((s) => s.removeHotelBooking);
+  const removeFlightBooking = useSeasonStore((s) => s.removeFlightBooking);
   const { refresh, isRefreshing } = useDataRefresh();
+  const { user } = useAuth();
+  const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
+
+  const handleDeleteHotel = (hotelId: string, hotelName: string) => {
+    const doDelete = async () => {
+      if (isSupabaseConfigured && user) await deleteHotelBookingDB(hotelId);
+      removeHotelBooking(hotelId);
+    };
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Delete hotel "${hotelName}"?`)) doDelete();
+    } else {
+      Alert.alert('Delete Hotel', `Delete "${hotelName}"?`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: doDelete },
+      ]);
+    }
+  };
+
+  const handleDeleteFlight = (flightId: string, airline: string) => {
+    const doDelete = async () => {
+      if (isSupabaseConfigured && user) await deleteFlightBookingDB(flightId);
+      removeFlightBooking(flightId);
+    };
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Delete ${airline} flight?`)) doDelete();
+    } else {
+      Alert.alert('Delete Flight', `Delete ${airline} flight?`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: doDelete },
+      ]);
+    }
+  };
 
   const sections: Section[] = useMemo(() => {
     const map = new Map<string, Section>();
@@ -200,6 +236,7 @@ export default function TravelScreen() {
                 <HotelBookingCard
                   booking={item.data}
                   onPress={() => router.push({ pathname: '/booking/add-hotel', params: { editId: item.data.id } })}
+                  onDelete={() => handleDeleteHotel(item.data.id, item.data.hotel_name)}
                 />
               </View>
             );
@@ -209,6 +246,7 @@ export default function TravelScreen() {
               <FlightBookingCard
                 booking={item.data}
                 onPress={() => router.push({ pathname: '/booking/add-flight', params: { editId: item.data.id } })}
+                onDelete={() => handleDeleteFlight(item.data.id, item.data.airline)}
               />
             </View>
           );

@@ -9,7 +9,7 @@ import FlightBookingCard from '@/components/FlightBookingCard';
 import TournamentGuestList from '@/components/TournamentGuestList';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
-import { useTeamEvents, deleteTournament as deleteTournamentDB, updateTournament as updateTournamentDB } from '@/hooks/useSupabaseData';
+import { useTeamEvents, deleteTournament as deleteTournamentDB, updateTournament as updateTournamentDB, deleteHotelBooking as deleteHotelBookingDB, deleteFlightBooking as deleteFlightBookingDB } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/providers/AuthProvider';
 import { useNotificationActions } from '@/hooks/useNotificationActions';
 import { MOCK_TEAM_EVENTS } from '@/lib/mock-data';
@@ -74,6 +74,38 @@ export default function TournamentDetailScreen() {
   const { user } = useAuth();
   const removeTournament = useSeasonStore((s) => s.removeTournament);
   const updateTournamentStore = useSeasonStore((s) => s.updateTournament);
+  const removeHotelBooking = useSeasonStore((s) => s.removeHotelBooking);
+  const removeFlightBooking = useSeasonStore((s) => s.removeFlightBooking);
+
+  const handleDeleteHotel = (hotelId: string, hotelName: string) => {
+    const doDelete = async () => {
+      if (isSupabaseConfigured && user) await deleteHotelBookingDB(hotelId);
+      removeHotelBooking(hotelId);
+    };
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Delete hotel "${hotelName}"?`)) doDelete();
+    } else {
+      Alert.alert('Delete Hotel', `Delete "${hotelName}"?`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: doDelete },
+      ]);
+    }
+  };
+
+  const handleDeleteFlight = (flightId: string, airline: string) => {
+    const doDelete = async () => {
+      if (isSupabaseConfigured && user) await deleteFlightBookingDB(flightId);
+      removeFlightBooking(flightId);
+    };
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Delete ${airline} flight?`)) doDelete();
+    } else {
+      Alert.alert('Delete Flight', `Delete ${airline} flight?`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: doDelete },
+      ]);
+    }
+  };
   const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
   const handleDeleteTournament = async () => {
@@ -170,6 +202,15 @@ export default function TournamentDetailScreen() {
         </View>
 
         <View className="px-4">
+          {/* PASTE + AI for tournament details */}
+          <Pressable
+            className="bg-rally-50 rounded-xl p-3 mt-4 flex-row items-center justify-center active:opacity-80 border border-rally-100"
+            onPress={() => router.push({ pathname: '/import/paste-tournament-details', params: { tournamentId: tournament.id } })}
+          >
+            <Ionicons name="sparkles" size={16} color="#7c3aed" />
+            <Text className="text-sm font-semibold text-rally-700 ml-2">Paste + AI Tournament Details</Text>
+          </Pressable>
+
           {/* VENUE */}
           {(() => {
             const hasVenue = tournament.venues.length > 0 && (tournament.venues[0]?.label || tournament.venues[0]?.address);
@@ -473,6 +514,7 @@ export default function TournamentDetailScreen() {
                   key={h.id}
                   booking={h}
                   onPress={() => router.push({ pathname: '/booking/add-hotel', params: { editId: h.id } })}
+                  onDelete={() => handleDeleteHotel(h.id, h.hotel_name)}
                 />
               ))}
               {/* Existing flight bookings (always shown) */}
@@ -481,6 +523,7 @@ export default function TournamentDetailScreen() {
                   key={f.id}
                   booking={f}
                   onPress={() => router.push({ pathname: '/booking/add-flight', params: { editId: f.id } })}
+                  onDelete={() => handleDeleteFlight(f.id, f.airline)}
                 />
               ))}
 

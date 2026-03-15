@@ -7,6 +7,7 @@ interface HotelBookingCardProps {
   booking: HotelBooking;
   tournamentName?: string;
   onPress?: () => void;
+  onDelete?: () => void;
 }
 
 const PLATFORM_COLORS: Record<string, string> = {
@@ -48,7 +49,7 @@ function getCancellationBadge(deadline: string | null): {
   return { text: `Cancel by ${formatDate(deadline)}`, bgClass: 'bg-cream', textClass: 'text-stone', icon: 'time-outline' };
 }
 
-export default function HotelBookingCard({ booking, tournamentName, onPress }: HotelBookingCardProps) {
+export default function HotelBookingCard({ booking, tournamentName, onPress, onDelete }: HotelBookingCardProps) {
   const platformStyle = PLATFORM_COLORS[booking.platform] ?? PLATFORM_COLORS['Other'];
   const [platformBg, platformText] = platformStyle.split(' ');
   const cancellation = getCancellationBadge(booking.cancellation_deadline);
@@ -64,7 +65,7 @@ export default function HotelBookingCard({ booking, tournamentName, onPress }: H
       onPress={onPress}
     >
       <View className="p-4">
-        {/* Header: hotel name + backup badge */}
+        {/* Header: hotel name + backup badge + delete */}
         <View className="flex-row items-start justify-between mb-2">
           <View className="flex-1 mr-3">
             <View className="flex-row items-center">
@@ -80,11 +81,18 @@ export default function HotelBookingCard({ booking, tournamentName, onPress }: H
             )}
           </View>
 
-          {booking.is_backup && (
-            <View className="bg-amber-50 px-2 py-0.5 rounded-full">
-              <Text className="text-xs font-semibold text-amber-600">Backup</Text>
-            </View>
-          )}
+          <View className="flex-row items-center">
+            {booking.is_backup && (
+              <View className="bg-amber-50 px-2 py-0.5 rounded-full mr-2">
+                <Text className="text-xs font-semibold text-amber-600">Backup</Text>
+              </View>
+            )}
+            {onDelete && (
+              <Pressable onPress={onDelete} className="p-1.5 active:opacity-60">
+                <Ionicons name="trash-outline" size={16} color="#ef4444" />
+              </Pressable>
+            )}
+          </View>
         </View>
 
         {/* Platform + status row */}
