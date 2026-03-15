@@ -452,7 +452,7 @@ export default function OnboardingScreen() {
         // 6. Haptic + navigate
         notifySuccess();
         console.log('[Onboarding] Setup complete, navigating to dashboard');
-        router.replace('/');
+        router.replace('/(tabs)');
         setTimeout(() => { refresh().catch(() => {}); }, 1500);
       } catch (err: any) {
         setSaving(false);
@@ -482,7 +482,7 @@ export default function OnboardingScreen() {
       store.setSeasons([{ id: mockSeasonId, athlete_id: mockAthleteId, team_name: teamName.trim(), club_name: clubName.trim() || null, season_year: seasonYear, sport: 'volleyball', team_code: null, schedule_import_source: null, schedule_import_connected: false, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
       store.setActiveSeasonId(mockSeasonId);
       notifySuccess();
-      router.replace('/');
+      router.replace('/(tabs)');
     }
     setSaving(false);
   };

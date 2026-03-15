@@ -124,10 +124,10 @@ function RootLayoutNav() {
       router.replace('/onboarding');
     } else if (session && userProfile?.role === 'athlete' && (inAuthFlow || inOnboarding)) {
       // Athlete — go straight to tabs (scoped view)
-      router.replace('/');
+      router.replace('/(tabs)');
     } else if (session && adminConfig && activeSeasonId && (inAuthFlow || inOnboarding)) {
       // Fully configured admin — go to tabs
-      router.replace('/');
+      router.replace('/(tabs)');
     }
   }, [session, isLoading, segments, adminConfig, activeSeasonId, storeLoading, userProfile]);
 
