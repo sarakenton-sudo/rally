@@ -604,7 +604,7 @@ export default function EmailDetailScreen() {
         body: JSON.stringify({
           from: email.from_address,
           subject: email.subject,
-          body: (email.body_text ?? '').slice(0, 10000),
+          body: cleanEmailBody(email.body_text ?? '').slice(0, 8000),
         }),
       });
 

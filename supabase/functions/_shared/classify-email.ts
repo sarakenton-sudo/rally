@@ -74,6 +74,54 @@ export async function classifyEmail(
     return result;
   }
 
+  // Strip HTML to get actual text content — airline/hotel emails can be 100K+ of HTML
+  // but only 5-10K of actual text. Without stripping, the first 8K chars are CSS/boilerplate.
+  let cleanBody = body;
+  if (body.includes('<') && body.includes('>')) {
+    try {
+      // Remove style/script blocks first (use split-based approach for large strings to avoid regex backtracking)
+      let stripped = body;
+      // Remove <style>...</style> blocks
+      while (stripped.includes('<style')) {
+        const start = stripped.indexOf('<style');
+        const end = stripped.indexOf('</style>', start);
+        if (end === -1) break;
+        stripped = stripped.slice(0, start) + stripped.slice(end + 8);
+      }
+      // Remove <script>...</script> blocks
+      while (stripped.includes('<script')) {
+        const start = stripped.indexOf('<script');
+        const end = stripped.indexOf('</script>', start);
+        if (end === -1) break;
+        stripped = stripped.slice(0, start) + stripped.slice(end + 9);
+      }
+      // Now strip remaining tags
+      cleanBody = stripped
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/p>/gi, '\n\n')
+        .replace(/<\/div>/gi, '\n')
+        .replace(/<\/tr>/gi, '\n')
+        .replace(/<\/td>/gi, ' | ')
+        .replace(/<\/li>/gi, '\n')
+        .replace(/<li[^>]*>/gi, '• ')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&#\d+;/g, '')
+        .replace(/[ \t]+/g, ' ')
+        .replace(/ *\n */g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    } catch {
+      // If stripping fails, just use raw body
+      cleanBody = body;
+    }
+  }
+
   const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -87,7 +135,7 @@ export async function classifyEmail(
       system: CLASSIFICATION_PROMPT,
       messages: [{
         role: 'user',
-        content: `From: ${from}\nSubject: ${subject}\n\n${body.slice(0, 8000)}`,
+        content: `From: ${from}\nSubject: ${subject}\n\n${cleanBody.slice(0, 8000)}`,
       }],
     }),
   });
