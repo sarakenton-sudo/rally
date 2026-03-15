@@ -298,6 +298,17 @@ export default function OnboardingScreen() {
     setGuests([...guests, { name: '', relation: 'Grandparent', phone: '' }]);
   };
 
+  // Returns true if all guests with names also have phone numbers
+  const validateGuests = (): boolean => {
+    const guestsWithNames = guests.filter((g) => g.name.trim());
+    const missing = guestsWithNames.find((g) => !g.phone.trim());
+    if (missing) {
+      Alert.alert('Phone required', `Please add a phone number for ${missing.name.trim()}. Guests need a phone number to receive tournament updates.`);
+      return false;
+    }
+    return true;
+  };
+
   // ---- FINISH ----
   const handleFinish = async () => {
     if (!athleteFirstName.trim()) { Alert.alert('Athlete name required', "Please go back and enter your athlete's first name."); goTo(1); return; }
@@ -969,7 +980,11 @@ export default function OnboardingScreen() {
                   </View>
 
                   <TextInput value={guest.phone} onChangeText={(v) => { const u = [...guests]; u[i] = { ...u[i], phone: v }; setGuests(u); }}
-                    placeholder="Phone (optional, for SMS)" placeholderTextColor="#7A9AB5" keyboardType="phone-pad" style={INPUT_STYLE} />
+                    placeholder="Phone number (required for SMS updates)" placeholderTextColor="#7A9AB5" keyboardType="phone-pad"
+                    style={{ ...INPUT_STYLE, borderColor: guest.name.trim() && !guest.phone.trim() ? '#ef4444' : '#3A6490' }} />
+                  {guest.name.trim() && !guest.phone.trim() && (
+                    <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-SemiBold', color: '#fca5a5', marginTop: 4 }}>Phone required to send updates</Text>
+                  )}
                 </View>
               ))}
 
@@ -984,12 +999,12 @@ export default function OnboardingScreen() {
             </ScrollView>
 
             <View style={{ marginTop: 'auto', paddingBottom: 16, gap: 8 }}>
-              <FinishButton onPress={handleFinish} saving={saving} />
+              <FinishButton onPress={() => { if (validateGuests()) handleFinish(); }} saving={saving} />
               <SkipButton onPress={() => { setGuests([{ name: '', relation: 'Grandparent', phone: '' }]); goTo(7); }} />
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <BackButton onPress={() => goTo(5)} />
                 <View style={{ flex: 1 }}>
-                  <ContinueButton onPress={() => goTo(7)} />
+                  <ContinueButton onPress={() => { if (validateGuests()) goTo(7); }} />
                 </View>
               </View>
             </View>
