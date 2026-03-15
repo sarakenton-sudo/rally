@@ -700,50 +700,54 @@ export default function TournamentDetailScreen() {
                 </View>
               </View>
 
-              {/* Not needed toggles — below existing bookings */}
-              <View className="flex-row items-center justify-between mt-3 mb-2 bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 border border-parchment dark:border-rally-900">
-                <View className="flex-1 mr-4">
-                  <Text className="text-sm font-medium text-bark dark:text-parchment">
-                    No hotel needed
-                  </Text>
-                  <Text className="text-xs text-stone dark:text-stone mt-0.5">
-                    Staying local or with family
-                  </Text>
+              {/* Not needed toggles — hidden when bookings exist */}
+              {hotels.length === 0 && (
+                <View className="flex-row items-center justify-between mt-3 mb-2 bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 border border-parchment dark:border-rally-900">
+                  <View className="flex-1 mr-4">
+                    <Text className="text-sm font-medium text-bark dark:text-parchment">
+                      No hotel needed
+                    </Text>
+                    <Text className="text-xs text-stone dark:text-stone mt-0.5">
+                      Staying local or with family
+                    </Text>
+                  </View>
+                  <Switch
+                    value={tournament.hotel_not_needed}
+                    onValueChange={async (value) => {
+                      if (isSupabaseConfigured && user) {
+                        await updateTournamentDB(tournament.id, { hotel_not_needed: value });
+                      }
+                      updateTournamentStore(tournament.id, { hotel_not_needed: value });
+                    }}
+                    trackColor={{ false: '#D8E2EC', true: '#86EFAC' }}
+                    thumbColor={tournament.hotel_not_needed ? '#16a34a' : '#FEFEFE'}
+                  />
                 </View>
-                <Switch
-                  value={tournament.hotel_not_needed}
-                  onValueChange={async (value) => {
-                    if (isSupabaseConfigured && user) {
-                      await updateTournamentDB(tournament.id, { hotel_not_needed: value });
-                    }
-                    updateTournamentStore(tournament.id, { hotel_not_needed: value });
-                  }}
-                  trackColor={{ false: '#D8E2EC', true: '#86EFAC' }}
-                  thumbColor={tournament.hotel_not_needed ? '#16a34a' : '#FEFEFE'}
-                />
-              </View>
+              )}
 
-              <View className="flex-row items-center justify-between mb-3 bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 border border-parchment dark:border-rally-900">
-                <View className="flex-1 mr-4">
-                  <Text className="text-sm font-medium text-bark dark:text-parchment">
-                    No air needed
-                  </Text>
-                  <Text className="text-xs text-stone dark:text-stone mt-0.5">
-                    Driving or getting a ride
-                  </Text>
+              {flights.length === 0 && (
+                <View className="flex-row items-center justify-between mb-3 bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 border border-parchment dark:border-rally-900">
+                  <View className="flex-1 mr-4">
+                    <Text className="text-sm font-medium text-bark dark:text-parchment">
+                      No air needed
+                    </Text>
+                    <Text className="text-xs text-stone dark:text-stone mt-0.5">
+                      Driving or getting a ride
+                    </Text>
+                  </View>
+                  <Switch
+                    value={tournament.air_not_needed}
+                    onValueChange={async (value) => {
+                      if (isSupabaseConfigured && user) {
+                        await updateTournamentDB(tournament.id, { air_not_needed: value });
+                      }
+                      updateTournamentStore(tournament.id, { air_not_needed: value });
+                    }}
+                    trackColor={{ false: '#D8E2EC', true: '#86EFAC' }}
+                    thumbColor={tournament.air_not_needed ? '#16a34a' : '#FEFEFE'}
+                  />
                 </View>
-                <Switch
-                  value={tournament.air_not_needed}
-                  onValueChange={async (value) => {
-                    if (isSupabaseConfigured && user) {
-                      await updateTournamentDB(tournament.id, { air_not_needed: value });
-                    }
-                    updateTournamentStore(tournament.id, { air_not_needed: value });
-                  }}
-                  trackColor={{ false: '#D8E2EC', true: '#86EFAC' }}
-                  thumbColor={tournament.air_not_needed ? '#16a34a' : '#FEFEFE'}
-                />
-              </View>
+              )}
             </>
 
           {/* Non-travel tournament bookings (if any exist — legacy fallback, hidden since travel always shows) */}
