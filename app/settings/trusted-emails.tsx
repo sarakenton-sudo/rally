@@ -92,7 +92,7 @@ export default function TrustedEmailsScreen() {
               Why add email addresses?
             </Text>
             <Text className="text-xs text-stone dark:text-parchment leading-5">
-              We already have the email you registered with — you're all set there! But you might book travel or forward confirmations from other accounts — personal, work, or a partner's. Add them here so RallyHUB recognizes those emails as yours.
+              We already have the email you registered with — you're all set there! But you might book travel or forward confirmations from other accounts — personal, work, or a partner's. Add them here so RallyHUB recognizes those emails as yours and adds critical information to your itineraries.
             </Text>
           </View>
 
