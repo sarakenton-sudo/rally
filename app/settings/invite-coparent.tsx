@@ -250,7 +250,7 @@ export default function InviteCoParentScreen() {
                 onPress={() => {
                   const roleLabel = inviteType === 'athlete' ? 'athlete' : 'co-parent';
                   const body = encodeURIComponent(
-                    `You've been invited to Rally! Download the app and use this invite code to join as a ${roleLabel}:\n\n${inviteCode}\n\nhttps://rally-hub.com`
+                    `You've been invited to Rally!\n\nYour invite code:\n\n${inviteCode}\n\nGo to rally-hub.com, sign in with Google, and enter the code above to join as a ${roleLabel}.`
                   );
                   const smsUrl = Platform.OS === 'ios'
                     ? `sms:&body=${body}`
