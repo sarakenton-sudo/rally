@@ -11,7 +11,7 @@ import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { useTeamEvents, deleteTournament as deleteTournamentDB, updateTournament as updateTournamentDB, deleteHotelBooking as deleteHotelBookingDB, deleteFlightBooking as deleteFlightBookingDB } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/providers/AuthProvider';
-import { useNotificationActions } from '@/hooks/useNotificationActions';
+
 import { MOCK_TEAM_EVENTS } from '@/lib/mock-data';
 import { formatDateRange, countdownText, daysUntil } from '@/lib/dates';
 import { useIconColors } from '@/lib/colors';
@@ -70,7 +70,7 @@ export default function TournamentDetailScreen() {
   const teamCode = activeSeason?.team_code;
   const ic = useIconColors();
   const { refresh, isRefreshing } = useDataRefresh();
-  const { sendRSVPRequest, sendTournamentReminder } = useNotificationActions();
+
   const { user } = useAuth();
   const removeTournament = useSeasonStore((s) => s.removeTournament);
   const updateTournamentStore = useSeasonStore((s) => s.updateTournament);
@@ -738,21 +738,42 @@ export default function TournamentDetailScreen() {
           <SectionHeader icon="people" title="Guests" iconColor={ic.muted} />
           <TournamentGuestList tournament={tournament} />
 
-          {/* Notification actions */}
+          {/* Send details to all guests */}
           <View className="flex-row gap-2 mt-2">
             <Pressable
-              className="flex-1 bg-purple-50 dark:bg-purple-900/20 rounded-xl py-3 items-center flex-row justify-center active:opacity-80"
-              onPress={() => sendRSVPRequest(tournament)}
+              className="flex-1 bg-green-50 dark:bg-green-900/20 rounded-xl py-3 items-center flex-row justify-center active:opacity-80"
+              onPress={() => {
+                const venue = tournament.venues.find((v) => v.is_confirmed) ?? tournament.venues[0];
+                const lines = [tournament.name];
+                if (tournament.ticket_link) {
+                  lines.push('', `Tickets: ${tournament.ticket_link}`);
+                  if (activeSeason?.team_code) lines.push(`Team Code: ${activeSeason.team_code}`);
+                }
+                if (venue?.address) {
+                  lines.push('', `Venue: ${venue.label || tournament.location_city}`, `Directions: https://maps.google.com/?q=${encodeURIComponent(venue.address)}`);
+                }
+                const smsBody = encodeURIComponent(lines.join('\n'));
+                const smsUrl = Platform.OS === 'ios' ? `sms:&body=${smsBody}` : `sms:?body=${smsBody}`;
+                Platform.OS === 'web' ? window.open(smsUrl, '_blank') : Linking.openURL(smsUrl);
+              }}
             >
-              <Ionicons name="mail-outline" size={16} color="#7c3aed" />
-              <Text className="text-xs font-semibold text-purple-700 dark:text-purple-300 ml-1.5">Send RSVP</Text>
+              <Ionicons name="location" size={16} color="#16a34a" />
+              <Text className="text-xs font-semibold text-green-700 dark:text-green-300 ml-1.5">Send In-Person Details</Text>
             </Pressable>
             <Pressable
-              className="flex-1 bg-rally-50 dark:bg-rally-900/20 rounded-xl py-3 items-center flex-row justify-center active:opacity-80"
-              onPress={() => sendTournamentReminder(tournament)}
+              className="flex-1 bg-purple-50 dark:bg-purple-900/20 rounded-xl py-3 items-center flex-row justify-center active:opacity-80"
+              onPress={() => {
+                const lines = [tournament.name];
+                const streamUrl = tournament.streaming_links[0]?.url ?? activeSeason?.default_stream_url;
+                if (streamUrl) lines.push('', `Watch: ${streamUrl}`);
+                if (tournament.schedule_link) lines.push('', `Schedule: ${tournament.schedule_link}`);
+                const smsBody = encodeURIComponent(lines.join('\n'));
+                const smsUrl = Platform.OS === 'ios' ? `sms:&body=${smsBody}` : `sms:?body=${smsBody}`;
+                Platform.OS === 'web' ? window.open(smsUrl, '_blank') : Linking.openURL(smsUrl);
+              }}
             >
-              <Ionicons name="notifications-outline" size={16} color="#3B82B0" />
-              <Text className="text-xs font-semibold text-rally-700 dark:text-rally-300 ml-1.5">Send Reminder</Text>
+              <Ionicons name="videocam" size={16} color="#7c3aed" />
+              <Text className="text-xs font-semibold text-purple-700 dark:text-purple-300 ml-1.5">Send Streaming Details</Text>
             </Pressable>
           </View>
 
