@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, Pressable, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Pressable, Alert, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -246,10 +246,27 @@ export default function InviteCoParentScreen() {
               </View>
 
               <Pressable
-                className="bg-rally-600 rounded-xl py-4 items-center mt-4 active:opacity-80"
+                className="bg-rally-600 rounded-xl py-4 flex-row items-center justify-center mt-4 active:opacity-80"
+                onPress={() => {
+                  const roleLabel = inviteType === 'athlete' ? 'athlete' : 'co-parent';
+                  const body = encodeURIComponent(
+                    `You've been invited to Rally! Download the app and use this invite code to join as a ${roleLabel}:\n\n${inviteCode}\n\nhttps://rally-hub.com`
+                  );
+                  const smsUrl = Platform.OS === 'ios'
+                    ? `sms:&body=${body}`
+                    : `sms:?body=${body}`;
+                  Linking.openURL(smsUrl);
+                }}
+              >
+                <Ionicons name="chatbubble-outline" size={18} color="#FEFEFE" />
+                <Text className="text-base font-semibold text-cream ml-2">Text Invite</Text>
+              </Pressable>
+
+              <Pressable
+                className="border border-rally-600 rounded-xl py-4 items-center mt-3 active:opacity-80"
                 onPress={handleCopyCode}
               >
-                <Text className="text-base font-semibold text-cream">Copy Code</Text>
+                <Text className="text-base font-semibold text-rally-600">Copy Code</Text>
               </Pressable>
 
               <Pressable
