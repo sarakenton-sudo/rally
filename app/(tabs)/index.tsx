@@ -10,6 +10,11 @@ import { daysUntil } from '@/lib/dates';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
 
+const AVATAR_COLORS = [
+  '#3B82B0', '#7c3aed', '#6A9E8A', '#d97706', '#dc2626',
+  '#0d9488', '#be185d', '#4f46e5', '#ca8a04', '#0891b2',
+];
+
 export default function HomeScreen() {
   const tournaments = useSeasonStore((s) => s.tournaments);
   const hotelBookings = useSeasonStore((s) => s.hotelBookings);
@@ -220,23 +225,22 @@ export default function HomeScreen() {
                   All Athletes
                 </Text>
               </Pressable>
-              {athletes.map((a) => (
-                <Pressable
-                  key={a.id}
-                  className={`px-3 py-1.5 rounded-full border ${
-                    athleteFilter === a.id
-                      ? 'bg-rally-600 border-rally-600'
-                      : 'bg-warm-white dark:bg-bark-light border-parchment dark:border-rally-900'
-                  }`}
-                  onPress={() => setAthleteFilter(a.id)}
-                >
-                  <Text className={`text-xs font-semibold ${
-                    athleteFilter === a.id ? 'text-cream' : 'text-bark dark:text-parchment'
-                  }`}>
-                    {a.first_name}
-                  </Text>
-                </Pressable>
-              ))}
+              {athletes.map((a) => {
+                const avatarColor = a.avatar_color || AVATAR_COLORS[a.first_name.charCodeAt(0) % AVATAR_COLORS.length];
+                const isSelected = athleteFilter === a.id;
+                return (
+                  <Pressable
+                    key={a.id}
+                    style={isSelected ? { backgroundColor: avatarColor, borderColor: avatarColor, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999 } : undefined}
+                    className={isSelected ? undefined : 'px-3 py-1.5 rounded-full border bg-warm-white border-parchment'}
+                    onPress={() => setAthleteFilter(a.id)}
+                  >
+                    <Text className={`text-xs font-semibold ${isSelected ? 'text-cream' : 'text-bark'}`}>
+                      {a.first_name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </ScrollView>
           )}
 
@@ -294,33 +298,6 @@ export default function HomeScreen() {
             Tap to copy — forward hotel, flight, and tournament emails and we'll do the rest.
           </Text>
         </Pressable>
-
-        {/* Team Code — compact, only show if set */}
-        {teamCode ? (
-          <Pressable
-            className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mt-3 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
-            onPress={async () => {
-              if (Platform.OS === 'web') {
-                await navigator.clipboard.writeText(teamCode);
-              } else {
-                await Clipboard.setStringAsync(teamCode);
-              }
-              tapLight();
-              if (Platform.OS !== 'web') {
-                Alert.alert('Copied', 'Team code copied to clipboard.');
-              }
-            }}
-          >
-            <View className="w-10 h-10 rounded-full bg-rally-50 dark:bg-rally-900/30 items-center justify-center mr-3">
-              <Ionicons name="key" size={18} color="#3B82B0" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-xs text-stone uppercase tracking-wider">Team Code</Text>
-              <Text className="text-lg font-bold text-bark dark:text-cream tracking-widest">{teamCode}</Text>
-            </View>
-            <Ionicons name="copy-outline" size={18} color="#8FA8BF" />
-          </Pressable>
-        ) : null}
 
         <View className="h-4" />
       </ScrollView>
