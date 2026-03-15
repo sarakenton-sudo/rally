@@ -62,7 +62,7 @@ export default function HubScreen() {
         {/* TRAVEL IMPORT */}
         {/* ============================================================ */}
         <View className="mt-6">
-          <HubSectionHeader icon="airplane" title="Travel Import" iconColor={ic.muted} />
+          <HubSectionHeader icon="airplane" title="Tournament & Travel Details Import" iconColor={ic.muted} />
         </View>
 
         {/* Email Forwarding */}

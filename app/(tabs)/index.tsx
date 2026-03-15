@@ -9,6 +9,8 @@ import { useGuestStore } from '@/stores/useGuestStore';
 import { daysUntil } from '@/lib/dates';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/providers/AuthProvider';
 
 const AVATAR_COLORS = [
   '#3B82B0', '#7c3aed', '#6A9E8A', '#d97706', '#dc2626',
@@ -50,6 +52,7 @@ export default function HomeScreen() {
   const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
   const guests = useGuestStore((s) => s.guests);
   const ic = useIconColors();
+  const { user } = useAuth();
 
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [athleteFilter, setAthleteFilter] = useState<string>('all');
@@ -256,13 +259,21 @@ export default function HomeScreen() {
     return season ? athletes.find((a) => a.id === season.athlete_id) ?? null : null;
   };
 
-  const handleFeatureSubmit = () => {
+  const handleFeatureSubmit = async () => {
     if (!featureRequest.trim()) return;
-    const body = encodeURIComponent(featureRequest.trim());
-    Linking.openURL(`mailto:hello@rally-hub.com?subject=Feature%20Request&body=${body}`);
-    setFeatureRequest('');
-    setFeatureSubmitted(true);
-    setTimeout(() => setFeatureSubmitted(false), 3000);
+    try {
+      await (supabase.from('feature_events') as any).insert({
+        user_id: user?.id,
+        event_type: 'feature_request',
+        metadata: { message: featureRequest.trim() },
+      });
+      tapLight();
+      setFeatureRequest('');
+      setFeatureSubmitted(true);
+      setTimeout(() => setFeatureSubmitted(false), 3000);
+    } catch {
+      Alert.alert('Error', 'Could not submit. Please try again.');
+    }
   };
 
   return (
