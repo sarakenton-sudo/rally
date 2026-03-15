@@ -913,10 +913,11 @@ export default function EmailDetailScreen() {
               <Text className="text-xs text-stone mt-2">No new data to update for this tournament.</Text>
             )}
 
-            {/* Save booking directly to matched tournament */}
+            {/* Save booking directly to matched tournament — show based on extracted data fields, not classification */}
             {activeMatch && hasExtractedData && (
               <View className="mt-3">
-                {email.classification === 'travel_confirmation' && (
+                {(extractedData?.airline || extractedData?.flight_number || extractedData?.departure_airport || extractedData?.outbound ||
+                  email.classification === 'travel_confirmation') && (
                   savedBooking === 'flight' ? (
                     <View className="flex-row items-center justify-center py-3">
                       <Ionicons name="checkmark-circle" size={20} color="#16a34a" />
@@ -935,7 +936,8 @@ export default function EmailDetailScreen() {
                     </Pressable>
                   )
                 )}
-                {email.classification === 'stay_and_play' && (
+                {(extractedData?.hotel_name || extractedData?.check_in_date || extractedData?.nightly_rate ||
+                  email.classification === 'stay_and_play') && (
                   savedBooking === 'hotel' ? (
                     <View className="flex-row items-center justify-center py-3">
                       <Ionicons name="checkmark-circle" size={20} color="#16a34a" />
