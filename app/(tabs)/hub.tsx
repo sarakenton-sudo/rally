@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, RefreshControl, Pressable, Alert } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, Pressable, Alert, Linking } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -316,6 +316,33 @@ export default function HubScreen() {
             </View>
           </>
         )}
+
+        {/* ============================================================ */}
+        {/* LEGAL */}
+        {/* ============================================================ */}
+        <View className="mt-6 mb-2">
+          <HubSectionHeader icon="document-text" title="Legal" iconColor={ic.muted} />
+        </View>
+
+        <HubSettingsRow
+          icon="shield-checkmark"
+          iconColor="#3B82B0"
+          title="Privacy Policy"
+          subtitle="How we collect, use, and protect your data"
+          onPress={() => Linking.openURL('https://rally-hub.com/privacy')}
+        />
+
+        <HubSettingsRow
+          icon="document-text"
+          iconColor="#3B82B0"
+          title="Terms of Use"
+          subtitle="Rules and guidelines for using RallyHUB"
+          onPress={() => Linking.openURL('https://rally-hub.com/terms')}
+        />
+
+        <Text className="text-xs text-stone/50 text-center mt-4 mb-2">
+          © 2026 Quiet Standard Consulting LLC
+        </Text>
       </ScrollView>
     </View>
   );

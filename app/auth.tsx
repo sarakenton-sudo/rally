@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, Pressable, KeyboardAvoidingView, Platform, Image, ScrollView } from 'react-native';
+import { View, Text, Pressable, KeyboardAvoidingView, Platform, Image, ScrollView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import FormField from '@/components/FormField';
@@ -231,6 +231,24 @@ export default function AuthScreen() {
               </Text>
             </Text>
           </Pressable>
+
+          {/* Legal links */}
+          <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontFamily: 'NunitoSans-Regular', textAlign: 'center', marginTop: 24, lineHeight: 18 }}>
+            By continuing you agree to our{' '}
+            <Text
+              style={{ color: 'rgba(255,255,255,0.55)', fontFamily: 'NunitoSans-SemiBold', textDecorationLine: 'underline' }}
+              onPress={() => Linking.openURL('https://rally-hub.com/terms')}
+            >
+              Terms of Use
+            </Text>
+            {' '}and{' '}
+            <Text
+              style={{ color: 'rgba(255,255,255,0.55)', fontFamily: 'NunitoSans-SemiBold', textDecorationLine: 'underline' }}
+              onPress={() => Linking.openURL('https://rally-hub.com/privacy')}
+            >
+              Privacy Policy
+            </Text>
+          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
