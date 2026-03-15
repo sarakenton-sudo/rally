@@ -11,7 +11,7 @@ import { updateTournament as updateTournamentDB } from '@/hooks/useSupabaseData'
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
-import type { ExtractedTournamentDetails } from './paste-tournament-details';
+import type { ExtractedTournamentDetails } from '@/lib/tournament-detail-parser';
 
 export default function ReviewTournamentDetailsScreen() {
   const { details: raw, tournamentId: preselectedId } = useLocalSearchParams<{
