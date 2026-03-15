@@ -17,9 +17,9 @@ const CLASS_CONFIG: Record<string, { icon: keyof typeof Ionicons.glyphMap; color
 };
 
 const ACTION_LABELS: Record<string, string> = {
-  booking_alert_sent: 'Booking alert sent',
-  travel_import_queued: 'Import queued',
-  notification_sent: 'Notification sent',
+  booking_alert_sent: 'Imported',
+  travel_import_queued: 'Imported',
+  notification_sent: 'Imported',
   none: 'No action',
 };
 

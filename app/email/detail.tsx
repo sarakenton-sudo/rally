@@ -397,10 +397,30 @@ export default function EmailDetailScreen() {
     for (const update of pending) {
       await handleApplyUpdate(update);
     }
+    // Mark email as imported after applying all updates
+    await markEmailImported('notification_sent');
   };
 
   const [savedBooking, setSavedBooking] = useState<'flight' | 'hotel' | null>(null);
   const [isSavingBooking, setIsSavingBooking] = useState(false);
+
+  // Update email record to reflect that data was saved/imported
+  const markEmailImported = async (actionTaken: string) => {
+    const updates: Record<string, unknown> = { action_taken: actionTaken };
+    // If classification was wrong (e.g., "other"), fix it based on what we just saved
+    if (actionTaken === 'travel_import_queued' && email.classification !== 'travel_confirmation') {
+      updates.classification = 'travel_confirmation';
+    }
+    if (actionTaken === 'booking_alert_sent' && email.classification !== 'stay_and_play') {
+      updates.classification = 'stay_and_play';
+    }
+    if (isSupabaseConfigured) {
+      await (supabase.from('forwarded_emails') as any)
+        .update(updates)
+        .eq('id', email.id);
+    }
+    updateForwardedEmail(email.id, updates as any);
+  };
 
   const handleSaveFlightBooking = async () => {
     if (!activeMatch || !extractedData || !user) return;
@@ -458,6 +478,8 @@ export default function EmailDetailScreen() {
           if (error) throw error;
         }
         setSavedBooking('flight');
+        // Mark email as imported
+        await markEmailImported('travel_import_queued');
         const msg = Object.keys(updates).length > 0
           ? `Updated ${Object.keys(updates).length} fields on existing flight booking.`
           : 'Flight booking already has all this data.';
@@ -480,6 +502,8 @@ export default function EmailDetailScreen() {
         } as any);
         if (error) throw error;
         setSavedBooking('flight');
+        // Mark email as imported
+        await markEmailImported('travel_import_queued');
         if (Platform.OS === 'web') window.alert('Flight booking saved!');
         else Alert.alert('Saved', 'Flight booking created and linked to tournament.');
       }
@@ -533,6 +557,7 @@ export default function EmailDetailScreen() {
           if (error) throw error;
         }
         setSavedBooking('hotel');
+        await markEmailImported('booking_alert_sent');
         const msg = Object.keys(updates).length > 0
           ? `Updated ${Object.keys(updates).length} fields on existing hotel booking.`
           : 'Hotel booking already has all this data.';
@@ -558,6 +583,7 @@ export default function EmailDetailScreen() {
         } as any);
         if (error) throw error;
         setSavedBooking('hotel');
+        await markEmailImported('booking_alert_sent');
         if (Platform.OS === 'web') window.alert('Hotel booking saved!');
         else Alert.alert('Saved', 'Hotel booking created and linked to tournament.');
       }
