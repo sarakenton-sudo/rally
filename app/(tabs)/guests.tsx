@@ -43,7 +43,7 @@ export default function GuestsScreen() {
               No guests added yet
             </Text>
             <Text className="text-sm text-stone dark:text-parchment mt-1 text-center px-8">
-              Add grandparents, family & friends. They'll get push/SMS notifications for tournaments — no app install required.
+              Stop being the family group chat. Add anyone who wants to follow the season — they'll get locations, streaming links, and ticket info without you lifting a finger.
             </Text>
             <Pressable
               className="bg-rally-600 px-5 py-2.5 rounded-xl mt-6 active:opacity-80"

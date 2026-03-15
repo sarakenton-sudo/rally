@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, Switch, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, Switch, Alert, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +33,7 @@ export default function AddHotelBookingScreen() {
     existing?.cancellation_deadline ? new Date(existing.cancellation_deadline + 'T12:00:00') : null
   );
   const [cost, setCost] = useState(existing?.cost != null ? String(existing.cost) : '');
+  const [address, setAddress] = useState(existing?.address ?? '');
   const [isBackup, setIsBackup] = useState(existing?.is_backup ?? false);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedTournamentId, setSelectedTournamentId] = useState(
@@ -135,6 +136,7 @@ export default function AddHotelBookingScreen() {
       is_backup: isBackup,
       status: (existing?.status ?? 'confirmed') as BookingStatus,
       notes: existing?.notes ?? '',
+      address: address.trim(),
     };
 
     try {
@@ -232,6 +234,24 @@ export default function AddHotelBookingScreen() {
           <FormField label="Hotel Name" value={hotelName} onChangeText={setHotelName} placeholder="e.g. Marriott Marquis Houston" />
           <DropdownField label="Booking Platform" value={platform} options={PLATFORMS} onChange={setPlatform} />
           <FormField label="Reservation Number" value={reservationNumber} onChangeText={setReservationNumber} placeholder="e.g. 217759" />
+          <FormField label="Address" value={address} onChangeText={setAddress} placeholder="e.g. 1777 Walker St, Houston, TX 77010" />
+          {address.trim().length > 0 && (
+            <Pressable
+              className="flex-row items-center justify-center bg-rally-50 dark:bg-rally-900/20 rounded-lg py-2.5 mb-4 -mt-2 active:opacity-70"
+              onPress={() => {
+                const encoded = encodeURIComponent(address.trim());
+                const url = Platform.select({
+                  ios: `maps:?q=${encoded}`,
+                  android: `geo:0,0?q=${encoded}`,
+                  default: `https://maps.google.com/?q=${encoded}`,
+                });
+                if (url) Linking.openURL(url);
+              }}
+            >
+              <Ionicons name="navigate" size={16} color="#3B82B0" />
+              <Text className="text-sm font-semibold text-rally-600 ml-2">Directions</Text>
+            </Pressable>
+          )}
 
           <View className="flex-row gap-3">
             <View className="flex-1">

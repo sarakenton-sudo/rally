@@ -33,9 +33,13 @@ interface ExtractedBooking {
   booked_by?: string;
   airline?: string;
   confirmation_code?: string;
+  flight_number?: string;
   ticket_number?: string;
   departure_date?: string;
   return_date?: string;
+  departure_time?: string;
+  arrival_time?: string;
+  seat_number?: string;
   traveler_names?: string[];
   cost?: number | null;
   notes?: string;
@@ -159,6 +163,7 @@ export default function ReviewTravelScreen() {
             cost: item.cost ?? null,
             is_backup: false,
             status: 'confirmed' as BookingStatus,
+            address: '',
           };
 
           if (isSupabaseConfigured && user) {
@@ -175,9 +180,13 @@ export default function ReviewTravelScreen() {
             tournament_id: tournamentId,
             airline: item.airline || 'Other',
             confirmation_code: item.confirmation_code || '',
+            flight_number: item.flight_number || null,
             ticket_number: item.ticket_number || null,
             departure_date: item.departure_date || '',
             return_date: item.return_date || '',
+            departure_time: item.departure_time || null,
+            arrival_time: item.arrival_time || null,
+            seat_number: item.seat_number || null,
             booked_by: item.booked_by || '',
             traveler_names: (item.traveler_names || []).map((s: string) => s.trim()).filter(Boolean),
             cost: item.cost ?? null,
@@ -318,6 +327,7 @@ export default function ReviewTravelScreen() {
                   <>
                     <DropdownField label="Airline" value={item.airline || ''} options={AIRLINES} onChange={(v) => updateItem(index, 'airline', v)} />
                     <FormField label="Confirmation Code" value={item.confirmation_code || ''} onChangeText={(v) => updateItem(index, 'confirmation_code', v)} placeholder="e.g. ABC123" autoCapitalize="characters" />
+                    <FormField label="Flight Number" value={item.flight_number || ''} onChangeText={(v) => updateItem(index, 'flight_number', v)} placeholder="e.g. SW 1234" />
                     <View className="flex-row gap-3">
                       <View className="flex-1">
                         <FormField label="Departure" value={item.departure_date || ''} onChangeText={(v) => updateItem(index, 'departure_date', v)} placeholder="YYYY-MM-DD" />
@@ -326,6 +336,15 @@ export default function ReviewTravelScreen() {
                         <FormField label="Return" value={item.return_date || ''} onChangeText={(v) => updateItem(index, 'return_date', v)} placeholder="YYYY-MM-DD" />
                       </View>
                     </View>
+                    <View className="flex-row gap-3">
+                      <View className="flex-1">
+                        <FormField label="Departure Time" value={item.departure_time || ''} onChangeText={(v) => updateItem(index, 'departure_time', v)} placeholder="e.g. 6:00 AM" />
+                      </View>
+                      <View className="flex-1">
+                        <FormField label="Arrival Time" value={item.arrival_time || ''} onChangeText={(v) => updateItem(index, 'arrival_time', v)} placeholder="e.g. 9:30 AM" />
+                      </View>
+                    </View>
+                    <FormField label="Seat Number" value={item.seat_number || ''} onChangeText={(v) => updateItem(index, 'seat_number', v)} placeholder="e.g. 12A" />
                     <FormField
                       label="Travelers"
                       value={(item.traveler_names || []).join(', ')}

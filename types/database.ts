@@ -133,6 +133,7 @@ export interface HotelBooking {
   notes: string;
   is_backup: boolean;
   status: BookingStatus;
+  address: string;
   created_by_user_id: string;
   created_at: string;
 }
@@ -148,6 +149,10 @@ export interface FlightBooking {
   booked_by: string;
   traveler_names: string[];
   cost: number | null;
+  departure_time: string | null;
+  arrival_time: string | null;
+  seat_number: string | null;
+  flight_number: string | null;
   created_by_user_id: string;
   created_at: string;
 }

@@ -23,13 +23,17 @@ For each FLIGHT booking you find, extract:
 - type: "flight"
 - airline: airline name (e.g. "Southwest", "Delta", "United", "American")
 - confirmation_code: the confirmation/record locator code
+- flight_number: flight number (e.g. "SW 1234", "DL 456"), empty string if not found
 - departure_date: YYYY-MM-DD format
 - return_date: YYYY-MM-DD format (same as departure if one-way)
+- departure_time: departure time as text (e.g. "6:00 AM", "14:30"), empty string if not found
+- arrival_time: arrival time as text (e.g. "9:30 AM", "17:45"), empty string if not found
+- seat_number: seat assignment (e.g. "12A", "23C"), empty string if not found
 - ticket_number: ticket number if available, otherwise empty string
 - booked_by: who booked if mentioned, otherwise empty string
 - traveler_names: array of passenger names
 - cost: total cost as a number, or null if not found
-- notes: seat assignments, baggage info, etc.
+- notes: baggage info, connection details, etc.
 
 Important rules:
 - Dates come in MANY formats: "03/19/26", "March 19, 2026", "2026-03-19", "19MAR", "Thu, 19MAR", "3/19/2026". ALWAYS convert to YYYY-MM-DD.

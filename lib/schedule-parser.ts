@@ -330,6 +330,66 @@ function reconstructRows(text: string): string {
 }
 
 /**
+ * Parse simple one-per-line tournament format:
+ * "Tourney 1 April 4 Austin Tx"
+ * "Tourney 2 April 18/19 Tomball Tx"
+ * "Tourney 3 May 2/3 Austin Tx"
+ *
+ * Pattern: {name} {month} {day}[/{day}] {city} {state}
+ */
+function simpleLineExtract(text: string): ExtractedTournament[] | null {
+  const lines = text.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+  if (lines.length === 0) return null;
+
+  const US_STATES = new Set([
+    'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
+    'MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC',
+    'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY',
+  ]);
+
+  // Pattern: name ... Month Day[/Day] City State
+  const linePattern = /^(.+?)\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\.?\s+(\d{1,2})(?:\/(\d{1,2}))?\s+(.+?)\s+([A-Za-z]{2})\s*$/i;
+
+  const tournaments: ExtractedTournament[] = [];
+  let matchCount = 0;
+
+  for (const line of lines) {
+    const m = line.match(linePattern);
+    if (!m) continue;
+
+    const name = m[1].trim().replace(/[-–—,\s]+$/, '');
+    const month = parseMonth(m[2]);
+    if (!month) continue;
+
+    const startDay = String(parseInt(m[3])).padStart(2, '0');
+    const endDay = m[4] ? String(parseInt(m[4])).padStart(2, '0') : startDay;
+    const city = m[5].trim();
+    const state = m[6].toUpperCase();
+
+    if (!US_STATES.has(state)) continue;
+
+    const year = inferYear(month);
+    const startDate = `${year}-${month}-${startDay}`;
+    const endDate = `${year}-${month}-${endDay}`;
+
+    matchCount++;
+    tournaments.push({
+      name,
+      start_date: startDate,
+      end_date: endDate,
+      location_city: `${city}, ${state}`,
+      venue_name: '',
+      venue_address: '',
+      notes: '',
+    });
+  }
+
+  // Only return if we matched at least half the non-empty lines (to avoid false positives)
+  if (matchCount === 0 || matchCount < lines.length * 0.4) return null;
+  return tournaments;
+}
+
+/**
  * Smart local extraction — handles various messy real-world formats:
  * - Tab-separated spreadsheet data (from Google Sheets, Excel, etc.)
  * - "Name - Date - City - Venue" (dash-separated)
@@ -353,6 +413,11 @@ export function smartExtract(text: string): ExtractedTournament[] {
   // Try TSV/spreadsheet format first
   const tsvResult = tsvExtract(processed);
   if (tsvResult) return tsvResult;
+
+  // Try simple one-per-line format: "Name Month Day[/Day] City State"
+  const simpleLineResult = simpleLineExtract(text);
+  if (simpleLineResult) return simpleLineResult;
+
   const tournaments: ExtractedTournament[] = [];
   const lines = text.split('\n');
 

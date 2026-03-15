@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert, Platform, ActionSheetIOS, Modal } from 'react-native';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +27,28 @@ export default function HomeScreen() {
   const activeSeason = seasons.find((s) => s.id === activeSeasonId);
   const teamCode = activeSeason?.team_code;
   const ic = useIconColors();
+  const [showAddMenu, setShowAddMenu] = useState(false);
+
+  const handlePlusPress = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Tournament', 'Hotel', 'Flight', 'Team Event'],
+          cancelButtonIndex: 0,
+        },
+        (index) => {
+          if (index === 1) {
+            const blank = [{ name: '', start_date: '', end_date: '', location_city: '', venue_name: '', venue_address: '', notes: '' }];
+            router.push({ pathname: '/import/review', params: { tournaments: JSON.stringify(blank) } });
+          } else if (index === 2) router.push('/booking/add-hotel');
+          else if (index === 3) router.push('/booking/add-flight');
+          else if (index === 4) router.push('/booking/add-team-event');
+        }
+      );
+    } else {
+      setShowAddMenu(true);
+    }
+  };
 
   // Filter for Next 30 Days section: 'all' or a specific athlete ID
   const [athleteFilter, setAthleteFilter] = useState<string>('all');
@@ -133,7 +155,7 @@ export default function HomeScreen() {
           </Pressable>
           <Pressable
             className="bg-warm-white dark:bg-bark-light rounded-xl py-3 px-4 items-center justify-center active:opacity-80 border border-parchment dark:border-rally-900"
-            onPress={() => router.push('/booking/add-hotel')}
+            onPress={handlePlusPress}
           >
             <Ionicons name="add" size={20} color="#3B82B0" />
           </Pressable>
@@ -308,6 +330,44 @@ export default function HomeScreen() {
 
         <View className="h-4" />
       </ScrollView>
+
+      {/* Add menu modal (Android/web fallback) */}
+      {showAddMenu && (
+        <Modal transparent animationType="fade" visible={showAddMenu} onRequestClose={() => setShowAddMenu(false)}>
+          <Pressable className="flex-1 bg-black/40 justify-end" onPress={() => setShowAddMenu(false)}>
+            <View className="bg-warm-white dark:bg-bark-light rounded-t-2xl px-4 pb-8 pt-4">
+              <Text className="text-lg font-bold text-bark dark:text-cream mb-4 text-center">Add New</Text>
+              {[
+                { label: 'Tournament', icon: 'trophy-outline' as const, color: '#6A9E8A', onPress: () => {
+                  setShowAddMenu(false);
+                  const blank = [{ name: '', start_date: '', end_date: '', location_city: '', venue_name: '', venue_address: '', notes: '' }];
+                  router.push({ pathname: '/import/review', params: { tournaments: JSON.stringify(blank) } });
+                }},
+                { label: 'Hotel', icon: 'bed-outline' as const, color: '#3B82B0', onPress: () => { setShowAddMenu(false); router.push('/booking/add-hotel'); } },
+                { label: 'Flight', icon: 'airplane-outline' as const, color: '#7c3aed', onPress: () => { setShowAddMenu(false); router.push('/booking/add-flight'); } },
+                { label: 'Team Event', icon: 'restaurant-outline' as const, color: '#d97706', onPress: () => { setShowAddMenu(false); router.push('/booking/add-team-event'); } },
+              ].map((item) => (
+                <Pressable
+                  key={item.label}
+                  className="flex-row items-center py-3.5 border-b border-parchment dark:border-rally-900 active:opacity-70"
+                  onPress={item.onPress}
+                >
+                  <View className="w-10 h-10 rounded-full items-center justify-center mr-3" style={{ backgroundColor: item.color + '15' }}>
+                    <Ionicons name={item.icon} size={20} color={item.color} />
+                  </View>
+                  <Text className="text-base font-medium text-bark dark:text-cream">{item.label}</Text>
+                </Pressable>
+              ))}
+              <Pressable
+                className="mt-3 py-3 items-center active:opacity-70"
+                onPress={() => setShowAddMenu(false)}
+              >
+                <Text className="text-sm font-semibold text-stone">Cancel</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
+      )}
     </View>
   );
 }

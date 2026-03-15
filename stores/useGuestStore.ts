@@ -30,7 +30,14 @@ export const useGuestStore = create<GuestState>((set) => ({
 
   setTournamentGuests: (tournamentGuests) => set({ tournamentGuests }),
   addTournamentGuest: (tg) =>
-    set((state) => ({ tournamentGuests: [...state.tournamentGuests, tg] })),
+    set((state) => ({
+      tournamentGuests: [
+        ...state.tournamentGuests.filter(
+          (existing) => !(existing.tournament_id === tg.tournament_id && existing.guest_id === tg.guest_id)
+        ),
+        tg,
+      ],
+    })),
   updateRSVP: (tournamentId, guestId, updates) =>
     set((state) => ({
       tournamentGuests: state.tournamentGuests.map((tg) =>

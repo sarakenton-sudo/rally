@@ -25,6 +25,11 @@ export default function ScheduleImportScreen() {
       </View>
 
       <ScrollView className="flex-1 px-4 pt-4" keyboardShouldPersistTaps="handled">
+        {/* Subheadline */}
+        <Text className="text-center text-lg font-bold text-bark mb-3">
+          Let's Build Your Beautiful Itinerary 🪄
+        </Text>
+
         {/* Info */}
         <View className="bg-rally-50 rounded-xl p-4 mb-5">
           <View className="flex-row items-start">

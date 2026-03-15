@@ -9,6 +9,7 @@ import { insertTournament } from '@/hooks/useSupabaseData';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
+import DatePickerField from '@/components/DatePickerField';
 import type { Tournament } from '@/types/database';
 
 interface ExtractedTournament {
@@ -19,6 +20,8 @@ interface ExtractedTournament {
   venue_name: string;
   venue_address: string;
   notes: string;
+  schedule_link?: string;
+  ticket_link?: string;
 }
 
 export default function PasteReviewScreen() {
@@ -28,6 +31,8 @@ export default function PasteReviewScreen() {
   const ic = useIconColors();
   const [items, setItems] = useState<ExtractedTournament[]>(parsed);
   const [aesIds, setAesIds] = useState<Record<number, string>>({});
+  const [scheduleLinks, setScheduleLinks] = useState<Record<number, string>>({});
+  const [ticketLinks, setTicketLinks] = useState<Record<number, string>>({});
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -83,12 +88,12 @@ export default function PasteReviewScreen() {
             ? [{ label: item.venue_name, address: item.venue_address || item.location_city, is_confirmed: false }]
             : [{ label: item.location_city, address: item.location_city, is_confirmed: false }],
           ticket_system: null,
-          ticket_link: null,
+          ticket_link: ticketLinks[i]?.trim() || item.ticket_link?.trim() || null,
           aes_tournament_id: aesIds[i]?.trim() || null,
           aes_feed_data: null,
           aes_feed_last_updated: null,
           aes_feed_available: false,
-          schedule_link: null,
+          schedule_link: scheduleLinks[i]?.trim() || item.schedule_link?.trim() || null,
           schedule_available_date: null,
           ticket_sales_date: null,
           tickets_purchased: false,
@@ -142,7 +147,7 @@ export default function PasteReviewScreen() {
           <Ionicons name="chevron-back" size={24} color={ic.muted} />
         </Pressable>
         <Text className="text-lg font-bold text-bark dark:text-cream">
-          Review ({items.length})
+          Add a Tournament
         </Text>
         <Pressable
           onPress={handleSaveAll}
@@ -224,11 +229,21 @@ export default function PasteReviewScreen() {
 
               {editingIndex === index ? (
                 <View className="gap-3">
-                  <EditRow label="Start Date" value={item.start_date} onChange={(v) => updateField(index, 'start_date', v)} placeholder="YYYY-MM-DD" />
-                  <EditRow label="End Date" value={item.end_date} onChange={(v) => updateField(index, 'end_date', v)} placeholder="YYYY-MM-DD" />
+                  <DatePickerField
+                    label="Start Date"
+                    value={item.start_date ? (() => { const d = new Date(item.start_date + 'T12:00:00'); return isNaN(d.getTime()) ? null : d; })() : null}
+                    onChange={(d) => updateField(index, 'start_date', d ? d.toISOString().split('T')[0] : '')}
+                  />
+                  <DatePickerField
+                    label="End Date"
+                    value={item.end_date ? (() => { const d = new Date(item.end_date + 'T12:00:00'); return isNaN(d.getTime()) ? null : d; })() : null}
+                    onChange={(d) => updateField(index, 'end_date', d ? d.toISOString().split('T')[0] : '')}
+                  />
                   <EditRow label="City" value={item.location_city} onChange={(v) => updateField(index, 'location_city', v)} placeholder="City, ST" />
                   <EditRow label="Venue" value={item.venue_name} onChange={(v) => updateField(index, 'venue_name', v)} placeholder="Venue name" />
                   <EditRow label="Address" value={item.venue_address} onChange={(v) => updateField(index, 'venue_address', v)} placeholder="Full address" />
+                  <EditRow label="Schedule Link" value={scheduleLinks[index] ?? item.schedule_link ?? ''} onChange={(v) => setScheduleLinks((prev) => ({ ...prev, [index]: v }))} placeholder="https://..." />
+                  <EditRow label="Ticket Link" value={ticketLinks[index] ?? item.ticket_link ?? ''} onChange={(v) => setTicketLinks((prev) => ({ ...prev, [index]: v }))} placeholder="https://..." />
                   <EditRow label="Notes" value={item.notes} onChange={(v) => updateField(index, 'notes', v)} placeholder="Notes" />
                 </View>
               ) : (

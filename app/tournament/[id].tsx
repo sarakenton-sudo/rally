@@ -202,14 +202,31 @@ export default function TournamentDetailScreen() {
         </View>
 
         <View className="px-4">
-          {/* PASTE + AI */}
-          <Pressable
-            className="bg-rally-50 rounded-xl p-3 mt-4 flex-row items-center justify-center active:opacity-80 border border-rally-100"
-            onPress={() => router.push('/import/paste-combined')}
-          >
-            <Ionicons name="sparkles" size={16} color="#7c3aed" />
-            <Text className="text-sm font-semibold text-rally-700 ml-2">Paste + AI</Text>
-          </Pressable>
+          {/* ADD DETAILS — 3 options near top */}
+          <View className="flex-row gap-2 mt-4">
+            <Pressable
+              className="flex-1 bg-rally-600 rounded-xl py-3 flex-row items-center justify-center active:opacity-80"
+              style={{ shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3 }}
+              onPress={() => router.push('/import/paste-combined')}
+            >
+              <Ionicons name="sparkles" size={14} color="#FEFEFE" />
+              <Text className="text-xs font-semibold text-cream ml-1.5">Paste + AI</Text>
+            </Pressable>
+            <Pressable
+              className="flex-1 bg-warm-white dark:bg-bark-light rounded-xl py-3 flex-row items-center justify-center active:opacity-80 border border-parchment dark:border-rally-900"
+              onPress={() => router.push('/settings/email-forward')}
+            >
+              <Ionicons name="mail-open" size={14} color="#3B82B0" />
+              <Text className="text-xs font-semibold text-bark dark:text-cream ml-1.5">Forward</Text>
+            </Pressable>
+            <Pressable
+              className="flex-1 bg-warm-white dark:bg-bark-light rounded-xl py-3 flex-row items-center justify-center active:opacity-80 border border-parchment dark:border-rally-900"
+              onPress={() => router.push({ pathname: '/booking/add-hotel', params: { tournamentId: tournament.id } })}
+            >
+              <Ionicons name="add" size={16} color="#3B82B0" />
+              <Text className="text-xs font-semibold text-bark dark:text-cream ml-1">Manual</Text>
+            </Pressable>
+          </View>
 
           {/* VENUE */}
           {(() => {
@@ -437,9 +454,23 @@ export default function TournamentDetailScreen() {
             {tournament.ticket_link ? (
               <Pressable
                 className="bg-rally-600 rounded-lg py-3 items-center active:opacity-80"
-                onPress={() => Linking.openURL(tournament.ticket_link!)}
+                onPress={async () => {
+                  if (teamCode) {
+                    if (Platform.OS === 'web') {
+                      await navigator.clipboard.writeText(teamCode);
+                    } else {
+                      await Clipboard.setStringAsync(teamCode);
+                    }
+                    tapLight();
+                  }
+                  Linking.openURL(tournament.ticket_link!);
+                }}
               >
-                <Text className="text-sm font-semibold text-cream">Buy Tickets</Text>
+                <View className="flex-row items-center justify-center">
+                  <Ionicons name="ticket" size={16} color="#FEFEFE" />
+                  <Text className="text-sm font-semibold text-cream ml-2">Buy Tickets</Text>
+                  {teamCode && <Text className="text-xs text-cream/70 ml-2">(code copied)</Text>}
+                </View>
               </Pressable>
             ) : (
               <Text className="text-sm text-stone">No ticket link set for this tournament.</Text>
@@ -460,95 +491,66 @@ export default function TournamentDetailScreen() {
 
           {/* TRAVEL */}
           <>
-              <SectionHeader icon="bed" title="Travel" iconColor={ic.muted} />
+              <SectionHeader icon="bed" title="Hotels" iconColor={hotels.length > 0 ? '#3B82B0' : ic.muted} />
 
-              {/* Hotel Not Needed toggle */}
-              <View className="flex-row items-center justify-between mb-2 bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 border border-parchment dark:border-rally-900">
-                <View className="flex-1 mr-4">
-                  <Text className="text-sm font-medium text-bark dark:text-parchment">
-                    Hotel Not Needed
-                  </Text>
-                  <Text className="text-xs text-stone dark:text-stone mt-0.5">
-                    Staying local or with family
-                  </Text>
-                </View>
-                <Switch
-                  value={tournament.hotel_not_needed}
-                  onValueChange={async (value) => {
-                    if (isSupabaseConfigured && user) {
-                      await updateTournamentDB(tournament.id, { hotel_not_needed: value });
-                    }
-                    updateTournamentStore(tournament.id, { hotel_not_needed: value });
-                  }}
-                  trackColor={{ false: '#D8E2EC', true: '#86EFAC' }}
-                  thumbColor={tournament.hotel_not_needed ? '#16a34a' : '#FEFEFE'}
-                />
-              </View>
-
-              {/* Air Not Needed toggle */}
-              <View className="flex-row items-center justify-between mb-3 bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 border border-parchment dark:border-rally-900">
-                <View className="flex-1 mr-4">
-                  <Text className="text-sm font-medium text-bark dark:text-parchment">
-                    Air Not Needed
-                  </Text>
-                  <Text className="text-xs text-stone dark:text-stone mt-0.5">
-                    Driving or getting a ride
-                  </Text>
-                </View>
-                <Switch
-                  value={tournament.air_not_needed}
-                  onValueChange={async (value) => {
-                    if (isSupabaseConfigured && user) {
-                      await updateTournamentDB(tournament.id, { air_not_needed: value });
-                    }
-                    updateTournamentStore(tournament.id, { air_not_needed: value });
-                  }}
-                  trackColor={{ false: '#D8E2EC', true: '#86EFAC' }}
-                  thumbColor={tournament.air_not_needed ? '#16a34a' : '#FEFEFE'}
-                />
-              </View>
-
-              {/* Existing hotel bookings (always shown) */}
+              {/* Existing hotel bookings */}
               {hotels.map((h) => (
-                <HotelBookingCard
-                  key={h.id}
-                  booking={h}
-                  onPress={() => router.push({ pathname: '/booking/add-hotel', params: { editId: h.id } })}
-                  onDelete={() => handleDeleteHotel(h.id, h.hotel_name)}
-                />
-              ))}
-              {/* Existing flight bookings (always shown) */}
-              {flights.map((f) => (
-                <FlightBookingCard
-                  key={f.id}
-                  booking={f}
-                  onPress={() => router.push({ pathname: '/booking/add-flight', params: { editId: f.id } })}
-                  onDelete={() => handleDeleteFlight(f.id, f.airline)}
-                />
+                <View key={h.id} className="mb-2">
+                  <View className="rounded-xl overflow-hidden border border-parchment dark:border-rally-900">
+                    <View className="h-1.5 bg-rally-600" />
+                    <HotelBookingCard
+                      booking={h}
+                      onPress={() => router.push({ pathname: '/booking/add-hotel', params: { editId: h.id } })}
+                      onDelete={() => handleDeleteHotel(h.id, h.hotel_name)}
+                    />
+                  </View>
+                  {/* Hotel directions button */}
+                  {(h as any).address ? (
+                    <Pressable
+                      className="flex-row items-center justify-center bg-rally-50 dark:bg-rally-900/20 rounded-lg py-2 mt-1 active:opacity-70"
+                      onPress={() => openDirections((h as any).address)}
+                    >
+                      <Ionicons name="navigate" size={14} color="#3B82B0" />
+                      <Text className="text-xs font-semibold text-rally-600 ml-1.5">Directions</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
               ))}
 
-              {/* Add buttons — hidden when category marked not needed */}
-              {(!tournament.hotel_not_needed || !tournament.air_not_needed) && (
-                <View className="flex-row gap-2">
-                  {!tournament.hotel_not_needed && hotels.length === 0 && (
-                    <Pressable
-                      className="flex-1 bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900 items-center active:opacity-80"
-                      onPress={() => router.push({ pathname: '/booking/add-hotel', params: { tournamentId: tournament.id } })}
-                    >
-                      <Ionicons name="bed" size={22} color="#7c3aed" />
-                      <Text className="text-sm text-stone mt-1">Add Hotel</Text>
-                    </Pressable>
-                  )}
-                  {!tournament.air_not_needed && flights.length === 0 && (
-                    <Pressable
-                      className="flex-1 bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900 items-center active:opacity-80"
-                      onPress={() => router.push({ pathname: '/booking/add-flight', params: { tournamentId: tournament.id } })}
-                    >
-                      <Ionicons name="airplane" size={22} color="#3B82B0" />
-                      <Text className="text-sm text-stone mt-1">Add Flight</Text>
-                    </Pressable>
-                  )}
+              {/* Add hotel — hidden when marked not needed */}
+              {!tournament.hotel_not_needed && hotels.length === 0 && (
+                <Pressable
+                  className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900 items-center active:opacity-80"
+                  onPress={() => router.push({ pathname: '/booking/add-hotel', params: { tournamentId: tournament.id } })}
+                >
+                  <Ionicons name="bed" size={22} color="#3B82B0" />
+                  <Text className="text-sm text-stone mt-1">Add Hotel</Text>
+                </Pressable>
+              )}
+
+              <SectionHeader icon="airplane" title="Flights" iconColor={flights.length > 0 ? '#7c3aed' : ic.muted} />
+
+              {/* Existing flight bookings */}
+              {flights.map((f) => (
+                <View key={f.id} className="mb-2 rounded-xl overflow-hidden border border-parchment dark:border-rally-900">
+                  <View className="h-1.5 bg-purple-500" />
+                  <FlightBookingCard
+                    booking={f}
+                    onPress={() => router.push({ pathname: '/booking/add-flight', params: { editId: f.id } })}
+                    onDelete={() => handleDeleteFlight(f.id, f.airline)}
+                  />
                 </View>
+              ))}
+
+              {/* Add flight — hidden when marked not needed */}
+              {!tournament.air_not_needed && flights.length === 0 && (
+                <Pressable
+                  className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900 items-center active:opacity-80"
+                  onPress={() => router.push({ pathname: '/booking/add-flight', params: { tournamentId: tournament.id } })}
+                >
+                  <Ionicons name="airplane" size={22} color="#7c3aed" />
+                  <Text className="text-sm text-stone mt-1">Add Flight</Text>
+                </Pressable>
               )}
 
               {/* Quick import helpers */}
@@ -570,6 +572,51 @@ export default function TournamentDetailScreen() {
                     <Text className="text-xs font-semibold text-bark dark:text-cream ml-1.5">Forward Email</Text>
                   </Pressable>
                 </View>
+              </View>
+
+              {/* Not needed toggles — below existing bookings */}
+              <View className="flex-row items-center justify-between mt-3 mb-2 bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 border border-parchment dark:border-rally-900">
+                <View className="flex-1 mr-4">
+                  <Text className="text-sm font-medium text-bark dark:text-parchment">
+                    No hotel needed
+                  </Text>
+                  <Text className="text-xs text-stone dark:text-stone mt-0.5">
+                    Staying local or with family
+                  </Text>
+                </View>
+                <Switch
+                  value={tournament.hotel_not_needed}
+                  onValueChange={async (value) => {
+                    if (isSupabaseConfigured && user) {
+                      await updateTournamentDB(tournament.id, { hotel_not_needed: value });
+                    }
+                    updateTournamentStore(tournament.id, { hotel_not_needed: value });
+                  }}
+                  trackColor={{ false: '#D8E2EC', true: '#86EFAC' }}
+                  thumbColor={tournament.hotel_not_needed ? '#16a34a' : '#FEFEFE'}
+                />
+              </View>
+
+              <View className="flex-row items-center justify-between mb-3 bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 border border-parchment dark:border-rally-900">
+                <View className="flex-1 mr-4">
+                  <Text className="text-sm font-medium text-bark dark:text-parchment">
+                    No air needed
+                  </Text>
+                  <Text className="text-xs text-stone dark:text-stone mt-0.5">
+                    Driving or getting a ride
+                  </Text>
+                </View>
+                <Switch
+                  value={tournament.air_not_needed}
+                  onValueChange={async (value) => {
+                    if (isSupabaseConfigured && user) {
+                      await updateTournamentDB(tournament.id, { air_not_needed: value });
+                    }
+                    updateTournamentStore(tournament.id, { air_not_needed: value });
+                  }}
+                  trackColor={{ false: '#D8E2EC', true: '#86EFAC' }}
+                  thumbColor={tournament.air_not_needed ? '#16a34a' : '#FEFEFE'}
+                />
               </View>
             </>
 
@@ -704,10 +751,24 @@ export default function TournamentDetailScreen() {
           )}
 
           {/* TEAM EVENTS */}
-          {teamEvents.length > 0 && (
-            <>
-              <SectionHeader icon="restaurant" title="Team Events" iconColor={ic.muted} />
-              {teamEvents.map((event) => (
+          <>
+            <View className="flex-row items-center justify-between mt-6 mb-3">
+              <View className="flex-row items-center">
+                <Ionicons name="restaurant" size={18} color={teamEvents.length > 0 ? '#d97706' : ic.muted} />
+                <Text className="text-sm font-semibold text-stone dark:text-parchment ml-2 uppercase tracking-wider">
+                  Team Events
+                </Text>
+              </View>
+              <Pressable
+                className="flex-row items-center active:opacity-70"
+                onPress={() => router.push({ pathname: '/booking/add-team-event', params: { tournamentId: tournament.id } })}
+              >
+                <Ionicons name="add-circle-outline" size={18} color="#3B82B0" />
+                <Text className="text-xs font-semibold text-rally-600 ml-1">Add</Text>
+              </Pressable>
+            </View>
+            {teamEvents.length > 0 ? (
+              teamEvents.map((event) => (
                 <View key={event.id} className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900">
                   <View className="flex-row items-start justify-between">
                     <View className="flex-1 mr-3">
@@ -743,9 +804,17 @@ export default function TournamentDetailScreen() {
                     </Pressable>
                   </View>
                 </View>
-              ))}
-            </>
-          )}
+              ))
+            ) : (
+              <Pressable
+                className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900 items-center active:opacity-80"
+                onPress={() => router.push({ pathname: '/booking/add-team-event', params: { tournamentId: tournament.id } })}
+              >
+                <Ionicons name="restaurant-outline" size={22} color="#d97706" />
+                <Text className="text-sm text-stone mt-1">Add Team Event</Text>
+              </Pressable>
+            )}
+          </>
 
 
           {/* ADD TO CALENDAR */}

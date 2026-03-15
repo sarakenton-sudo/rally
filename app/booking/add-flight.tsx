@@ -48,6 +48,10 @@ export default function AddFlightBookingScreen() {
     return null;
   });
   const [ticketNumber, setTicketNumber] = useState(existing?.ticket_number ?? params.ticketNumber ?? '');
+  const [flightNumber, setFlightNumber] = useState(existing?.flight_number ?? '');
+  const [departureTime, setDepartureTime] = useState(existing?.departure_time ?? '');
+  const [arrivalTime, setArrivalTime] = useState(existing?.arrival_time ?? '');
+  const [seatNumber, setSeatNumber] = useState(existing?.seat_number ?? '');
   const [bookedBy, setBookedBy] = useState(existing?.booked_by ?? '');
   const [cost, setCost] = useState(
     existing?.cost != null ? String(existing.cost) : params.cost ?? ''
@@ -160,8 +164,12 @@ export default function AddFlightBookingScreen() {
       airline,
       confirmation_code: confirmationCode.trim().toUpperCase(),
       ticket_number: ticketNumber.trim() || null,
+      flight_number: flightNumber.trim() || null,
       departure_date: departureDate.toISOString().split('T')[0],
       return_date: returnDate.toISOString().split('T')[0],
+      departure_time: departureTime.trim() || null,
+      arrival_time: arrivalTime.trim() || null,
+      seat_number: seatNumber.trim() || null,
       booked_by: bookedBy.trim(),
       traveler_names: travelerNames,
       cost: cost ? parseFloat(cost) : null,
@@ -258,6 +266,7 @@ export default function AddFlightBookingScreen() {
           <DropdownField label="Airline" value={airline} options={AIRLINES} onChange={setAirline} />
           <FormField label="Confirmation Code" value={confirmationCode} onChangeText={setConfirmationCode} placeholder="e.g. ABC123" autoCapitalize="characters" />
           <FormField label="Ticket Number" value={ticketNumber} onChangeText={setTicketNumber} placeholder="e.g. 00623456789" />
+          <FormField label="Flight Number" value={flightNumber} onChangeText={setFlightNumber} placeholder="e.g. SW 1234" />
 
           <View className="flex-row gap-3">
             <View className="flex-1">
@@ -268,6 +277,16 @@ export default function AddFlightBookingScreen() {
             </View>
           </View>
 
+          <View className="flex-row gap-3">
+            <View className="flex-1">
+              <FormField label="Departure Time" value={departureTime} onChangeText={setDepartureTime} placeholder="e.g. 6:00 AM" />
+            </View>
+            <View className="flex-1">
+              <FormField label="Arrival Time" value={arrivalTime} onChangeText={setArrivalTime} placeholder="e.g. 9:30 AM" />
+            </View>
+          </View>
+
+          <FormField label="Seat Number" value={seatNumber} onChangeText={setSeatNumber} placeholder="e.g. 12A" />
           <FormField label="Booked By" value={bookedBy} onChangeText={setBookedBy} placeholder="e.g. Sara" />
 
           {/* Traveler names */}

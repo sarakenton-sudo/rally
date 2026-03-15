@@ -34,13 +34,17 @@ For each FLIGHT booking:
 - type: "flight"
 - airline: airline name
 - confirmation_code: record locator
+- flight_number: flight number (e.g. "SW 1234"), else ""
 - departure_date: YYYY-MM-DD
 - return_date: YYYY-MM-DD
+- departure_time: departure time as text (e.g. "6:00 AM"), else ""
+- arrival_time: arrival time as text (e.g. "9:30 AM"), else ""
+- seat_number: seat assignment (e.g. "12A"), else ""
 - ticket_number: if available, else ""
 - booked_by: ""
 - traveler_names: array of passenger names
 - cost: total cost as number, or null
-- notes: seat assignments, baggage, etc.
+- notes: baggage, connection details, etc.
 
 ## Tournament Details
 

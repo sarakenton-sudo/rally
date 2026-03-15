@@ -166,6 +166,10 @@ function RootLayoutNav() {
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
+          name="booking/add-team-event"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
           name="tournament/[id]"
           options={{ headerShown: false }}
         />

@@ -190,7 +190,7 @@ export default function OnboardingScreen() {
   const [travelExtractError, setTravelExtractError] = useState('');
 
   // Step 5: Credentials
-  const [credentials, setCredentials] = useState<Record<string, { username: string; password: string }>>({});
+  const [credentials, setCredentials] = useState<Record<string, { username: string; password: string; link?: string }>>({});
   const [savedCredentials, setSavedCredentials] = useState<Set<string>>(new Set());
   const [expandedCredential, setExpandedCredential] = useState<string | null>(null);
 
@@ -288,10 +288,10 @@ export default function OnboardingScreen() {
     }
   };
 
-  const updateCredential = (key: string, field: 'username' | 'password', value: string) => {
+  const updateCredential = (key: string, field: 'username' | 'password' | 'link', value: string) => {
     setCredentials((prev) => ({
       ...prev,
-      [key]: { ...prev[key] || { username: '', password: '' }, [field]: value },
+      [key]: { ...prev[key] || { username: '', password: '', link: '' }, [field]: value },
     }));
   };
 
@@ -411,12 +411,12 @@ export default function OnboardingScreen() {
         // 3. Fire-and-forget: credentials → external_links
         if (Object.keys(credentials).length > 0) {
           const externalLinks: ExternalLink[] = Object.entries(credentials)
-            .filter(([, cred]) => cred.username.trim() || cred.password.trim())
+            .filter(([, cred]) => cred.username.trim() || cred.password.trim() || cred.link?.trim())
             .map(([key, cred]) => {
               const brand = CREDENTIAL_BRANDS.find((b) => b.key === key);
               return {
                 label: brand?.label || key,
-                url: '',
+                url: (key === 'instagram' && cred.link?.trim()) ? cred.link.trim() : '',
                 icon_name: String(brand?.icon || 'globe'),
                 username: cred.username.trim() || null,
                 password: cred.password.trim() || null,
@@ -966,6 +966,17 @@ export default function OnboardingScreen() {
                             placeholderTextColor="#8FA8BF"
                             secureTextEntry
                             autoCapitalize="none"
+                            style={{ ...INPUT_STYLE, marginBottom: 8 }}
+                          />
+                        )}
+                        {brand.key === 'instagram' && (
+                          <TextInput
+                            value={cred?.link || ''}
+                            onChangeText={(v) => updateCredential(brand.key, 'link', v)}
+                            placeholder="Profile URL (e.g. instagram.com/athlete)"
+                            placeholderTextColor="#8FA8BF"
+                            autoCapitalize="none"
+                            keyboardType="url"
                             style={{ ...INPUT_STYLE, marginBottom: 8 }}
                           />
                         )}

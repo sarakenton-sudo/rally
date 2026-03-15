@@ -284,6 +284,8 @@ export const MOCK_HOTEL_BOOKINGS: HotelBooking[] = [
     cost: 296.00,
     is_backup: false,
     status: 'tentative',
+    notes: '',
+    address: '',
     created_at: '',
   },
   {
@@ -301,6 +303,8 @@ export const MOCK_HOTEL_BOOKINGS: HotelBooking[] = [
     cost: null,
     is_backup: false,
     status: 'confirmed',
+    notes: '',
+    address: '',
     created_at: '',
   },
   {
@@ -318,6 +322,8 @@ export const MOCK_HOTEL_BOOKINGS: HotelBooking[] = [
     cost: null,
     is_backup: false,
     status: 'confirmed',
+    notes: '',
+    address: '',
     created_at: '',
   },
   {
@@ -335,6 +341,8 @@ export const MOCK_HOTEL_BOOKINGS: HotelBooking[] = [
     cost: null,
     is_backup: false,
     status: 'confirmed',
+    notes: '',
+    address: '',
     created_at: '',
   },
   {
@@ -352,6 +360,8 @@ export const MOCK_HOTEL_BOOKINGS: HotelBooking[] = [
     cost: 508.00,
     is_backup: false,
     status: 'confirmed',
+    notes: '',
+    address: '',
     created_at: '',
   },
   {
@@ -369,6 +379,8 @@ export const MOCK_HOTEL_BOOKINGS: HotelBooking[] = [
     cost: null,
     is_backup: false,
     status: 'confirmed',
+    notes: '',
+    address: '',
     created_at: '',
   },
 ];
@@ -389,6 +401,10 @@ export const MOCK_FLIGHT_BOOKINGS: FlightBooking[] = [
     booked_by: 'Adam + Kenton',
     traveler_names: ['Adam', 'Kenton'],
     cost: null,
+    departure_time: null,
+    arrival_time: null,
+    seat_number: null,
+    flight_number: null,
     created_at: '',
   },
   {
@@ -403,6 +419,10 @@ export const MOCK_FLIGHT_BOOKINGS: FlightBooking[] = [
     booked_by: 'Sara + Kenton',
     traveler_names: ['Sara', 'Kenton'],
     cost: null,
+    departure_time: null,
+    arrival_time: null,
+    seat_number: null,
+    flight_number: null,
     created_at: '',
   },
   {
@@ -417,6 +437,10 @@ export const MOCK_FLIGHT_BOOKINGS: FlightBooking[] = [
     booked_by: 'Sara',
     traveler_names: ['Sara'],
     cost: null,
+    departure_time: null,
+    arrival_time: null,
+    seat_number: null,
+    flight_number: null,
     created_at: '',
   },
 ];

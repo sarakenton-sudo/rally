@@ -1,5 +1,6 @@
 import { View, Text, Pressable, Alert, ActionSheetIOS, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useGuestStore } from '@/stores/useGuestStore';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { upsertTournamentGuest } from '@/hooks/useSupabaseData';
@@ -105,6 +106,11 @@ export default function TournamentGuestList({ tournamentId, tournamentName, tour
   );
 
   const handleInviteGuest = () => {
+    if (guests.length === 0) {
+      // No guests at all — send to add guest screen
+      router.push('/guest/add');
+      return;
+    }
     if (uninvitedGuests.length === 0) {
       Alert.alert('All invited', 'All your guests are already invited to this tournament.');
       return;
