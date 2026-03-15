@@ -316,12 +316,14 @@ export default function TournamentDetailScreen() {
                             </View>
                             <Text className="text-sm text-stone dark:text-parchment mt-1">{venue.address}</Text>
                           </View>
-                          <Pressable
-                            className="bg-rally-50 dark:bg-rally-900/30 px-3 py-2 rounded-lg active:opacity-70"
-                            onPress={() => openDirections(venue.address)}
-                          >
-                            <Ionicons name="navigate" size={18} color="#3B82B0" />
-                          </Pressable>
+                          {venue.address ? (
+                            <Pressable
+                              className="bg-rally-50 dark:bg-rally-900/30 px-3 py-2 rounded-lg active:opacity-70"
+                              onPress={() => openDirections(venue.address)}
+                            >
+                              <Ionicons name="navigate" size={18} color="#3B82B0" />
+                            </Pressable>
+                          ) : null}
                         </View>
                       </View>
                     ))}

@@ -210,6 +210,10 @@ function RootLayoutNav() {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="tournament/add"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
           name="tournament/add-stream"
           options={{ presentation: 'modal', headerShown: false }}
         />

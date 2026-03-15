@@ -37,10 +37,8 @@ export default function HomeScreen() {
           cancelButtonIndex: 0,
         },
         (index) => {
-          if (index === 1) {
-            const blank = [{ name: '', start_date: '', end_date: '', location_city: '', venue_name: '', venue_address: '', notes: '' }];
-            router.push({ pathname: '/import/review', params: { tournaments: JSON.stringify(blank) } });
-          } else if (index === 2) router.push('/booking/add-hotel');
+          if (index === 1) router.push('/tournament/add');
+          else if (index === 2) router.push('/booking/add-hotel');
           else if (index === 3) router.push('/booking/add-flight');
           else if (index === 4) router.push('/booking/add-team-event');
         }
@@ -340,8 +338,7 @@ export default function HomeScreen() {
               {[
                 { label: 'Tournament', icon: 'trophy-outline' as const, color: '#6A9E8A', onPress: () => {
                   setShowAddMenu(false);
-                  const blank = [{ name: '', start_date: '', end_date: '', location_city: '', venue_name: '', venue_address: '', notes: '' }];
-                  router.push({ pathname: '/import/review', params: { tournaments: JSON.stringify(blank) } });
+                  router.push('/tournament/add');
                 }},
                 { label: 'Hotel', icon: 'bed-outline' as const, color: '#3B82B0', onPress: () => { setShowAddMenu(false); router.push('/booking/add-hotel'); } },
                 { label: 'Flight', icon: 'airplane-outline' as const, color: '#7c3aed', onPress: () => { setShowAddMenu(false); router.push('/booking/add-flight'); } },
