@@ -75,100 +75,108 @@ export default function HotelBookingCard({ booking, tournamentName, onPress, onD
       onPress={onPress}
     >
       <View className="p-4">
-        {/* Header: hotel name + backup badge + delete */}
-        <View className="flex-row items-start justify-between mb-2">
+        <View className="flex-row items-start justify-between">
           <View className="flex-1 mr-3">
-            <View className="flex-row items-center">
-              <Ionicons name="bed-outline" size={18} color="#8FA8BF" />
-              <Text className="text-lg font-bold text-bark dark:text-cream ml-2" numberOfLines={1}>
-                {booking.hotel_name}
-              </Text>
-            </View>
-            {tournamentName && (
-              <Text className="text-xs text-stone dark:text-stone mt-0.5 ml-7">
-                {tournamentName}
-              </Text>
-            )}
-          </View>
-
-          <View className="flex-row items-center">
-            {booking.is_backup && (
-              <View className="bg-amber-50 px-2 py-0.5 rounded-full mr-2">
-                <Text className="text-xs font-semibold text-amber-600">Backup</Text>
+            {/* Header: hotel name + backup badge + delete */}
+            <View className="flex-row items-start justify-between mb-2">
+              <View className="flex-1 mr-3">
+                <View className="flex-row items-center">
+                  <Ionicons name="bed-outline" size={18} color="#8FA8BF" />
+                  <Text className="text-lg font-bold text-bark dark:text-cream ml-2" numberOfLines={1}>
+                    {booking.hotel_name}
+                  </Text>
+                </View>
+                {tournamentName && (
+                  <Text className="text-xs text-stone dark:text-stone mt-0.5 ml-7">
+                    {tournamentName}
+                  </Text>
+                )}
               </View>
-            )}
-            {onDelete && (
-              <Pressable onPress={onDelete} className="p-1.5 active:opacity-60">
-                <Ionicons name="trash-outline" size={16} color="#ef4444" />
-              </Pressable>
-            )}
-          </View>
-        </View>
 
-        {/* Platform + status row */}
-        <View className="flex-row items-center mb-3 ml-7">
-          <View className={`px-2 py-0.5 rounded-full ${platformBg}`}>
-            <Text className={`text-xs font-medium ${platformText}`}>{booking.platform}</Text>
-          </View>
-        </View>
-
-        {/* Details grid */}
-        <View className="ml-7 space-y-1.5">
-          {/* Check-in / Check-out */}
-          <View className="flex-row items-center">
-            <Ionicons name="calendar-outline" size={14} color="#8FA8BF" />
-            <Text className="text-sm text-stone dark:text-parchment ml-2">
-              {formatDate(booking.check_in)} — {formatDate(booking.check_out)}
-              <Text className="text-stone"> ({nights} night{nights !== 1 ? 's' : ''})</Text>
-            </Text>
-          </View>
-
-          {/* Reservation number */}
-          {booking.reservation_number ? (
-            <View className="flex-row items-center mt-1.5">
-              <Ionicons name="document-text-outline" size={14} color="#8FA8BF" />
-              <Text className="text-sm text-stone dark:text-parchment ml-2 font-mono">
-                #{booking.reservation_number}
-              </Text>
+              <View className="flex-row items-center">
+                {booking.is_backup && (
+                  <View className="bg-amber-50 px-2 py-0.5 rounded-full mr-2">
+                    <Text className="text-xs font-semibold text-amber-600">Backup</Text>
+                  </View>
+                )}
+                {onDelete && (
+                  <Pressable onPress={onDelete} className="p-1.5 active:opacity-60">
+                    <Ionicons name="trash-outline" size={16} color="#ef4444" />
+                  </Pressable>
+                )}
+              </View>
             </View>
-          ) : null}
 
-          {/* Booked by / name on reservation */}
-          <View className="flex-row items-center mt-1.5">
-            <Ionicons name="person-outline" size={14} color="#8FA8BF" />
-            <Text className="text-sm text-stone dark:text-parchment ml-2">
-              {booking.booking_name}
-              {booking.booked_by && booking.booked_by !== booking.booking_name
-                ? ` (booked by ${booking.booked_by})`
-                : ''}
-            </Text>
+            {/* Platform + status row */}
+            <View className="flex-row items-center mb-3 ml-7">
+              <View className={`px-2 py-0.5 rounded-full ${platformBg}`}>
+                <Text className={`text-xs font-medium ${platformText}`}>{booking.platform}</Text>
+              </View>
+            </View>
+
+            {/* Details grid */}
+            <View className="ml-7 space-y-1.5">
+              {/* Check-in / Check-out */}
+              <View className="flex-row items-center">
+                <Ionicons name="calendar-outline" size={14} color="#8FA8BF" />
+                <Text className="text-sm text-stone dark:text-parchment ml-2">
+                  {formatDate(booking.check_in)} — {formatDate(booking.check_out)}
+                  <Text className="text-stone"> ({nights} night{nights !== 1 ? 's' : ''})</Text>
+                </Text>
+              </View>
+
+              {/* Reservation number */}
+              {booking.reservation_number ? (
+                <View className="flex-row items-center mt-1.5">
+                  <Ionicons name="document-text-outline" size={14} color="#8FA8BF" />
+                  <Text className="text-sm text-stone dark:text-parchment ml-2 font-mono">
+                    #{booking.reservation_number}
+                  </Text>
+                </View>
+              ) : null}
+
+              {/* Booked by / name on reservation */}
+              <View className="flex-row items-center mt-1.5">
+                <Ionicons name="person-outline" size={14} color="#8FA8BF" />
+                <Text className="text-sm text-stone dark:text-parchment ml-2">
+                  {booking.booking_name}
+                  {booking.booked_by && booking.booked_by !== booking.booking_name
+                    ? ` (booked by ${booking.booked_by})`
+                    : ''}
+                </Text>
+              </View>
+
+              {/* Address */}
+              {booking.address ? (
+                <View className="flex-row items-center mt-1.5">
+                  <Ionicons name="location-outline" size={14} color="#8FA8BF" />
+                  <Text className="text-sm text-stone dark:text-parchment ml-2 flex-1" numberOfLines={1}>
+                    {booking.address}
+                  </Text>
+                </View>
+              ) : null}
+
+              {/* Cost */}
+              {booking.cost != null && (
+                <View className="flex-row items-center mt-1.5">
+                  <Ionicons name="card-outline" size={14} color="#8FA8BF" />
+                  <Text className="text-sm text-stone dark:text-parchment ml-2">
+                    ${booking.cost.toFixed(2)}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
 
-          {/* Address + Directions */}
+          {/* Directions button — same style as venue card */}
           {booking.address ? (
-            <View className="flex-row items-center mt-1.5">
-              <Ionicons name="location-outline" size={14} color="#8FA8BF" />
-              <Text className="text-sm text-stone dark:text-parchment ml-2 flex-1" numberOfLines={1}>
-                {booking.address}
-              </Text>
-              <Pressable
-                className="bg-rally-50 dark:bg-rally-900/30 px-2.5 py-1.5 rounded-lg active:opacity-70 ml-2"
-                onPress={(e) => { e.stopPropagation(); openDirections(booking.address); }}
-              >
-                <Ionicons name="navigate" size={14} color="#3B82B0" />
-              </Pressable>
-            </View>
+            <Pressable
+              className="bg-rally-50 dark:bg-rally-900/30 px-3 py-2 rounded-lg active:opacity-70"
+              onPress={(e) => { e.stopPropagation(); openDirections(booking.address); }}
+            >
+              <Ionicons name="navigate" size={18} color="#3B82B0" />
+            </Pressable>
           ) : null}
-
-          {/* Cost */}
-          {booking.cost != null && (
-            <View className="flex-row items-center mt-1.5">
-              <Ionicons name="card-outline" size={14} color="#8FA8BF" />
-              <Text className="text-sm text-stone dark:text-parchment ml-2">
-                ${booking.cost.toFixed(2)}
-              </Text>
-            </View>
-          )}
         </View>
 
         {/* Cancellation deadline badge */}
