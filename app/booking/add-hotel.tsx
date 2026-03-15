@@ -159,7 +159,7 @@ export default function AddHotelBookingScreen() {
           notifySuccess();
         }
       }
-      showAlert('Saved', 'Hotel booking saved.', () => router.back());
+      router.back();
     } finally {
       setIsSaving(false);
     }

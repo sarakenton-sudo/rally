@@ -190,7 +190,7 @@ export default function AddFlightBookingScreen() {
           notifySuccess();
         }
       }
-      showAlert('Saved', 'Flight booking saved.', () => router.back());
+      router.back();
     } finally {
       setIsSaving(false);
     }
