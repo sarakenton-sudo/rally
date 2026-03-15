@@ -692,7 +692,7 @@ export default function OnboardingScreen() {
                 style={{
                   borderRadius: 14, paddingVertical: 12, alignItems: 'center', marginBottom: 16,
                   backgroundColor: isExtracting || !pasteText.trim() ? '#E8F0F8' : '#3B82B0',
-                  shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: !pasteText.trim() ? 0 : 0.45, shadowRadius: 20,
+                  shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 2 }, shadowOpacity: !pasteText.trim() ? 0 : 0.15, shadowRadius: 6,
                 }}
                 onPress={handleExtractSchedule} disabled={isExtracting || !pasteText.trim()}
               >
@@ -814,7 +814,7 @@ export default function OnboardingScreen() {
                 style={{
                   borderRadius: 14, paddingVertical: 12, alignItems: 'center', marginBottom: 16,
                   backgroundColor: isExtractingTravel || !travelPasteText.trim() ? '#E8F0F8' : '#3B82B0',
-                  shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: !travelPasteText.trim() ? 0 : 0.45, shadowRadius: 20,
+                  shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 2 }, shadowOpacity: !travelPasteText.trim() ? 0 : 0.15, shadowRadius: 6,
                 }}
                 onPress={handleExtractTravel} disabled={isExtractingTravel || !travelPasteText.trim()}
               >

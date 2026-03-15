@@ -1,19 +1,23 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
+import { useState, useMemo } from 'react';
+import { View, Text, ScrollView, Pressable, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import FormField from '@/components/FormField';
+import DropdownField from '@/components/DropdownField';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useAuth } from '@/providers/AuthProvider';
 import { insertHotelBooking, insertFlightBooking } from '@/hooks/useSupabaseData';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
-import type { HotelBooking, FlightBooking } from '@/types/database';
+import type { HotelBooking, FlightBooking, BookingPlatform, BookingStatus } from '@/types/database';
+
+const AIRLINES = ['Southwest', 'Delta', 'United', 'American', 'JetBlue', 'Spirit', 'Frontier', 'Alaska', 'Other'];
+const PLATFORMS: BookingPlatform[] = ['Bonvoy', 'Booking.com', 'Travel Source', 'Expedia', 'Direct', 'Other'];
 
 interface ExtractedBooking {
   type: 'hotel' | 'flight';
-  // Hotel fields
   hotel_name?: string;
   reservation_number?: string;
   check_in?: string;
@@ -21,13 +25,12 @@ interface ExtractedBooking {
   platform?: string;
   booking_name?: string;
   booked_by?: string;
-  // Flight fields
   airline?: string;
   confirmation_code?: string;
+  ticket_number?: string;
   departure_date?: string;
   return_date?: string;
   traveler_names?: string[];
-  // Shared
   cost?: number | null;
 }
 
@@ -38,34 +41,82 @@ export default function ReviewTravelScreen() {
   const ic = useIconColors();
   const [items, setItems] = useState<ExtractedBooking[]>(parsed);
   const [isSaving, setIsSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [selectedTournamentIds, setSelectedTournamentIds] = useState<Record<number, string>>({});
 
   const addHotelBooking = useSeasonStore((s) => s.addHotelBooking);
   const addFlightBooking = useSeasonStore((s) => s.addFlightBooking);
+  const tournaments = useSeasonStore((s) => s.tournaments);
   const { user } = useAuth();
+
+  // Only travel-required tournaments as options
+  const tournamentOptions = useMemo(
+    () => tournaments.filter((t) => t.travel_required).map((t) => t.name),
+    [tournaments]
+  );
+
+  const updateItem = (index: number, field: string, value: any) => {
+    setItems((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
 
   const removeItem = (index: number) => {
     setItems((prev) => prev.filter((_, i) => i !== index));
+    setSelectedTournamentIds((prev) => {
+      const updated = { ...prev };
+      delete updated[index];
+      return updated;
+    });
+  };
+
+  const handleTournamentChange = (index: number, name: string) => {
+    const t = tournaments.find((tour) => tour.name === name);
+    if (t) {
+      setSelectedTournamentIds((prev) => ({ ...prev, [index]: t.id }));
+    }
+  };
+
+  const showError = (msg: string) => {
+    if (Platform.OS === 'web') {
+      setErrorMsg(msg);
+    } else {
+      Alert.alert('Error', msg);
+    }
   };
 
   const handleSave = async () => {
     if (items.length === 0) {
-      Alert.alert('No bookings', 'Add at least one booking to save.');
+      showError('No bookings to save.');
       return;
     }
 
+    // Validate tournament selection
+    for (let i = 0; i < items.length; i++) {
+      if (!selectedTournamentIds[i]) {
+        showError(`Please select a tournament for ${items[i].type === 'hotel' ? items[i].hotel_name || 'hotel' : items[i].airline || 'flight'}.`);
+        return;
+      }
+    }
+
     setIsSaving(true);
+    setErrorMsg(null);
 
     try {
+      const userId = user?.id ?? '00000000-0000-0000-0000-000000000001';
+
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        const userId = user?.id ?? '00000000-0000-0000-0000-000000000001';
+        const tournamentId = selectedTournamentIds[i];
 
         if (item.type === 'hotel') {
           const hotelData = {
-            user_id: userId,
-            tournament_id: '', // Will need to be linked later
+            created_by_user_id: userId,
+            tournament_id: tournamentId,
             hotel_name: item.hotel_name || 'Unknown Hotel',
-            platform: (item.platform as any) || 'Other',
+            platform: (item.platform as BookingPlatform) || 'Other',
             booking_name: item.booking_name || '',
             booked_by: item.booked_by || '',
             reservation_number: item.reservation_number || '',
@@ -74,31 +125,24 @@ export default function ReviewTravelScreen() {
             cancellation_deadline: null,
             cost: item.cost ?? null,
             is_backup: false,
-            status: 'confirmed' as const,
+            status: 'confirmed' as BookingStatus,
           };
 
           if (isSupabaseConfigured && user) {
             const { data, error } = await insertHotelBooking(hotelData);
-            if (error) {
-              Alert.alert('Save failed', `Failed to save hotel: ${error.message}`);
-              setIsSaving(false);
-              return;
-            }
+            if (error) { showError(`Failed to save hotel: ${error.message}`); setIsSaving(false); return; }
             if (data) addHotelBooking(data);
           } else {
-            const booking: HotelBooking = {
-              ...hotelData,
-              id: `h-import-${Date.now()}-${i}`,
-              created_at: new Date().toISOString(),
-            };
+            const booking: HotelBooking = { ...hotelData, id: `h-import-${Date.now()}-${i}`, created_at: new Date().toISOString() };
             addHotelBooking(booking);
           }
         } else {
           const flightData = {
-            user_id: userId,
-            tournament_id: '', // Will need to be linked later
-            airline: item.airline || 'Unknown Airline',
+            created_by_user_id: userId,
+            tournament_id: tournamentId,
+            airline: item.airline || 'Other',
             confirmation_code: item.confirmation_code || '',
+            ticket_number: item.ticket_number || null,
             departure_date: item.departure_date || '',
             return_date: item.return_date || '',
             booked_by: item.booked_by || '',
@@ -108,44 +152,32 @@ export default function ReviewTravelScreen() {
 
           if (isSupabaseConfigured && user) {
             const { data, error } = await insertFlightBooking(flightData);
-            if (error) {
-              Alert.alert('Save failed', `Failed to save flight: ${error.message}`);
-              setIsSaving(false);
-              return;
-            }
+            if (error) { showError(`Failed to save flight: ${error.message}`); setIsSaving(false); return; }
             if (data) addFlightBooking(data);
           } else {
-            const booking: FlightBooking = {
-              ...flightData,
-              id: `f-import-${Date.now()}-${i}`,
-              created_at: new Date().toISOString(),
-            };
+            const booking: FlightBooking = { ...flightData, id: `f-import-${Date.now()}-${i}`, created_at: new Date().toISOString() };
             addFlightBooking(booking);
           }
         }
       }
 
       notifySuccess();
-      Alert.alert(
-        'Imported!',
-        `${items.length} booking${items.length !== 1 ? 's' : ''} added.`,
-        [{ text: 'OK', onPress: () => router.dismissAll() }]
-      );
+      router.dismissAll();
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to save bookings.');
+      showError(err.message || 'Failed to save bookings.');
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['bottom']}>
+    <SafeAreaView className="flex-1 bg-warm-white" edges={['bottom']}>
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-3 bg-warm-white dark:bg-bark border-b border-parchment dark:border-bark-light">
+      <View className="flex-row items-center justify-between px-4 py-3 bg-warm-white border-b border-parchment">
         <Pressable onPress={() => router.back()} className="p-1">
           <Ionicons name="chevron-back" size={24} color={ic.muted} />
         </Pressable>
-        <Text className="text-lg font-bold text-bark dark:text-cream">
+        <Text className="text-lg font-bold text-bark">
           Review Travel ({items.length})
         </Text>
         <Pressable
@@ -163,73 +195,96 @@ export default function ReviewTravelScreen() {
 
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         {/* Info banner */}
-        <View className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 mb-4 flex-row items-start">
+        <View className="bg-green-50 rounded-xl p-3 mb-4 flex-row items-start">
           <Ionicons name="checkmark-circle" size={18} color="#16a34a" />
-          <Text className="text-sm text-green-700 dark:text-green-300 ml-2 flex-1">
-            {items.length} booking{items.length !== 1 ? 's' : ''} extracted. Review before saving.
+          <Text className="text-sm text-green-700 ml-2 flex-1">
+            {items.length} booking{items.length !== 1 ? 's' : ''} extracted. Review and select a tournament, then save.
           </Text>
         </View>
 
-        {items.map((item, index) => (
-          <View
-            key={index}
-            className="bg-warm-white dark:bg-bark-light rounded-xl border border-parchment dark:border-rally-900 mb-3 overflow-hidden"
-          >
-            {/* Color bar */}
-            <View className={`h-1.5 ${item.type === 'hotel' ? 'bg-rally-600' : 'bg-amber-500'}`} />
-
-            <View className="p-4">
-              {/* Header */}
-              <View className="flex-row items-center justify-between mb-3">
-                <View className="flex-row items-center flex-1">
-                  <Ionicons
-                    name={item.type === 'hotel' ? 'bed-outline' : 'airplane-outline'}
-                    size={18}
-                    color={item.type === 'hotel' ? '#3B82B0' : '#d97706'}
-                  />
-                  <Text className="text-xs font-semibold uppercase tracking-wider text-stone ml-2">
-                    {item.type === 'hotel' ? 'Hotel' : 'Flight'}
-                  </Text>
-                </View>
-                <Pressable onPress={() => removeItem(index)} className="p-1.5">
-                  <Ionicons name="trash-outline" size={18} color="#ef4444" />
-                </Pressable>
-              </View>
-
-              {item.type === 'hotel' ? (
-                <View>
-                  <Text className="text-base font-bold text-bark dark:text-cream mb-2">
-                    {item.hotel_name || 'Unknown Hotel'}
-                  </Text>
-                  {item.check_in && (
-                    <DetailRow icon="calendar-outline" label="Check-in" value={item.check_in} muted={ic.muted} />
-                  )}
-                  {item.check_out && (
-                    <DetailRow icon="calendar-outline" label="Check-out" value={item.check_out} muted={ic.muted} />
-                  )}
-                  {item.reservation_number && (
-                    <DetailRow icon="document-outline" label="Confirmation" value={item.reservation_number} muted={ic.muted} />
-                  )}
-                </View>
-              ) : (
-                <View>
-                  <Text className="text-base font-bold text-bark dark:text-cream mb-2">
-                    {item.airline || 'Unknown Airline'}
-                  </Text>
-                  {item.departure_date && (
-                    <DetailRow icon="airplane-outline" label="Departure" value={item.departure_date} muted={ic.muted} />
-                  )}
-                  {item.return_date && (
-                    <DetailRow icon="return-down-back" label="Return" value={item.return_date} muted={ic.muted} />
-                  )}
-                  {item.confirmation_code && (
-                    <DetailRow icon="document-outline" label="Confirmation" value={item.confirmation_code} muted={ic.muted} />
-                  )}
-                </View>
-              )}
-            </View>
+        {/* Error */}
+        {errorMsg && (
+          <View className="bg-red-50 rounded-xl p-3 mb-4 flex-row items-start">
+            <Ionicons name="alert-circle" size={18} color="#dc2626" />
+            <Text className="text-sm text-red-700 ml-2 flex-1">{errorMsg}</Text>
           </View>
-        ))}
+        )}
+
+        {items.map((item, index) => {
+          const selectedName = tournaments.find((t) => t.id === selectedTournamentIds[index])?.name ?? '';
+          return (
+            <View
+              key={index}
+              className="bg-warm-white rounded-xl border border-parchment mb-4 overflow-hidden"
+              style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}
+            >
+              {/* Color bar */}
+              <View className={`h-1.5 ${item.type === 'hotel' ? 'bg-rally-600' : 'bg-amber-500'}`} />
+
+              <View className="p-4">
+                {/* Header row */}
+                <View className="flex-row items-center justify-between mb-3">
+                  <View className="flex-row items-center">
+                    <Ionicons
+                      name={item.type === 'hotel' ? 'bed-outline' : 'airplane-outline'}
+                      size={18}
+                      color={item.type === 'hotel' ? '#3B82B0' : '#d97706'}
+                    />
+                    <Text className="text-xs font-semibold uppercase tracking-wider text-stone ml-2">
+                      {item.type === 'hotel' ? 'Hotel' : 'Flight'}
+                    </Text>
+                  </View>
+                  <Pressable onPress={() => removeItem(index)} className="p-1.5">
+                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  </Pressable>
+                </View>
+
+                {/* Tournament selector */}
+                <DropdownField
+                  label="Link to Tournament"
+                  value={selectedName}
+                  options={tournamentOptions}
+                  onChange={(name) => handleTournamentChange(index, name)}
+                />
+
+                {item.type === 'hotel' ? (
+                  <>
+                    <FormField label="Hotel Name" value={item.hotel_name || ''} onChangeText={(v) => updateItem(index, 'hotel_name', v)} placeholder="Hotel name" />
+                    <DropdownField label="Platform" value={item.platform || ''} options={PLATFORMS} onChange={(v) => updateItem(index, 'platform', v)} />
+                    <FormField label="Reservation #" value={item.reservation_number || ''} onChangeText={(v) => updateItem(index, 'reservation_number', v)} placeholder="Confirmation number" />
+                    <View className="flex-row gap-3">
+                      <View className="flex-1">
+                        <FormField label="Check-in" value={item.check_in || ''} onChangeText={(v) => updateItem(index, 'check_in', v)} placeholder="YYYY-MM-DD" />
+                      </View>
+                      <View className="flex-1">
+                        <FormField label="Check-out" value={item.check_out || ''} onChangeText={(v) => updateItem(index, 'check_out', v)} placeholder="YYYY-MM-DD" />
+                      </View>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <DropdownField label="Airline" value={item.airline || ''} options={AIRLINES} onChange={(v) => updateItem(index, 'airline', v)} />
+                    <FormField label="Confirmation Code" value={item.confirmation_code || ''} onChangeText={(v) => updateItem(index, 'confirmation_code', v)} placeholder="e.g. ABC123" autoCapitalize="characters" />
+                    <View className="flex-row gap-3">
+                      <View className="flex-1">
+                        <FormField label="Departure" value={item.departure_date || ''} onChangeText={(v) => updateItem(index, 'departure_date', v)} placeholder="YYYY-MM-DD" />
+                      </View>
+                      <View className="flex-1">
+                        <FormField label="Return" value={item.return_date || ''} onChangeText={(v) => updateItem(index, 'return_date', v)} placeholder="YYYY-MM-DD" />
+                      </View>
+                    </View>
+                    <FormField
+                      label="Travelers"
+                      value={(item.traveler_names || []).join(', ')}
+                      onChangeText={(v) => updateItem(index, 'traveler_names', v.split(',').map((s: string) => s.trim()).filter(Boolean))}
+                      placeholder="Names separated by commas"
+                    />
+                  </>
+                )}
+              </View>
+            </View>
+          );
+        })}
 
         {items.length === 0 && (
           <View className="items-center py-16">
@@ -240,15 +295,5 @@ export default function ReviewTravelScreen() {
         )}
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function DetailRow({ icon, label, value, muted }: { icon: string; label: string; value: string; muted: string }) {
-  return (
-    <View className="flex-row items-center mb-1.5">
-      <Ionicons name={icon as any} size={14} color={muted} />
-      <Text className="text-xs text-stone ml-1.5">{label}:</Text>
-      <Text className="text-sm text-bark dark:text-cream ml-1 font-medium">{value}</Text>
-    </View>
   );
 }

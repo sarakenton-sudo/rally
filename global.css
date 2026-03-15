@@ -49,5 +49,5 @@
   /* Shadows — matching homepage */
   --shadow-card: 0 2px 12px rgba(30, 58, 95, 0.08);
   --shadow-card-hover: 0 12px 40px rgba(30, 58, 95, 0.09);
-  --shadow-button: 0 4px 20px rgba(59, 130, 176, 0.45);
+  --shadow-button: 0 2px 8px rgba(59, 130, 176, 0.15);
 }
