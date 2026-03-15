@@ -7,7 +7,7 @@ import FormField from '@/components/FormField';
 import DropdownField from '@/components/DropdownField'; // for relationship
 import { useGuestStore } from '@/stores/useGuestStore';
 import { useAuth } from '@/providers/AuthProvider';
-import { insertGuest, updateGuest as updateGuestDB, deleteGuest as deleteGuestDB } from '@/hooks/useSupabaseData';
+import { insertGuest, updateGuest as updateGuestDB, deleteGuest as deleteGuestDB, upsertTournamentGuest } from '@/hooks/useSupabaseData';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 import type { Guest, NotificationPref } from '@/types/database';
@@ -15,7 +15,7 @@ import type { Guest, NotificationPref } from '@/types/database';
 const RELATIONSHIPS = ['Grandma', 'Grandpa', 'Uncle', 'Aunt', 'Friend', 'Other'];
 
 export default function AddGuestScreen() {
-  const { editId } = useLocalSearchParams<{ editId?: string }>();
+  const { editId, tournamentId } = useLocalSearchParams<{ editId?: string; tournamentId?: string }>();
   const guests = useGuestStore((s) => s.guests);
   const existing = useMemo(() => editId ? guests.find((g) => g.id === editId) : null, [editId, guests]);
   const isEditing = !!existing;
@@ -31,6 +31,7 @@ export default function AddGuestScreen() {
   const addGuest = useGuestStore((s) => s.addGuest);
   const updateGuestStore = useGuestStore((s) => s.updateGuest);
   const removeGuest = useGuestStore((s) => s.removeGuest);
+  const addTournamentGuest = useGuestStore((s) => s.addTournamentGuest);
   const { user } = useAuth();
   const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -95,13 +96,14 @@ export default function AddGuestScreen() {
         updateGuestStore(editId!, updates);
         notifySuccess();
       } else {
+        let newGuestId: string | null = null;
         if (isSupabaseConfigured && user) {
           const { data, error } = await insertGuest(guestData);
           if (error) {
             showError('Save failed', error.message);
             return;
           }
-          if (data) { addGuest(data); notifySuccess(); }
+          if (data) { addGuest(data); newGuestId = data.id; notifySuccess(); }
         } else {
           const guest: Guest = {
             ...guestData,
@@ -110,7 +112,24 @@ export default function AddGuestScreen() {
             created_at: new Date().toISOString(),
           };
           addGuest(guest);
+          newGuestId = guest.id;
           notifySuccess();
+        }
+
+        // Auto-invite to tournament if created from tournament detail
+        if (tournamentId && newGuestId) {
+          const tg = {
+            tournament_id: tournamentId,
+            guest_id: newGuestId,
+            invited: true,
+            rsvp_status: 'pending' as const,
+            attending_in_person: true,
+            ticket_purchased: false,
+          };
+          if (isSupabaseConfigured && user) {
+            await upsertTournamentGuest(tg);
+          }
+          addTournamentGuest(tg);
         }
       }
       router.back();

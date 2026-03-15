@@ -184,13 +184,22 @@ export default function TournamentGuestList({ tournament }: TournamentGuestListP
 
   // --- Shared sub-components ---
   const InviteButton = () => (
-    <Pressable
-      className="bg-warm-white dark:bg-bark-light rounded-xl p-3.5 mb-2 border border-dashed border-parchment dark:border-rally-900 flex-row items-center justify-center active:opacity-80"
-      onPress={handleInviteGuest}
-    >
-      <Ionicons name="person-add-outline" size={16} color="#3B82B0" />
-      <Text className="text-sm font-semibold text-rally-600 ml-2">Invite Guest</Text>
-    </Pressable>
+    <View className="flex-row gap-2 mb-2">
+      <Pressable
+        className="flex-1 bg-white/70 dark:bg-bark-light rounded-xl p-3.5 border border-dashed border-pink-200 dark:border-pink-900 flex-row items-center justify-center active:opacity-80"
+        onPress={handleInviteGuest}
+      >
+        <Ionicons name="person-add-outline" size={16} color="#ec4899" />
+        <Text className="text-sm font-semibold text-pink-700 ml-2">Invite Guest</Text>
+      </Pressable>
+      <Pressable
+        className="flex-1 bg-white/70 dark:bg-bark-light rounded-xl p-3.5 border border-dashed border-pink-200 dark:border-pink-900 flex-row items-center justify-center active:opacity-80"
+        onPress={() => router.push({ pathname: '/guest/add', params: { tournamentId: tournament.id } })}
+      >
+        <Ionicons name="add-circle-outline" size={16} color="#ec4899" />
+        <Text className="text-sm font-semibold text-pink-700 ml-2">New Guest</Text>
+      </Pressable>
+    </View>
   );
 
   // --- Empty state ---
