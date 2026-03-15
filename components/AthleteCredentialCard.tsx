@@ -11,12 +11,12 @@ const APP_SCHEMES: Record<string, string> = {
 };
 
 // Services that only store a membership/ID number (no URL, no password)
-const MEMBERSHIP_ONLY = ['usa volleyball', 'university athlete'];
+const MEMBERSHIP_ONLY = ['usa volleyball'];
 
 // Brand colors for known services
 const BRAND_STYLES: Record<string, { bg: string; color: string; icon: keyof typeof Ionicons.glyphMap; defaultUrl?: string }> = {
   sportsrecruits: { bg: '#1B4D7E', color: '#FFFFFF', icon: 'school', defaultUrl: 'https://my.sportsrecruits.com/login' },
-  'university athlete': { bg: '#E8520E', color: '#FFFFFF', icon: 'trophy' },
+  'university athlete': { bg: '#E8520E', color: '#FFFFFF', icon: 'trophy', defaultUrl: 'https://universityathlete.com' },
   hudl: { bg: '#FF6600', color: '#FFFFFF', icon: 'videocam', defaultUrl: 'https://identity.hudl.com/u/login/identifier' },
   instagram: { bg: '#E1306C', color: '#FFFFFF', icon: 'logo-instagram', defaultUrl: 'https://www.instagram.com' },
   'usa volleyball': { bg: '#dc2626', color: '#FFFFFF', icon: 'shield-checkmark' },

@@ -43,7 +43,7 @@ const CREDENTIAL_BRANDS: { key: string; label: string; bg: string; icon: keyof t
   { key: 'sportsrecruits', label: 'SportsRecruits', bg: '#1B4D7E', icon: 'school' },
   { key: 'hudl', label: 'Hudl', bg: '#FF6600', icon: 'videocam' },
   { key: 'instagram', label: 'Instagram', bg: '#E1306C', icon: 'logo-instagram' },
-  { key: 'university athlete', label: 'University Athlete', bg: '#E8520E', icon: 'trophy', membershipOnly: true },
+  { key: 'university athlete', label: 'University Athlete', bg: '#E8520E', icon: 'trophy' },
   { key: 'usa volleyball', label: 'USA Volleyball', bg: '#dc2626', icon: 'shield-checkmark', membershipOnly: true },
 ];
 
