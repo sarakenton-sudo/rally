@@ -22,13 +22,34 @@ export default function ReviewTournamentDetailsScreen() {
 
   const ic = useIconColors();
   const [fields, setFields] = useState<ExtractedTournamentDetails>(parsed);
-  const [selectedTournamentId, setSelectedTournamentId] = useState<string>(preselectedId || '');
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const tournaments = useSeasonStore((s) => s.tournaments);
   const updateTournamentStore = useSeasonStore((s) => s.updateTournament);
   const { user } = useAuth();
+
+  // Auto-match tournament by name if no preselectedId
+  const autoMatchedId = (() => {
+    if (preselectedId) return preselectedId;
+    if (!parsed.tournament_name) return '';
+    const name = parsed.tournament_name.toLowerCase();
+    // Try exact substring match first
+    const match = tournaments.find((t) =>
+      t.name.toLowerCase().includes(name) || name.includes(t.name.toLowerCase())
+    );
+    if (match) return match.id;
+    // Try word-level match (at least 2 significant words match)
+    const words = name.split(/\s+/).filter((w) => w.length > 3);
+    for (const t of tournaments) {
+      const tWords = t.name.toLowerCase();
+      const matchCount = words.filter((w) => tWords.includes(w)).length;
+      if (matchCount >= 2) return t.id;
+    }
+    return '';
+  })();
+
+  const [selectedTournamentId, setSelectedTournamentId] = useState<string>(autoMatchedId);
 
   const tournamentOptions = useMemo(
     () => tournaments.map((t) => t.name),
@@ -91,11 +112,17 @@ export default function ReviewTournamentDetailsScreen() {
       }
 
       if (fields.location_city) updates.location_city = fields.location_city;
-      if (fields.ticket_sales_date) updates.ticket_sales_date = fields.ticket_sales_date;
+      // Only save dates that are valid YYYY-MM-DD format
+      const isValidDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d);
+      if (fields.ticket_sales_date && isValidDate(fields.ticket_sales_date)) {
+        updates.ticket_sales_date = fields.ticket_sales_date;
+      }
       if (fields.ticket_link) updates.ticket_link = fields.ticket_link;
       if (fields.ticket_system) updates.ticket_system = fields.ticket_system;
       if (fields.schedule_link) updates.schedule_link = fields.schedule_link;
-      if (fields.schedule_available_date) updates.schedule_available_date = fields.schedule_available_date;
+      if (fields.schedule_available_date && isValidDate(fields.schedule_available_date)) {
+        updates.schedule_available_date = fields.schedule_available_date;
+      }
 
       if (Object.keys(updates).length === 0) {
         showError('No details to update. Fill in at least one field.');
@@ -149,7 +176,9 @@ export default function ReviewTournamentDetailsScreen() {
         <View className="bg-green-50 rounded-xl p-3 mb-4 flex-row items-start">
           <Ionicons name="checkmark-circle" size={18} color="#16a34a" />
           <Text className="text-sm text-green-700 ml-2 flex-1">
-            Details extracted. Select a tournament to update, review the fields, then save.
+            {selectedTournamentId
+              ? `Matched to "${selectedName}". Review the details below, then save.`
+              : 'Details extracted. Select a tournament to update, review the fields, then save.'}
           </Text>
         </View>
 

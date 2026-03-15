@@ -1,4 +1,5 @@
 export interface ExtractedTournamentDetails {
+  tournament_name: string;
   venue_name: string;
   venue_address: string;
   location_city: string;
@@ -37,6 +38,7 @@ function parseDate(dateStr: string): string {
  */
 export function extractTournamentDetails(text: string): ExtractedTournamentDetails {
   const result: ExtractedTournamentDetails = {
+    tournament_name: '',
     venue_name: '',
     venue_address: '',
     location_city: '',
@@ -48,6 +50,29 @@ export function extractTournamentDetails(text: string): ExtractedTournamentDetai
     division_info: '',
     notes: '',
   };
+
+  // --- TOURNAMENT NAME ---
+  // Try subject line: "Subject: 2026 Mizuno Northern Lights Qualifier #2 | Important..."
+  const subjectMatch = text.match(/(?:subject|re|fwd)[:\s]+(.+?)(?:\s*\||\s*[-–—]\s*(?:important|tournament|info)|\n)/i);
+  if (subjectMatch) {
+    result.tournament_name = subjectMatch[1].replace(/^\d{4}\s+/, '').replace(/\s*#\d+$/, '').trim();
+  }
+  // Try first line if it looks like a tournament name (contains qualifier, classic, championship, etc.)
+  if (!result.tournament_name) {
+    const firstLines = text.split('\n').slice(0, 3);
+    for (const line of firstLines) {
+      const cleaned = line.trim();
+      if (cleaned.length > 5 && cleaned.length < 100 &&
+          /(?:qualifier|classic|championship|invitational|national|open|bid|tournament|NIT)/i.test(cleaned)) {
+        result.tournament_name = cleaned
+          .replace(/^\d{4}\s+/, '')
+          .replace(/\s*\|.*$/, '')
+          .replace(/\s*[-–—]\s*(?:important|tournament).*$/i, '')
+          .trim();
+        break;
+      }
+    }
+  }
 
   // --- VENUE ---
   // Try "Location:\n Venue Name" (label on one line, value on next)
@@ -132,15 +157,22 @@ export function extractTournamentDetails(text: string): ExtractedTournamentDetai
   }
 
   // --- SCHEDULE AVAILABLE DATE ---
-  // "Posted on VBSchedule.com on Wednesday night prior to the event"
-  const schedDescMatch = text.match(/schedule[:\s]*(?:posted|available|released|will\s+be\s+posted)\s+(?:on\s+)?(?:\w+\.com\s+)?(?:on\s+)?(\w+day\s+(?:night\s+)?(?:prior|before)\s+(?:to\s+)?(?:the\s+)?event)/i);
-  if (schedDescMatch) {
-    result.schedule_available_date = schedDescMatch[1].trim();
-  }
-  // "Schedule: Posted March 18, 2026"
+  // "Schedule: Posted March 18, 2026" — exact date
   const schedDateExact = text.match(/schedule[:\s]*(?:posted|available|released)\s+(?:on\s+)?(\w+\s+\d{1,2},?\s*\d{4})/i);
   if (schedDateExact) {
-    result.schedule_available_date = parseDate(schedDateExact[1]);
+    const parsed = parseDate(schedDateExact[1]);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(parsed)) {
+      result.schedule_available_date = parsed;
+    }
+  }
+  // "Posted on VBSchedule.com on Wednesday night prior to the event" — description, goes to notes
+  if (!result.schedule_available_date) {
+    const schedDescMatch = text.match(/schedule[:\s]*(?:posted|available|released|will\s+be\s+posted)\s+(?:on\s+)?(?:\w+\.com\s+)?(?:on\s+)?((?:\w+day|the\s+\w+)\s+(?:night\s+)?(?:prior|before)\s+(?:to\s+)?(?:the\s+)?event)/i);
+    if (schedDescMatch) {
+      // Store as note, not as date field (DB expects YYYY-MM-DD)
+      result.notes = result.notes ? result.notes + '\n' : '';
+      result.notes += `Schedule: ${schedDescMatch[1].trim()}`;
+    }
   }
 
   // --- DIVISION ---
