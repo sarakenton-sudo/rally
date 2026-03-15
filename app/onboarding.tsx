@@ -928,19 +928,24 @@ export default function OnboardingScreen() {
                 </View>
               )}
 
-              {/* My Email Addresses */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, marginTop: 8, backgroundColor: 'rgba(106,158,138,0.12)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
-                <Ionicons name="mail" size={18} color="#6A9E8A" />
+              {/* Email Import Section */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 8, backgroundColor: 'rgba(59,130,176,0.12)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
+                <Ionicons name="mail" size={18} color="#3B82B0" />
                 <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-Bold', color: '#1E3A5F' }}>
-                  My Email Addresses
+                  Email & Travel Import
                 </Text>
               </View>
-              <View style={{ backgroundColor: 'rgba(106,158,138,0.08)', borderWidth: 1.5, borderColor: 'rgba(106,158,138,0.25)', borderRadius: 16, padding: 16, marginBottom: 16 }}>
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#1E3A5F', marginBottom: 4 }}>
-                  Add emails you use to book travel
+              <View style={{ backgroundColor: 'rgba(59,130,176,0.06)', borderWidth: 1.5, borderColor: 'rgba(59,130,176,0.2)', borderRadius: 16, padding: 16, marginBottom: 16 }}>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#1E3A5F', marginBottom: 6 }}>
+                  RallyHUB builds your itinerary from your emails
                 </Text>
-                <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Regular', color: '#6B8BA8', marginBottom: 10 }}>
-                  Personal, work, partner's — so RALLY recognizes confirmations from all of them as yours.
+                <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Regular', color: '#6B8BA8', marginBottom: 14, lineHeight: 18 }}>
+                  We already have the email you signed up with — you're all set there. If you also book travel from a work email, partner's email, or any other account, add those below so we recognize confirmations from all of them as yours. Then forward any confirmation to our address and we'll do the rest.
+                </Text>
+
+                {/* Other email addresses */}
+                <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: '#4A6E8A', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
+                  Other Email Addresses
                 </Text>
                 {trustedEmails.length > 0 && (
                   <View style={{ marginBottom: 10, gap: 6 }}>
@@ -955,7 +960,7 @@ export default function OnboardingScreen() {
                     ))}
                   </View>
                 )}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                   <View style={{ flex: 1, backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(106,158,138,0.3)', paddingHorizontal: 12, paddingVertical: 8 }}>
                     <TextInput
                       value={trustedEmailInput}
@@ -981,21 +986,14 @@ export default function OnboardingScreen() {
                     <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Bold', color: '#fff' }}>Add</Text>
                   </Pressable>
                 </View>
-              </View>
 
-              {/* Forward email hint */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, marginTop: 8, backgroundColor: '#E8F4FF', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
-                <Ionicons name="mail" size={18} color="#3B82B0" />
-                <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-Bold', color: '#1E3A5F' }}>
-                  Option 2: Forward Email
-                </Text>
-              </View>
-              <View style={{ backgroundColor: '#E8F4FF', borderWidth: 1.5, borderColor: '#B8D4EC', borderRadius: 16, padding: 16, marginBottom: 16 }}>
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#1E3A5F', marginBottom: 4 }}>
-                  Forward a confirmation email to RALLY
+                {/* Forward address */}
+                <View style={{ height: 1, backgroundColor: 'rgba(59,130,176,0.15)', marginBottom: 14 }} />
+                <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: '#4A6E8A', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>
+                  Forward Confirmations Here
                 </Text>
                 <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Regular', color: '#6B8BA8', marginBottom: 10 }}>
-                  We'll create your tournament weekend itinerary like magic.
+                  Forward any hotel, flight, or tournament email to this address and we'll build your itinerary automatically.
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Text selectable style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#3B82B0', flex: 1 }}>
