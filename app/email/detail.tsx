@@ -846,7 +846,53 @@ export default function EmailDetailScreen() {
           </View>
         )}
 
-        {/* Email body */}
+        {/* Action buttons — right after extraction/match for easy access */}
+        <View className="mb-3">
+          {(email.classification === 'tournament_info' ||
+            email.classification === 'schedule_change' ||
+            email.classification === 'coach_announcement') && (
+            <Pressable
+              className="bg-rally-600 rounded-xl py-3.5 items-center flex-row justify-center mb-2 active:opacity-80"
+              onPress={handleExtractSchedule}
+            >
+              <Ionicons name="sparkles" size={18} color="#FEFEFE" />
+              <Text className="text-sm font-semibold text-cream ml-2">Extract Tournaments</Text>
+            </Pressable>
+          )}
+
+          {email.classification === 'stay_and_play' && (
+            <Pressable
+              className="bg-purple-600 rounded-xl py-3.5 items-center flex-row justify-center mb-2 active:opacity-80"
+              onPress={handleCreateHotelBooking}
+            >
+              <Ionicons name="bed" size={18} color="white" />
+              <Text className="text-sm font-semibold text-white ml-2">Create Hotel Booking</Text>
+            </Pressable>
+          )}
+
+          {email.classification === 'travel_confirmation' && (
+            <Pressable
+              className="bg-rally-600 rounded-xl py-3.5 items-center flex-row justify-center mb-2 active:opacity-80"
+              onPress={handleCreateFlightBooking}
+            >
+              <Ionicons name="airplane" size={18} color="white" />
+              <Text className="text-sm font-semibold text-white ml-2">Create Flight Booking</Text>
+            </Pressable>
+          )}
+
+          <Pressable
+            className={`rounded-xl py-3.5 items-center flex-row justify-center ${hasExtractedData ? 'bg-warm-white dark:bg-bark-light border border-parchment dark:border-rally-900' : 'bg-rally-600'} ${isReExtracting ? 'opacity-60' : 'active:opacity-80'}`}
+            onPress={handleReExtract}
+            disabled={isReExtracting}
+          >
+            <Ionicons name="sparkles" size={18} color={hasExtractedData ? ic.muted : '#FEFEFE'} />
+            <Text className={`text-sm font-semibold ml-2 ${hasExtractedData ? 'text-stone dark:text-parchment' : 'text-cream'}`}>
+              {isReExtracting ? 'Extracting...' : hasExtractedData ? 'Re-extract with AI' : 'Extract Details'}
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Email body — collapsed by default, below actions */}
         <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-4 border border-parchment dark:border-rally-900">
           <Text className="text-xs text-stone uppercase tracking-wider mb-2">Email Body</Text>
           <Text className="text-sm text-bark dark:text-parchment leading-5" selectable>
@@ -860,54 +906,6 @@ export default function EmailDetailScreen() {
             </Pressable>
           )}
         </View>
-
-        {/* Action buttons */}
-        <Text className="text-xs font-semibold text-stone uppercase tracking-wider mb-2 ml-1">
-          Actions
-        </Text>
-
-        {(email.classification === 'tournament_info' ||
-          email.classification === 'schedule_change' ||
-          email.classification === 'coach_announcement') && (
-          <Pressable
-            className="bg-rally-600 rounded-xl py-3.5 items-center flex-row justify-center mb-2 active:opacity-80"
-            onPress={handleExtractSchedule}
-          >
-            <Ionicons name="sparkles" size={18} color="#FEFEFE" />
-            <Text className="text-sm font-semibold text-cream ml-2">Extract Tournaments</Text>
-          </Pressable>
-        )}
-
-        {email.classification === 'stay_and_play' && (
-          <Pressable
-            className="bg-purple-600 rounded-xl py-3.5 items-center flex-row justify-center mb-2 active:opacity-80"
-            onPress={handleCreateHotelBooking}
-          >
-            <Ionicons name="bed" size={18} color="white" />
-            <Text className="text-sm font-semibold text-white ml-2">Create Hotel Booking</Text>
-          </Pressable>
-        )}
-
-        {email.classification === 'travel_confirmation' && (
-          <Pressable
-            className="bg-rally-600 rounded-xl py-3.5 items-center flex-row justify-center mb-2 active:opacity-80"
-            onPress={handleCreateFlightBooking}
-          >
-            <Ionicons name="airplane" size={18} color="white" />
-            <Text className="text-sm font-semibold text-white ml-2">Create Flight Booking</Text>
-          </Pressable>
-        )}
-
-        <Pressable
-          className={`rounded-xl py-3.5 items-center flex-row justify-center ${hasExtractedData ? 'bg-warm-white dark:bg-bark-light border border-parchment dark:border-rally-900' : 'bg-rally-600'} ${isReExtracting ? 'opacity-60' : 'active:opacity-80'}`}
-          onPress={handleReExtract}
-          disabled={isReExtracting}
-        >
-          <Ionicons name="sparkles" size={18} color={hasExtractedData ? ic.muted : '#FEFEFE'} />
-          <Text className={`text-sm font-semibold ml-2 ${hasExtractedData ? 'text-stone dark:text-parchment' : 'text-cream'}`}>
-            {isReExtracting ? 'Extracting...' : hasExtractedData ? 'Re-extract with AI' : 'Extract Details'}
-          </Text>
-        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
