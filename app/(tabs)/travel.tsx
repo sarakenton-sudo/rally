@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { View, Text, SectionList, Pressable, ActivityIndicator, Alert, Platform } from 'react-native';
 import { router } from 'expo-router';
-import { useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useIconColors } from '@/lib/colors';
 import HotelBookingCard from '@/components/HotelBookingCard';
@@ -37,7 +36,6 @@ const SECTION_ACCENTS = [
 
 export default function TravelScreen() {
   const ic = useIconColors();
-  const [showAddMenu, setShowAddMenu] = useState(false);
   const allTournaments = useSeasonStore((s) => s.tournaments);
   const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
   const tournaments = useMemo(() =>
@@ -264,69 +262,6 @@ export default function TravelScreen() {
         }
       />
 
-      {/* Add menu overlay */}
-      {showAddMenu && (
-        <Pressable
-          className="absolute inset-0 bg-black/30"
-          onPress={() => setShowAddMenu(false)}
-        >
-          <View className="absolute bottom-24 right-6">
-            <Pressable
-              className="bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 mb-2 flex-row items-center shadow-lg active:opacity-80"
-              style={{ elevation: 4 }}
-              onPress={() => {
-                setShowAddMenu(false);
-                router.push('/import/paste-travel');
-              }}
-            >
-              <Ionicons name="sparkles" size={20} color="#7c3aed" />
-              <Text className="text-sm font-semibold text-bark dark:text-cream ml-3">Paste + AI</Text>
-            </Pressable>
-            <Pressable
-              className="bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 mb-2 flex-row items-center shadow-lg active:opacity-80"
-              style={{ elevation: 4 }}
-              onPress={() => {
-                setShowAddMenu(false);
-                router.push('/settings/email-forward');
-              }}
-            >
-              <Ionicons name="mail-open" size={20} color="#3B82B0" />
-              <Text className="text-sm font-semibold text-bark dark:text-cream ml-3">Forward Email</Text>
-            </Pressable>
-            <Pressable
-              className="bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 mb-2 flex-row items-center shadow-lg active:opacity-80"
-              style={{ elevation: 4 }}
-              onPress={() => {
-                setShowAddMenu(false);
-                router.push('/booking/add-hotel');
-              }}
-            >
-              <Ionicons name="bed" size={20} color="#7c3aed" />
-              <Text className="text-sm font-semibold text-bark dark:text-cream ml-3">Add Hotel</Text>
-            </Pressable>
-            <Pressable
-              className="bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 flex-row items-center shadow-lg active:opacity-80"
-              style={{ elevation: 4 }}
-              onPress={() => {
-                setShowAddMenu(false);
-                router.push('/booking/add-flight');
-              }}
-            >
-              <Ionicons name="airplane" size={20} color="#3B82B0" />
-              <Text className="text-sm font-semibold text-bark dark:text-cream ml-3">Add Flight</Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      )}
-
-      {/* FAB */}
-      <Pressable
-        className="absolute bottom-6 right-6 bg-rally-600 w-14 h-14 rounded-full items-center justify-center shadow-lg active:opacity-80"
-        style={{ elevation: 4 }}
-        onPress={() => setShowAddMenu(!showAddMenu)}
-      >
-        <Ionicons name={showAddMenu ? 'close' : 'add'} size={28} color="#FEFEFE" />
-      </Pressable>
     </View>
   );
 }

@@ -113,9 +113,10 @@ export default function ScheduleImportScreen() {
               <Text className="text-base font-semibold text-bark">Add Manually</Text>
             </View>
           </View>
-          <View className="flex-row gap-3 ml-13">
+          <View className="flex-row flex-wrap gap-3 ml-13">
             <Pressable
-              className="flex-1 bg-green-50 rounded-xl py-3 items-center active:opacity-80 border border-green-200"
+              className="bg-green-50 rounded-xl py-3 items-center active:opacity-80 border border-green-200"
+              style={{ width: '30%' }}
               onPress={() => {
                 const blank = [{ name: '', start_date: '', end_date: '', location_city: '', venue_name: '', venue_address: '', notes: '' }];
                 router.push({ pathname: '/import/review', params: { tournaments: JSON.stringify(blank) } });
@@ -125,18 +126,36 @@ export default function ScheduleImportScreen() {
               <Text className="text-xs font-semibold text-green-700 mt-1">Tournament</Text>
             </Pressable>
             <Pressable
-              className="flex-1 bg-purple-50 rounded-xl py-3 items-center active:opacity-80 border border-purple-200"
+              className="bg-purple-50 rounded-xl py-3 items-center active:opacity-80 border border-purple-200"
+              style={{ width: '30%' }}
               onPress={() => router.push('/booking/add-hotel')}
             >
               <Ionicons name="bed-outline" size={20} color="#7c3aed" />
               <Text className="text-xs font-semibold text-purple-700 mt-1">Hotel</Text>
             </Pressable>
             <Pressable
-              className="flex-1 bg-rally-50 rounded-xl py-3 items-center active:opacity-80 border border-rally-200"
+              className="bg-rally-50 rounded-xl py-3 items-center active:opacity-80 border border-rally-200"
+              style={{ width: '30%' }}
               onPress={() => router.push('/booking/add-flight')}
             >
               <Ionicons name="airplane-outline" size={20} color="#3B82B0" />
               <Text className="text-xs font-semibold text-rally-600 mt-1">Flight</Text>
+            </Pressable>
+            <Pressable
+              className="bg-amber-50 rounded-xl py-3 items-center active:opacity-80 border border-amber-200"
+              style={{ width: '30%' }}
+              onPress={() => router.push('/booking/add-team-event')}
+            >
+              <Ionicons name="restaurant-outline" size={20} color="#d97706" />
+              <Text className="text-xs font-semibold text-amber-700 mt-1">Event</Text>
+            </Pressable>
+            <Pressable
+              className="bg-pink-50 rounded-xl py-3 items-center active:opacity-80 border border-pink-200"
+              style={{ width: '30%' }}
+              onPress={() => router.push('/guest/add')}
+            >
+              <Ionicons name="person-add-outline" size={20} color="#ec4899" />
+              <Text className="text-xs font-semibold text-pink-700 mt-1">Guest</Text>
             </Pressable>
           </View>
         </View>

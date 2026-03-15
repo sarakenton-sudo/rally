@@ -4,6 +4,7 @@ import { Tabs, router, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import SeasonSwitcher from '@/components/SeasonSwitcher';
+import GlobalAddFAB from '@/components/GlobalAddFAB';
 
 const logoWhite = require('@/assets/images/rallyhub_lockup_white.png');
 
@@ -71,6 +72,7 @@ function GlobalHeader() {
 
 export default function TabLayout() {
   return (
+    <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: '#FEFEFE',
@@ -137,5 +139,7 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    <GlobalAddFAB />
+    </View>
   );
 }
