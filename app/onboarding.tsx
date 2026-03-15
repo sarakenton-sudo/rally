@@ -209,6 +209,8 @@ export default function OnboardingScreen() {
   const [isExtractingTravel, setIsExtractingTravel] = useState(false);
   const [extractedBookings, setExtractedBookings] = useState<any[]>([]);
   const [travelExtractError, setTravelExtractError] = useState('');
+  const [trustedEmailInput, setTrustedEmailInput] = useState('');
+  const [trustedEmails, setTrustedEmails] = useState<string[]>([]);
 
   // Step 5: Credentials
   const [credentials, setCredentials] = useState<Record<string, { username: string; password: string; link?: string }>>({});
@@ -359,7 +361,7 @@ export default function OnboardingScreen() {
           p_streaming_url: null,
           p_gmail_connected: false,
           p_gmail_email: null,
-          p_trusted_sender_emails: [],
+          p_trusted_sender_emails: trustedEmails,
           p_tournaments: tournamentPayload,
           p_additional_athletes: [],
           p_guests: guestPayload,
@@ -925,6 +927,61 @@ export default function OnboardingScreen() {
                   ))}
                 </View>
               )}
+
+              {/* My Email Addresses */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, marginTop: 8, backgroundColor: 'rgba(106,158,138,0.12)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
+                <Ionicons name="mail" size={18} color="#6A9E8A" />
+                <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-Bold', color: '#1E3A5F' }}>
+                  My Email Addresses
+                </Text>
+              </View>
+              <View style={{ backgroundColor: 'rgba(106,158,138,0.08)', borderWidth: 1.5, borderColor: 'rgba(106,158,138,0.25)', borderRadius: 16, padding: 16, marginBottom: 16 }}>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#1E3A5F', marginBottom: 4 }}>
+                  Add emails you use to book travel
+                </Text>
+                <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Regular', color: '#6B8BA8', marginBottom: 10 }}>
+                  Personal, work, partner's — so RALLY recognizes confirmations from all of them as yours.
+                </Text>
+                {trustedEmails.length > 0 && (
+                  <View style={{ marginBottom: 10, gap: 6 }}>
+                    {trustedEmails.map((email) => (
+                      <View key={email} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(106,158,138,0.15)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 }}>
+                        <Ionicons name="mail" size={14} color="#6A9E8A" />
+                        <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#1E3A5F', flex: 1, marginLeft: 8 }}>{email}</Text>
+                        <Pressable onPress={() => setTrustedEmails(trustedEmails.filter((e) => e !== email))} className="active:opacity-60">
+                          <Ionicons name="close-circle" size={18} color="#ef4444" />
+                        </Pressable>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ flex: 1, backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(106,158,138,0.3)', paddingHorizontal: 12, paddingVertical: 8 }}>
+                    <TextInput
+                      value={trustedEmailInput}
+                      onChangeText={setTrustedEmailInput}
+                      placeholder="e.g. sara@work.com"
+                      placeholderTextColor="#8FA8BF"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#1E3A5F' }}
+                    />
+                  </View>
+                  <Pressable
+                    style={{ backgroundColor: '#6A9E8A', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14 }}
+                    className="active:opacity-70"
+                    onPress={() => {
+                      const email = trustedEmailInput.trim().toLowerCase();
+                      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+                      if (trustedEmails.includes(email)) { setTrustedEmailInput(''); return; }
+                      setTrustedEmails([...trustedEmails, email]);
+                      setTrustedEmailInput('');
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Bold', color: '#fff' }}>Add</Text>
+                  </Pressable>
+                </View>
+              </View>
 
               {/* Forward email hint */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, marginTop: 8, backgroundColor: '#E8F4FF', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>

@@ -104,6 +104,16 @@ export default function HubScreen() {
           )}
         </View>
 
+        {/* My Email Addresses */}
+        <HubSettingsRow
+          icon="mail"
+          iconColor="#6A9E8A"
+          title="My Email Addresses"
+          subtitle="Add emails you use to book travel so RALLY recognizes them"
+          badge={adminConfig?.trusted_sender_emails?.length || undefined}
+          onPress={() => router.push('/settings/trusted-emails')}
+        />
+
         {/* Copy / Paste + AI */}
         <HubSettingsRow
           icon="sparkles"

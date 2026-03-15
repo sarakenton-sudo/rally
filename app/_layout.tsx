@@ -294,6 +294,10 @@ function RootLayoutNav() {
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
+          name="settings/trusted-emails"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
           name="settings/add-season"
           options={{ presentation: 'modal', headerShown: false }}
         />
