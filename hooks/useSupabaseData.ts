@@ -85,6 +85,7 @@ export function useSupabaseData() {
         supabase
           .from('admin_config')
           .select('*')
+          .order('created_at', { ascending: true })
           .limit(1)
           .single(),
         supabase
@@ -147,7 +148,21 @@ export function useSupabaseData() {
       }
 
       // Set active season from admin_config
-      const config = configRes.data as AdminConfig | null;
+      let config = configRes.data as AdminConfig | null;
+
+      // If no config for current user, try to read the primary admin's config (co-parent case)
+      if (!config) {
+        const { data: sharedConfig } = await supabase
+          .from('admin_config')
+          .select('*')
+          .limit(1)
+          .single();
+        if (sharedConfig) {
+          config = sharedConfig as AdminConfig;
+          setAdminConfig(config);
+        }
+      }
+
       if (config?.active_season_id) {
         setActiveSeasonId(config.active_season_id);
       } else if (seasonsRes.data && seasonsRes.data.length > 0) {
