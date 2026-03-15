@@ -82,35 +82,21 @@ function StepHeader({ icon, title, subtitle }: { icon: keyof typeof Ionicons.gly
 function SkipButton({ onPress }: { onPress: () => void }) {
   return (
     <Pressable style={{ paddingVertical: 8, alignItems: 'center', marginBottom: 8 }} className="active:opacity-70" onPress={onPress}>
-      <Text style={{ fontSize: 13, color: '#8FA8BF', fontFamily: 'NunitoSans-Regular' }}>I'll do this later</Text>
+      <Text style={{ fontSize: 14, color: '#4A6E8A', fontFamily: 'NunitoSans-SemiBold' }}>I'll do this later</Text>
     </Pressable>
   );
 }
 
-function FinishButton({ onPress, saving }: { onPress: () => void; saving: boolean }) {
+function DashboardButton({ onPress, saving }: { onPress: () => void; saving: boolean }) {
   return (
-    <Pressable
-      style={{
-        backgroundColor: 'rgba(106,158,138,0.2)',
-        borderRadius: 14,
-        paddingVertical: 14,
-        alignItems: 'center',
-        borderWidth: 1.5,
-        borderColor: 'rgba(106,158,138,0.35)',
-        marginBottom: 8,
-        opacity: saving ? 0.6 : 1,
-      }}
-      className="active:opacity-80"
-      onPress={onPress}
-      disabled={saving}
-    >
+    <Pressable style={{ paddingVertical: 8, alignItems: 'center', marginBottom: 8, opacity: saving ? 0.5 : 1 }} className="active:opacity-70" onPress={onPress} disabled={saving}>
       {saving ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <ActivityIndicator size="small" color="#6A9E8A" />
-          <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#6A9E8A' }}>Setting up...</Text>
+          <ActivityIndicator size="small" color="#4A6E8A" />
+          <Text style={{ fontSize: 14, color: '#4A6E8A', fontFamily: 'NunitoSans-SemiBold' }}>Setting up...</Text>
         </View>
       ) : (
-        <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#6A9E8A' }}>Finish Setup</Text>
+        <Text style={{ fontSize: 14, color: '#4A6E8A', fontFamily: 'NunitoSans-SemiBold' }}>Go to Dashboard</Text>
       )}
     </Pressable>
   );
@@ -789,7 +775,7 @@ export default function OnboardingScreen() {
                   <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-SemiBold', color: '#fca5a5', textAlign: 'center' }}>{finishError}</Text>
                 </View>
               ) : null}
-              <FinishButton onPress={handleFinish} saving={saving} />
+              <DashboardButton onPress={handleFinish} saving={saving} />
               <SkipButton onPress={() => goTo(4)} />
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <BackButton onPress={() => goTo(2)} />
@@ -908,7 +894,7 @@ export default function OnboardingScreen() {
             </ScrollView>
 
             <View style={{ marginTop: 'auto', paddingBottom: 16, gap: 8 }}>
-              <FinishButton onPress={handleFinish} saving={saving} />
+              <DashboardButton onPress={handleFinish} saving={saving} />
               <SkipButton onPress={() => goTo(5)} />
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <BackButton onPress={() => goTo(3)} />
@@ -1006,7 +992,7 @@ export default function OnboardingScreen() {
             </ScrollView>
 
             <View style={{ marginTop: 'auto', paddingBottom: 16, gap: 8 }}>
-              <FinishButton onPress={handleFinish} saving={saving} />
+              <DashboardButton onPress={handleFinish} saving={saving} />
               <SkipButton onPress={() => goTo(6)} />
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <BackButton onPress={() => goTo(4)} />
@@ -1074,7 +1060,7 @@ export default function OnboardingScreen() {
             </ScrollView>
 
             <View style={{ marginTop: 'auto', paddingBottom: 16, gap: 8 }}>
-              <FinishButton onPress={() => { if (validateGuests()) handleFinish(); }} saving={saving} />
+              <DashboardButton onPress={() => { if (validateGuests()) handleFinish(); }} saving={saving} />
               <SkipButton onPress={() => { setGuests([{ name: '', relation: 'Grandparent', phone: '' }]); goTo(7); }} />
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <BackButton onPress={() => goTo(5)} />
@@ -1138,7 +1124,7 @@ export default function OnboardingScreen() {
             </ScrollView>
 
             <View style={{ marginTop: 'auto', paddingBottom: 16, gap: 8 }}>
-              <FinishButton onPress={handleFinish} saving={saving} />
+              <DashboardButton onPress={handleFinish} saving={saving} />
               <SkipButton onPress={() => goTo(8)} />
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <BackButton onPress={() => goTo(6)} />
