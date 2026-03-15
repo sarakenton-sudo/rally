@@ -65,6 +65,9 @@ export default function AddFlightBookingScreen() {
   );
 
   const tournaments = useSeasonStore((s) => s.tournaments);
+  const athletes = useSeasonStore((s) => s.athletes);
+  const seasons = useSeasonStore((s) => s.seasons);
+  const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
   const addFlightBooking = useSeasonStore((s) => s.addFlightBooking);
   const updateFlightBookingStore = useSeasonStore((s) => s.updateFlightBooking);
   const removeFlightBooking = useSeasonStore((s) => s.removeFlightBooking);
@@ -73,11 +76,41 @@ export default function AddFlightBookingScreen() {
   const ic = useIconColors();
   const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
+  // Athlete/season selection for filtering tournaments
+  const hasMultipleAthletes = athletes.length > 1;
+  const [selectedAthleteId, setSelectedAthleteId] = useState(() => {
+    if (existing) {
+      const t = tournaments.find((tour) => tour.id === existing.tournament_id);
+      const s = t ? seasons.find((se) => se.id === t.season_id) : null;
+      return s?.athlete_id ?? athletes[0]?.id ?? '';
+    }
+    const activeSeason = seasons.find((s) => s.id === activeSeasonId);
+    return activeSeason?.athlete_id ?? athletes[0]?.id ?? '';
+  });
+
+  const athleteSeasonIds = useMemo(() => {
+    const athleteSeasons = seasons.filter((s) => s.athlete_id === selectedAthleteId);
+    return new Set(athleteSeasons.map((s) => s.id));
+  }, [seasons, selectedAthleteId]);
+
+  const filteredTournaments = useMemo(
+    () => tournaments.filter((t) => t.travel_required && athleteSeasonIds.has(t.season_id)),
+    [tournaments, athleteSeasonIds]
+  );
+
   const tournamentOptions = useMemo(
-    () => tournaments.filter((t) => t.travel_required).map((t) => t.name),
-    [tournaments]
+    () => filteredTournaments.map((t) => t.name),
+    [filteredTournaments]
   );
   const selectedTournamentName = tournaments.find((t) => t.id === selectedTournamentId)?.name ?? '';
+
+  const handleAthleteChange = (name: string) => {
+    const a = athletes.find((ath) => `${ath.first_name}${ath.last_name ? ' ' + ath.last_name : ''}` === name);
+    if (a) {
+      setSelectedAthleteId(a.id);
+      setSelectedTournamentId('');
+    }
+  };
 
   const handleTournamentChange = (name: string) => {
     const t = tournaments.find((tour) => tour.name === name);
@@ -211,6 +244,16 @@ export default function AddFlightBookingScreen() {
         </View>
 
         <ScrollView className="flex-1 px-4 pt-4" keyboardShouldPersistTaps="handled">
+          {hasMultipleAthletes && (
+            <DropdownField
+              label="Athlete"
+              value={athletes.find((a) => a.id === selectedAthleteId)
+                ? `${athletes.find((a) => a.id === selectedAthleteId)!.first_name}${athletes.find((a) => a.id === selectedAthleteId)!.last_name ? ' ' + athletes.find((a) => a.id === selectedAthleteId)!.last_name : ''}`
+                : ''}
+              options={athletes.map((a) => `${a.first_name}${a.last_name ? ' ' + a.last_name : ''}`)}
+              onChange={handleAthleteChange}
+            />
+          )}
           <DropdownField label="Tournament" value={selectedTournamentName} options={tournamentOptions} onChange={handleTournamentChange} />
           <DropdownField label="Airline" value={airline} options={AIRLINES} onChange={setAirline} />
           <FormField label="Confirmation Code" value={confirmationCode} onChangeText={setConfirmationCode} placeholder="e.g. ABC123" autoCapitalize="characters" />
