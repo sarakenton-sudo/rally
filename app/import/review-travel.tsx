@@ -49,9 +49,8 @@ export default function ReviewTravelScreen() {
   const tournaments = useSeasonStore((s) => s.tournaments);
   const { user } = useAuth();
 
-  // Only travel-required tournaments as options
   const tournamentOptions = useMemo(
-    () => tournaments.filter((t) => t.travel_required).map((t) => t.name),
+    () => tournaments.map((t) => t.name),
     [tournaments]
   );
 
@@ -240,12 +239,20 @@ export default function ReviewTravelScreen() {
                 </View>
 
                 {/* Tournament selector */}
-                <DropdownField
-                  label="Link to Tournament"
-                  value={selectedName}
-                  options={tournamentOptions}
-                  onChange={(name) => handleTournamentChange(index, name)}
-                />
+                {tournamentOptions.length > 0 ? (
+                  <DropdownField
+                    label="Link to Tournament"
+                    value={selectedName}
+                    options={tournamentOptions}
+                    onChange={(name) => handleTournamentChange(index, name)}
+                  />
+                ) : (
+                  <View className="bg-amber-50 rounded-xl p-3 mb-4">
+                    <Text className="text-sm text-amber-700">
+                      No tournaments yet. Add tournaments first, then import travel.
+                    </Text>
+                  </View>
+                )}
 
                 {item.type === 'hotel' ? (
                   <>
