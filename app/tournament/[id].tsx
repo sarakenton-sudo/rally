@@ -343,6 +343,23 @@ export default function TournamentDetailScreen() {
                         </Pressable>
                       )}
 
+                      {/* Streaming link */}
+                      {(() => {
+                        const streamUrl = tournament.streaming_links?.[0]?.url ?? activeSeason?.default_stream_url;
+                        const streamLabel = tournament.streaming_links?.[0]?.label || 'Watch Live';
+                        if (!streamUrl) return null;
+                        return (
+                          <Pressable
+                            className={`flex-row items-center active:opacity-80 mb-1 ${tournament.schedule_link ? 'mt-2 pt-2 border-t border-green-100 dark:border-green-900' : ''}`}
+                            onPress={() => Linking.openURL(streamUrl)}
+                          >
+                            <Ionicons name="tv-outline" size={18} color="#7c3aed" />
+                            <Text className="text-sm text-purple-700 font-semibold ml-2 flex-1" numberOfLines={1}>{streamLabel}</Text>
+                            <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
+                          </Pressable>
+                        );
+                      })()}
+
                       {/* AES feed info */}
                       {tournament.aes_tournament_id && (
                         <View className={tournament.schedule_link ? 'mt-3 pt-3 border-t border-green-100 dark:border-green-900' : ''}>
