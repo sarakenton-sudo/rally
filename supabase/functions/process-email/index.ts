@@ -12,6 +12,7 @@ interface InboundEmail {
   subject: string;
   text: string;
   html?: string;
+  envelopeFrom?: string; // The actual forwarder (from SendGrid envelope)
 }
 
 serve(async (req: Request) => {
@@ -35,23 +36,39 @@ serve(async (req: Request) => {
     if (contentType.includes('multipart/form-data') || contentType.includes('application/x-www-form-urlencoded')) {
       // SendGrid inbound parse format
       const formData = await req.formData();
+
+      // SendGrid sends an "envelope" field as JSON string: {"to":["plans@rally-hub.com"],"from":"forwarder@gmail.com"}
+      // The envelope.from is the ACTUAL person who forwarded the email (not the original sender like Marriott/Delta)
+      let envelopeFrom = '';
+      const envelopeRaw = formData.get('envelope') as string;
+      if (envelopeRaw) {
+        try {
+          const envelope = JSON.parse(envelopeRaw);
+          envelopeFrom = envelope.from ?? '';
+          console.log(`[process-email] Envelope from: ${envelopeFrom}`);
+        } catch {
+          console.warn('[process-email] Failed to parse envelope JSON');
+        }
+      }
+
       email = {
         from: formData.get('from') as string ?? '',
         to: formData.get('to') as string ?? '',
         subject: formData.get('subject') as string ?? '',
         text: formData.get('text') as string ?? '',
         html: formData.get('html') as string ?? undefined,
+        envelopeFrom,
       };
     } else {
       // JSON format (Postmark or direct API call)
       const body = await req.json();
-      // Postmark format uses different field names
       email = {
         from: body.From ?? body.from ?? '',
         to: body.To ?? body.to ?? '',
         subject: body.Subject ?? body.subject ?? '',
         text: body.TextBody ?? body.text ?? '',
         html: body.HtmlBody ?? body.html ?? undefined,
+        envelopeFrom: body.envelopeFrom ?? body.envelope_from ?? '',
       };
     }
 
@@ -59,57 +76,56 @@ serve(async (req: Request) => {
       return jsonResponse({ error: 'Missing required email fields' }, 400);
     }
 
-    // Look up the team by Rally forward address
-    const forwardAddress = extractAddress(email.to);
-    const { data: config } = await supabase
-      .from('admin_config')
-      .select('id, user_id')
-      .eq('rally_forward_address', forwardAddress)
-      .single();
+    // === User routing: identify who forwarded this email ===
+    // Priority 1: SendGrid envelope.from — the actual forwarder's email
+    if (email.envelopeFrom) {
+      const forwarderEmail = email.envelopeFrom.toLowerCase().trim();
+      console.log(`[process-email] Trying envelope-based routing for: ${forwarderEmail}`);
 
-    if (!config) {
-      // Fallback 1: match by domain (e.g. any plans@rally-hub.com address)
-      const domain = forwardAddress.split('@')[1];
-      const { data: domainConfig } = await supabase
-        .from('admin_config')
-        .select('id, user_id')
-        .like('rally_forward_address', `%@${domain}`)
-        .limit(1)
-        .single();
-      if (domainConfig) {
-        return await processForUser(supabase, domainConfig, email);
-      }
-
-      // Fallback 2: if only one user exists, use their config
-      const { data: allConfigs } = await supabase
-        .from('admin_config')
-        .select('id, user_id')
-        .limit(2);
-      if (allConfigs && allConfigs.length === 1) {
-        console.log(`Single-user fallback: routing email to user ${allConfigs[0].user_id}`);
-        return await processForUser(supabase, allConfigs[0], email);
-      }
-
-      // Fallback 3: try matching sender email to auth user
-      const fromAddress = extractAddress(email.from);
       const { data: authUsers } = await supabase.auth.admin.listUsers();
-      const matchingUser = authUsers?.users?.find((u: any) => u.email === fromAddress);
-      if (!matchingUser) {
-        console.error(`No user found for forward address ${forwardAddress} or from address ${fromAddress}`);
-        return jsonResponse({ error: 'No team found for this forward address' }, 404);
+      const matchingUser = authUsers?.users?.find((u: any) => u.email?.toLowerCase() === forwarderEmail);
+      if (matchingUser) {
+        const { data: userConfig } = await supabase
+          .from('admin_config')
+          .select('id, user_id')
+          .eq('user_id', matchingUser.id)
+          .single();
+        if (userConfig) {
+          console.log(`[process-email] Routed via envelope to user ${matchingUser.email}`);
+          return await processForUser(supabase, userConfig, email);
+        }
       }
-      const { data: userConfig } = await supabase
-        .from('admin_config')
-        .select('id, user_id')
-        .eq('user_id', matchingUser.id)
-        .single();
-      if (!userConfig) {
-        return jsonResponse({ error: 'User has no config' }, 404);
-      }
-      return await processForUser(supabase, userConfig, email);
+      console.log(`[process-email] Envelope from "${forwarderEmail}" did not match any auth user`);
     }
 
-    return await processForUser(supabase, config, email);
+    // Priority 2: Single-user fallback (most Rally installs have one admin)
+    const { data: allConfigs } = await supabase
+      .from('admin_config')
+      .select('id, user_id')
+      .limit(2);
+    if (allConfigs && allConfigs.length === 1) {
+      console.log(`[process-email] Single-user fallback: routing to user ${allConfigs[0].user_id}`);
+      return await processForUser(supabase, allConfigs[0], email);
+    }
+
+    // Priority 3: Match the "from" header email to an auth user (works when user forwards from their own email client)
+    const fromAddress = extractAddress(email.from).toLowerCase().trim();
+    const { data: authUsersP3 } = await supabase.auth.admin.listUsers();
+    const fromMatch = authUsersP3?.users?.find((u: any) => u.email?.toLowerCase() === fromAddress);
+    if (fromMatch) {
+      const { data: fromConfig } = await supabase
+        .from('admin_config')
+        .select('id, user_id')
+        .eq('user_id', fromMatch.id)
+        .single();
+      if (fromConfig) {
+        console.log(`[process-email] Routed via from-header to user ${fromMatch.email}`);
+        return await processForUser(supabase, fromConfig, email);
+      }
+    }
+
+    console.error(`[process-email] Could not route email. From: "${email.from}", Envelope: "${email.envelopeFrom}", To: "${email.to}"`);
+    return jsonResponse({ error: 'Could not identify forwarding user' }, 404);
   } catch (err) {
     console.error('Process email error:', err);
     return jsonResponse({ error: 'Internal server error' }, 500);
