@@ -76,7 +76,7 @@ export default function HubScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text className="text-sm font-semibold text-bark dark:text-cream">Email Forwarding</Text>
                 <View style={{ backgroundColor: 'rgba(251,146,60,0.25)', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 }}>
-                  <Text style={{ fontSize: 8, fontWeight: '700', color: '#FB923C', letterSpacing: 0.4 }}>AUTO IMPORT COMING SOON!</Text>
+                  <Text style={{ fontSize: 8, fontWeight: '700', color: '#FB923C', letterSpacing: 0.4 }}>EMAIL AUTO-SYNC COMING SOON!</Text>
                 </View>
               </View>
               <Text className="text-xs text-stone dark:text-parchment mt-0.5">
