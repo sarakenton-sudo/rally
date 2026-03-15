@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { extractTournamentDetails } from '@/lib/tournament-detail-parser';
+import { smartExtract } from '@/lib/schedule-parser';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -27,6 +28,16 @@ export default function PasteCombinedScreen() {
     setErrorMsg(null);
 
     try {
+      // Try schedule parser FIRST — fast, handles simple tournament lists
+      const scheduleTournaments = smartExtract(trimmed);
+      if (scheduleTournaments.length > 0) {
+        router.push({
+          pathname: '/import/review',
+          params: { tournaments: JSON.stringify(scheduleTournaments) },
+        });
+        return;
+      }
+
       // Try unified AI extraction
       if (SUPABASE_URL && SUPABASE_ANON_KEY) {
         try {
@@ -72,7 +83,7 @@ export default function PasteCombinedScreen() {
               });
               return;
             }
-            // If AI found nothing, fall through to local extraction
+            // AI found nothing useful, fall through to local extraction
           } else {
             console.warn('AI extraction returned', resp.status, '— falling back to local');
           }

@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { View, Text, ScrollView, RefreshControl, Pressable, Linking, Platform, Share, Alert, Switch } from 'react-native';
+import { useMemo, useState } from 'react';
+import { View, Text, ScrollView, RefreshControl, Pressable, Linking, Platform, Share, Alert, Switch, ActionSheetIOS, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -76,6 +76,23 @@ export default function TournamentDetailScreen() {
   const updateTournamentStore = useSeasonStore((s) => s.updateTournament);
   const removeHotelBooking = useSeasonStore((s) => s.removeHotelBooking);
   const removeFlightBooking = useSeasonStore((s) => s.removeFlightBooking);
+
+  const [showManualMenu, setShowManualMenu] = useState(false);
+
+  const handleManualAdd = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options: ['Add Hotel', 'Add Flight', 'Add Team Event', 'Cancel'], cancelButtonIndex: 3, title: 'Add Manually' },
+        (index) => {
+          if (index === 0) router.push({ pathname: '/booking/add-hotel', params: { tournamentId: id } });
+          if (index === 1) router.push({ pathname: '/booking/add-flight', params: { tournamentId: id } });
+          if (index === 2) router.push({ pathname: '/booking/add-team-event', params: { tournamentId: id } });
+        }
+      );
+    } else {
+      setShowManualMenu(true);
+    }
+  };
 
   const handleDeleteHotel = (hotelId: string, hotelName: string) => {
     const doDelete = async () => {
@@ -221,12 +238,44 @@ export default function TournamentDetailScreen() {
             </Pressable>
             <Pressable
               className="flex-1 bg-warm-white dark:bg-bark-light rounded-xl py-3 flex-row items-center justify-center active:opacity-80 border border-parchment dark:border-rally-900"
-              onPress={() => router.push({ pathname: '/booking/add-hotel', params: { tournamentId: tournament.id } })}
+              onPress={handleManualAdd}
             >
               <Ionicons name="add" size={16} color="#3B82B0" />
               <Text className="text-xs font-semibold text-bark dark:text-cream ml-1">Manual</Text>
             </Pressable>
           </View>
+
+          {/* Manual add menu modal (Android + Web) */}
+          <Modal visible={showManualMenu} transparent animationType="fade" onRequestClose={() => setShowManualMenu(false)}>
+            <Pressable className="flex-1 bg-black/50 justify-center items-center" onPress={() => setShowManualMenu(false)}>
+              <View className="bg-warm-white dark:bg-bark-light rounded-2xl w-72 overflow-hidden">
+                <Text className="text-base font-bold text-bark dark:text-cream p-4 pb-2">Add Manually</Text>
+                {[
+                  { label: 'Hotel', icon: 'bed' as const, path: '/booking/add-hotel' as const },
+                  { label: 'Flight', icon: 'airplane' as const, path: '/booking/add-flight' as const },
+                  { label: 'Team Event', icon: 'restaurant' as const, path: '/booking/add-team-event' as const },
+                ].map((item) => (
+                  <Pressable
+                    key={item.label}
+                    className="px-4 py-3 border-t border-parchment dark:border-rally-900 flex-row items-center active:bg-rally-50"
+                    onPress={() => {
+                      setShowManualMenu(false);
+                      router.push({ pathname: item.path, params: { tournamentId: tournament.id } });
+                    }}
+                  >
+                    <Ionicons name={item.icon} size={18} color="#3B82B0" />
+                    <Text className="text-sm text-bark dark:text-cream ml-3">{item.label}</Text>
+                  </Pressable>
+                ))}
+                <Pressable
+                  className="px-4 py-3 border-t border-parchment dark:border-rally-900 items-center active:bg-rally-50"
+                  onPress={() => setShowManualMenu(false)}
+                >
+                  <Text className="text-sm font-semibold text-stone">Cancel</Text>
+                </Pressable>
+              </View>
+            </Pressable>
+          </Modal>
 
           {/* VENUE */}
           {(() => {
@@ -539,6 +588,58 @@ export default function TournamentDetailScreen() {
                 </Pressable>
               )}
 
+              {/* TEAM EVENTS — inline with travel */}
+              <View className="flex-row items-center justify-between mt-4 mb-2">
+                <View className="flex-row items-center">
+                  <Ionicons name="restaurant" size={16} color={teamEvents.length > 0 ? '#d97706' : ic.muted} />
+                  <Text className="text-xs font-semibold text-stone dark:text-parchment ml-1.5 uppercase tracking-wider">
+                    Team Events
+                  </Text>
+                </View>
+                <Pressable
+                  className="flex-row items-center active:opacity-70"
+                  onPress={() => router.push({ pathname: '/booking/add-team-event', params: { tournamentId: tournament.id } })}
+                >
+                  <Ionicons name="add-circle-outline" size={16} color="#3B82B0" />
+                  <Text className="text-xs font-semibold text-rally-600 ml-1">Add</Text>
+                </Pressable>
+              </View>
+              {teamEvents.length > 0 ? (
+                teamEvents.map((event) => (
+                  <View key={event.id} className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900">
+                    <View className="flex-row items-start justify-between">
+                      <View className="flex-1 mr-3">
+                        <Text className="text-base font-semibold text-bark dark:text-cream">{event.name}</Text>
+                        <Text className="text-sm text-stone dark:text-parchment mt-0.5">{event.venue_name}</Text>
+                        {event.time && (
+                          <View className="flex-row items-center mt-1">
+                            <Ionicons name="time-outline" size={14} color={ic.subtle} />
+                            <Text className="text-sm text-stone ml-1">{event.time}</Text>
+                          </View>
+                        )}
+                        {event.notes && <Text className="text-xs text-stone mt-2 italic">{event.notes}</Text>}
+                      </View>
+                      {event.address ? (
+                        <Pressable
+                          className="bg-rally-50 dark:bg-rally-900/30 px-3 py-2 rounded-lg active:opacity-70"
+                          onPress={() => openDirections(event.address)}
+                        >
+                          <Ionicons name="navigate" size={18} color="#3B82B0" />
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Pressable
+                  className="bg-warm-white dark:bg-bark-light rounded-xl p-3 border border-dashed border-parchment dark:border-rally-900 items-center active:opacity-80"
+                  onPress={() => router.push({ pathname: '/booking/add-team-event', params: { tournamentId: tournament.id } })}
+                >
+                  <Ionicons name="restaurant-outline" size={20} color="#d97706" />
+                  <Text className="text-xs text-stone mt-1">Add Team Event</Text>
+                </Pressable>
+              )}
+
               {/* Quick import helpers */}
               <View className="mt-3 bg-rally-50 dark:bg-rally-900/20 rounded-xl p-3 border border-rally-100 dark:border-rally-800">
                 <Text className="text-xs font-semibold text-rally-700 dark:text-rally-300 mb-2">Quick Add</Text>
@@ -629,7 +730,7 @@ export default function TournamentDetailScreen() {
 
           {/* GUESTS / RSVP */}
           <SectionHeader icon="people" title="Guests" iconColor={ic.muted} />
-          <TournamentGuestList tournamentId={tournament.id} tournamentName={tournament.name} tournamentCity={tournament.location_city} />
+          <TournamentGuestList tournament={tournament} />
 
           {/* Notification actions */}
           <View className="flex-row gap-2 mt-2">
@@ -707,7 +808,7 @@ export default function TournamentDetailScreen() {
                 </View>
               </View>
             ))
-          ) : adminConfig?.default_stream_url ? (
+          ) : activeSeason?.default_stream_url ? (
             <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900">
               <View className="flex-row items-center mb-2">
                 <View className="bg-rally-50 dark:bg-rally-900/20 px-2 py-0.5 rounded-full">
@@ -716,14 +817,14 @@ export default function TournamentDetailScreen() {
               </View>
               <Pressable
                 className="flex-row items-center active:opacity-80"
-                onPress={() => Linking.openURL(adminConfig.default_stream_url!)}
+                onPress={() => Linking.openURL(activeSeason.default_stream_url!)}
               >
                 <Ionicons name="play-circle" size={24} color="#dc2626" />
                 <View className="ml-3 flex-1">
                   <Text className="text-sm font-semibold text-bark dark:text-cream">
-                    {adminConfig.default_streaming_platform ?? 'Stream'}
+                    {activeSeason.default_streaming_platform ?? 'Stream'}
                   </Text>
-                  <Text className="text-xs text-stone mt-0.5" numberOfLines={1}>{adminConfig.default_stream_url}</Text>
+                  <Text className="text-xs text-stone mt-0.5" numberOfLines={1}>{activeSeason.default_stream_url}</Text>
                 </View>
                 <Ionicons name="open-outline" size={16} color={ic.subtle} />
               </Pressable>
@@ -735,73 +836,6 @@ export default function TournamentDetailScreen() {
               </Text>
             </View>
           )}
-
-          {/* TEAM EVENTS */}
-          <>
-            <View className="flex-row items-center justify-between mt-6 mb-3">
-              <View className="flex-row items-center">
-                <Ionicons name="restaurant" size={18} color={teamEvents.length > 0 ? '#d97706' : ic.muted} />
-                <Text className="text-sm font-semibold text-stone dark:text-parchment ml-2 uppercase tracking-wider">
-                  Team Events
-                </Text>
-              </View>
-              <Pressable
-                className="flex-row items-center active:opacity-70"
-                onPress={() => router.push({ pathname: '/booking/add-team-event', params: { tournamentId: tournament.id } })}
-              >
-                <Ionicons name="add-circle-outline" size={18} color="#3B82B0" />
-                <Text className="text-xs font-semibold text-rally-600 ml-1">Add</Text>
-              </Pressable>
-            </View>
-            {teamEvents.length > 0 ? (
-              teamEvents.map((event) => (
-                <View key={event.id} className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900">
-                  <View className="flex-row items-start justify-between">
-                    <View className="flex-1 mr-3">
-                      <Text className="text-base font-semibold text-bark dark:text-cream">{event.name}</Text>
-                      <Text className="text-sm text-stone dark:text-parchment mt-0.5">{event.venue_name}</Text>
-                      {event.time && (
-                        <View className="flex-row items-center mt-1">
-                          <Ionicons name="time-outline" size={14} color={ic.subtle} />
-                          <Text className="text-sm text-stone ml-1">{event.time}</Text>
-                        </View>
-                      )}
-                      {event.reservation_name && (
-                        <View className="flex-row items-center mt-1">
-                          <Ionicons name="person-outline" size={14} color={ic.subtle} />
-                          <Text className="text-sm text-stone ml-1">
-                            Reservation: {event.reservation_name}
-                            {event.party_size ? ` (party of ${event.party_size})` : ''}
-                          </Text>
-                        </View>
-                      )}
-                      {event.notes && <Text className="text-xs text-stone mt-2 italic">{event.notes}</Text>}
-                      {event.family_welcome && (
-                        <View className="bg-green-50 px-2 py-0.5 rounded-full self-start mt-2">
-                          <Text className="text-xs font-medium text-green-700">Family welcome</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Pressable
-                      className="bg-rally-50 dark:bg-rally-900/30 px-3 py-2 rounded-lg active:opacity-70"
-                      onPress={() => openDirections(event.address)}
-                    >
-                      <Ionicons name="navigate" size={18} color="#3B82B0" />
-                    </Pressable>
-                  </View>
-                </View>
-              ))
-            ) : (
-              <Pressable
-                className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900 items-center active:opacity-80"
-                onPress={() => router.push({ pathname: '/booking/add-team-event', params: { tournamentId: tournament.id } })}
-              >
-                <Ionicons name="restaurant-outline" size={22} color="#d97706" />
-                <Text className="text-sm text-stone mt-1">Add Team Event</Text>
-              </Pressable>
-            )}
-          </>
-
 
           {/* ADD TO CALENDAR */}
           <Pressable

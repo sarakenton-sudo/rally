@@ -347,41 +347,75 @@ function simpleLineExtract(text: string): ExtractedTournament[] | null {
     'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY',
   ]);
 
-  // Pattern: name ... Month Day[/Day] City State
-  const linePattern = /^(.+?)\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\.?\s+(\d{1,2})(?:\/(\d{1,2}))?\s+(.+?)\s+([A-Za-z]{2})\s*$/i;
+  // Pattern A: name ... Month Day[/Day] City State (optional note)
+  const linePatternWithName = /^(.+?)\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\.?\s+(\d{1,2})(?:\/(\d{1,2}))?\s+(.+?)\s+([A-Za-z]{2})\s*(?:\((.+?)\))?\s*$/i;
+  // Pattern B: Month Day[/Day] City State (no name — date first)
+  const linePatternDateFirst = /^(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\.?\s+(\d{1,2})(?:\/(\d{1,2}))?\s+(.+?)\s+([A-Za-z]{2})\s*(?:\((.+?)\))?\s*$/i;
 
   const tournaments: ExtractedTournament[] = [];
   let matchCount = 0;
 
   for (const line of lines) {
-    const m = line.match(linePattern);
-    if (!m) continue;
+    // Try name-first pattern
+    const m = line.match(linePatternWithName);
+    if (m) {
+      const name = m[1].trim().replace(/[-–—,\s]+$/, '');
+      const month = parseMonth(m[2]);
+      if (!month) continue;
 
-    const name = m[1].trim().replace(/[-–—,\s]+$/, '');
-    const month = parseMonth(m[2]);
-    if (!month) continue;
+      const startDay = String(parseInt(m[3])).padStart(2, '0');
+      const endDay = m[4] ? String(parseInt(m[4])).padStart(2, '0') : startDay;
+      const city = m[5].trim();
+      const state = m[6].toUpperCase();
+      const parenNote = m[7]?.trim() || '';
 
-    const startDay = String(parseInt(m[3])).padStart(2, '0');
-    const endDay = m[4] ? String(parseInt(m[4])).padStart(2, '0') : startDay;
-    const city = m[5].trim();
-    const state = m[6].toUpperCase();
+      if (!US_STATES.has(state)) continue;
 
-    if (!US_STATES.has(state)) continue;
+      const year = inferYear(month);
+      matchCount++;
+      tournaments.push({
+        name,
+        start_date: `${year}-${month}-${startDay}`,
+        end_date: `${year}-${month}-${endDay}`,
+        location_city: `${city}, ${state}`,
+        venue_name: '',
+        venue_address: '',
+        notes: parenNote,
+      });
+      continue;
+    }
 
-    const year = inferYear(month);
-    const startDate = `${year}-${month}-${startDay}`;
-    const endDate = `${year}-${month}-${endDay}`;
+    // Try date-first pattern (no tournament name)
+    const d = line.match(linePatternDateFirst);
+    if (d) {
+      const month = parseMonth(d[1]);
+      if (!month) continue;
 
-    matchCount++;
-    tournaments.push({
-      name,
-      start_date: startDate,
-      end_date: endDate,
-      location_city: `${city}, ${state}`,
-      venue_name: '',
-      venue_address: '',
-      notes: '',
-    });
+      const startDay = String(parseInt(d[2])).padStart(2, '0');
+      const endDay = d[3] ? String(parseInt(d[3])).padStart(2, '0') : startDay;
+      const city = d[4].trim();
+      const state = d[5].toUpperCase();
+      const parenNote = d[6]?.trim() || '';
+
+      if (!US_STATES.has(state)) continue;
+
+      const year = inferYear(month);
+      const startDate = `${year}-${month}-${startDay}`;
+      const endDate = `${year}-${month}-${endDay}`;
+      const dateLabel = `${d[1]} ${d[2]}${d[3] ? '/' + d[3] : ''}`;
+
+      matchCount++;
+      tournaments.push({
+        name: `${city} — ${dateLabel}`,
+        start_date: startDate,
+        end_date: endDate,
+        location_city: `${city}, ${state}`,
+        venue_name: '',
+        venue_address: '',
+        notes: parenNote,
+      });
+      continue;
+    }
   }
 
   // Only return if we matched at least half the non-empty lines (to avoid false positives)
