@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, Text, ScrollView, Pressable, Alert, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
@@ -16,129 +17,225 @@ export default function HomeScreen() {
   const adminConfig = useSeasonStore((s) => s.adminConfig);
   const forwardedEmails = useSeasonStore((s) => s.forwardedEmails);
   const seasons = useSeasonStore((s) => s.seasons);
+  const athletes = useSeasonStore((s) => s.athletes);
   const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
   const activeSeason = seasons.find((s) => s.id === activeSeasonId);
   const teamCode = activeSeason?.team_code;
+  const ic = useIconColors();
 
-  // Filter tournaments to active season
+  // Filter for Next 30 Days section: 'all' or a specific athlete ID
+  const [athleteFilter, setAthleteFilter] = useState<string>('all');
+
+  // All tournaments across all seasons (for "all" filter)
+  const allNext30 = useMemo(() => {
+    return tournaments
+      .filter((t) => daysUntil(t.end_date) >= 0 && daysUntil(t.start_date) <= 30)
+      .sort((a, b) => a.start_date.localeCompare(b.start_date));
+  }, [tournaments]);
+
+  // Filtered tournaments for selected athlete
+  const filteredNext30 = useMemo(() => {
+    if (athleteFilter === 'all') return allNext30;
+    const athleteSeasonIds = new Set(
+      seasons.filter((s) => s.athlete_id === athleteFilter).map((s) => s.id)
+    );
+    return allNext30.filter((t) => athleteSeasonIds.has(t.season_id));
+  }, [allNext30, athleteFilter, seasons]);
+
+  // Active season tournaments (for action items)
   const seasonTournaments = useMemo(() =>
     activeSeasonId ? tournaments.filter((t) => t.season_id === activeSeasonId) : tournaments,
     [tournaments, activeSeasonId]
   );
 
-  const next30Days = useMemo(() => {
-    return seasonTournaments
-      .filter((t) => daysUntil(t.end_date) >= 0 && daysUntil(t.start_date) <= 30)
-      .sort((a, b) => a.start_date.localeCompare(b.start_date));
-  }, [seasonTournaments]);
+  // Emails needing review (unclassified or action not taken)
+  const emailsToReview = useMemo(() =>
+    forwardedEmails.filter((e) => e.classification === 'unclassified' || e.action_taken === 'none'),
+    [forwardedEmails]
+  );
 
   const actionItems = useMemo(() => {
-    const items: string[] = [];
+    const items: { text: string; icon: keyof typeof Ionicons.glyphMap; color: string; onPress?: () => void }[] = [];
     const needsBooking = seasonTournaments.filter((t) => t.status === 'travel_needed');
     if (needsBooking.length > 0) {
-      items.push(`${needsBooking.length} tournament${needsBooking.length > 1 ? 's' : ''} still need hotel bookings`);
+      items.push({
+        text: `${needsBooking.length} tournament${needsBooking.length > 1 ? 's' : ''} still need hotel bookings`,
+        icon: 'bed-outline',
+        color: '#d97706',
+        onPress: () => router.push('/(tabs)/travel'),
+      });
     }
     const noTickets = seasonTournaments.filter(
       (t) => !t.tickets_purchased && daysUntil(t.start_date) > 0 && daysUntil(t.start_date) <= 7
     );
     if (noTickets.length > 0) {
-      items.push(`Buy tickets for ${noTickets.map((t) => t.name).join(', ')}`);
+      items.push({
+        text: `Buy tickets for ${noTickets.map((t) => t.name).join(', ')}`,
+        icon: 'ticket-outline',
+        color: '#7c3aed',
+        onPress: noTickets.length === 1 ? () => router.push(`/tournament/${noTickets[0].id}`) : undefined,
+      });
     }
     if (!teamCode) {
-      items.push('Set your team ticket code for quick access');
+      items.push({
+        text: 'Set your team ticket code for quick access',
+        icon: 'key-outline',
+        color: '#3B82B0',
+        onPress: () => router.push('/settings/team-details'),
+      });
     }
     return items;
   }, [seasonTournaments, teamCode]);
 
-  const ic = useIconColors();
-  const teamName = activeSeason?.team_name ?? 'RallyHUB';
-  const seasonYear = activeSeason?.season_year ?? '';
+  const forwardAddress = adminConfig?.rally_forward_address || 'plans@rally-hub.com';
+  const hasMultipleAthletes = athletes.length > 1;
 
   return (
     <View className="flex-1 bg-cream dark:bg-bark">
-      <ScrollView className="flex-1 px-4">
-        <Text className="text-sm text-stone dark:text-parchment mt-3 mb-1">
-          {teamName}{seasonYear ? ` — ${seasonYear}` : ''}
-        </Text>
+      <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 40 }}>
 
-        {/* Team Code Vault — only show if a code is set */}
-        {teamCode ? (
+        {/* ============================================================ */}
+        {/* QUICK ADD — Top of page */}
+        {/* ============================================================ */}
+        <View className="flex-row gap-2 mt-3">
           <Pressable
-            className="bg-rally-600 rounded-2xl p-5 mt-5 active:opacity-90"
-            style={{ shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 4 }}
-            onPress={async () => {
-              if (Platform.OS === 'web') {
-                await navigator.clipboard.writeText(teamCode);
-              } else {
-                await Clipboard.setStringAsync(teamCode);
-              }
-              tapLight();
-              if (Platform.OS !== 'web') {
-                Alert.alert('Copied', 'Team code copied to clipboard.');
-              }
-            }}
+            className="flex-1 bg-rally-600 rounded-xl py-3 flex-row items-center justify-center active:opacity-80"
+            style={{ shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3 }}
+            onPress={() => router.push('/import/paste-travel')}
           >
-            <Text className="text-xs font-medium text-rally-200 uppercase tracking-wider">
-              Team Code
-            </Text>
-            <Text className="text-4xl font-bold text-cream mt-1 tracking-widest">
-              {teamCode}
-            </Text>
-            <Text className="text-xs text-rally-200 mt-2">
-              Tap to copy
-            </Text>
+            <Ionicons name="sparkles" size={16} color="#FEFEFE" />
+            <Text className="text-sm font-semibold text-cream ml-2">Paste + AI</Text>
           </Pressable>
-        ) : null}
-
-        {/* Email Activity */}
-        {forwardedEmails.length > 0 && (
           <Pressable
-            className="bg-warm-white dark:bg-bark-light rounded-2xl p-4 mt-4 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
-            style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
+            className="flex-1 bg-warm-white dark:bg-bark-light rounded-xl py-3 flex-row items-center justify-center active:opacity-80 border border-parchment dark:border-rally-900"
+            onPress={() => router.push('/settings/email-forward')}
+          >
+            <Ionicons name="mail-open" size={16} color="#3B82B0" />
+            <Text className="text-sm font-semibold text-bark dark:text-cream ml-2">Forward Email</Text>
+          </Pressable>
+          <Pressable
+            className="bg-warm-white dark:bg-bark-light rounded-xl py-3 px-4 items-center justify-center active:opacity-80 border border-parchment dark:border-rally-900"
+            onPress={() => router.push('/booking/add-hotel')}
+          >
+            <Ionicons name="add" size={20} color="#3B82B0" />
+          </Pressable>
+        </View>
+
+        {/* ============================================================ */}
+        {/* 1. ACTION ITEMS */}
+        {/* ============================================================ */}
+        {actionItems.length > 0 && (
+          <View className="mt-5">
+            <Text className="text-xs font-semibold text-stone uppercase tracking-wider mb-2 ml-1">
+              Action Items
+            </Text>
+            {actionItems.map((item, i) => (
+              <Pressable
+                key={i}
+                className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 flex-row items-center border border-parchment dark:border-rally-900 active:opacity-80"
+                onPress={item.onPress}
+                disabled={!item.onPress}
+              >
+                <View className="w-8 h-8 rounded-full items-center justify-center mr-3" style={{ backgroundColor: item.color + '15' }}>
+                  <Ionicons name={item.icon} size={16} color={item.color} />
+                </View>
+                <Text className="text-sm text-bark dark:text-parchment flex-1">
+                  {item.text}
+                </Text>
+                {item.onPress && <Ionicons name="chevron-forward" size={14} color="#8FA8BF" />}
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        {/* ============================================================ */}
+        {/* 2. EMAILS TO REVIEW */}
+        {/* ============================================================ */}
+        {emailsToReview.length > 0 && (
+          <Pressable
+            className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 mt-4 border border-amber-200 dark:border-amber-800 flex-row items-center active:opacity-80"
             onPress={() => router.push('/email/inbox')}
           >
-            <View className="w-10 h-10 rounded-full bg-rally-50 dark:bg-rally-900/30 items-center justify-center mr-3">
-              <Ionicons name="mail" size={20} color="#3B82B0" />
+            <View className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 items-center justify-center mr-3">
+              <Ionicons name="mail-unread" size={20} color="#d97706" />
             </View>
             <View className="flex-1">
               <Text className="text-sm font-semibold text-bark dark:text-cream">
-                Email Inbox
+                {emailsToReview.length} email{emailsToReview.length !== 1 ? 's' : ''} to review
               </Text>
               <Text className="text-xs text-stone dark:text-parchment mt-0.5">
-                {forwardedEmails.length} email{forwardedEmails.length !== 1 ? 's' : ''} synced from Gmail
+                Tap to review and map to tournaments
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
+            <View className="bg-amber-500 w-6 h-6 rounded-full items-center justify-center">
+              <Text className="text-xs font-bold text-white">{emailsToReview.length}</Text>
+            </View>
           </Pressable>
         )}
 
-        {/* Schedule Import */}
-        <Pressable
-          className="bg-warm-white dark:bg-bark-light rounded-2xl p-4 mt-4 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
-          style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
-          onPress={() => router.push('/settings/schedule-import')}
-        >
-          <View className="w-10 h-10 rounded-full bg-rally-50 dark:bg-rally-900/30 items-center justify-center mr-3">
-            <Ionicons name="add-circle-outline" size={20} color="#3B82B0" />
-          </View>
-          <View className="flex-1">
-            <Text className="text-sm font-semibold text-bark dark:text-cream">
-              Add Tournaments & Travel
+        {/* All emails link (when there are emails but none to review) */}
+        {emailsToReview.length === 0 && forwardedEmails.length > 0 && (
+          <Pressable
+            className="bg-warm-white dark:bg-bark-light rounded-xl p-3 mt-4 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
+            onPress={() => router.push('/email/inbox')}
+          >
+            <Ionicons name="mail" size={16} color="#3B82B0" />
+            <Text className="text-xs font-medium text-stone dark:text-parchment ml-2 flex-1">
+              {forwardedEmails.length} email{forwardedEmails.length !== 1 ? 's' : ''} synced
             </Text>
-            <Text className="text-xs text-stone dark:text-parchment mt-0.5">
-              Paste schedules, import confirmations, or connect Gmail
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
-        </Pressable>
+            <Ionicons name="chevron-forward" size={14} color="#8FA8BF" />
+          </Pressable>
+        )}
 
-        {/* Next 30 Days */}
+        {/* ============================================================ */}
+        {/* 3. NEXT 30 DAYS */}
+        {/* ============================================================ */}
         <View className="mt-5">
-          <Text className="text-xs font-semibold text-stone dark:text-stone uppercase tracking-wider mb-2">
-            Next 30 Days
-          </Text>
-          {next30Days.length > 0 ? (
-            next30Days.map((t) => (
+          <View className="flex-row items-center justify-between mb-2">
+            <Text className="text-xs font-semibold text-stone uppercase tracking-wider ml-1">
+              Next 30 Days
+            </Text>
+          </View>
+
+          {/* Athlete filter chips — only show if multiple athletes */}
+          {hasMultipleAthletes && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3" contentContainerStyle={{ gap: 8 }}>
+              <Pressable
+                className={`px-3 py-1.5 rounded-full border ${
+                  athleteFilter === 'all'
+                    ? 'bg-rally-600 border-rally-600'
+                    : 'bg-warm-white dark:bg-bark-light border-parchment dark:border-rally-900'
+                }`}
+                onPress={() => setAthleteFilter('all')}
+              >
+                <Text className={`text-xs font-semibold ${
+                  athleteFilter === 'all' ? 'text-cream' : 'text-bark dark:text-parchment'
+                }`}>
+                  All Athletes
+                </Text>
+              </Pressable>
+              {athletes.map((a) => (
+                <Pressable
+                  key={a.id}
+                  className={`px-3 py-1.5 rounded-full border ${
+                    athleteFilter === a.id
+                      ? 'bg-rally-600 border-rally-600'
+                      : 'bg-warm-white dark:bg-bark-light border-parchment dark:border-rally-900'
+                  }`}
+                  onPress={() => setAthleteFilter(a.id)}
+                >
+                  <Text className={`text-xs font-semibold ${
+                    athleteFilter === a.id ? 'text-cream' : 'text-bark dark:text-parchment'
+                  }`}>
+                    {a.first_name}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+
+          {filteredNext30.length > 0 ? (
+            filteredNext30.map((t) => (
               <TournamentCard
                 key={t.id}
                 tournament={t}
@@ -160,31 +257,65 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Action Items */}
-        <View className="mt-5 mb-8">
-          <Text className="text-xs font-semibold text-stone dark:text-stone uppercase tracking-wider mb-2">
-            Action Items
+        {/* ============================================================ */}
+        {/* 4. FORWARD EMAIL REMINDER */}
+        {/* ============================================================ */}
+        <Pressable
+          className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 mt-5 border border-rally-200 dark:border-rally-800 active:opacity-80"
+          onPress={async () => {
+            if (Platform.OS === 'web') {
+              await navigator.clipboard.writeText(forwardAddress);
+            } else {
+              await Clipboard.setStringAsync(forwardAddress);
+            }
+            tapLight();
+            if (Platform.OS !== 'web') {
+              Alert.alert('Copied', 'Forward address copied to clipboard.');
+            }
+          }}
+        >
+          <View className="flex-row items-center">
+            <Ionicons name="mail-open-outline" size={18} color="#3B82B0" />
+            <Text className="text-xs font-semibold text-rally-700 dark:text-rally-300 ml-2 uppercase tracking-wider">
+              Forward emails to RALLY
+            </Text>
+          </View>
+          <Text selectable className="text-lg font-bold text-rally-600 dark:text-rally-400 mt-2">
+            {forwardAddress}
           </Text>
-          {actionItems.length > 0 ? (
-            actionItems.map((item, i) => (
-              <View
-                key={i}
-                className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 flex-row items-center border border-parchment dark:border-rally-900"
-              >
-                <View className="w-2 h-2 rounded-full bg-gold mr-3" />
-                <Text className="text-sm text-bark dark:text-parchment flex-1">
-                  {item}
-                </Text>
-              </View>
-            ))
-          ) : (
-            <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4">
-              <Text className="text-sm text-stone dark:text-stone">
-                All caught up — no action items right now
-              </Text>
+          <Text className="text-xs text-stone dark:text-parchment mt-1">
+            Tap to copy — forward hotel, flight, and tournament emails and we'll do the rest.
+          </Text>
+        </Pressable>
+
+        {/* Team Code — compact, only show if set */}
+        {teamCode ? (
+          <Pressable
+            className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mt-3 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
+            onPress={async () => {
+              if (Platform.OS === 'web') {
+                await navigator.clipboard.writeText(teamCode);
+              } else {
+                await Clipboard.setStringAsync(teamCode);
+              }
+              tapLight();
+              if (Platform.OS !== 'web') {
+                Alert.alert('Copied', 'Team code copied to clipboard.');
+              }
+            }}
+          >
+            <View className="w-10 h-10 rounded-full bg-rally-50 dark:bg-rally-900/30 items-center justify-center mr-3">
+              <Ionicons name="key" size={18} color="#3B82B0" />
             </View>
-          )}
-        </View>
+            <View className="flex-1">
+              <Text className="text-xs text-stone uppercase tracking-wider">Team Code</Text>
+              <Text className="text-lg font-bold text-bark dark:text-cream tracking-widest">{teamCode}</Text>
+            </View>
+            <Ionicons name="copy-outline" size={18} color="#8FA8BF" />
+          </Pressable>
+        ) : null}
+
+        <View className="h-4" />
       </ScrollView>
     </View>
   );
