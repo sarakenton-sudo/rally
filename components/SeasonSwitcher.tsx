@@ -17,16 +17,13 @@ export default function SeasonSwitcher() {
   const setActiveSeasonId = useSeasonStore((s) => s.setActiveSeasonId);
   const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
 
-  const hasMultiple = athletes.length > 1 || seasons.length > 1;
-  if (!hasMultiple) return null;
-
   const hasMultipleAthletes = athletes.length > 1;
 
   // Figure out which athlete is currently active
   const activeSeason = seasons.find((s) => s.id === activeSeasonId);
   const activeAthleteId = activeSeason?.athlete_id || athletes[0]?.id || '';
 
-  // Does any athlete have multiple seasons?
+  // Group seasons by athlete
   const athleteSeasonsMap = useMemo(() => {
     const map: Record<string, typeof seasons> = {};
     for (const s of seasons) {
@@ -38,6 +35,9 @@ export default function SeasonSwitcher() {
 
   const activeAthleteSeasons = athleteSeasonsMap[activeAthleteId] || [];
   const activeAthleteHasMultipleSeasons = activeAthleteSeasons.length > 1;
+
+  const hasMultiple = athletes.length > 1 || seasons.length > 1;
+  if (!hasMultiple) return null;
 
   const handleSwitch = async (seasonId: string) => {
     tapLight();
