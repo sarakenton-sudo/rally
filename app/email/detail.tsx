@@ -185,14 +185,20 @@ function matchScore(tournament: Tournament, extracted: Record<string, unknown>, 
   const tCity = (tournament.location_city ?? '').toLowerCase();
   if (eCity && tCity && (tCity.includes(eCity) || eCity.includes(tCity))) score += 15;
 
-  // Penalize when extracted dates clearly don't match tournament timeframe
-  // e.g., a past email about March shouldn't match a tournament in May
+  // Reject matches where extracted dates are in the past (can't plan for past events)
   const anyExtractedDate = travelDate || eStart;
+  if (anyExtractedDate) {
+    const extractedMs = new Date(anyExtractedDate).getTime();
+    const now = Date.now();
+    // If the email's dates are more than 30 days in the past, kill the match entirely
+    if (extractedMs < now - 30 * 24 * 60 * 60 * 1000) return 0;
+  }
+
+  // Penalize when extracted dates don't match tournament timeframe
   if (anyExtractedDate && tournament.start_date) {
     const extractedMs = new Date(anyExtractedDate).getTime();
     const tournamentMs = new Date(tournament.start_date).getTime();
     const diffDays = Math.abs(extractedMs - tournamentMs) / (24 * 60 * 60 * 1000);
-    // If dates are more than 14 days apart, heavily penalize
     if (diffDays > 14) score -= 30;
     else if (diffDays > 7) score -= 15;
   }

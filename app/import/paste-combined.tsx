@@ -50,7 +50,7 @@ export default function PasteCombinedScreen() {
               'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
               'apikey': SUPABASE_ANON_KEY,
             },
-            body: JSON.stringify({ text: trimmed.replace(/[^\p{L}\p{N}\p{P}\p{Z}\n\r\t]/gu, '') }),
+            body: JSON.stringify({ text: trimmed.replace(/[^\p{L}\p{N}\p{P}\p{Z}\n\r\t]/gu, '').slice(0, 8000) }),
             signal: controller.signal,
           });
           clearTimeout(timeout);
@@ -236,7 +236,7 @@ function localExtractTravel(text: string): any[] {
   // --- Flights ---
   const airlinePatterns: [RegExp, string][] = [
     [/delta/i, 'Delta'], [/southwest/i, 'Southwest'], [/united/i, 'United'],
-    [/american\s*(?:airlines?)?/i, 'American'], [/jetblue/i, 'JetBlue'],
+    [/american\s+airlines?/i, 'American'], [/jetblue/i, 'JetBlue'],
     [/spirit/i, 'Spirit'], [/frontier/i, 'Frontier'], [/alaska/i, 'Alaska'],
   ];
 
@@ -297,6 +297,7 @@ function localExtractTravel(text: string): any[] {
     [/hyatt/i, 'Direct'],
     [/booking\.com/i, 'Booking.com'],
     [/expedia/i, 'Expedia'],
+    [/amex\s*travel|american express.*travel|fine hotels/i, 'Amex Travel'],
   ];
 
   let detectedPlatform = 'Other';
@@ -313,14 +314,26 @@ function localExtractTravel(text: string): any[] {
     const confirmMatch = text.match(/(?:hotel\s+)?(?:confirmation|reservation|conf)(?:\s+number)?[#:\s]*([A-Z0-9-]+)/i);
     const checkInMatch = text.match(/(?:check[- ]?in|arrival)[:\s]*(.+?)(?:\n|$)/i);
     const checkOutMatch = text.match(/(?:check[- ]?out|departure)[:\s]*(.+?)(?:\n|$)/i);
-    const guestMatch = text.match(/(?:primary\s+)?guest\s*name?[:\s]*(.+?)(?:\n|$)/i);
-    const rateMatch = text.match(/(?:room\s+)?rate[:\s]*\$?([\d,.]+)/i);
+    const guestMatch = text.match(/(?:primary\s+)?guest\s*name?[:\s]*(.+?)(?:\n|$)/i) ?? text.match(/(?:main\s+guest|traveler\s+(?:name|information))[:\s]*\n*(.+?)(?:\n|$)/i);
+    const rateMatch = text.match(/(?:room\s+)?rate[:\s]*\$?([\d,.]+)/i) ?? text.match(/(?:total\s+)?cost[:\s]*\$?([\d,.]+)/i) ?? text.match(/(?:estimated\s+)?(?:total|amount)[:\s]*\$?([\d,.]+)/i);
 
     let hotelName = '';
-    const hotelNameMatch = text.match(/(?:hotel|resort|inn|suites|lodge)[:\s]*(.+?)(?:\n|$)/i);
-    if (hotelNameMatch) hotelName = hotelNameMatch[1].trim();
+    // Try to find property name near confirmation number (common in booking emails)
+    const nearConfirm = text.match(/(?:confirmation|reservation)[\s\S]{0,100}?\n\n([A-Z][A-Za-z\s&']+(?:Hotel|Resort|Inn|Suites|Lodge|Heights|Beach|Bay|Club|Palace|Plaza|Tower|Grand|Park|Place))/i);
+    if (nearConfirm) hotelName = nearConfirm[1].trim();
     if (!hotelName) {
-      const brandLineMatch = text.match(/^((?:Hilton|Marriott|Hyatt|Sheraton|Westin|Hampton|Courtyard|Residence Inn|DoubleTree|Embassy Suites|Holiday Inn|Comfort Inn|Best Western|La Quinta)\s+[\w\s]+?)$/im);
+      // Match "Hotel Details" header followed by property name
+      const afterHeader = text.match(/hotel\s+details[\s\S]*?\n\n([A-Z][A-Za-z\s&']+?)(?:\n|$)/i);
+      if (afterHeader && afterHeader[1].trim().length > 3 && !/^details$/i.test(afterHeader[1].trim())) {
+        hotelName = afterHeader[1].trim();
+      }
+    }
+    if (!hotelName) {
+      const hotelNameMatch = text.match(/(?:hotel|resort|inn|suites|lodge)[:\s]*(.+?)(?:\n|$)/i);
+      if (hotelNameMatch && !/^details$/i.test(hotelNameMatch[1].trim())) hotelName = hotelNameMatch[1].trim();
+    }
+    if (!hotelName) {
+      const brandLineMatch = text.match(/^((?:Hilton|Marriott|Hyatt|Sheraton|Westin|Hampton|Courtyard|Residence Inn|DoubleTree|Embassy Suites|Holiday Inn|Comfort Inn|Best Western|La Quinta|Palm Heights|Ritz.Carlton|Kimpton)\s*[\w\s]*?)$/im);
       if (brandLineMatch) hotelName = brandLineMatch[1].trim();
     }
     if (!hotelName && hotelMatch) hotelName = hotelMatch[0];
