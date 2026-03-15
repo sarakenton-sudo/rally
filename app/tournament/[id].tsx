@@ -18,7 +18,7 @@ import { MOCK_TEAM_EVENTS } from '@/lib/mock-data';
 import { formatDateRange, countdownText, daysUntil } from '@/lib/dates';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
-import QRCode from 'react-native-qrcode-svg';
+
 
 const STATUS_CONFIG = {
   upcoming: { label: 'Upcoming', bg: 'bg-cream', text: 'text-stone' },
@@ -440,16 +440,6 @@ export default function TournamentDetailScreen() {
                 </Pressable>
               </View>
 
-              {teamCode && (
-                <View className="bg-warm-white p-2 rounded-xl border border-green-100">
-                  <QRCode
-                    value={teamCode}
-                    size={80}
-                    backgroundColor="#FEFEFE"
-                    color="#1E3A5F"
-                  />
-                </View>
-              )}
             </View>
 
             {tournament.ticket_system && (
