@@ -27,9 +27,9 @@ function GlobalHeader() {
             top: 6 + insets.top,
             backgroundColor: 'rgba(255,255,255,0.08)',
           }}
-          onPress={() => router.push('/settings/account')}
+          onPress={() => router.push('/notifications')}
         >
-          <Ionicons name="person-circle-outline" size={22} color="rgba(255,255,255,0.65)" />
+          <Ionicons name="notifications-outline" size={20} color="rgba(255,255,255,0.65)" />
         </Pressable>
 
         <Pressable
@@ -47,16 +47,16 @@ function GlobalHeader() {
           />
         </Pressable>
 
-        {/* Notifications button (right) */}
+        {/* Account button (right) */}
         <Pressable
           className="w-10 h-10 rounded-xl items-center justify-center active:opacity-70 absolute right-4"
           style={{
             top: 6 + insets.top,
             backgroundColor: 'rgba(255,255,255,0.08)',
           }}
-          onPress={() => router.push('/notifications')}
+          onPress={() => router.push('/settings/account')}
         >
-          <Ionicons name="notifications-outline" size={20} color="rgba(255,255,255,0.65)" />
+          <Ionicons name="person-circle-outline" size={22} color="rgba(255,255,255,0.65)" />
         </Pressable>
       </View>
 
