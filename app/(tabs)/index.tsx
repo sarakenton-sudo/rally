@@ -90,6 +90,12 @@ export default function HomeScreen() {
   const forwardAddress = adminConfig?.rally_forward_address || 'plans@rally-hub.com';
   const hasMultipleAthletes = athletes.length > 1;
 
+  // Lookup athlete for a tournament (via season)
+  const getAthleteForTournament = (t: typeof tournaments[0]) => {
+    const season = seasons.find((s) => s.id === t.season_id);
+    return season ? athletes.find((a) => a.id === season.athlete_id) ?? null : null;
+  };
+
   return (
     <View className="flex-1 bg-cream dark:bg-bark">
       <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 40 }}>
@@ -242,6 +248,7 @@ export default function HomeScreen() {
                 hotelCount={hotelBookings.filter((h) => h.tournament_id === t.id).length}
                 flightCount={flightBookings.filter((f) => f.tournament_id === t.id).length}
                 backupHotelCount={hotelBookings.filter((h) => h.tournament_id === t.id && h.is_backup).length}
+                athlete={getAthleteForTournament(t)}
                 onPress={() => router.push(`/tournament/${t.id}`)}
               />
             ))

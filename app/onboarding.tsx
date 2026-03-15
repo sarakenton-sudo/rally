@@ -175,8 +175,13 @@ export default function OnboardingScreen() {
   const { refresh } = useDataRefresh();
 
   // Step 1: Athlete
+  const AVATAR_COLORS = [
+    '#3B82B0', '#7c3aed', '#6A9E8A', '#d97706', '#dc2626',
+    '#0d9488', '#be185d', '#4f46e5', '#ca8a04', '#0891b2',
+  ];
   const [athleteFirstName, setAthleteFirstName] = useState('');
   const [athleteLastName, setAthleteLastName] = useState('');
+  const [avatarColor, setAvatarColor] = useState(AVATAR_COLORS[0]);
 
   // Computed display name (first + last) — used for labels throughout wizard
   const athleteName = [athleteFirstName.trim(), athleteLastName.trim()].filter(Boolean).join(' ');
@@ -375,6 +380,7 @@ export default function OnboardingScreen() {
         store.setAthletes([{
           id: result.athlete_id!, user_id: null,
           first_name: athleteFirstName.trim() || 'My Athlete', last_name: athleteLastName.trim() || null,
+          avatar_color: avatarColor,
           can_edit: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
         }]);
         store.setSeasons([{
@@ -400,6 +406,11 @@ export default function OnboardingScreen() {
           } as any)));
         }
         store.setLoading(false);
+
+        // 2b. Fire-and-forget: save avatar color on athlete
+        if (avatarColor) {
+          supabase.from('athletes').update({ avatar_color: avatarColor }).eq('id', result.athlete_id!).then(() => {}).catch(() => {});
+        }
 
         // 3. Fire-and-forget: credentials → external_links
         if (Object.keys(credentials).length > 0) {
@@ -471,7 +482,7 @@ export default function OnboardingScreen() {
         default_stream_url: null, travel_sync_emails: [], gmail_connected: false, gmail_email: null,
         external_links: [], active_season_id: mockSeasonId, created_at: new Date().toISOString(),
       });
-      store.setAthletes([{ id: mockAthleteId, user_id: null, first_name: athleteFirstName.trim() || 'My Athlete', last_name: athleteLastName.trim() || null, can_edit: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
+      store.setAthletes([{ id: mockAthleteId, user_id: null, first_name: athleteFirstName.trim() || 'My Athlete', last_name: athleteLastName.trim() || null, avatar_color: avatarColor, can_edit: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
       store.setSeasons([{ id: mockSeasonId, athlete_id: mockAthleteId, team_name: teamName.trim(), club_name: clubName.trim() || null, season_year: seasonYear, sport: 'volleyball', team_code: null, schedule_import_source: null, schedule_import_connected: false, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
       store.setActiveSeasonId(mockSeasonId);
       notifySuccess();
@@ -555,6 +566,35 @@ export default function OnboardingScreen() {
                 placeholderTextColor="#7A9AB5"
                 style={{ ...INPUT_STYLE, fontSize: 20, paddingVertical: 16 }}
               />
+
+              {/* Avatar Color Picker */}
+              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#9AB5CC', marginTop: 20, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>
+                Pick a color
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: avatarColor, alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+                  <Text style={{ fontSize: 22, fontWeight: '700', color: '#FEFEFE' }}>
+                    {athleteFirstName ? athleteFirstName.charAt(0).toUpperCase() : '?'}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', flex: 1, gap: 8 }}>
+                  {AVATAR_COLORS.map((color) => (
+                    <Pressable
+                      key={color}
+                      onPress={() => setAvatarColor(color)}
+                      style={{
+                        width: 28, height: 28, borderRadius: 14,
+                        backgroundColor: color,
+                        borderWidth: avatarColor === color ? 2.5 : 0,
+                        borderColor: '#FEFEFE',
+                        alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >
+                      {avatarColor === color && <Ionicons name="checkmark" size={14} color="#FEFEFE" />}
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
 
               <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#B0C4D8', marginTop: 12 }}>
                 You can add more players later in Settings.

@@ -17,8 +17,14 @@ export default function EditAthleteScreen() {
   const athlete = athletes.find((a) => a.id === athleteId);
   const { refresh } = useDataRefresh();
 
+  const AVATAR_COLORS = [
+    '#3B82B0', '#7c3aed', '#6A9E8A', '#d97706', '#dc2626',
+    '#0d9488', '#be185d', '#4f46e5', '#ca8a04', '#0891b2',
+  ];
+
   const [firstName, setFirstName] = useState(athlete?.first_name ?? '');
   const [lastName, setLastName] = useState(athlete?.last_name ?? '');
+  const [avatarColor, setAvatarColor] = useState(athlete?.avatar_color ?? AVATAR_COLORS[0]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +49,7 @@ export default function EditAthleteScreen() {
       const { error: err } = await updateAthlete(athleteId, {
         first_name: firstName.trim(),
         last_name: lastName.trim() || null,
+        avatar_color: avatarColor,
       });
       if (err) throw err;
       notifySuccess();
@@ -86,6 +93,38 @@ export default function EditAthleteScreen() {
         </View>
 
         <ScrollView className="flex-1 px-4 pt-4" keyboardShouldPersistTaps="handled">
+          {/* Avatar Preview + Color Picker */}
+          <View className="items-center mb-6">
+            <View
+              className="w-20 h-20 rounded-full items-center justify-center mb-4"
+              style={{ backgroundColor: avatarColor }}
+            >
+              <Text style={{ fontSize: 32, fontWeight: '700', color: '#FEFEFE' }}>
+                {firstName ? firstName.charAt(0).toUpperCase() : '?'}
+              </Text>
+            </View>
+            <Text className="text-xs text-stone uppercase tracking-wider mb-2">Pick a Color</Text>
+            <View className="flex-row flex-wrap justify-center gap-3">
+              {AVATAR_COLORS.map((color) => (
+                <Pressable
+                  key={color}
+                  onPress={() => setAvatarColor(color)}
+                  className="items-center justify-center"
+                  style={{
+                    width: 36, height: 36, borderRadius: 18,
+                    backgroundColor: color,
+                    borderWidth: avatarColor === color ? 3 : 0,
+                    borderColor: '#1E3A5F',
+                  }}
+                >
+                  {avatarColor === color && (
+                    <Ionicons name="checkmark" size={18} color="#FEFEFE" />
+                  )}
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
           <FormField label="First Name" value={firstName} onChangeText={setFirstName} placeholder="e.g. Emma" />
           <FormField label="Last Name (optional)" value={lastName} onChangeText={setLastName} placeholder="" />
 

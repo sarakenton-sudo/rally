@@ -48,6 +48,7 @@ export interface Athlete {
   first_name: string;
   last_name: string | null;
   can_edit: boolean;
+  avatar_color: string | null;
   created_at: string;
   updated_at: string;
 }

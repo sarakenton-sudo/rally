@@ -1,13 +1,19 @@
 import { View, Text, Pressable, Linking, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import type { Tournament } from '@/types/database';
+import type { Tournament, Athlete } from '@/types/database';
 import { formatDateRange, countdownText, daysUntil } from '@/lib/dates';
+
+const AVATAR_COLORS = [
+  '#3B82B0', '#7c3aed', '#6A9E8A', '#d97706', '#dc2626',
+  '#0d9488', '#be185d', '#4f46e5', '#ca8a04', '#0891b2',
+];
 
 interface TournamentCardProps {
   tournament: Tournament;
   hotelCount?: number;
   flightCount?: number;
   backupHotelCount?: number;
+  athlete?: Athlete | null;
   onPress?: () => void;
 }
 
@@ -29,7 +35,7 @@ function openDirections(address: string) {
   if (url) Linking.openURL(url);
 }
 
-export default function TournamentCard({ tournament, hotelCount = 0, flightCount = 0, backupHotelCount = 0, onPress }: TournamentCardProps) {
+export default function TournamentCard({ tournament, hotelCount = 0, flightCount = 0, backupHotelCount = 0, athlete, onPress }: TournamentCardProps) {
   const hasHotel = hotelCount > 0;
   const hasFlight = flightCount > 0;
   const hasMultipleBookings = backupHotelCount > 0 || hotelCount > 1 || flightCount > 1;
@@ -71,8 +77,18 @@ export default function TournamentCard({ tournament, hotelCount = 0, flightCount
       />
 
       <View className="p-4">
-        {/* Header row: name + status badge */}
+        {/* Header row: avatar + name + status badge */}
         <View className="flex-row items-start justify-between mb-2">
+          {athlete && (
+            <View
+              className="w-9 h-9 rounded-full items-center justify-center mr-3 mt-0.5"
+              style={{ backgroundColor: athlete.avatar_color || AVATAR_COLORS[athlete.first_name.charCodeAt(0) % AVATAR_COLORS.length] }}
+            >
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#FEFEFE' }}>
+                {athlete.first_name.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
           <View className="flex-1 mr-3">
             <Text className="text-lg font-bold text-bark dark:text-cream">
               {tournament.name}

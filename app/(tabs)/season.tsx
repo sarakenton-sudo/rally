@@ -1,13 +1,15 @@
-import { View, Text, FlatList, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, Pressable, Alert, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import TournamentCard from '@/components/TournamentCard';
 import HubSectionHeader from '@/components/HubSectionHeader';
 import HubSettingsRow from '@/components/HubSettingsRow';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { useIconColors } from '@/lib/colors';
+import { tapLight } from '@/lib/haptics';
 import { daysUntil } from '@/lib/dates';
 import type { Tournament } from '@/types/database';
 
@@ -22,8 +24,13 @@ export default function SeasonScreen() {
   const { refresh, isRefreshing } = useDataRefresh();
   const ic = useIconColors();
 
+  const athletes = useSeasonStore((s) => s.athletes);
   const hotelBookings = useSeasonStore((s) => s.hotelBookings);
   const flightBookings = useSeasonStore((s) => s.flightBookings);
+  const teamCode = activeSeason?.team_code;
+
+  // Lookup athlete for active season
+  const activeAthlete = athletes.find((a) => activeSeason && a.id === activeSeason.athlete_id) ?? null;
 
   // Filter tournaments to active season
   const seasonTournaments = useMemo(() =>
@@ -66,6 +73,7 @@ export default function SeasonScreen() {
         hotelCount={hotelBookings.filter((h) => h.tournament_id === item.data.id).length}
         flightCount={flightBookings.filter((f) => f.tournament_id === item.data.id).length}
         backupHotelCount={hotelBookings.filter((h) => h.tournament_id === item.data.id && h.is_backup).length}
+        athlete={activeAthlete}
         onPress={() => router.push(`/tournament/${item.data.id}`)}
       />
     );
@@ -108,6 +116,31 @@ export default function SeasonScreen() {
                 <Text className="text-xs font-semibold text-rally-600 ml-1">Add</Text>
               </Pressable>
             </View>
+
+            {/* Team Code Block */}
+            {teamCode ? (
+              <Pressable
+                className="bg-rally-600 rounded-xl p-4 mt-3 flex-row items-center active:opacity-90"
+                style={{ shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3 }}
+                onPress={async () => {
+                  if (Platform.OS === 'web') {
+                    await navigator.clipboard.writeText(teamCode);
+                  } else {
+                    await Clipboard.setStringAsync(teamCode);
+                  }
+                  tapLight();
+                  if (Platform.OS !== 'web') {
+                    Alert.alert('Copied', 'Team code copied to clipboard.');
+                  }
+                }}
+              >
+                <View className="flex-1">
+                  <Text className="text-xs text-rally-200 uppercase tracking-wider">Team Code</Text>
+                  <Text className="text-2xl font-bold text-cream tracking-widest mt-0.5">{teamCode}</Text>
+                </View>
+                <Ionicons name="copy-outline" size={20} color="rgba(254,254,254,0.7)" />
+              </Pressable>
+            ) : null}
           </View>
         }
         ListFooterComponent={
