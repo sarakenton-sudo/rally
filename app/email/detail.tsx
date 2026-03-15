@@ -458,19 +458,19 @@ export default function EmailDetailScreen() {
         if (Platform.OS === 'web') window.alert(msg);
         else Alert.alert('Updated', msg);
       } else {
-        // Create new
+        // Create new — use null for empty date fields (Postgres rejects empty strings for DATE columns)
         const { error } = await insertFlightBooking({
           ...cleanData,
           created_by_user_id: user.id,
           tournament_id: activeMatch.id,
-          airline: cleanData.airline as string ?? '',
+          airline: (cleanData.airline as string) || '',
           confirmation_code: confCode,
-          departure_date: cleanData.departure_date as string ?? '',
-          return_date: cleanData.return_date as string ?? '',
-          booked_by: cleanData.booked_by as string ?? '',
-          traveler_names: cleanData.traveler_names as string[] ?? [],
-          cost: cleanData.cost as number ?? null,
-          ticket_number: cleanData.ticket_number as string ?? '',
+          departure_date: (cleanData.departure_date as string) || null,
+          return_date: (cleanData.return_date as string) || null,
+          booked_by: (cleanData.booked_by as string) || '',
+          traveler_names: (cleanData.traveler_names as string[]) || [],
+          cost: (cleanData.cost as number) ?? null,
+          ticket_number: (cleanData.ticket_number as string) || '',
         } as any);
         if (error) throw error;
         setSavedBooking('flight');
