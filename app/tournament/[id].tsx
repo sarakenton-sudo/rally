@@ -608,7 +608,11 @@ export default function TournamentDetailScreen() {
               </View>
               {teamEvents.length > 0 ? (
                 teamEvents.map((event) => (
-                  <View key={event.id} className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900">
+                  <Pressable
+                    key={event.id}
+                    className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900 active:opacity-80"
+                    onPress={() => router.push({ pathname: '/booking/add-team-event', params: { editId: event.id, tournamentId: tournament.id } })}
+                  >
                     <View className="flex-row items-start justify-between">
                       <View className="flex-1 mr-3">
                         <Text className="text-base font-semibold text-bark dark:text-cream">{event.name}</Text>
@@ -624,13 +628,13 @@ export default function TournamentDetailScreen() {
                       {event.address ? (
                         <Pressable
                           className="bg-rally-50 dark:bg-rally-900/30 px-3 py-2 rounded-lg active:opacity-70"
-                          onPress={() => openDirections(event.address)}
+                          onPress={(e) => { e.stopPropagation(); openDirections(event.address); }}
                         >
                           <Ionicons name="navigate" size={18} color="#3B82B0" />
                         </Pressable>
                       ) : null}
                     </View>
-                  </View>
+                  </Pressable>
                 ))
               ) : (
                 <Pressable

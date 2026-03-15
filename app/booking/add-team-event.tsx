@@ -8,22 +8,36 @@ import DatePickerField from '@/components/DatePickerField';
 import DropdownField from '@/components/DropdownField';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useAuth } from '@/providers/AuthProvider';
-import { insertTeamEvent } from '@/hooks/useSupabaseData';
+import { insertTeamEvent, updateTeamEvent, deleteTeamEvent } from '@/hooks/useSupabaseData';
+import { useTeamEvents } from '@/hooks/useSupabaseData';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
+import { MOCK_TEAM_EVENTS } from '@/lib/mock-data';
 import type { TeamEvent } from '@/types/database';
 
 export default function AddTeamEventScreen() {
-  const params = useLocalSearchParams<{ tournamentId?: string }>();
-  const [name, setName] = useState('');
-  const [venueName, setVenueName] = useState('');
-  const [address, setAddress] = useState('');
-  const [eventDate, setEventDate] = useState<Date | null>(null);
-  const [time, setTime] = useState('');
-  const [notes, setNotes] = useState('');
+  const params = useLocalSearchParams<{ tournamentId?: string; editId?: string }>();
+  const editId = params.editId;
+
+  // Find existing event for editing
+  const { events: supabaseEvents } = useTeamEvents(params.tournamentId);
+  const allEvents = supabaseEvents.length > 0 ? supabaseEvents : MOCK_TEAM_EVENTS;
+  const existing = editId ? allEvents.find((e) => e.id === editId) : null;
+  const isEditing = !!existing;
+
+  const [name, setName] = useState(existing?.name ?? '');
+  const [venueName, setVenueName] = useState(existing?.venue_name ?? '');
+  const [address, setAddress] = useState(existing?.address ?? '');
+  const [eventDate, setEventDate] = useState<Date | null>(
+    existing?.date ? new Date(existing.date + 'T12:00:00') : null
+  );
+  const [time, setTime] = useState(existing?.time ?? '');
+  const [notes, setNotes] = useState(existing?.notes ?? '');
   const [isSaving, setIsSaving] = useState(false);
 
-  const [selectedTournamentId, setSelectedTournamentId] = useState(params.tournamentId ?? '');
+  const [selectedTournamentId, setSelectedTournamentId] = useState(
+    existing?.tournament_id ?? params.tournamentId ?? ''
+  );
 
   const tournaments = useSeasonStore((s) => s.tournaments);
   const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
@@ -38,11 +52,11 @@ export default function AddTeamEventScreen() {
   );
   const selectedTournamentName = tournaments.find((t) => t.id === selectedTournamentId)?.name ?? 'None (standalone)';
 
-  const handleTournamentChange = (name: string) => {
-    if (name === 'None (standalone)') {
+  const handleTournamentChange = (tourName: string) => {
+    if (tourName === 'None (standalone)') {
       setSelectedTournamentId('');
     } else {
-      const t = tournaments.find((tour) => tour.name === name);
+      const t = tournaments.find((tour) => tour.name === tourName);
       if (t) setSelectedTournamentId(t.id);
     }
   };
@@ -78,13 +92,37 @@ export default function AddTeamEventScreen() {
 
     try {
       if (isSupabaseConfigured && user) {
-        const { error } = await insertTeamEvent(eventData);
-        if (error) { showAlert('Save failed', error.message); setIsSaving(false); return; }
+        if (isEditing) {
+          const { error } = await updateTeamEvent(editId!, eventData);
+          if (error) { showAlert('Save failed', error.message); setIsSaving(false); return; }
+        } else {
+          const { error } = await insertTeamEvent(eventData);
+          if (error) { showAlert('Save failed', error.message); setIsSaving(false); return; }
+        }
       }
       notifySuccess();
       router.back();
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (!existing) return;
+    const doDelete = async () => {
+      if (isSupabaseConfigured && user) {
+        await deleteTeamEvent(editId!);
+      }
+      notifySuccess();
+      router.back();
+    };
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Delete "${existing.name}"?`)) doDelete();
+    } else {
+      Alert.alert('Delete Event', `Delete "${existing.name}"?`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: doDelete },
+      ]);
     }
   };
 
@@ -100,7 +138,7 @@ export default function AddTeamEventScreen() {
             <Ionicons name="close" size={24} color={ic.muted} />
           </Pressable>
           <Text className="text-lg font-bold text-bark dark:text-cream">
-            Add Team Event
+            {isEditing ? 'Edit Team Event' : 'Add Team Event'}
           </Text>
           <Pressable
             onPress={handleSave}
@@ -119,6 +157,21 @@ export default function AddTeamEventScreen() {
           <DatePickerField label="Date" value={eventDate} onChange={setEventDate} />
           <FormField label="Time" value={time} onChangeText={setTime} placeholder="e.g. 7:00 PM" />
           <FormField label="Notes" value={notes} onChangeText={setNotes} placeholder="Optional notes" />
+
+          {/* Delete button (edit mode only) */}
+          {isEditing && (
+            <Pressable
+              className="bg-red-50 dark:bg-red-900/20 rounded-xl py-4 items-center mt-4 mb-8 active:opacity-80"
+              onPress={handleDelete}
+            >
+              <View className="flex-row items-center">
+                <Ionicons name="trash-outline" size={18} color="#dc2626" />
+                <Text className="text-sm font-semibold text-red-600 dark:text-red-400 ml-2">
+                  Delete Event
+                </Text>
+              </View>
+            </Pressable>
+          )}
 
           <View className="h-8" />
         </ScrollView>

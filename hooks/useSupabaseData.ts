@@ -352,6 +352,22 @@ export async function insertTeamEvent(event: Omit<TeamEvent, 'id' | 'created_at'
   return { data: data as TeamEvent | null, error };
 }
 
+export async function updateTeamEvent(id: string, updates: Partial<Omit<TeamEvent, 'id' | 'created_at'>>) {
+  const { error } = await (supabase
+    .from('team_events') as any)
+    .update(updates)
+    .eq('id', id);
+  return { error };
+}
+
+export async function deleteTeamEvent(id: string) {
+  const { error } = await supabase
+    .from('team_events')
+    .delete()
+    .eq('id', id);
+  return { error };
+}
+
 export async function insertUSAVProfile(profile: Omit<USAVProfile, 'id' | 'created_at'>) {
   const { data, error } = await supabase
     .from('usav_profiles')
