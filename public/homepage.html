@@ -78,6 +78,16 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(30,58,95,0.9
 .pe-name{font-family:'Nunito',sans-serif;font-weight:700;font-size:9.5px;color:var(--navy);}
 .pe-detail{font-size:7.5px;color:var(--mist);margin-top:1px;}
 .pe-time{margin-left:auto;font-size:8.5px;color:var(--mist);font-weight:600;white-space:nowrap;}
+.pe-badge{margin-left:auto;font-size:6.5px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;}
+.pe-badge.booked{background:rgba(106,158,138,0.15);color:var(--teal);}
+.pe-badge.needs{background:rgba(251,146,60,0.15);color:#FB923C;}
+.action-list{display:flex;flex-direction:column;gap:4px;margin-bottom:8px;}
+.action-card{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:8px;}
+.ac-icon{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ac-text{flex:1;min-width:0;}
+.ac-title{font-family:'Nunito',sans-serif;font-weight:700;font-size:8px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ac-sub{font-size:6.5px;color:var(--mist);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ac-chev{color:var(--mist);font-size:12px;font-weight:300;flex-shrink:0;}
 
 /* STATS BAR */
 .stats-bar{background:white;border-top:1.5px solid var(--frost);border-bottom:1.5px solid var(--frost);padding:56px 48px;}
@@ -370,17 +380,44 @@ footer{padding:30px 20px;}
             <div class="pn-tag">Season 2025-26</div>
           </div>
           <div class="phone-body">
-            <div class="pg">AJV 14u National <small>Drue Kenton · Next up</small></div>
+            <div class="pg">AJV 14u National <small>Drue Kenton · Season 2025-26</small></div>
             <div class="p-stats">
-              <div class="ps"><div class="ps-lbl">Next Tournament</div><div class="ps-val">12</div><div class="ps-sub">days away</div></div>
+              <div class="ps"><div class="ps-lbl">Next Tournament</div><div class="ps-val">5</div><div class="ps-sub">days away</div></div>
               <div class="ps"><div class="ps-lbl">Season</div><div class="ps-val">7/11</div><div class="ps-sub">tournaments</div></div>
-              <div class="ps hl"><div class="ps-lbl">Action Needed</div><div class="ps-val">Cancel backup hotel by Friday</div><div class="ps-sub">Hampton Inn · Lone Star Classic</div></div>
             </div>
-            <div class="p-lbl">Upcoming</div>
+            <div class="p-lbl" style="display:flex;align-items:center;gap:4px;"><span style="font-size:8px;">&#9889;</span> Actions</div>
+            <div class="action-list">
+              <div class="action-card" style="background:#FEE2E2;">
+                <div class="ac-icon" style="background:rgba(220,38,38,0.15);"><span style="color:#dc2626;font-size:10px;">&#9888;</span></div>
+                <div class="ac-text"><div class="ac-title">Pick your hotel for Northern Lights</div><div class="ac-sub">2 hotels booked — cancellation deadline in 3 days</div></div>
+                <div class="ac-chev">&#8250;</div>
+              </div>
+              <div class="action-card" style="background:#EDE9FE;">
+                <div class="ac-icon" style="background:rgba(124,58,237,0.15);"><span style="color:#7c3aed;font-size:10px;">&#127915;</span></div>
+                <div class="ac-text"><div class="ac-title">Buy Tickets for Northern Lights</div><div class="ac-sub">Tickets available now</div></div>
+                <div class="ac-chev">&#8250;</div>
+              </div>
+              <div class="action-card" style="background:#DBEAFE;">
+                <div class="ac-icon" style="background:rgba(59,130,176,0.15);"><span style="color:#3B82B0;font-size:10px;">&#128228;</span></div>
+                <div class="ac-text"><div class="ac-title">Share Details with Guests</div><div class="ac-sub">Northern Lights · 5 days away</div></div>
+                <div class="ac-chev">&#8250;</div>
+              </div>
+              <div class="action-card" style="background:#FEF3C7;">
+                <div class="ac-icon" style="background:rgba(217,119,6,0.15);"><span style="color:#d97706;font-size:10px;">&#127976;</span></div>
+                <div class="ac-text"><div class="ac-title">Book Hotel for Lone Star Classic</div><div class="ac-sub">19 days away</div></div>
+                <div class="ac-chev">&#8250;</div>
+              </div>
+              <div class="action-card" style="background:#E8F5EE;">
+                <div class="ac-icon" style="background:rgba(106,158,138,0.15);"><span style="color:#6A9E8A;font-size:10px;">&#9992;</span></div>
+                <div class="ac-text"><div class="ac-title">Book Air for Lone Star Classic</div><div class="ac-sub">19 days away</div></div>
+                <div class="ac-chev">&#8250;</div>
+              </div>
+            </div>
+            <div class="p-lbl" style="margin-top:8px;">Upcoming</div>
             <div class="p-events">
-              <div class="pe"><div class="pe-bar" style="background:var(--teal);"></div><div><div class="pe-name">Northern Lights</div><div class="pe-detail">Minneapolis, MN</div></div><div class="pe-time">Mar 20-22</div></div>
-              <div class="pe"><div class="pe-bar" style="background:var(--steel);"></div><div><div class="pe-name">Lone Star Classic</div><div class="pe-detail">Houston, TX</div></div><div class="pe-time">Apr 3-5</div></div>
-              <div class="pe"><div class="pe-bar" style="background:var(--mist);"></div><div><div class="pe-name">Show Me Qualifier</div><div class="pe-detail">Kansas City, MO</div></div><div class="pe-time">Apr 17-19</div></div>
+              <div class="pe"><div class="pe-bar" style="background:var(--teal);"></div><div><div class="pe-name">Northern Lights</div><div class="pe-detail">Minneapolis, MN · Mar 20-22</div></div><div class="pe-badge booked">&#10003; Ready</div></div>
+              <div class="pe"><div class="pe-bar" style="background:var(--steel);"></div><div><div class="pe-name">Lone Star Classic</div><div class="pe-detail">Houston, TX · Apr 3-5</div></div><div class="pe-badge needs">Needs Booking</div></div>
+              <div class="pe"><div class="pe-bar" style="background:var(--mist);"></div><div><div class="pe-name">Show Me Qualifier</div><div class="pe-detail">Kansas City, MO · Apr 17-19</div></div><div class="pe-badge needs">Needs Booking</div></div>
             </div>
           </div>
         </div>
