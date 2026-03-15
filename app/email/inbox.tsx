@@ -1,9 +1,10 @@
-import { View, Text, FlatList, Pressable } from 'react-native';
+import { View, Text, FlatList, Pressable, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useIconColors } from '@/lib/colors';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { ForwardedEmail } from '@/types/database';
 
 const CLASS_CONFIG: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string; bg: string }> = {
@@ -26,59 +27,88 @@ const ACTION_LABELS: Record<string, string> = {
 export default function EmailInboxScreen() {
   const ic = useIconColors();
   const emails = useSeasonStore((s) => s.forwardedEmails);
+  const removeForwardedEmail = useSeasonStore((s) => s.removeForwardedEmail);
   const adminConfig = useSeasonStore((s) => s.adminConfig);
+
+  const handleDelete = (item: ForwardedEmail) => {
+    const doDelete = async () => {
+      if (isSupabaseConfigured) {
+        await supabase.from('forwarded_emails').delete().eq('id', item.id);
+      }
+      removeForwardedEmail(item.id);
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Delete "${item.subject}"?`)) doDelete();
+    } else {
+      Alert.alert('Delete Email', `Delete "${item.subject}"?`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: doDelete },
+      ]);
+    }
+  };
 
   const renderItem = ({ item }: { item: ForwardedEmail }) => {
     const cls = CLASS_CONFIG[item.classification] ?? CLASS_CONFIG.other;
     const receivedDate = new Date(item.received_at);
 
     return (
-      <Pressable
-        className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900 active:opacity-80"
-        onPress={() => router.push({ pathname: '/email/detail', params: { id: item.id } })}
-      >
-        <View className="flex-row items-start">
-          {/* Classification icon */}
-          <View
-            className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${cls.bg}`}
-          >
-            <Ionicons name={cls.icon} size={18} color={cls.color} />
-          </View>
-
-          <View className="flex-1">
-            {/* Subject + date */}
-            <View className="flex-row items-start justify-between">
-              <Text className="text-sm font-semibold text-bark dark:text-cream flex-1 mr-2" numberOfLines={1}>
-                {item.subject}
-              </Text>
-              <Text className="text-xs text-stone">
-                {receivedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </Text>
+      <View className="flex-row items-center mb-2">
+        <Pressable
+          className="flex-1 bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 active:opacity-80"
+          onPress={() => router.push({ pathname: '/email/detail', params: { id: item.id } })}
+        >
+          <View className="flex-row items-start">
+            {/* Classification icon */}
+            <View
+              className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${cls.bg}`}
+            >
+              <Ionicons name={cls.icon} size={18} color={cls.color} />
             </View>
 
-            {/* From */}
-            <Text className="text-xs text-stone dark:text-parchment mt-0.5" numberOfLines={1}>
-              {item.from_address}
-            </Text>
-
-            {/* Classification + action badges */}
-            <View className="flex-row items-center mt-2 gap-2">
-              <View className={`px-2 py-0.5 rounded-full ${cls.bg}`}>
-                <Text style={{ color: cls.color }} className="text-xs font-semibold">
-                  {cls.label}
+            <View className="flex-1">
+              {/* Subject + date */}
+              <View className="flex-row items-start justify-between">
+                <Text className="text-sm font-semibold text-bark dark:text-cream flex-1 mr-2" numberOfLines={1}>
+                  {item.subject}
+                </Text>
+                <Text className="text-xs text-stone">
+                  {receivedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </Text>
               </View>
-              {item.action_taken !== 'none' && (
-                <View className="px-2 py-0.5 rounded-full bg-green-50">
-                  <Text className="text-xs font-medium text-green-700">
-                    {ACTION_LABELS[item.action_taken]}
+
+              {/* From */}
+              <Text className="text-xs text-stone dark:text-parchment mt-0.5" numberOfLines={1}>
+                {item.from_address}
+              </Text>
+
+              {/* Classification + action badges */}
+              <View className="flex-row items-center mt-2 gap-2">
+                <View className={`px-2 py-0.5 rounded-full ${cls.bg}`}>
+                  <Text style={{ color: cls.color }} className="text-xs font-semibold">
+                    {cls.label}
                   </Text>
                 </View>
-              )}
+                {item.action_taken !== 'none' && (
+                  <View className="px-2 py-0.5 rounded-full bg-green-50">
+                    <Text className="text-xs font-medium text-green-700">
+                      {ACTION_LABELS[item.action_taken]}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
-        </View>
-      </Pressable>
+        </Pressable>
+
+        {/* Delete button */}
+        <Pressable
+          className="ml-2 w-9 h-9 rounded-full items-center justify-center active:opacity-60 bg-red-50"
+          onPress={() => handleDelete(item)}
+        >
+          <Ionicons name="trash-outline" size={16} color="#dc2626" />
+        </Pressable>
+      </View>
     );
   };
 
