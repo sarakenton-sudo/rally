@@ -186,7 +186,39 @@ export default function HomeScreen() {
       });
     }
 
-    // Priority 6: Inbox up to date (only if NO other cards)
+    // Priority 3: Multiple hotels booked for a tournament (at least one backup) —
+    // alert when the earliest cancellation deadline is within 30 days
+    const tournamentHotelMap = new Map<string, typeof hotelBookings>();
+    for (const h of hotelBookings) {
+      if (!h.tournament_id) continue;
+      const list = tournamentHotelMap.get(h.tournament_id) ?? [];
+      list.push(h);
+      tournamentHotelMap.set(h.tournament_id, list);
+    }
+    for (const [tid, hotels] of tournamentHotelMap) {
+      if (hotels.length < 2) continue;
+      if (!hotels.some((h) => h.is_backup)) continue;
+      // Find earliest cancellation deadline across ALL hotels for this tournament
+      const deadlines = hotels
+        .filter((h) => h.cancellation_deadline && daysUntil(h.cancellation_deadline) >= 0)
+        .sort((a, b) => a.cancellation_deadline!.localeCompare(b.cancellation_deadline!));
+      if (deadlines.length === 0) continue;
+      const earliest = deadlines[0];
+      const d = daysUntil(earliest.cancellation_deadline!);
+      if (d > 30) continue;
+      const t = seasonTournaments.find((t) => t.id === tid);
+      cards.push({
+        priority: 3,
+        text: `Pick your hotel for ${t?.name ?? 'tournament'}`,
+        subtitle: `${hotels.length} hotels booked — first cancellation deadline ${d === 0 ? 'today' : `in ${d} day${d !== 1 ? 's' : ''}`}`,
+        icon: 'alert-circle',
+        color: '#dc2626',
+        bgColor: '#FEE2E2',
+        onPress: t ? () => router.push(`/tournament/${t.id}`) : () => {},
+      });
+    }
+
+    // Priority 7: Inbox up to date (only if NO other cards)
     if (cards.length === 0) {
       cards.push({
         priority: 6,
