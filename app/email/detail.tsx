@@ -604,20 +604,29 @@ export default function EmailDetailScreen() {
         body: JSON.stringify({
           from: email.from_address,
           subject: email.subject,
-          body: email.body_text.slice(0, 10000),
+          body: (email.body_text ?? '').slice(0, 10000),
         }),
       });
 
+      const responseText = await response.text();
+      console.log('[Re-extract] Status:', response.status, 'Body:', responseText.slice(0, 500));
+
       if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Classification failed (${response.status}): ${errText.slice(0, 200)}`);
+        throw new Error(`Classification failed (${response.status}): ${responseText.slice(0, 200)}`);
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        throw new Error(`Invalid JSON response: ${responseText.slice(0, 200)}`);
+      }
+
       const newClassification = data?.classification ?? email.classification;
       const newExtractedData = data?.extracted_data ?? {};
       const newSummary = data?.summary ?? '';
       const newAction = data?.action ?? email.action_taken;
+      console.log('[Re-extract] Classification:', newClassification, 'Fields:', Object.keys(newExtractedData).length);
 
       // Update the email record in DB
       await (supabase
@@ -636,8 +645,10 @@ export default function EmailDetailScreen() {
         action_taken: newAction,
       } as any);
 
-      if (Platform.OS === 'web') window.alert(`Re-extracted! Classification: ${newClassification}. ${Object.keys(newExtractedData).length} fields found.`);
-      else Alert.alert('Re-extracted', `Classification: ${newClassification}. ${Object.keys(newExtractedData).length} fields found.`);
+      const fieldCount = Object.keys(newExtractedData).length;
+      const debugInfo = fieldCount === 0 ? `\n\nDebug: body length=${(email.body_text ?? '').length}, response=${responseText.slice(0, 300)}` : '';
+      if (Platform.OS === 'web') window.alert(`Re-extracted! Classification: ${newClassification}. ${fieldCount} fields found.${debugInfo}`);
+      else Alert.alert('Re-extracted', `Classification: ${newClassification}. ${fieldCount} fields found.${debugInfo}`);
     } catch (err: any) {
       if (Platform.OS === 'web') window.alert(`Re-extract failed: ${err.message}`);
       else Alert.alert('Failed', err.message);
