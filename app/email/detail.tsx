@@ -185,7 +185,19 @@ function matchScore(tournament: Tournament, extracted: Record<string, unknown>, 
   const tCity = (tournament.location_city ?? '').toLowerCase();
   if (eCity && tCity && (tCity.includes(eCity) || eCity.includes(tCity))) score += 15;
 
-  return Math.min(100, score);
+  // Penalize when extracted dates clearly don't match tournament timeframe
+  // e.g., a past email about March shouldn't match a tournament in May
+  const anyExtractedDate = travelDate || eStart;
+  if (anyExtractedDate && tournament.start_date) {
+    const extractedMs = new Date(anyExtractedDate).getTime();
+    const tournamentMs = new Date(tournament.start_date).getTime();
+    const diffDays = Math.abs(extractedMs - tournamentMs) / (24 * 60 * 60 * 1000);
+    // If dates are more than 14 days apart, heavily penalize
+    if (diffDays > 14) score -= 30;
+    else if (diffDays > 7) score -= 15;
+  }
+
+  return Math.max(0, Math.min(100, score));
 }
 
 interface SuggestedUpdate {
