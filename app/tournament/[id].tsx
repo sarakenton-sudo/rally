@@ -124,7 +124,7 @@ export default function TournamentDetailScreen() {
   const confirmedVenue = tournament.venues.find((v) => v.is_confirmed);
 
   return (
-    <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-warm-white dark:bg-bark" edges={['top', 'bottom']}>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 40 }}
@@ -134,7 +134,7 @@ export default function TournamentDetailScreen() {
         <View className={`px-5 pt-4 pb-5 ${
           tournament.status === 'booked' ? 'bg-green-600' :
           tournament.status === 'travel_needed' ? 'bg-amber-500' :
-          tournament.status === 'complete' ? 'bg-rally-500' : 'bg-stone'
+          tournament.status === 'complete' ? 'bg-rally-500' : 'bg-rally-700'
         }`}>
           <View className="flex-row items-center justify-between mb-3">
             <Pressable onPress={() => router.back()} className="flex-row items-center">
