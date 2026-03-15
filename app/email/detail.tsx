@@ -781,21 +781,39 @@ export default function EmailDetailScreen() {
           </View>
         </View>
 
-        {/* Extracted data card */}
+        {/* Extracted data as suggested updates */}
         {hasExtractedData && (
-          <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 mb-3 border border-rally-200 dark:border-rally-800">
+          <View className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 mb-3 border border-purple-200 dark:border-purple-800">
             <View className="flex-row items-center mb-3">
-              <Ionicons name="sparkles" size={18} color="#3B82B0" />
-              <Text className="text-sm font-semibold text-rally-700 dark:text-rally-300 ml-2">
+              <Ionicons name="sparkles" size={18} color="#7c3aed" />
+              <Text className="text-sm font-semibold text-purple-700 dark:text-purple-300 ml-2">
                 AI Extracted Details
               </Text>
             </View>
             {Object.entries(extractedData!).map(([key, value]) => {
-              if (value === null || value === undefined || value === '' || key === 'ticket_urls') return null;
+              if (value === null || value === undefined || value === '' || key === 'ticket_urls' || key === 'note') return null;
               const label = DATA_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+              // Render nested objects (outbound/return legs) as sub-cards
+              if (typeof value === 'object' && !Array.isArray(value)) {
+                return (
+                  <View key={key} className="bg-white/60 dark:bg-bark-light rounded-lg p-3 mb-2">
+                    <Text className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-1">{label}</Text>
+                    {Object.entries(value as Record<string, unknown>).map(([subKey, subVal]) => {
+                      if (subVal === null || subVal === undefined || subVal === '') return null;
+                      const subLabel = DATA_LABELS[subKey] || subKey.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+                      return (
+                        <View key={subKey} className="flex-row mb-1">
+                          <Text className="text-xs text-stone w-28 pt-0.5">{subLabel}</Text>
+                          <View className="flex-1">{renderValue(subKey, subVal)}</View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                );
+              }
               return (
-                <View key={key} className="flex-row mb-2">
-                  <Text className="text-xs text-stone w-28 pt-0.5">{label}</Text>
+                <View key={key} className="bg-white/60 dark:bg-bark-light rounded-lg p-2 px-3 mb-2 flex-row items-center">
+                  <Text className="text-xs text-stone w-28">{label}</Text>
                   <View className="flex-1">{renderValue(key, value)}</View>
                 </View>
               );
