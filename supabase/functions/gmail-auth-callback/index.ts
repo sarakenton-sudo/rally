@@ -189,7 +189,7 @@ function redirectToApp(path: string, state?: string | null): Response {
   if (isWeb) {
     // For web, redirect to rally-hub.com with query params
     const params = path.split('?')[1] || '';
-    url = `https://rally-hub.com/settings/email-connect?${params}`;
+    url = `https://rally-hub.com/settings/email-forward?${params}`;
   } else {
     url = path;
   }

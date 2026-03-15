@@ -521,7 +521,7 @@ export default function TournamentDetailScreen() {
                   </Pressable>
                   <Pressable
                     className="flex-1 flex-row items-center justify-center bg-warm-white dark:bg-bark-light rounded-lg py-2.5 active:opacity-70 border border-parchment dark:border-rally-900"
-                    onPress={() => router.push('/settings/email-connect')}
+                    onPress={() => router.push('/settings/email-forward')}
                   >
                     <Ionicons name="mail" size={14} color="#3B82B0" />
                     <Text className="text-xs font-semibold text-bark dark:text-cream ml-1.5">Forward Email</Text>

@@ -34,7 +34,7 @@ export default function EmailConnectScreen() {
           <Ionicons name="close" size={24} color={ic.muted} />
         </Pressable>
         <Text className="text-lg font-bold text-bark dark:text-cream">
-          Schedule Import
+          Forward Your Details
         </Text>
         <View style={{ width: 32 }} />
       </View>

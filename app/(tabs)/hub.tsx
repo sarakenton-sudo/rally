@@ -68,7 +68,7 @@ export default function HubScreen() {
           className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 mb-2"
           style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
         >
-          <Pressable className="flex-row items-center mb-2" onPress={() => router.push('/settings/email-connect')}>
+          <Pressable className="flex-row items-center mb-2" onPress={() => router.push('/settings/email-forward')}>
             <View className="w-8 h-8 rounded-full items-center justify-center mr-3" style={{ backgroundColor: '#3B82B015' }}>
               <Ionicons name="mail-open" size={16} color="#3B82B0" />
             </View>

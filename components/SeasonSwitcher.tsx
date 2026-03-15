@@ -50,16 +50,8 @@ export default function SeasonSwitcher() {
     ? `${activeAthlete.first_name} • ${activeSeason?.team_name ?? ''}`
     : activeSeason?.team_name ?? '';
 
-  // Single athlete, single season — just show label, no switcher
-  if (!hasMultiple) {
-    return (
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 6 }}>
-        <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: 'rgba(255,255,255,0.6)' }}>
-          {label}{activeSeason?.season_year ? ` — ${activeSeason.season_year}` : ''}
-        </Text>
-      </View>
-    );
-  }
+  // Single athlete, single season — hide completely
+  if (!hasMultiple) return null;
 
   return (
     <>

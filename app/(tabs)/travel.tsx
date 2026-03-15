@@ -238,6 +238,28 @@ export default function TravelScreen() {
               style={{ elevation: 4 }}
               onPress={() => {
                 setShowAddMenu(false);
+                router.push('/import/paste-travel');
+              }}
+            >
+              <Ionicons name="sparkles" size={20} color="#7c3aed" />
+              <Text className="text-sm font-semibold text-bark dark:text-cream ml-3">Paste + AI</Text>
+            </Pressable>
+            <Pressable
+              className="bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 mb-2 flex-row items-center shadow-lg active:opacity-80"
+              style={{ elevation: 4 }}
+              onPress={() => {
+                setShowAddMenu(false);
+                router.push('/settings/email-forward');
+              }}
+            >
+              <Ionicons name="mail-open" size={20} color="#3B82B0" />
+              <Text className="text-sm font-semibold text-bark dark:text-cream ml-3">Forward Email</Text>
+            </Pressable>
+            <Pressable
+              className="bg-warm-white dark:bg-bark-light rounded-xl px-4 py-3 mb-2 flex-row items-center shadow-lg active:opacity-80"
+              style={{ elevation: 4 }}
+              onPress={() => {
+                setShowAddMenu(false);
                 router.push('/booking/add-hotel');
               }}
             >

@@ -251,7 +251,7 @@ function RootLayoutNav() {
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
-          name="settings/email-connect"
+          name="settings/email-forward"
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen

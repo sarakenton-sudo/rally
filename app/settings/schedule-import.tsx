@@ -28,65 +28,7 @@ export default function ScheduleImportScreen() {
         {/* Section: Tournament Schedule */}
         <Text className="text-xs font-semibold text-stone uppercase tracking-wider mb-3">Tournament Schedule</Text>
 
-        {/* Card A1 — LeagueApps (Coming Soon) */}
-        <Pressable
-          className="bg-warm-white dark:bg-bark-light rounded-xl p-5 mb-3 border border-parchment dark:border-rally-900 opacity-60"
-          onPress={() => Alert.alert(
-            'Coming Soon',
-            'Direct import from LeagueApps is planned for a future release. Use Copy/Paste or Forward Email for now.'
-          )}
-        >
-          <View className="flex-row items-center mb-2">
-            <View
-              className="w-10 h-10 rounded-full items-center justify-center mr-3"
-              style={{ backgroundColor: '#6A9E8A15' }}
-            >
-              <Ionicons name="trophy" size={20} color="#6A9E8A" />
-            </View>
-            <View className="flex-1">
-              <View className="flex-row items-center">
-                <Text className="text-base font-semibold text-bark dark:text-cream">LeagueApps</Text>
-                <View className="bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full ml-2">
-                  <Text className="text-xs font-semibold text-amber-700 dark:text-amber-300">Coming Soon</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-          <Text className="text-sm text-stone ml-13">
-            Import tournaments automatically from LeagueApps.
-          </Text>
-        </Pressable>
-
-        {/* Card A2 — TeamSnap */}
-        <Pressable
-          className="bg-warm-white dark:bg-bark-light rounded-xl p-5 mb-3 border border-parchment dark:border-rally-900 opacity-60"
-          onPress={() => Alert.alert(
-            'Coming Soon',
-            'Direct import from TeamSnap is planned for a future release. Use Copy/Paste or Forward Email for now.'
-          )}
-        >
-          <View className="flex-row items-center mb-2">
-            <View
-              className="w-10 h-10 rounded-full items-center justify-center mr-3"
-              style={{ backgroundColor: '#6A9E8A15' }}
-            >
-              <Ionicons name="people" size={20} color="#6A9E8A" />
-            </View>
-            <View className="flex-1">
-              <View className="flex-row items-center">
-                <Text className="text-base font-semibold text-bark dark:text-cream">TeamSnap</Text>
-                <View className="bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full ml-2">
-                  <Text className="text-xs font-semibold text-amber-700 dark:text-amber-300">Coming Soon</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-          <Text className="text-sm text-stone ml-13">
-            Import tournaments automatically from TeamSnap.
-          </Text>
-        </Pressable>
-
-        {/* Card B — Copy/Paste + AI */}
+        {/* Card A — Copy/Paste + AI */}
         <Pressable
           className="bg-warm-white dark:bg-bark-light rounded-xl p-5 mb-3 border border-parchment dark:border-rally-900 active:opacity-80"
           onPress={() => router.push('/import/paste')}
@@ -111,7 +53,7 @@ export default function ScheduleImportScreen() {
           </Text>
         </Pressable>
 
-        {/* Card C — Forward Email */}
+        {/* Card B — Forward Email */}
         <View className="bg-warm-white dark:bg-bark-light rounded-xl p-5 mb-3 border border-parchment dark:border-rally-900">
           <View className="flex-row items-center mb-2">
             <View
@@ -146,6 +88,46 @@ export default function ScheduleImportScreen() {
           )}
         </View>
 
+        {/* Card C — LeagueApps (Coming Soon) */}
+        <Pressable
+          className="bg-warm-white dark:bg-bark-light rounded-xl p-3 mb-2 border border-parchment dark:border-rally-900 opacity-50 flex-row items-center"
+          onPress={() => Alert.alert(
+            'Coming Soon',
+            'Direct import from LeagueApps is planned for a future release. Use Copy/Paste or Forward Email for now.'
+          )}
+        >
+          <View
+            className="w-8 h-8 rounded-full items-center justify-center mr-3"
+            style={{ backgroundColor: '#6A9E8A15' }}
+          >
+            <Ionicons name="trophy" size={16} color="#6A9E8A" />
+          </View>
+          <Text className="text-sm font-medium text-bark dark:text-cream flex-1">LeagueApps</Text>
+          <View className="bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+            <Text className="text-xs font-semibold text-amber-700 dark:text-amber-300">Coming Soon</Text>
+          </View>
+        </Pressable>
+
+        {/* Card D — TeamSnap (Coming Soon) */}
+        <Pressable
+          className="bg-warm-white dark:bg-bark-light rounded-xl p-3 mb-3 border border-parchment dark:border-rally-900 opacity-50 flex-row items-center"
+          onPress={() => Alert.alert(
+            'Coming Soon',
+            'Direct import from TeamSnap is planned for a future release. Use Copy/Paste or Forward Email for now.'
+          )}
+        >
+          <View
+            className="w-8 h-8 rounded-full items-center justify-center mr-3"
+            style={{ backgroundColor: '#6A9E8A15' }}
+          >
+            <Ionicons name="people" size={16} color="#6A9E8A" />
+          </View>
+          <Text className="text-sm font-medium text-bark dark:text-cream flex-1">TeamSnap</Text>
+          <View className="bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+            <Text className="text-xs font-semibold text-amber-700 dark:text-amber-300">Coming Soon</Text>
+          </View>
+        </Pressable>
+
         {/* Section: Travel Details */}
         <Text className="text-xs font-semibold text-stone uppercase tracking-wider mt-6 mb-3">Travel Details</Text>
 
@@ -174,7 +156,7 @@ export default function ScheduleImportScreen() {
         {/* Card E — Gmail Auto-Import */}
         <Pressable
           className="bg-warm-white dark:bg-bark-light rounded-xl p-5 mb-3 border border-parchment dark:border-rally-900 active:opacity-80"
-          onPress={() => router.push('/settings/email-connect')}
+          onPress={() => router.push('/settings/email-forward')}
         >
           <View className="flex-row items-center mb-2">
             <View
