@@ -495,26 +495,12 @@ export default function TournamentDetailScreen() {
 
               {/* Existing hotel bookings */}
               {hotels.map((h) => (
-                <View key={h.id} className="mb-2">
-                  <View className="rounded-xl overflow-hidden border border-parchment dark:border-rally-900">
-                    <View className="h-1.5 bg-rally-600" />
-                    <HotelBookingCard
-                      booking={h}
-                      onPress={() => router.push({ pathname: '/booking/add-hotel', params: { editId: h.id } })}
-                      onDelete={() => handleDeleteHotel(h.id, h.hotel_name)}
-                    />
-                  </View>
-                  {/* Hotel directions button */}
-                  {(h as any).address ? (
-                    <Pressable
-                      className="flex-row items-center justify-center bg-rally-50 dark:bg-rally-900/20 rounded-lg py-2 mt-1 active:opacity-70"
-                      onPress={() => openDirections((h as any).address)}
-                    >
-                      <Ionicons name="navigate" size={14} color="#3B82B0" />
-                      <Text className="text-xs font-semibold text-rally-600 ml-1.5">Directions</Text>
-                    </Pressable>
-                  ) : null}
-                </View>
+                <HotelBookingCard
+                  key={h.id}
+                  booking={h}
+                  onPress={() => router.push({ pathname: '/booking/add-hotel', params: { editId: h.id } })}
+                  onDelete={() => handleDeleteHotel(h.id, h.hotel_name)}
+                />
               ))}
 
               {/* Add hotel — hidden when marked not needed */}

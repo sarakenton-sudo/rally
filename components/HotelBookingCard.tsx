@@ -1,6 +1,16 @@
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, Linking, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { HotelBooking } from '@/types/database';
+
+function openDirections(address: string) {
+  const encoded = encodeURIComponent(address);
+  const url = Platform.select({
+    ios: `maps:?q=${encoded}`,
+    android: `geo:0,0?q=${encoded}`,
+    default: `https://maps.google.com/?q=${encoded}`,
+  });
+  if (url) Linking.openURL(url);
+}
 import { daysUntil } from '@/lib/dates';
 
 interface HotelBookingCardProps {
@@ -133,6 +143,22 @@ export default function HotelBookingCard({ booking, tournamentName, onPress, onD
                 : ''}
             </Text>
           </View>
+
+          {/* Address + Directions */}
+          {booking.address ? (
+            <View className="flex-row items-center mt-1.5">
+              <Ionicons name="location-outline" size={14} color="#8FA8BF" />
+              <Text className="text-sm text-stone dark:text-parchment ml-2 flex-1" numberOfLines={1}>
+                {booking.address}
+              </Text>
+              <Pressable
+                className="bg-rally-50 dark:bg-rally-900/30 px-2.5 py-1.5 rounded-lg active:opacity-70 ml-2"
+                onPress={(e) => { e.stopPropagation(); openDirections(booking.address); }}
+              >
+                <Ionicons name="navigate" size={14} color="#3B82B0" />
+              </Pressable>
+            </View>
+          ) : null}
 
           {/* Cost */}
           {booking.cost != null && (
