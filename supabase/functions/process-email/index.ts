@@ -250,56 +250,132 @@ async function autoApplyToTournament(
       .in('season_id', seasonIds);
     if (!tournaments || tournaments.length === 0) return;
 
-    // For travel emails, auto-create bookings
+    // For travel emails, upsert bookings (update existing or create new)
     if (classification === 'travel_confirmation') {
       const departureDate = String(data.departure_date ?? (data.outbound as any)?.departure_date ?? '');
+      const confCode = String(data.confirmation_number ?? data.confirmation_code ?? '');
       const match = findNearestTournament(tournaments, departureDate, String(data.tournament_name ?? ''));
       if (!match) return;
 
-      const returnDate = String(data.return_date ?? (data.return as any)?.departure_date ?? '');
-      const { error } = await supabase
+      // Check for existing flight booking (by confirmation code or tournament)
+      const { data: existingFlights } = await supabase
         .from('flight_bookings')
-        .insert({
+        .select('id, airline, confirmation_code, departure_date, return_date, departure_time, arrival_time, seat_number, flight_number, ticket_number, cost, booked_by')
+        .or(`confirmation_code.eq.${confCode},tournament_id.eq.${match.id}`)
+        .eq('created_by_user_id', userId)
+        .limit(1);
+
+      const newData: Record<string, unknown> = {
+        airline: String(data.airline ?? '') || undefined,
+        confirmation_code: confCode || undefined,
+        departure_date: departureDate || undefined,
+        return_date: String(data.return_date ?? (data.return as any)?.departure_date ?? '') || undefined,
+        booked_by: String(data.passenger_name ?? '') || undefined,
+        traveler_names: data.passenger_name ? [String(data.passenger_name)] : undefined,
+        cost: data.total_cost ? Number(data.total_cost) : undefined,
+        ticket_number: String(data.ticket_number ?? '') || undefined,
+        departure_time: String(data.departure_time ?? (data.outbound as any)?.departure_time ?? '') || undefined,
+        arrival_time: String(data.arrival_time ?? (data.outbound as any)?.arrival_time ?? '') || undefined,
+        seat_number: String(data.seat_number ?? (data.outbound as any)?.seat_number ?? '') || undefined,
+        flight_number: String(data.flight_number ?? (data.outbound as any)?.flight_number ?? '') || undefined,
+      };
+
+      if (existingFlights && existingFlights.length > 0) {
+        // Update only empty fields
+        const existing = existingFlights[0] as Record<string, unknown>;
+        const updates: Record<string, unknown> = {};
+        for (const [key, val] of Object.entries(newData)) {
+          if (val === undefined) continue;
+          const cur = existing[key];
+          if (!cur || cur === '' || cur === null) updates[key] = val;
+        }
+        if (Object.keys(updates).length > 0) {
+          await supabase.from('flight_bookings').update(updates).eq('id', existing.id);
+          console.log(`Auto-updated flight booking for "${match.name}":`, Object.keys(updates));
+        } else {
+          console.log(`Flight booking for "${match.name}" already up to date`);
+        }
+      } else {
+        const clean = Object.fromEntries(Object.entries(newData).filter(([_, v]) => v !== undefined));
+        const { error } = await supabase.from('flight_bookings').insert({
           tournament_id: match.id,
           created_by_user_id: userId,
-          airline: String(data.airline ?? ''),
-          confirmation_code: String(data.confirmation_number ?? ''),
-          departure_date: departureDate || null,
-          return_date: returnDate || null,
-          booked_by: String(data.passenger_name ?? ''),
-          traveler_names: data.passenger_name ? [String(data.passenger_name)] : [],
-          cost: data.total_cost ? Number(data.total_cost) : null,
+          airline: '',
+          confirmation_code: '',
+          departure_date: null,
+          return_date: null,
+          booked_by: '',
+          traveler_names: [],
+          cost: null,
           ticket_number: '',
+          ...clean,
         });
-      if (error) console.error('Auto-create flight booking failed:', error);
-      else console.log(`Auto-created flight booking for tournament "${match.name}"`);
+        if (error) console.error('Auto-create flight booking failed:', error);
+        else console.log(`Auto-created flight booking for tournament "${match.name}"`);
+      }
       return;
     }
 
     if (classification === 'stay_and_play') {
       const checkInDate = String(data.check_in_date ?? '');
+      const confNum = String(data.confirmation_number ?? data.reservation_number ?? '');
       const match = findNearestTournament(tournaments, checkInDate, String(data.tournament_name ?? ''));
       if (!match) return;
 
-      const { error } = await supabase
+      // Check for existing hotel booking
+      const { data: existingHotels } = await supabase
         .from('hotel_bookings')
-        .insert({
+        .select('id, hotel_name, reservation_number, check_in, check_out, cancellation_deadline, cost, address, booked_by')
+        .or(`reservation_number.eq.${confNum},tournament_id.eq.${match.id}`)
+        .eq('created_by_user_id', userId)
+        .limit(1);
+
+      const newData: Record<string, unknown> = {
+        hotel_name: String(data.hotel_name ?? '') || undefined,
+        booking_name: String(data.hotel_name ?? '') || undefined,
+        reservation_number: confNum || undefined,
+        check_in: checkInDate || undefined,
+        check_out: String(data.check_out_date ?? '') || undefined,
+        cancellation_deadline: String(data.cancellation_deadline ?? '') || undefined,
+        cost: data.total_cost ? Number(data.total_cost) : (data.nightly_rate ? Number(data.nightly_rate) : undefined),
+        address: String(data.address ?? data.hotel_address ?? '') || undefined,
+      };
+
+      if (existingHotels && existingHotels.length > 0) {
+        const existing = existingHotels[0] as Record<string, unknown>;
+        const updates: Record<string, unknown> = {};
+        for (const [key, val] of Object.entries(newData)) {
+          if (val === undefined) continue;
+          const cur = existing[key];
+          if (!cur || cur === '' || cur === null) updates[key] = val;
+        }
+        if (Object.keys(updates).length > 0) {
+          await supabase.from('hotel_bookings').update(updates).eq('id', existing.id);
+          console.log(`Auto-updated hotel booking for "${match.name}":`, Object.keys(updates));
+        } else {
+          console.log(`Hotel booking for "${match.name}" already up to date`);
+        }
+      } else {
+        const clean = Object.fromEntries(Object.entries(newData).filter(([_, v]) => v !== undefined));
+        const { error } = await supabase.from('hotel_bookings').insert({
           tournament_id: match.id,
           created_by_user_id: userId,
-          hotel_name: String(data.hotel_name ?? ''),
+          hotel_name: '',
           platform: 'Other',
-          booking_name: String(data.hotel_name ?? ''),
+          booking_name: '',
           booked_by: '',
-          reservation_number: String(data.confirmation_number ?? ''),
-          check_in: checkInDate || null,
-          check_out: String(data.check_out_date ?? '') || null,
-          cancellation_deadline: String(data.cancellation_deadline ?? '') || null,
-          cost: data.total_cost ? Number(data.total_cost) : (data.nightly_rate ? Number(data.nightly_rate) : null),
+          reservation_number: '',
+          check_in: null,
+          check_out: null,
+          cancellation_deadline: null,
+          cost: null,
           is_backup: false,
           status: 'confirmed',
+          ...clean,
         });
-      if (error) console.error('Auto-create hotel booking failed:', error);
-      else console.log(`Auto-created hotel booking for tournament "${match.name}"`);
+        if (error) console.error('Auto-create hotel booking failed:', error);
+        else console.log(`Auto-created hotel booking for tournament "${match.name}"`);
+      }
     }
 
     // Tournament info / schedule updates — update tournament fields
