@@ -555,7 +555,7 @@ export default function OnboardingScreen() {
             <View style={{ marginTop: 32, width: '100%', maxWidth: 320 }}>
               <View style={{ height: 1, backgroundColor: '#D8E2EC', marginBottom: 20 }} />
               <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-SemiBold', color: '#6B8BA8', textAlign: 'center', marginBottom: 12 }}>
-                Were you invited to join someone's RALLY?
+                Co-parent, athlete, or family member?{'\n'}Enter your invite code to join.
               </Text>
               <TextInput
                 style={{
