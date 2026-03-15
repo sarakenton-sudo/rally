@@ -68,8 +68,29 @@ serve(async (req: Request) => {
       .single();
 
     if (!config) {
-      // Fallback: try matching by the generic plans@rally.app address
-      // In this case, try to identify user from the "from" address
+      // Fallback 1: match by domain (e.g. any plans@rally-hub.com address)
+      const domain = forwardAddress.split('@')[1];
+      const { data: domainConfig } = await supabase
+        .from('admin_config')
+        .select('id, user_id')
+        .like('rally_forward_address', `%@${domain}`)
+        .limit(1)
+        .single();
+      if (domainConfig) {
+        return await processForUser(supabase, domainConfig, email);
+      }
+
+      // Fallback 2: if only one user exists, use their config
+      const { data: allConfigs } = await supabase
+        .from('admin_config')
+        .select('id, user_id')
+        .limit(2);
+      if (allConfigs && allConfigs.length === 1) {
+        console.log(`Single-user fallback: routing email to user ${allConfigs[0].user_id}`);
+        return await processForUser(supabase, allConfigs[0], email);
+      }
+
+      // Fallback 3: try matching sender email to auth user
       const fromAddress = extractAddress(email.from);
       const { data: authUsers } = await supabase.auth.admin.listUsers();
       const matchingUser = authUsers?.users?.find((u: any) => u.email === fromAddress);
@@ -77,7 +98,6 @@ serve(async (req: Request) => {
         console.error(`No user found for forward address ${forwardAddress} or from address ${fromAddress}`);
         return jsonResponse({ error: 'No team found for this forward address' }, 404);
       }
-      // Use this user's config
       const { data: userConfig } = await supabase
         .from('admin_config')
         .select('id, user_id')

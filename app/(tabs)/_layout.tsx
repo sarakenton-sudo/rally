@@ -61,7 +61,7 @@ function GlobalHeader() {
       </View>
 
       {/* Season switcher — hidden on Home (has inline filter) and Athlete tab (has its own) */}
-      {pathname !== '/' && pathname !== '/athlete' && <SeasonSwitcher />}
+      {pathname !== '/' && pathname !== '/athlete' && pathname !== '/hub' && <SeasonSwitcher />}
 
       {/* Bottom border */}
       <View className="h-px" style={{ backgroundColor: 'rgba(255,255,255,0.07)' }} />
