@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, Alert, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -294,7 +294,8 @@ function getSuggestedUpdates(tournament: Tournament, extracted: Record<string, u
 export default function EmailDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const ic = useIconColors();
-  const email = useSeasonStore((s) => s.forwardedEmails.find((e) => e.id === id));
+  const storeEmail = useSeasonStore((s) => s.forwardedEmails.find((e) => e.id === id));
+  const addForwardedEmail = useSeasonStore((s) => s.addForwardedEmail);
   const tournaments = useSeasonStore((s) => s.tournaments);
   const updateTournamentStore = useSeasonStore((s) => s.updateTournament);
   const updateForwardedEmail = useSeasonStore((s) => s.updateForwardedEmail);
@@ -302,14 +303,44 @@ export default function EmailDetailScreen() {
   const [showFullBody, setShowFullBody] = useState(false);
   const [appliedUpdates, setAppliedUpdates] = useState<Set<string>>(new Set());
   const [overrideMatch, setOverrideMatch] = useState<string>('');
+  const [fetchedEmail, setFetchedEmail] = useState<any>(null);
+  const [isFetching, setIsFetching] = useState(false);
+
+  // If email isn't in store, fetch directly from Supabase
+  useEffect(() => {
+    if (!storeEmail && id && isSupabaseConfigured && !fetchedEmail && !isFetching) {
+      setIsFetching(true);
+      supabase
+        .from('forwarded_emails')
+        .select('*')
+        .eq('id', id)
+        .single()
+        .then(({ data, error }) => {
+          if (data && !error) {
+            setFetchedEmail(data);
+            // Also add to store so it persists during this session
+            addForwardedEmail(data as any);
+          }
+          setIsFetching(false);
+        });
+    }
+  }, [id, storeEmail, fetchedEmail, isFetching]);
+
+  const email = storeEmail ?? fetchedEmail;
 
   if (!email) {
     return (
       <SafeAreaView className="flex-1 bg-warm-white dark:bg-bark items-center justify-center">
-        <Text className="text-lg text-stone">Email not found</Text>
-        <Pressable onPress={() => router.back()} className="mt-4">
-          <Text className="text-rally-600 font-semibold">Go back</Text>
-        </Pressable>
+        {isFetching ? (
+          <Text className="text-lg text-stone">Loading email...</Text>
+        ) : (
+          <>
+            <Text className="text-lg text-stone">Email not found</Text>
+            <Pressable onPress={() => router.back()} className="mt-4">
+              <Text className="text-rally-600 font-semibold">Go back</Text>
+            </Pressable>
+          </>
+        )}
       </SafeAreaView>
     );
   }
@@ -383,7 +414,6 @@ export default function EmailDetailScreen() {
       const { error } = await insertFlightBooking({
         tournament_id: activeMatch.id,
         created_by_user_id: user.id,
-        season_id: activeSeasonId ?? '',
         airline: String(d.airline ?? outbound?.airline ?? ''),
         confirmation_code: String(d.confirmation_number ?? d.confirmation_code ?? d.booking_reference ?? ''),
         departure_date: String(d.departure_date ?? outbound?.departure_date ?? ''),
@@ -419,7 +449,6 @@ export default function EmailDetailScreen() {
       const { error } = await insertHotelBooking({
         tournament_id: activeMatch.id,
         created_by_user_id: user.id,
-        season_id: activeSeasonId ?? '',
         hotel_name: String(d.hotel_name ?? ''),
         platform: 'Other',
         booking_name: String(d.hotel_name ?? ''),
@@ -430,9 +459,9 @@ export default function EmailDetailScreen() {
         cancellation_deadline: String(d.cancellation_deadline ?? ''),
         cost: d.total_cost ? Number(d.total_cost) : (d.nightly_rate ? Number(d.nightly_rate) : null),
         is_backup: false,
-        status: 'confirmed',
+        status: 'confirmed' as const,
         address: String(d.address ?? d.hotel_address ?? ''),
-      });
+      } as any);
       if (error) throw error;
       setSavedBooking('hotel');
       if (Platform.OS === 'web') window.alert('Hotel booking saved!');
@@ -502,8 +531,8 @@ export default function EmailDetailScreen() {
       const newAction = data?.action ?? email.action_taken;
 
       // Update the email record in DB
-      await supabase
-        .from('forwarded_emails')
+      await (supabase
+        .from('forwarded_emails') as any)
         .update({
           classification: newClassification,
           extracted_data: newExtractedData,
