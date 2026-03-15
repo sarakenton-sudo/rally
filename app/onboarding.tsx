@@ -893,6 +893,25 @@ export default function OnboardingScreen() {
                             style={{ ...INPUT_STYLE, marginBottom: 8 }}
                           />
                         )}
+                        <Pressable
+                          style={{
+                            backgroundColor: hasValue ? '#2A6B50' : '#264868',
+                            borderRadius: 10,
+                            paddingVertical: 10,
+                            alignItems: 'center',
+                            marginBottom: 8,
+                            flexDirection: 'row',
+                            justifyContent: 'center',
+                            gap: 6,
+                          }}
+                          className="active:opacity-80"
+                          onPress={() => toggleCredential(brand.key)}
+                        >
+                          <Ionicons name={hasValue ? 'checkmark-circle' : 'chevron-up'} size={16} color={hasValue ? '#FEFEFE' : '#9AB5CC'} />
+                          <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Bold', color: hasValue ? '#FEFEFE' : '#9AB5CC' }}>
+                            {hasValue ? 'Saved' : 'Done'}
+                          </Text>
+                        </Pressable>
                       </View>
                     )}
                   </View>
