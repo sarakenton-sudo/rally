@@ -1000,7 +1000,7 @@ export default function OnboardingScreen() {
         {step === 7 && (
           <View className="flex-1 px-6 pt-4">
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              <StepHeader icon="people" title="Co-Parent" subtitle="Add a co-admin" />
+              <StepHeader icon="people" title="Co-Parent or Admin" subtitle="Add someone who helps manage" />
 
               <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#C8D8E8', marginBottom: 20, lineHeight: 20 }}>
                 A co-parent or co-admin is someone who helps book travel or needs full visibility into tournament details.
