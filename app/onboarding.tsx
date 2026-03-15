@@ -10,148 +10,153 @@ import {
   TextInput,
   ActivityIndicator,
   Image,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
+import Animated, { useSharedValue, withTiming, useAnimatedStyle } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import * as Clipboard from 'expo-clipboard';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { updateAdminConfig } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/providers/AuthProvider';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { useSeasonStore } from '@/stores/useSeasonStore';
-import type { AdminConfig, Tournament, Athlete, Season } from '@/types/database';
+import { notifySuccess } from '@/lib/haptics';
+import type { AdminConfig, Tournament, Athlete, Season, ExternalLink } from '@/types/database';
 import { smartExtract as smartExtractOnboarding } from '@/lib/schedule-parser';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
-const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? '';
 
 const SEASON_OPTIONS = ['2025-2026', '2026-2027'];
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 9; // Steps 0-8
 
-// ---- Shared components (outside main component to avoid re-creation) ----
+// Brand styles for credential tiles
+const CREDENTIAL_BRANDS: { key: string; label: string; bg: string; icon: keyof typeof Ionicons.glyphMap; membershipOnly?: boolean }[] = [
+  { key: 'sportsrecruits', label: 'SportsRecruits', bg: '#1B4D7E', icon: 'school' },
+  { key: 'hudl', label: 'Hudl', bg: '#FF6600', icon: 'videocam' },
+  { key: 'instagram', label: 'Instagram', bg: '#E1306C', icon: 'logo-instagram' },
+  { key: 'university athlete', label: 'University Athlete', bg: '#E8520E', icon: 'trophy', membershipOnly: true },
+  { key: 'usa volleyball', label: 'USA Volleyball', bg: '#dc2626', icon: 'shield-checkmark', membershipOnly: true },
+];
+
+// Relationship chip options for guests
+const RELATIONSHIP_OPTIONS = ['Grandparent', 'Family', 'Other'];
+
+// ---- Shared sub-components ----
+
+function ProgressBar({ step }: { step: number }) {
+  const progress = useSharedValue(0);
+  progress.value = withTiming(step / (TOTAL_STEPS - 1), { duration: 350 });
+  const animStyle = useAnimatedStyle(() => ({
+    width: `${progress.value * 100}%`,
+  }));
+  return (
+    <View style={{ height: 4, backgroundColor: '#264868' }}>
+      <Animated.View style={[{ height: 4, backgroundColor: '#3B82B0', borderRadius: 2 }, animStyle]} />
+    </View>
+  );
+}
 
 function StepHeader({ icon, title, subtitle }: { icon: keyof typeof Ionicons.glyphMap; title: string; subtitle: string }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-      <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: '#264868', alignItems: 'center', justifyContent: 'center' }}>
         <Ionicons name={icon} size={22} color="#FEFEFE" />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{ fontSize: 24, fontFamily: 'Nunito-Black', color: '#FEFEFE' }}>{title}</Text>
-        <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.6)' }}>{subtitle}</Text>
+        <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#D4E3F0' }}>{subtitle}</Text>
       </View>
     </View>
   );
 }
 
-function FieldLabel({ label, optional }: { label: string; optional?: boolean }) {
+function SkipButton({ onPress }: { onPress: () => void }) {
   return (
-    <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#FEFEFE', marginBottom: 6 }}>
-      {label}{optional ? <Text style={{ fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.45)' }}> (optional)</Text> : ''}
-    </Text>
-  );
-}
-
-function NavButtons({ onBack, onNext, nextLabel = 'Continue', nextDisabled = false, showSkip = false, onSkip }: {
-  onBack: () => void; onNext: () => void; nextLabel?: string; nextDisabled?: boolean; showSkip?: boolean; onSkip?: () => void;
-}) {
-  return (
-    <View style={{ marginTop: 'auto', paddingHorizontal: 8, paddingBottom: 16 }}>
-      {showSkip && (
-        <Pressable style={{ paddingVertical: 8, alignItems: 'center', marginBottom: 8 }} className="active:opacity-70" onPress={onSkip}>
-          <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontFamily: 'NunitoSans-Regular' }}>Skip for now</Text>
-        </Pressable>
-      )}
-      <View style={{ flexDirection: 'row', gap: 12 }}>
-        <Pressable
-          style={{ paddingVertical: 16, paddingHorizontal: 24, borderRadius: 14, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)' }}
-          className="active:opacity-70"
-          onPress={onBack}
-        >
-          <Ionicons name="arrow-back" size={20} color="#FEFEFE" />
-        </Pressable>
-        <Pressable
-          style={{
-            flex: 1,
-            backgroundColor: '#3B82B0',
-            borderRadius: 14,
-            paddingVertical: 16,
-            alignItems: 'center',
-            opacity: nextDisabled ? 0.4 : 1,
-            shadowColor: '#3B82B0',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.45,
-            shadowRadius: 20,
-            elevation: 6,
-          }}
-          className="active:opacity-80"
-          onPress={onNext}
-          disabled={nextDisabled}
-        >
-          <Text style={{ fontSize: 15, fontFamily: 'Nunito-ExtraBold', color: '#FEFEFE' }}>{nextLabel}</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
-function OptionCard({ icon, title, desc, selected, onPress, badge }: {
-  icon: keyof typeof Ionicons.glyphMap; title: string; desc: string; selected: boolean; onPress: () => void; badge?: string;
-}) {
-  return (
-    <Pressable
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 16,
-        padding: 16,
-        borderRadius: 20,
-        borderWidth: 1.5,
-        borderColor: selected ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.12)',
-        backgroundColor: selected ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)',
-        marginBottom: 12,
-      }}
-      onPress={onPress}
-    >
-      <View style={{
-        width: 44, height: 44, borderRadius: 14,
-        alignItems: 'center', justifyContent: 'center',
-        backgroundColor: selected ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)',
-      }}>
-        <Ionicons name={icon} size={22} color={selected ? '#FEFEFE' : 'rgba(255,255,255,0.55)'} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-Bold', color: selected ? '#FEFEFE' : 'rgba(255,255,255,0.7)' }}>{title}</Text>
-          {badge && (
-            <View style={{ backgroundColor: 'rgba(251,146,60,0.25)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-              <Text style={{ fontSize: 9, fontFamily: 'NunitoSans-Bold', color: '#FB923C', letterSpacing: 0.5 }}>{badge}</Text>
-            </View>
-          )}
-        </View>
-        <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: selected ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.35)', marginTop: 2 }}>{desc}</Text>
-      </View>
-      {selected && <Ionicons name="checkmark-circle" size={22} color="#6A9E8A" />}
+    <Pressable style={{ paddingVertical: 8, alignItems: 'center', marginBottom: 8 }} className="active:opacity-70" onPress={onPress}>
+      <Text style={{ fontSize: 13, color: '#C8D8E8', fontFamily: 'NunitoSans-Regular' }}>I'll do this later</Text>
     </Pressable>
   );
 }
 
-function SummaryRow({ icon, text, color }: { icon: keyof typeof Ionicons.glyphMap; text: string; color?: string }) {
+function FinishButton({ onPress, saving }: { onPress: () => void; saving: boolean }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-      <Ionicons name={icon} size={18} color={color ?? '#FEFEFE'} />
-      <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Regular', color: '#FEFEFE' }}>{text}</Text>
-    </View>
+    <Pressable
+      style={{
+        backgroundColor: 'rgba(106,158,138,0.2)',
+        borderRadius: 14,
+        paddingVertical: 14,
+        alignItems: 'center',
+        borderWidth: 1.5,
+        borderColor: 'rgba(106,158,138,0.35)',
+        marginBottom: 8,
+        opacity: saving ? 0.6 : 1,
+      }}
+      className="active:opacity-80"
+      onPress={onPress}
+      disabled={saving}
+    >
+      {saving ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <ActivityIndicator size="small" color="#6A9E8A" />
+          <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#6A9E8A' }}>Setting up...</Text>
+        </View>
+      ) : (
+        <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#6A9E8A' }}>Finish Setup</Text>
+      )}
+    </Pressable>
+  );
+}
+
+function ContinueButton({ onPress, disabled, label = 'Continue' }: { onPress: () => void; disabled?: boolean; label?: string }) {
+  return (
+    <Pressable
+      style={{
+        backgroundColor: '#3B82B0',
+        borderRadius: 14,
+        paddingVertical: 16,
+        alignItems: 'center',
+        opacity: disabled ? 0.4 : 1,
+        shadowColor: '#3B82B0',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.45,
+        shadowRadius: 20,
+        elevation: 6,
+      }}
+      className="active:opacity-80"
+      onPress={onPress}
+      disabled={disabled}
+    >
+      <Text style={{ fontSize: 15, fontFamily: 'Nunito-ExtraBold', color: '#FEFEFE' }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function BackButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      style={{ paddingVertical: 16, paddingHorizontal: 24, borderRadius: 14, borderWidth: 1.5, borderColor: '#3A6490' }}
+      className="active:opacity-70"
+      onPress={onPress}
+    >
+      <Ionicons name="arrow-back" size={20} color="#FEFEFE" />
+    </Pressable>
   );
 }
 
 // Input style constants
 const INPUT_STYLE = {
-  backgroundColor: 'rgba(255,255,255,0.06)',
+  backgroundColor: '#284B6F',
   borderWidth: 1.5,
-  borderColor: 'rgba(255,255,255,0.12)',
+  borderColor: '#3A6490',
   borderRadius: 14,
   paddingHorizontal: 16,
   paddingVertical: 12,
@@ -170,38 +175,52 @@ export default function OnboardingScreen() {
   const { refresh } = useDataRefresh();
 
   // Step 1: Athlete
-  const [athleteName, setAthleteName] = useState('');
+  const [athleteFirstName, setAthleteFirstName] = useState('');
+  const [athleteLastName, setAthleteLastName] = useState('');
 
-  // Step 2: Season
+  // Computed display name (first + last) — used for labels throughout wizard
+  const athleteName = [athleteFirstName.trim(), athleteLastName.trim()].filter(Boolean).join(' ');
+
+  // Step 2: Season / Team
   const [clubName, setClubName] = useState('');
   const [teamName, setTeamName] = useState('');
   const [seasonYear, setSeasonYear] = useState(SEASON_OPTIONS[0]);
-  const [teamCode, setTeamCode] = useState('');
-  const [streamingUrl, setStreamingUrl] = useState('');
 
-  // Step 3: Schedule
+  // Step 3: Tournaments (schedule extraction)
   const [pasteText, setPasteText] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedTournaments, setExtractedTournaments] = useState<any[]>([]);
   const [extractError, setExtractError] = useState('');
 
-  // Step 4: Email Forwarding
-  const [forwardAddressCopied, setForwardAddressCopied] = useState(false);
+  // Step 4: Travel extraction
+  const [travelPasteText, setTravelPasteText] = useState('');
+  const [isExtractingTravel, setIsExtractingTravel] = useState(false);
+  const [extractedBookings, setExtractedBookings] = useState<any[]>([]);
+  const [travelExtractError, setTravelExtractError] = useState('');
 
-  // Step 5: Additional Athletes
-  const [additionalAthletes, setAdditionalAthletes] = useState<{ firstName: string }[]>([]);
+  // Step 5: Credentials
+  const [credentials, setCredentials] = useState<Record<string, { username: string; password: string }>>({});
+  const [expandedCredential, setExpandedCredential] = useState<string | null>(null);
 
   // Step 6: Guests
   const [guests, setGuests] = useState<GuestEntry[]>([{ name: '', relation: 'Grandparent', phone: '' }]);
 
+  // Step 7: Co-parent
+  const [coParentEmail, setCoParentEmail] = useState('');
+  const [coParentPermission, setCoParentPermission] = useState<'view' | 'manage'>('view');
+
+  // Step 8: Athlete login
+  const [athleteLoginEmail, setAthleteLoginEmail] = useState('');
+
+  // Email forwarding
+  const [forwardAddressCopied, setForwardAddressCopied] = useState(false);
+
   const [saving, setSaving] = useState(false);
   const [finishError, setFinishError] = useState('');
 
-  const goTo = (index: number) => {
-    setStep(index);
-  };
+  const goTo = (index: number) => setStep(index);
 
-  // ---- Schedule extraction ----
+  // ---- Schedule extraction (reused from old step 3) ----
   const handleExtractSchedule = async () => {
     const trimmed = pasteText.trim();
     if (!trimmed) { setExtractError('Paste your schedule text above first.'); return; }
@@ -230,7 +249,50 @@ export default function OnboardingScreen() {
     finally { setIsExtracting(false); }
   };
 
-  // ---- Helpers ----
+  // ---- Travel extraction (from paste-travel.tsx pattern) ----
+  const handleExtractTravel = async () => {
+    const trimmed = travelPasteText.trim();
+    if (!trimmed) { setTravelExtractError('Paste a hotel or flight confirmation above first.'); return; }
+    setIsExtractingTravel(true); setTravelExtractError(''); setExtractedBookings([]);
+    try {
+      let bookings: any[] = [];
+      if (isSupabaseConfigured) {
+        const { data, error } = await supabase.functions.invoke('extract-travel', {
+          body: { text: trimmed },
+        });
+        if (error) throw new Error(error.message);
+        bookings = data?.bookings || [];
+      } else {
+        // Simple mock for dev
+        bookings = mockExtractTravel(trimmed);
+      }
+      if (bookings.length === 0) setTravelExtractError('No bookings found. Try pasting a different format.');
+      else setExtractedBookings(bookings);
+    } catch (err: any) { setTravelExtractError(err.message || 'Something went wrong.'); }
+    finally { setIsExtractingTravel(false); }
+  };
+
+  const handleCopyForwardAddress = () => {
+    if (Platform.OS === 'web') {
+      navigator.clipboard.writeText('plans@rally-hub.com');
+    } else {
+      Clipboard.setStringAsync('plans@rally-hub.com');
+    }
+    setForwardAddressCopied(true);
+    setTimeout(() => setForwardAddressCopied(false), 2000);
+  };
+
+  const toggleCredential = (key: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedCredential(expandedCredential === key ? null : key);
+  };
+
+  const updateCredential = (key: string, field: 'username' | 'password', value: string) => {
+    setCredentials((prev) => ({
+      ...prev,
+      [key]: { ...prev[key] || { username: '', password: '' }, [field]: value },
+    }));
+  };
 
   const addGuest = () => {
     setGuests([...guests, { name: '', relation: 'Grandparent', phone: '' }]);
@@ -238,12 +300,13 @@ export default function OnboardingScreen() {
 
   // ---- FINISH ----
   const handleFinish = async () => {
+    if (!athleteFirstName.trim()) { Alert.alert('Athlete name required', "Please go back and enter your athlete's first name."); goTo(1); return; }
     if (!teamName.trim()) { Alert.alert('Team name required', 'Please go back and enter your team name.'); goTo(2); return; }
-    setSaving(true);
+    setSaving(true); setFinishError('');
 
     if (isSupabaseConfigured && user) {
       try {
-        // Use SECURITY DEFINER RPC to bypass RLS for all onboarding inserts
+        // 1. Setup onboarding RPC
         const tournamentPayload = extractedTournaments.map((t) => ({
           name: t.name, start_date: t.start_date, end_date: t.end_date,
           location_city: t.location_city || null,
@@ -254,22 +317,18 @@ export default function OnboardingScreen() {
           name: g.name.trim(), relationship: g.relation, phone: g.phone.trim() || null,
         }));
 
-        const additionalPayload = additionalAthletes.filter((a) => a.firstName.trim()).map((a) => ({
-          firstName: a.firstName.trim(),
-        }));
-
         const { data: rpcResult, error: rpcError } = await supabase.rpc('setup_onboarding', {
-          p_athlete_name: athleteName.trim(),
+          p_athlete_name: [athleteFirstName.trim(), athleteLastName.trim()].filter(Boolean).join(' '),
           p_team_name: teamName.trim(),
           p_club_name: clubName.trim() || null,
           p_season_year: seasonYear,
-          p_team_code: teamCode.trim() || null,
-          p_streaming_url: streamingUrl.trim() || null,
+          p_team_code: null,
+          p_streaming_url: null,
           p_gmail_connected: false,
           p_gmail_email: null,
           p_trusted_sender_emails: [],
           p_tournaments: tournamentPayload,
-          p_additional_athletes: additionalPayload,
+          p_additional_athletes: [],
           p_guests: guestPayload,
         });
 
@@ -277,14 +336,14 @@ export default function OnboardingScreen() {
         const result = rpcResult as { success: boolean; error?: string; athlete_id?: string; season_id?: string; config_id?: string };
         if (!result.success) throw new Error(result.error ?? 'Onboarding setup failed');
 
-        // Directly populate the store with the data we just created
+        // 2. Populate Zustand store
         const store = useSeasonStore.getState();
         store.setAdminConfig({
           id: result.config_id ?? user.id,
           user_id: user.id,
           club_email_domain: null,
           rally_forward_address: 'plans@rally-hub.com',
-          trusted_sender_emails: trustedEmails,
+          trusted_sender_emails: [],
           vip_sender_emails: [],
           notification_preferences: {
             tournament_reminders: true, cancellation_deadlines: true,
@@ -293,7 +352,7 @@ export default function OnboardingScreen() {
           ical_feed_token: '',
           youtube_channel_id: null,
           default_streaming_platform: null,
-          default_stream_url: streamingUrl.trim() || null,
+          default_stream_url: null,
           travel_sync_emails: [],
           gmail_connected: false,
           gmail_email: null,
@@ -304,21 +363,20 @@ export default function OnboardingScreen() {
         store.setActiveSeasonId(result.season_id!);
         store.setAthletes([{
           id: result.athlete_id!, user_id: null,
-          first_name: athleteName.trim() || 'My Athlete', last_name: null,
+          first_name: athleteFirstName.trim() || 'My Athlete', last_name: athleteLastName.trim() || null,
           can_edit: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
         }]);
         store.setSeasons([{
           id: result.season_id!, athlete_id: result.athlete_id!,
           team_name: teamName.trim(), club_name: clubName.trim() || null,
           season_year: seasonYear, sport: 'volleyball',
-          team_code: teamCode.trim() || null, schedule_import_source: null,
+          team_code: null, schedule_import_source: null,
           schedule_import_connected: false, is_active: true,
           created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
         }]);
-        // Also populate tournaments we just created
         if (extractedTournaments.length > 0) {
           store.setTournaments(extractedTournaments.map((t, i) => ({
-            id: `pending-${i}`, // temporary IDs until refresh
+            id: `pending-${i}`,
             season_id: result.season_id!,
             name: t.name,
             start_date: t.start_date,
@@ -332,10 +390,51 @@ export default function OnboardingScreen() {
         }
         store.setLoading(false);
 
-        // Navigate to dashboard, then refresh from DB to get real IDs
+        // 3. Fire-and-forget: credentials → external_links
+        if (Object.keys(credentials).length > 0) {
+          const externalLinks: ExternalLink[] = Object.entries(credentials)
+            .filter(([, cred]) => cred.username.trim() || cred.password.trim())
+            .map(([key, cred]) => {
+              const brand = CREDENTIAL_BRANDS.find((b) => b.key === key);
+              return {
+                label: brand?.label || key,
+                url: '',
+                icon_name: String(brand?.icon || 'globe'),
+                username: cred.username.trim() || null,
+                password: cred.password.trim() || null,
+              };
+            });
+          if (externalLinks.length > 0) {
+            updateAdminConfig(result.config_id ?? user.id, { external_links: externalLinks }).catch(() => {});
+          }
+        }
+
+        // 4. Fire-and-forget: co-parent invite
+        if (coParentEmail.trim()) {
+          supabase.from('athlete_invites').insert({
+            inviter_id: user.id,
+            athlete_id: result.athlete_id!,
+            email: coParentEmail.trim().toLowerCase(),
+            invite_type: 'admin',
+            permission: coParentPermission,
+          } as any).then(() => {}).catch(() => {});
+        }
+
+        // 5. Fire-and-forget: athlete invite
+        if (athleteLoginEmail.trim()) {
+          supabase.from('athlete_invites').insert({
+            inviter_id: user.id,
+            athlete_id: result.athlete_id!,
+            email: athleteLoginEmail.trim().toLowerCase(),
+            invite_type: 'athlete',
+            permission: 'view',
+          } as any).then(() => {}).catch(() => {});
+        }
+
+        // 6. Haptic + navigate
+        notifySuccess();
         console.log('[Onboarding] Setup complete, navigating to dashboard');
         router.replace('/');
-        // Delay refresh so nav gating doesn't see storeLoading=true and block
         setTimeout(() => { refresh().catch(() => {}); }, 1500);
       } catch (err: any) {
         setSaving(false);
@@ -349,60 +448,55 @@ export default function OnboardingScreen() {
         return;
       }
     } else {
+      // Dev mode — mock setup
       const store = useSeasonStore.getState();
       const mockSeasonId = 'season-dev-001';
       const mockAthleteId = 'athlete-dev-001';
       store.setAdminConfig({
         id: 'onboarding-dev', user_id: 'dev', club_email_domain: null, rally_forward_address: 'plans@rally-hub.com',
-        trusted_sender_emails: trustedEmails, vip_sender_emails: [], notification_preferences: {
+        trusted_sender_emails: [], vip_sender_emails: [], notification_preferences: {
           tournament_reminders: true, cancellation_deadlines: true, email_arrivals: true, rsvp_responses: true, schedule_changes: true,
         }, ical_feed_token: '', youtube_channel_id: null, default_streaming_platform: null,
-        default_stream_url: streamingUrl.trim() || null, travel_sync_emails: [], gmail_connected: false, gmail_email: null,
+        default_stream_url: null, travel_sync_emails: [], gmail_connected: false, gmail_email: null,
         external_links: [], active_season_id: mockSeasonId, created_at: new Date().toISOString(),
       });
-      store.setAthletes([{ id: mockAthleteId, user_id: null, first_name: athleteName.trim() || 'My Athlete', last_name: null, can_edit: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
-      store.setSeasons([{ id: mockSeasonId, athlete_id: mockAthleteId, team_name: teamName.trim(), club_name: clubName.trim() || null, season_year: seasonYear, sport: 'volleyball', team_code: teamCode.trim() || null, schedule_import_source: null, schedule_import_connected: false, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
+      store.setAthletes([{ id: mockAthleteId, user_id: null, first_name: athleteFirstName.trim() || 'My Athlete', last_name: athleteLastName.trim() || null, can_edit: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
+      store.setSeasons([{ id: mockSeasonId, athlete_id: mockAthleteId, team_name: teamName.trim(), club_name: clubName.trim() || null, season_year: seasonYear, sport: 'volleyball', team_code: null, schedule_import_source: null, schedule_import_connected: false, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
       store.setActiveSeasonId(mockSeasonId);
+      notifySuccess();
       router.replace('/');
     }
     setSaving(false);
   };
 
+  // Can finish from any skippable step (3-8)
+  const canFinish = step >= 3;
+
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: '#1E3A5F' }}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
-        {/* Progress dots */}
-        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingTop: 16, paddingBottom: 8, gap: 8 }}>
-          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-            <View key={i} style={{
-              borderRadius: 999,
-              width: i === step ? 32 : 8,
-              height: 8,
-              backgroundColor: i === step ? '#3B82B0' : i < step ? 'rgba(59,130,176,0.5)' : 'rgba(255,255,255,0.12)',
-            }} />
-          ))}
-        </View>
+        {/* Animated progress bar */}
+        <ProgressBar step={step} />
 
-        {/* Pages — conditional render to avoid focus issues on web */}
+        {/* ========== Step 0: Welcome ========== */}
         {step === 0 && (
           <View className="flex-1 justify-center items-center px-8">
             <Image source={require('@/assets/images/rallyhub_lockup_white.png')} style={{ width: 220, height: 64 }} resizeMode="contain" />
-            <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: 12, marginBottom: 8, maxWidth: 280, lineHeight: 22 }}>
-              Your family's command center for travel volleyball. Let's get you set up — it only takes a minute.
+            <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-SemiBold', color: '#D4E3F0', textAlign: 'center', marginTop: 12, marginBottom: 8, maxWidth: 280 }}>
+              Your hub for everything volleyball.
             </Text>
 
-            <View style={{ marginTop: 24, marginBottom: 40, gap: 14 }}>
+            <View style={{ marginTop: 24, marginBottom: 40, gap: 16 }}>
               {[
-                { icon: 'person' as const, text: 'Set up your athlete' },
-                { icon: 'trophy' as const, text: 'Add your season & schedule' },
-                { icon: 'mail' as const, text: 'Connect travel email' },
-                { icon: 'heart' as const, text: 'Invite family' },
+                { icon: 'trophy' as const, text: 'Tournaments, travel, and schedules in one place' },
+                { icon: 'key' as const, text: 'Save logins and credentials you always forget' },
+                { icon: 'heart' as const, text: 'Keep grandparents and family in the loop' },
               ].map((item) => (
                 <View key={item.text} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(59,130,176,0.15)', alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name={item.icon} size={16} color="#7DBDD9" />
                   </View>
-                  <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-SemiBold', color: 'rgba(255,255,255,0.8)' }}>{item.text}</Text>
+                  <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Regular', color: '#E0ECF5', flex: 1 }}>{item.text}</Text>
                 </View>
               ))}
             </View>
@@ -417,101 +511,134 @@ export default function OnboardingScreen() {
             >
               <Text style={{ fontSize: 16, fontFamily: 'Nunito-ExtraBold', color: '#FEFEFE' }}>Let's Go</Text>
             </Pressable>
+
+            <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-SemiBold', color: '#9AB5CC', textAlign: 'center', marginTop: 24, maxWidth: 280 }}>
+              RALLY is for tournaments, not practices.{'\n'}Plenty of apps exist for that.
+            </Text>
           </View>
         )}
 
+        {/* ========== Step 1: Create Athlete ========== */}
         {step === 1 && (
           <View className="flex-1 px-6 pt-4">
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <StepHeader icon="person" title="Your Athlete" subtitle="Who's playing?" />
 
-              <View style={{ marginBottom: 16 }}>
-                <FieldLabel label="Athlete Name" />
-                <TextInput value={athleteName} onChangeText={setAthleteName} placeholder="e.g. Sophie Kenton" placeholderTextColor="rgba(255,255,255,0.3)" style={INPUT_STYLE} />
-              </View>
+              <Text style={{ fontSize: 17, fontFamily: 'NunitoSans-SemiBold', color: '#E0ECF5', marginBottom: 12 }}>
+                What's your athlete's name?
+              </Text>
 
-              <View style={{ backgroundColor: 'rgba(59,130,176,0.1)', borderRadius: 20, padding: 16, borderWidth: 1.5, borderColor: 'rgba(59,130,176,0.2)' }}>
-                <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Regular', color: '#FEFEFE', lineHeight: 22 }}>
-                  This is the player whose tournaments, travel, and schedule you'll be managing. You can add more players later.
-                </Text>
-              </View>
+              <TextInput
+                value={athleteFirstName}
+                onChangeText={setAthleteFirstName}
+                placeholder="First name"
+                placeholderTextColor="#7A9AB5"
+                style={{ ...INPUT_STYLE, fontSize: 20, paddingVertical: 16, marginBottom: 12 }}
+                autoFocus
+              />
+
+              <TextInput
+                value={athleteLastName}
+                onChangeText={setAthleteLastName}
+                placeholder="Last name (optional)"
+                placeholderTextColor="#7A9AB5"
+                style={{ ...INPUT_STYLE, fontSize: 20, paddingVertical: 16 }}
+              />
+
+              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#B0C4D8', marginTop: 12 }}>
+                You can add more players later in Settings.
+              </Text>
             </ScrollView>
 
-            <NavButtons onBack={() => goTo(0)} onNext={() => {
-              if (!athleteName.trim()) { Alert.alert('Name required', "Enter your athlete's first name."); return; }
-              goTo(2);
-            }} nextDisabled={!athleteName.trim()} />
+            <View style={{ marginTop: 'auto', paddingBottom: 16, gap: 12 }}>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <BackButton onPress={() => goTo(0)} />
+                <View style={{ flex: 1 }}>
+                  <ContinueButton
+                    onPress={() => {
+                      if (!athleteFirstName.trim()) { Alert.alert('Name required', "Enter your athlete's first name."); return; }
+                      goTo(2);
+                    }}
+                    disabled={!athleteFirstName.trim()}
+                  />
+                </View>
+              </View>
+            </View>
           </View>
         )}
 
+        {/* ========== Step 2: Season / Team ========== */}
         {step === 2 && (
           <View className="flex-1 px-6 pt-4">
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              <StepHeader icon="trophy" title="Season Details" subtitle={`${athleteName.trim() || 'Your athlete'}'s team`} />
+              <StepHeader icon="trophy" title="Season & Team" subtitle={`${athleteName.trim()}'s team info`} />
 
               <View style={{ marginBottom: 16 }}>
-                <FieldLabel label="Club Name" />
-                <TextInput value={clubName} onChangeText={setClubName} placeholder="e.g. Austin Juniors Volleyball" placeholderTextColor="rgba(255,255,255,0.3)" style={INPUT_STYLE} />
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#FEFEFE', marginBottom: 6 }}>Team Name</Text>
+                <TextInput value={teamName} onChangeText={setTeamName} placeholder="e.g. AJV Travel 14u" placeholderTextColor="#7A9AB5" style={INPUT_STYLE} />
               </View>
 
               <View style={{ marginBottom: 16 }}>
-                <FieldLabel label="Team Name" />
-                <TextInput value={teamName} onChangeText={setTeamName} placeholder="e.g. AJV Travel 14u" placeholderTextColor="rgba(255,255,255,0.3)" style={INPUT_STYLE} />
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#FEFEFE', marginBottom: 6 }}>
+                  Club Name <Text style={{ fontFamily: 'NunitoSans-Regular', color: '#9AB5CC' }}>(optional)</Text>
+                </Text>
+                <TextInput value={clubName} onChangeText={setClubName} placeholder="e.g. Austin Juniors Volleyball" placeholderTextColor="#7A9AB5" style={INPUT_STYLE} />
               </View>
 
               <View style={{ marginBottom: 16 }}>
-                <FieldLabel label="Season" />
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#FEFEFE', marginBottom: 6 }}>Season</Text>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   {SEASON_OPTIONS.map((opt) => (
                     <Pressable key={opt} style={{
                       flex: 1, paddingVertical: 12, borderRadius: 14, alignItems: 'center',
-                      backgroundColor: seasonYear === opt ? '#3B82B0' : 'rgba(255,255,255,0.04)',
-                      borderWidth: 1.5, borderColor: seasonYear === opt ? '#3B82B0' : 'rgba(255,255,255,0.12)',
+                      backgroundColor: seasonYear === opt ? '#3B82B0' : '#264868',
+                      borderWidth: 1.5, borderColor: seasonYear === opt ? '#3B82B0' : '#3A6490',
                     }} onPress={() => setSeasonYear(opt)}>
-                      <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: seasonYear === opt ? '#FEFEFE' : 'rgba(255,255,255,0.6)' }}>{opt}</Text>
+                      <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: seasonYear === opt ? '#FEFEFE' : '#B0C4D8' }}>{opt}</Text>
                     </Pressable>
                   ))}
                 </View>
               </View>
-
-              <View style={{ marginBottom: 16 }}>
-                <FieldLabel label="Team Ticket Code" optional />
-                <TextInput value={teamCode} onChangeText={setTeamCode} placeholder="e.g. AJV14U" placeholderTextColor="rgba(255,255,255,0.3)" autoCapitalize="characters" style={{ ...INPUT_STYLE, letterSpacing: 2 }} />
-              </View>
-
-              <View style={{ marginBottom: 16 }}>
-                <FieldLabel label="Streaming URL" optional />
-                <TextInput value={streamingUrl} onChangeText={setStreamingUrl} placeholder="e.g. https://youtube.com/@yourchannel" placeholderTextColor="rgba(255,255,255,0.3)" autoCapitalize="none" keyboardType="url" style={INPUT_STYLE} />
-              </View>
             </ScrollView>
 
-            <NavButtons onBack={() => goTo(1)} onNext={() => {
-              if (!teamName.trim()) { Alert.alert('Team name required', 'Please enter your team name.'); return; }
-              goTo(3);
-            }} nextDisabled={!teamName.trim()} />
+            <View style={{ marginTop: 'auto', paddingBottom: 16, gap: 12 }}>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <BackButton onPress={() => goTo(1)} />
+                <View style={{ flex: 1 }}>
+                  <ContinueButton
+                    onPress={() => {
+                      if (!teamName.trim()) { Alert.alert('Team name required', 'Please enter your team name.'); return; }
+                      goTo(3);
+                    }}
+                    disabled={!teamName.trim()}
+                  />
+                </View>
+              </View>
+            </View>
           </View>
         )}
 
+        {/* ========== Step 3: Add Tournaments ========== */}
         {step === 3 && (
           <View className="flex-1 px-6 pt-4">
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              <StepHeader icon="calendar" title="Tournament Schedule" subtitle="Add your upcoming tournaments" />
+              <StepHeader icon="calendar" title="Tournaments" subtitle="Add your upcoming tournaments" />
 
-              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>
+              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#C8D8E8', marginBottom: 16 }}>
                 Paste a coach message, email, or tournament list and we'll extract the details.
               </Text>
 
               <TextInput
                 value={pasteText} onChangeText={setPasteText} multiline textAlignVertical="top"
                 placeholder={"Paste schedule here...\n\ne.g. Lonestar Classic - Jan 17-19, 2026 - Dallas, TX"}
-                placeholderTextColor="rgba(255,255,255,0.2)"
+                placeholderTextColor="#7A9AB5"
                 style={{ ...INPUT_STYLE, minHeight: 120, marginBottom: 12, paddingTop: 12 }}
               />
 
               <Pressable
                 style={{
                   borderRadius: 14, paddingVertical: 12, alignItems: 'center', marginBottom: 16,
-                  backgroundColor: isExtracting || !pasteText.trim() ? 'rgba(255,255,255,0.06)' : '#3B82B0',
+                  backgroundColor: isExtracting || !pasteText.trim() ? '#264868' : '#3B82B0',
                   shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: !pasteText.trim() ? 0 : 0.45, shadowRadius: 20,
                 }}
                 onPress={handleExtractSchedule} disabled={isExtracting || !pasteText.trim()}
@@ -522,7 +649,7 @@ export default function OnboardingScreen() {
                     <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#FEFEFE' }}>Extracting...</Text>
                   </View>
                 ) : (
-                  <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: !pasteText.trim() ? 'rgba(255,255,255,0.2)' : '#FEFEFE' }}>Extract Tournaments</Text>
+                  <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: !pasteText.trim() ? '#5A7A95' : '#FEFEFE' }}>Extract Tournaments</Text>
                 )}
               </Pressable>
 
@@ -541,13 +668,13 @@ export default function OnboardingScreen() {
                     </Text>
                   </View>
                   {extractedTournaments.map((t, i) => (
-                    <View key={i} style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(106,158,138,0.2)', borderRadius: 14, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View key={i} style={{ backgroundColor: '#264868', borderWidth: 1, borderColor: 'rgba(106,158,138,0.2)', borderRadius: 14, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                       <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(106,158,138,0.15)', alignItems: 'center', justifyContent: 'center' }}>
                         <Ionicons name="trophy" size={18} color="#6A9E8A" />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Bold', color: '#FEFEFE' }}>{t.name}</Text>
-                        <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
+                        <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Regular', color: '#C8D8E8', marginTop: 2 }}>
                           {t.start_date}{t.end_date !== t.start_date ? ` → ${t.end_date}` : ''}{t.location_city ? `  •  ${t.location_city}` : ''}
                         </Text>
                       </View>
@@ -557,234 +684,441 @@ export default function OnboardingScreen() {
                 </View>
               )}
 
-              {/* LeagueApps — Coming Soon */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, padding: 16, borderRadius: 20, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.06)', marginBottom: 12, opacity: 0.4 }}>
-                <View style={{ width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.04)' }}>
-                  <Ionicons name="globe" size={22} color="rgba(255,255,255,0.3)" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-Bold', color: 'rgba(255,255,255,0.4)' }}>LeagueApps Import</Text>
-                    <View style={{ backgroundColor: 'rgba(251,146,60,0.25)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-                      <Text style={{ fontSize: 9, fontFamily: 'NunitoSans-Bold', color: '#FB923C', letterSpacing: 0.5 }}>COMING SOON</Text>
-                    </View>
-                  </View>
-                  <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.2)', marginTop: 2 }}>Auto-sync from LeagueApps</Text>
+              {/* Forward email hint */}
+              <View style={{ backgroundColor: '#1E4468', borderWidth: 1.5, borderColor: '#2E5A82', borderRadius: 16, padding: 16, marginBottom: 16 }}>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#D4E3F0', marginBottom: 8 }}>
+                  Or forward an email to:
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text selectable style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#7DBDD9', flex: 1 }}>
+                    plans@rally-hub.com
+                  </Text>
+                  <Pressable
+                    style={{ backgroundColor: forwardAddressCopied ? 'rgba(106,158,138,0.2)' : 'rgba(59,130,176,0.2)', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                    className="active:opacity-70"
+                    onPress={handleCopyForwardAddress}
+                  >
+                    <Ionicons name={forwardAddressCopied ? 'checkmark' : 'copy-outline'} size={14} color={forwardAddressCopied ? '#6A9E8A' : '#7DBDD9'} />
+                    <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: forwardAddressCopied ? '#6A9E8A' : '#7DBDD9' }}>
+                      {forwardAddressCopied ? 'Copied!' : 'Copy'}
+                    </Text>
+                  </Pressable>
                 </View>
               </View>
             </ScrollView>
-            <NavButtons onBack={() => goTo(2)} onNext={() => goTo(4)} showSkip onSkip={() => goTo(4)} />
+
+            <View style={{ marginTop: 'auto', paddingBottom: 16, gap: 8 }}>
+              {finishError ? (
+                <View style={{ backgroundColor: 'rgba(239,68,68,0.15)', borderRadius: 14, padding: 12, marginBottom: 4, borderWidth: 1.5, borderColor: 'rgba(239,68,68,0.3)' }}>
+                  <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-SemiBold', color: '#fca5a5', textAlign: 'center' }}>{finishError}</Text>
+                </View>
+              ) : null}
+              <FinishButton onPress={handleFinish} saving={saving} />
+              <SkipButton onPress={() => goTo(4)} />
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <BackButton onPress={() => goTo(2)} />
+                <View style={{ flex: 1 }}>
+                  <ContinueButton onPress={() => goTo(4)} />
+                </View>
+              </View>
+            </View>
           </View>
         )}
 
+        {/* ========== Step 4: Add Travel ========== */}
         {step === 4 && (
           <View className="flex-1 px-6 pt-4">
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              <StepHeader icon="mail" title="Email Forwarding" subtitle="Forward travel emails to RALLY" />
+              <StepHeader icon="airplane" title="Travel" subtitle="Add hotel or flight bookings" />
 
-              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.5)', marginBottom: 20, lineHeight: 20 }}>
-                Forward hotel confirmations, flight bookings, and tournament emails to your RALLY address. Our AI will automatically extract the details.
+              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#C8D8E8', marginBottom: 16 }}>
+                Paste a hotel or flight confirmation and we'll extract the details.
               </Text>
 
-              {/* Forwarding address card */}
-              <View style={{ backgroundColor: 'rgba(59,130,176,0.12)', borderWidth: 1.5, borderColor: 'rgba(59,130,176,0.3)', borderRadius: 20, padding: 20, marginBottom: 20 }}>
-                <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: 'rgba(255,255,255,0.5)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Your Forwarding Address</Text>
-                <Text selectable style={{ fontSize: 16, fontFamily: 'NunitoSans-Bold', color: '#7DBDD9', marginBottom: 12 }}>
-                  plans@rally.app
-                </Text>
-                <Pressable
-                  style={{
-                    backgroundColor: forwardAddressCopied ? 'rgba(106,158,138,0.2)' : 'rgba(59,130,176,0.2)',
-                    borderRadius: 12, paddingVertical: 10, alignItems: 'center',
-                    flexDirection: 'row', justifyContent: 'center', gap: 8,
-                    borderWidth: 1.5, borderColor: forwardAddressCopied ? 'rgba(106,158,138,0.4)' : 'rgba(59,130,176,0.3)',
-                  }}
-                  className="active:opacity-70"
-                  onPress={() => {
-                    if (Platform.OS === 'web') {
-                      navigator.clipboard.writeText('plans@rally.app');
-                    } else {
-                      Clipboard.setStringAsync('plans@rally.app');
-                    }
-                    setForwardAddressCopied(true);
-                    setTimeout(() => setForwardAddressCopied(false), 2000);
-                  }}
-                >
-                  <Ionicons name={forwardAddressCopied ? 'checkmark' : 'copy-outline'} size={16} color={forwardAddressCopied ? '#6A9E8A' : '#7DBDD9'} />
-                  <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Bold', color: forwardAddressCopied ? '#6A9E8A' : '#7DBDD9' }}>
-                    {forwardAddressCopied ? 'Copied!' : 'Copy Address'}
-                  </Text>
-                </Pressable>
-              </View>
+              <TextInput
+                value={travelPasteText} onChangeText={setTravelPasteText} multiline textAlignVertical="top"
+                placeholder={"Paste confirmation here...\n\ne.g. Marriott Marquis - Check-in April 3"}
+                placeholderTextColor="#7A9AB5"
+                style={{ ...INPUT_STYLE, minHeight: 120, marginBottom: 12, paddingTop: 12 }}
+              />
 
-              {/* What to forward */}
-              <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#FEFEFE', marginBottom: 12 }}>What to forward</Text>
-              {[
-                { icon: 'bed-outline' as const, text: 'Hotel confirmations & stay-and-play info' },
-                { icon: 'airplane-outline' as const, text: 'Flight bookings & itineraries' },
-                { icon: 'trophy-outline' as const, text: 'Tournament info & schedule updates' },
-                { icon: 'people-outline' as const, text: 'Coach announcements & team emails' },
-              ].map((item) => (
-                <View key={item.text} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                  <Ionicons name={item.icon} size={18} color="rgba(255,255,255,0.5)" />
-                  <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.7)', flex: 1 }}>{item.text}</Text>
+              <Pressable
+                style={{
+                  borderRadius: 14, paddingVertical: 12, alignItems: 'center', marginBottom: 16,
+                  backgroundColor: isExtractingTravel || !travelPasteText.trim() ? '#264868' : '#3B82B0',
+                  shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: !travelPasteText.trim() ? 0 : 0.45, shadowRadius: 20,
+                }}
+                onPress={handleExtractTravel} disabled={isExtractingTravel || !travelPasteText.trim()}
+              >
+                {isExtractingTravel ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <ActivityIndicator size="small" color="#FEFEFE" />
+                    <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#FEFEFE' }}>Extracting...</Text>
+                  </View>
+                ) : (
+                  <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: !travelPasteText.trim() ? '#5A7A95' : '#FEFEFE' }}>Extract Travel Details</Text>
+                )}
+              </Pressable>
+
+              {travelExtractError ? (
+                <View style={{ backgroundColor: 'rgba(239,68,68,0.15)', borderRadius: 14, padding: 12, marginBottom: 12, borderWidth: 1.5, borderColor: 'rgba(239,68,68,0.3)' }}>
+                  <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-SemiBold', color: '#fca5a5', textAlign: 'center' }}>{travelExtractError}</Text>
                 </View>
-              ))}
+              ) : null}
+
+              {extractedBookings.length > 0 && (
+                <View style={{ backgroundColor: 'rgba(106,158,138,0.1)', borderWidth: 2, borderColor: 'rgba(106,158,138,0.35)', borderRadius: 20, padding: 16, marginBottom: 16 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <Ionicons name="checkmark-circle" size={22} color="#6A9E8A" />
+                    <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-Bold', color: '#6A9E8A' }}>
+                      {extractedBookings.length} booking{extractedBookings.length !== 1 ? 's' : ''} found!
+                    </Text>
+                  </View>
+                  {extractedBookings.map((b, i) => (
+                    <View key={i} style={{ backgroundColor: '#264868', borderWidth: 1, borderColor: 'rgba(106,158,138,0.2)', borderRadius: 14, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(106,158,138,0.15)', alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name={b.type === 'hotel' ? 'bed' : 'airplane'} size={18} color="#6A9E8A" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Bold', color: '#FEFEFE' }}>
+                          {b.type === 'hotel' ? (b.hotel_name || 'Hotel') : (b.airline || 'Flight')}
+                        </Text>
+                        <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Regular', color: '#C8D8E8', marginTop: 2 }}>
+                          {b.type === 'hotel' ? `${b.check_in || ''} → ${b.check_out || ''}` : `${b.departure_date || ''}`}
+                        </Text>
+                      </View>
+                      <Ionicons name="checkmark" size={16} color="#6A9E8A" />
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Forward email hint */}
+              <View style={{ backgroundColor: '#1E4468', borderWidth: 1.5, borderColor: '#2E5A82', borderRadius: 16, padding: 16, marginBottom: 16 }}>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#D4E3F0', marginBottom: 8 }}>
+                  Or forward confirmations to:
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text selectable style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#7DBDD9', flex: 1 }}>
+                    plans@rally-hub.com
+                  </Text>
+                  <Pressable
+                    style={{ backgroundColor: forwardAddressCopied ? 'rgba(106,158,138,0.2)' : 'rgba(59,130,176,0.2)', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                    className="active:opacity-70"
+                    onPress={handleCopyForwardAddress}
+                  >
+                    <Ionicons name={forwardAddressCopied ? 'checkmark' : 'copy-outline'} size={14} color={forwardAddressCopied ? '#6A9E8A' : '#7DBDD9'} />
+                    <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: forwardAddressCopied ? '#6A9E8A' : '#7DBDD9' }}>
+                      {forwardAddressCopied ? 'Copied!' : 'Copy'}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
             </ScrollView>
-            <NavButtons onBack={() => goTo(3)} onNext={() => goTo(5)} showSkip onSkip={() => goTo(5)} />
+
+            <View style={{ marginTop: 'auto', paddingBottom: 16, gap: 8 }}>
+              <FinishButton onPress={handleFinish} saving={saving} />
+              <SkipButton onPress={() => goTo(5)} />
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <BackButton onPress={() => goTo(3)} />
+                <View style={{ flex: 1 }}>
+                  <ContinueButton onPress={() => goTo(5)} />
+                </View>
+              </View>
+            </View>
           </View>
         )}
 
+        {/* ========== Step 5: Credentials ========== */}
         {step === 5 && (
           <View className="flex-1 px-6 pt-4">
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              <StepHeader icon="people" title="More Athletes?" subtitle="Have another player? Add them here." />
+              <StepHeader icon="key" title="Credentials" subtitle="Save logins you always forget" />
 
-              {/* Primary athlete card */}
-              <View style={{ backgroundColor: 'rgba(106,158,138,0.1)', borderWidth: 1.5, borderColor: 'rgba(106,158,138,0.25)', borderRadius: 20, padding: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <Ionicons name="person-circle" size={28} color="#6A9E8A" />
-                <View>
-                  <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#FEFEFE' }}>{athleteName.trim() || 'My Athlete'}</Text>
-                  <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.4)' }}>{teamName.trim()} • {seasonYear}</Text>
+              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#C8D8E8', marginBottom: 20 }}>
+                Tap a service to add your login. These are stored securely and only visible to you.
+              </Text>
+
+              {CREDENTIAL_BRANDS.map((brand) => {
+                const isExpanded = expandedCredential === brand.key;
+                const cred = credentials[brand.key];
+                const hasValue = cred && (cred.username.trim() || cred.password.trim());
+                return (
+                  <View key={brand.key} style={{ marginBottom: 12 }}>
+                    <Pressable
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 14,
+                        padding: 14,
+                        borderRadius: 16,
+                        borderWidth: 1.5,
+                        borderColor: isExpanded ? '#4A7A9E' : hasValue ? '#3D7A66' : '#3A6490',
+                        backgroundColor: isExpanded ? '#264868' : hasValue ? '#1E4040' : '#223D58',
+                      }}
+                      onPress={() => toggleCredential(brand.key)}
+                    >
+                      <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: brand.bg, alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name={brand.icon} size={20} color="#FFFFFF" />
+                      </View>
+                      <Text style={{ flex: 1, fontSize: 15, fontFamily: 'NunitoSans-Bold', color: '#FEFEFE' }}>{brand.label}</Text>
+                      {hasValue && <Ionicons name="checkmark-circle" size={20} color="#6A9E8A" />}
+                      <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={18} color="#9AB5CC" />
+                    </Pressable>
+
+                    {isExpanded && (
+                      <View style={{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: 4 }}>
+                        <TextInput
+                          value={cred?.username || ''}
+                          onChangeText={(v) => updateCredential(brand.key, 'username', v)}
+                          placeholder={brand.membershipOnly ? 'Membership # or ID' : 'Username or email'}
+                          placeholderTextColor="#7A9AB5"
+                          autoCapitalize="none"
+                          style={{ ...INPUT_STYLE, marginBottom: 8 }}
+                        />
+                        {!brand.membershipOnly && (
+                          <TextInput
+                            value={cred?.password || ''}
+                            onChangeText={(v) => updateCredential(brand.key, 'password', v)}
+                            placeholder="Password"
+                            placeholderTextColor="#7A9AB5"
+                            secureTextEntry
+                            autoCapitalize="none"
+                            style={{ ...INPUT_STYLE, marginBottom: 8 }}
+                          />
+                        )}
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </ScrollView>
+
+            <View style={{ marginTop: 'auto', paddingBottom: 16, gap: 8 }}>
+              <FinishButton onPress={handleFinish} saving={saving} />
+              <SkipButton onPress={() => goTo(6)} />
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <BackButton onPress={() => goTo(4)} />
+                <View style={{ flex: 1 }}>
+                  <ContinueButton onPress={() => goTo(6)} />
                 </View>
               </View>
-
-              {additionalAthletes.map((extra, i) => (
-                <View key={i} style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.12)', borderRadius: 20, padding: 16, marginBottom: 12 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: 'rgba(255,255,255,0.5)', letterSpacing: 1, textTransform: 'uppercase' }}>Player {i + 2}</Text>
-                    <Pressable onPress={() => setAdditionalAthletes(additionalAthletes.filter((_, j) => j !== i))} className="active:opacity-70">
-                      <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.4)" />
-                    </Pressable>
-                  </View>
-                  <TextInput
-                    value={extra.firstName} onChangeText={(v) => { const updated = [...additionalAthletes]; updated[i] = { firstName: v }; setAdditionalAthletes(updated); }}
-                    placeholder="First name" placeholderTextColor="rgba(255,255,255,0.25)" style={INPUT_STYLE}
-                  />
-                  <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.3)', marginTop: 8 }}>You can set up their season details later in Settings.</Text>
-                </View>
-              ))}
-
-              <Pressable
-                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.12)', borderRadius: 20, marginBottom: 16 }}
-                className="active:opacity-70"
-                onPress={() => setAdditionalAthletes([...additionalAthletes, { firstName: '' }])}
-              >
-                <Ionicons name="add-circle" size={20} color="rgba(255,255,255,0.5)" />
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: 'rgba(255,255,255,0.5)' }}>Add another player</Text>
-              </Pressable>
-            </ScrollView>
-            <NavButtons onBack={() => goTo(4)} onNext={() => goTo(6)} showSkip onSkip={() => goTo(6)} />
+            </View>
           </View>
         )}
 
+        {/* ========== Step 6: Invite Guests ========== */}
         {step === 6 && (
           <View className="flex-1 px-6 pt-4">
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              <StepHeader icon="heart" title="Invite Family" subtitle="Who else follows along?" />
+              <StepHeader icon="heart" title="Invite Guests" subtitle="Keep family in the loop" />
 
-              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>
-                Grandparents, co-parents, or anyone who needs the schedule. They'll get a read-only view — no app required.
+              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#C8D8E8', marginBottom: 16, lineHeight: 20 }}>
+                Add people who need regular updates — grandparents, extended family, anyone who wants to know when and where the next tournament is.
               </Text>
 
               {guests.map((guest, i) => (
-                <View key={i} style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.12)', borderRadius: 20, padding: 16, marginBottom: 12 }}>
+                <View key={i} style={{ backgroundColor: '#264868', borderWidth: 1.5, borderColor: '#3A6490', borderRadius: 20, padding: 16, marginBottom: 12 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: 'rgba(255,255,255,0.5)', letterSpacing: 1, textTransform: 'uppercase' }}>Guest {i + 1}</Text>
+                    <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: '#C8D8E8', letterSpacing: 1, textTransform: 'uppercase' }}>Guest {i + 1}</Text>
                     {guests.length > 1 && (
                       <Pressable onPress={() => setGuests(guests.filter((_, j) => j !== i))} className="active:opacity-70">
-                        <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.4)" />
+                        <Ionicons name="close-circle" size={20} color="#8FA8BF" />
                       </Pressable>
                     )}
                   </View>
 
                   <TextInput value={guest.name} onChangeText={(v) => { const u = [...guests]; u[i] = { ...u[i], name: v }; setGuests(u); }}
-                    placeholder="Name (e.g. Grandma Sue)" placeholderTextColor="rgba(255,255,255,0.25)" style={{ ...INPUT_STYLE, marginBottom: 8 }} />
+                    placeholder="Name (e.g. Grandma Sue)" placeholderTextColor="#7A9AB5" style={{ ...INPUT_STYLE, marginBottom: 8 }} />
 
                   <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-                    {['Grandparent', 'Co-Parent', 'Family', 'Other'].map((rel) => (
+                    {RELATIONSHIP_OPTIONS.map((rel) => (
                       <Pressable key={rel} style={{
                         paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10,
                         backgroundColor: guest.relation === rel ? 'rgba(59,130,176,0.2)' : 'transparent',
-                        borderWidth: 1.5, borderColor: guest.relation === rel ? 'rgba(59,130,176,0.4)' : 'rgba(255,255,255,0.1)',
+                        borderWidth: 1.5, borderColor: guest.relation === rel ? '#4A8BBD' : '#3A6490',
                       }} onPress={() => { const u = [...guests]; u[i] = { ...u[i], relation: rel }; setGuests(u); }}>
-                        <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-SemiBold', color: guest.relation === rel ? '#7DBDD9' : 'rgba(255,255,255,0.4)' }}>{rel}</Text>
+                        <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-SemiBold', color: guest.relation === rel ? '#7DBDD9' : '#9AB5CC' }}>{rel}</Text>
                       </Pressable>
                     ))}
                   </View>
 
                   <TextInput value={guest.phone} onChangeText={(v) => { const u = [...guests]; u[i] = { ...u[i], phone: v }; setGuests(u); }}
-                    placeholder="Phone (optional, for SMS)" placeholderTextColor="rgba(255,255,255,0.25)" keyboardType="phone-pad" style={INPUT_STYLE} />
+                    placeholder="Phone (optional, for SMS)" placeholderTextColor="#7A9AB5" keyboardType="phone-pad" style={INPUT_STYLE} />
                 </View>
               ))}
 
               <Pressable
-                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.12)', borderRadius: 20, marginBottom: 16 }}
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#3A6490', borderRadius: 20, marginBottom: 16 }}
                 className="active:opacity-70"
                 onPress={addGuest}
               >
-                <Ionicons name="add-circle" size={20} color="rgba(255,255,255,0.5)" />
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: 'rgba(255,255,255,0.5)' }}>Add another guest</Text>
+                <Ionicons name="add-circle" size={20} color="#7DBDD9" />
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#C8D8E8' }}>Add another guest</Text>
               </Pressable>
             </ScrollView>
-            <NavButtons onBack={() => goTo(5)} onNext={() => goTo(7)} showSkip onSkip={() => { setGuests([{ name: '', relation: 'Grandparent', phone: '' }]); goTo(7); }} />
+
+            <View style={{ marginTop: 'auto', paddingBottom: 16, gap: 8 }}>
+              <FinishButton onPress={handleFinish} saving={saving} />
+              <SkipButton onPress={() => { setGuests([{ name: '', relation: 'Grandparent', phone: '' }]); goTo(7); }} />
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <BackButton onPress={() => goTo(5)} />
+                <View style={{ flex: 1 }}>
+                  <ContinueButton onPress={() => goTo(7)} />
+                </View>
+              </View>
+            </View>
           </View>
         )}
 
+        {/* ========== Step 7: Invite Co-Parent ========== */}
         {step === 7 && (
-          <View className="flex-1 justify-center items-center px-8">
-            <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(106,158,138,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
-              <Ionicons name="checkmark-circle" size={52} color="#6A9E8A" />
-            </View>
-            <Text style={{ fontSize: 28, fontFamily: 'Nunito-Black', color: '#FEFEFE', textAlign: 'center', marginBottom: 12 }}>You're all set!</Text>
-            <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.6)', textAlign: 'center', maxWidth: 280, lineHeight: 22 }}>
-              {teamName.trim() || 'Your team'} is ready to go.{athleteName.trim() ? ` Let's have a great season, ${athleteName.trim()}!` : ''}
-            </Text>
+          <View className="flex-1 px-6 pt-4">
+            <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <StepHeader icon="people" title="Co-Parent" subtitle="Add a co-admin" />
 
-            {/* Summary card */}
-            <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.1)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 340, marginTop: 16, marginBottom: 32 }}>
-              <SummaryRow icon="person" text={athleteName.trim() || 'My Athlete'} />
-              <SummaryRow icon="people" text={teamName.trim() || '—'} />
-              <SummaryRow icon="calendar" text={seasonYear} />
-              {teamCode.trim() ? <SummaryRow icon="key" text={teamCode.trim()} /> : null}
-              {extractedTournaments.length > 0 && <SummaryRow icon="checkmark-circle" text={`${extractedTournaments.length} tournament${extractedTournaments.length !== 1 ? 's' : ''} ready`} color="#6A9E8A" />}
-              <SummaryRow icon="mail" text="Forward emails to plans@rally.app" />
-              {additionalAthletes.filter((a) => a.firstName.trim()).length > 0 && <SummaryRow icon="checkmark-circle" text={`${additionalAthletes.filter((a) => a.firstName.trim()).length} additional player${additionalAthletes.filter((a) => a.firstName.trim()).length !== 1 ? 's' : ''}`} color="#6A9E8A" />}
-              {guests.some((g) => g.name.trim()) && <SummaryRow icon="checkmark-circle" text={`${guests.filter((g) => g.name.trim()).length} guest${guests.filter((g) => g.name.trim()).length !== 1 ? 's' : ''} invited`} color="#6A9E8A" />}
-            </View>
+              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#C8D8E8', marginBottom: 20, lineHeight: 20 }}>
+                A co-parent or co-admin is someone who helps book travel or needs full visibility into tournament details.
+              </Text>
 
-            {finishError ? (
-              <View style={{ backgroundColor: 'rgba(239,68,68,0.15)', borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1.5, borderColor: 'rgba(239,68,68,0.3)', width: '100%', maxWidth: 340 }}>
-                <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-SemiBold', color: '#fca5a5', textAlign: 'center' }}>{finishError}</Text>
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#FEFEFE', marginBottom: 6 }}>Email</Text>
+                <TextInput
+                  value={coParentEmail}
+                  onChangeText={setCoParentEmail}
+                  placeholder="email@example.com"
+                  placeholderTextColor="#7A9AB5"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  style={INPUT_STYLE}
+                />
               </View>
-            ) : null}
 
-            <View style={{ width: '100%', maxWidth: 340, gap: 12 }}>
-              <Pressable
-                style={{
-                  backgroundColor: '#3B82B0', borderRadius: 14, paddingVertical: 16, alignItems: 'center',
-                  shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.45, shadowRadius: 20, elevation: 6,
-                  opacity: saving ? 0.6 : 1,
-                }}
-                className="active:opacity-80"
-                onPress={() => { setFinishError(''); handleFinish(); }} disabled={saving}
-              >
-                {saving ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <ActivityIndicator size="small" color="#FEFEFE" />
-                    <Text style={{ fontSize: 15, fontFamily: 'Nunito-ExtraBold', color: '#FEFEFE' }}>Setting up...</Text>
-                  </View>
-                ) : (
-                  <Text style={{ fontSize: 15, fontFamily: 'Nunito-ExtraBold', color: '#FEFEFE' }}>Open My Dashboard</Text>
-                )}
-              </Pressable>
-              <Pressable style={{ paddingVertical: 12, alignItems: 'center' }} className="active:opacity-70" onPress={() => goTo(1)}>
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: 'rgba(255,255,255,0.5)' }}>Go back and edit</Text>
-              </Pressable>
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#FEFEFE', marginBottom: 6 }}>Permission</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Pressable
+                    style={{
+                      flex: 1, paddingVertical: 12, borderRadius: 14, alignItems: 'center',
+                      backgroundColor: coParentPermission === 'view' ? '#3B82B0' : '#264868',
+                      borderWidth: 1.5, borderColor: coParentPermission === 'view' ? '#3B82B0' : '#3A6490',
+                    }}
+                    onPress={() => setCoParentPermission('view')}
+                  >
+                    <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: coParentPermission === 'view' ? '#FEFEFE' : '#B0C4D8' }}>View Only</Text>
+                  </Pressable>
+                  <Pressable
+                    style={{
+                      flex: 1, paddingVertical: 12, borderRadius: 14, alignItems: 'center',
+                      backgroundColor: coParentPermission === 'manage' ? '#3B82B0' : '#264868',
+                      borderWidth: 1.5, borderColor: coParentPermission === 'manage' ? '#3B82B0' : '#3A6490',
+                    }}
+                    onPress={() => setCoParentPermission('manage')}
+                  >
+                    <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: coParentPermission === 'manage' ? '#FEFEFE' : '#B0C4D8' }}>Full Access</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={{ marginTop: 'auto', paddingBottom: 16, gap: 8 }}>
+              <FinishButton onPress={handleFinish} saving={saving} />
+              <SkipButton onPress={() => goTo(8)} />
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <BackButton onPress={() => goTo(6)} />
+                <View style={{ flex: 1 }}>
+                  <ContinueButton onPress={() => goTo(8)} />
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* ========== Step 8: Invite Athlete ========== */}
+        {step === 8 && (
+          <View className="flex-1 px-6 pt-4">
+            <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <StepHeader icon="person-add" title="Athlete Login" subtitle={`Give ${athleteName.trim() || 'your athlete'} access`} />
+
+              <View style={{ backgroundColor: '#1E4468', borderWidth: 1.5, borderColor: '#2E5A82', borderRadius: 20, padding: 20, marginBottom: 20 }}>
+                <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-SemiBold', color: '#FEFEFE', marginBottom: 8 }}>
+                  Want {athleteName.trim() || 'your athlete'} to have their own login?
+                </Text>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#D4E3F0', lineHeight: 20 }}>
+                  They'll see their schedule, team info, and streaming links. They won't be able to edit travel or bookings.
+                </Text>
+              </View>
+
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#FEFEFE', marginBottom: 6 }}>Athlete's Email</Text>
+                <TextInput
+                  value={athleteLoginEmail}
+                  onChangeText={setAthleteLoginEmail}
+                  placeholder="athlete@example.com"
+                  placeholderTextColor="#7A9AB5"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  style={INPUT_STYLE}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={{ marginTop: 'auto', paddingBottom: 16, gap: 8 }}>
+              {finishError ? (
+                <View style={{ backgroundColor: 'rgba(239,68,68,0.15)', borderRadius: 14, padding: 12, marginBottom: 4, borderWidth: 1.5, borderColor: 'rgba(239,68,68,0.3)' }}>
+                  <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-SemiBold', color: '#fca5a5', textAlign: 'center' }}>{finishError}</Text>
+                </View>
+              ) : null}
+              <ContinueButton
+                onPress={() => { setFinishError(''); handleFinish(); }}
+                label="Finish Setup"
+                disabled={saving}
+              />
+              {!athleteLoginEmail.trim() && (
+                <Pressable style={{ paddingVertical: 8, alignItems: 'center' }} className="active:opacity-70" onPress={() => { setFinishError(''); handleFinish(); }}>
+                  <Text style={{ fontSize: 13, color: '#C8D8E8', fontFamily: 'NunitoSans-Regular' }}>Skip & Finish</Text>
+                </Pressable>
+              )}
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <BackButton onPress={() => goTo(7)} />
+                <View style={{ flex: 1 }} />
+              </View>
             </View>
           </View>
         )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
+}
+
+// ---- Mock travel extraction for dev mode ----
+function mockExtractTravel(text: string) {
+  const bookings: any[] = [];
+  const hotelMatch = text.match(/(?:hotel|marriott|hilton|sheraton|hyatt|courtyard|residence inn)/i);
+  const confirmMatch = text.match(/(?:confirmation|conf)[#:\s]*([A-Z0-9-]+)/i);
+  const checkInMatch = text.match(/check[- ]?in[:\s]*(.+?)(?:\n|$)/i);
+  const checkOutMatch = text.match(/check[- ]?out[:\s]*(.+?)(?:\n|$)/i);
+  if (hotelMatch) {
+    bookings.push({
+      type: 'hotel', hotel_name: hotelMatch[0],
+      reservation_number: confirmMatch?.[1] || '',
+      check_in: checkInMatch?.[1]?.trim() || '', check_out: checkOutMatch?.[1]?.trim() || '',
+      platform: 'Other', booking_name: '', booked_by: '', cost: null,
+    });
+  }
+  const flightMatch = text.match(/(?:flight|airline|delta|southwest|american|united|jetblue)/i);
+  const flightConfirmMatch = text.match(/(?:confirmation|conf)[:\s]*([A-Z0-9]+)/i);
+  const departMatch = text.match(/depart[:\s]*(.+?)(?:\n|$)/i);
+  const returnMatch = text.match(/return[:\s]*(.+?)(?:\n|$)/i);
+  if (flightMatch) {
+    bookings.push({
+      type: 'flight', airline: flightMatch[0],
+      confirmation_code: flightConfirmMatch?.[1] || '',
+      departure_date: departMatch?.[1]?.trim() || '', return_date: returnMatch?.[1]?.trim() || '',
+      booked_by: '', traveler_names: [], cost: null,
+    });
+  }
+  return bookings;
 }

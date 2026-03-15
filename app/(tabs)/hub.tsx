@@ -143,16 +143,39 @@ export default function HubScreen() {
         />
 
         {/* VIP Alerts — Coming Soon */}
-        <View className="opacity-60">
-          <HubSettingsRow
-            icon="star"
-            iconColor="#6A9E8A"
-            title="VIP Email Alerts"
-            subtitle="Coach & club email senders that trigger push notifications"
-            badge={0}
-            onPress={() => Alert.alert('Coming Soon', 'VIP push notifications will be available in a future release.')}
-          />
+        <HubSettingsRow
+          icon="star"
+          iconColor="#6A9E8A"
+          title="VIP Email Alerts"
+          subtitle="Coach & club email senders that trigger push notifications"
+          comingSoon
+          onPress={() => Alert.alert('Coming Soon', 'VIP push notifications will be available in a future release.')}
+        />
+
+        {/* Email Auto-Sync — Coming Soon */}
+        <HubSettingsRow
+          icon="sync"
+          iconColor="#7c3aed"
+          title="Email Auto-Sync"
+          subtitle="Automatically sync travel emails from Gmail"
+          comingSoon
+          onPress={() => Alert.alert('Coming Soon', 'Automatic Gmail sync will be available in a future release.')}
+        />
+
+        {/* ============================================================ */}
+        {/* GUEST MANAGEMENT */}
+        {/* ============================================================ */}
+        <View className="mt-6">
+          <HubSectionHeader icon="people" title="Guests" iconColor={ic.muted} />
         </View>
+
+        <HubSettingsRow
+          icon="people"
+          iconColor="#6A9E8A"
+          title="Guest Management"
+          subtitle="Manage grandparents, family, and other guests"
+          onPress={() => router.push('/(tabs)/guests')}
+        />
 
         {/* ============================================================ */}
         {/* QUICK LINKS (admin-scoped) */}
