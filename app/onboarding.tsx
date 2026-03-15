@@ -685,9 +685,12 @@ export default function OnboardingScreen() {
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <StepHeader icon="calendar" title="Tournaments" subtitle="Add your upcoming tournaments" />
 
-              <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: '#3B82B0', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
-                Option 1: Paste + AI
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, backgroundColor: '#E8F4FF', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
+                <Ionicons name="sparkles" size={18} color="#3B82B0" />
+                <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-Bold', color: '#1E3A5F' }}>
+                  Option 1: Paste + AI
+                </Text>
+              </View>
               <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#4A6E8A', marginBottom: 16 }}>
                 Paste a coach message, email, or tournament list and we'll extract the details.
               </Text>
@@ -749,9 +752,12 @@ export default function OnboardingScreen() {
               )}
 
               {/* Forward email hint */}
-              <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: '#3B82B0', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8, marginTop: 8 }}>
-                Option 2: Forward Email
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, marginTop: 8, backgroundColor: '#E8F4FF', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
+                <Ionicons name="mail" size={18} color="#3B82B0" />
+                <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-Bold', color: '#1E3A5F' }}>
+                  Option 2: Forward Email
+                </Text>
+              </View>
               <View style={{ backgroundColor: '#E8F4FF', borderWidth: 1.5, borderColor: '#B8D4EC', borderRadius: 16, padding: 16, marginBottom: 16 }}>
                 <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#1E3A5F', marginBottom: 4 }}>
                   Forward a schedule email to RALLY
@@ -801,9 +807,12 @@ export default function OnboardingScreen() {
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <StepHeader icon="airplane" title="Travel" subtitle="Add hotel or flight bookings" />
 
-              <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: '#3B82B0', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
-                Option 1: Paste + AI
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, backgroundColor: '#E8F4FF', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
+                <Ionicons name="sparkles" size={18} color="#3B82B0" />
+                <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-Bold', color: '#1E3A5F' }}>
+                  Option 1: Paste + AI
+                </Text>
+              </View>
               <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#4A6E8A', marginBottom: 16 }}>
                 Paste a hotel or flight confirmation and we'll extract the details.
               </Text>
@@ -867,9 +876,12 @@ export default function OnboardingScreen() {
               )}
 
               {/* Forward email hint */}
-              <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: '#3B82B0', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8, marginTop: 8 }}>
-                Option 2: Forward Email
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, marginTop: 8, backgroundColor: '#E8F4FF', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
+                <Ionicons name="mail" size={18} color="#3B82B0" />
+                <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-Bold', color: '#1E3A5F' }}>
+                  Option 2: Forward Email
+                </Text>
+              </View>
               <View style={{ backgroundColor: '#E8F4FF', borderWidth: 1.5, borderColor: '#B8D4EC', borderRadius: 16, padding: 16, marginBottom: 16 }}>
                 <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#1E3A5F', marginBottom: 4 }}>
                   Forward a confirmation email to RALLY

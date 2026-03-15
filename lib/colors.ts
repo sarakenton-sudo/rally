@@ -12,7 +12,7 @@ export function useIconColors() {
     // Header / navigation icons
     muted: dark ? '#D8E2EC' : '#6B8BA8',           // frost / stronger mist
     // Secondary / decorative icons
-    subtle: dark ? '#8FA8BF' : '#8FA8BF',           // mist both
+    subtle: dark ? '#8FA8BF' : '#4A6E8A',           // mist / darker for light
     // Placeholder / empty state
     placeholder: dark ? '#152F43' : '#D8E2EC',      // rally-900 / frost
     // Accent colors
