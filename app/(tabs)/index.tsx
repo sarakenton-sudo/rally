@@ -161,8 +161,8 @@ export default function HomeScreen() {
         text: `Book Air for ${t.name}`,
         subtitle: `${daysUntil(t.start_date)} days away`,
         icon: 'airplane-outline',
-        color: '#0d9488',
-        bgColor: '#CCFBF1',
+        color: '#6A9E8A',
+        bgColor: '#E8F5EE',
         onPress: () => router.push('/booking/add-flight'),
       });
     }

@@ -113,7 +113,7 @@ export default function TournamentCard({ tournament, hotelCount = 0, flightCount
           <Text className="text-sm text-stone dark:text-parchment ml-1 flex-1" numberOfLines={1}>
             {tournament.location_city}
           </Text>
-          {tournament.travel_required && (
+          {tournament.travel_required && (!tournament.hotel_not_needed || hasHotel || !tournament.air_not_needed || hasFlight) && (
             <View className="flex-row items-center ml-2">
               <Ionicons name="airplane-outline" size={14} color="#8FA8BF" />
               <Text className="text-xs text-stone ml-0.5">Travel</Text>
