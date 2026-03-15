@@ -115,21 +115,21 @@ export default function ScheduleImportScreen() {
           </View>
           <View className="flex-row gap-3 ml-13">
             <Pressable
-              className="flex-1 bg-rally-50 rounded-xl py-3 items-center active:opacity-80 border border-rally-200"
+              className="flex-1 bg-green-50 rounded-xl py-3 items-center active:opacity-80 border border-green-200"
               onPress={() => {
                 const blank = [{ name: '', start_date: '', end_date: '', location_city: '', venue_name: '', venue_address: '', notes: '' }];
                 router.push({ pathname: '/import/review', params: { tournaments: JSON.stringify(blank) } });
               }}
             >
-              <Ionicons name="trophy-outline" size={20} color="#6A9E8A" />
+              <Ionicons name="trophy-outline" size={20} color="#16a34a" />
               <Text className="text-xs font-semibold text-green-700 mt-1">Tournament</Text>
             </Pressable>
             <Pressable
-              className="flex-1 bg-rally-50 rounded-xl py-3 items-center active:opacity-80 border border-rally-200"
+              className="flex-1 bg-purple-50 rounded-xl py-3 items-center active:opacity-80 border border-purple-200"
               onPress={() => router.push('/booking/add-hotel')}
             >
-              <Ionicons name="bed-outline" size={20} color="#3B82B0" />
-              <Text className="text-xs font-semibold text-rally-600 mt-1">Hotel</Text>
+              <Ionicons name="bed-outline" size={20} color="#7c3aed" />
+              <Text className="text-xs font-semibold text-purple-700 mt-1">Hotel</Text>
             </Pressable>
             <Pressable
               className="flex-1 bg-rally-50 rounded-xl py-3 items-center active:opacity-80 border border-rally-200"
