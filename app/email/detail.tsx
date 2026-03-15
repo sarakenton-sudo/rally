@@ -430,12 +430,18 @@ export default function EmailDetailScreen() {
       // Remove undefined values so we don't overwrite existing data with blanks
       const cleanData = Object.fromEntries(Object.entries(flightData).filter(([_, v]) => v !== undefined));
 
-      // Check if a flight booking already exists for this tournament (match by confirmation code or tournament)
+      // Check if a flight booking already exists — match by confirmation code + same passenger
+      const passengerName = String(d.passenger_name ?? d.traveler_name ?? '').toUpperCase();
       const flightBookings = useSeasonStore.getState().flightBookings;
-      const existing = flightBookings.find((f) =>
-        (confCode && f.confirmation_code === confCode) ||
-        f.tournament_id === activeMatch.id
-      );
+      const existing = flightBookings.find((f) => {
+        if (!confCode || f.confirmation_code !== confCode) return false;
+        // Same confirmation but different passenger = different booking (family travel)
+        if (passengerName && f.booked_by) {
+          return f.booked_by.toUpperCase() === passengerName ||
+            (f.traveler_names ?? []).some((t: string) => t.toUpperCase() === passengerName);
+        }
+        return true; // Same conf code, no passenger to compare
+      });
 
       if (existing) {
         // Update existing — only fill in fields that are currently empty

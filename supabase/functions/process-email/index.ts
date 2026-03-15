@@ -257,13 +257,55 @@ async function autoApplyToTournament(
       const match = findNearestTournament(tournaments, departureDate, String(data.tournament_name ?? ''));
       if (!match) return;
 
-      // Check for existing flight booking (by confirmation code or tournament)
-      const { data: existingFlights } = await supabase
-        .from('flight_bookings')
-        .select('id, airline, confirmation_code, departure_date, return_date, departure_time, arrival_time, seat_number, flight_number, ticket_number, cost, booked_by')
-        .or(`confirmation_code.eq.${confCode},tournament_id.eq.${match.id}`)
-        .eq('created_by_user_id', userId)
-        .limit(1);
+      // Check for existing flight booking — match by confirmation code + passenger name
+      // (Family members often share a confirmation code, so we need passenger-aware matching)
+      const passengerName = String(data.passenger_name ?? '').toUpperCase().trim();
+      let existingFlights: any[] | null = null;
+
+      if (confCode) {
+        const { data: candidates } = await supabase
+          .from('flight_bookings')
+          .select('id, airline, confirmation_code, departure_date, return_date, departure_time, arrival_time, seat_number, flight_number, ticket_number, cost, booked_by, traveler_names')
+          .eq('confirmation_code', confCode)
+          .eq('created_by_user_id', userId);
+
+        if (candidates && candidates.length > 0 && passengerName) {
+          // Find one matching this specific passenger
+          const passengerMatch = candidates.find((f: any) => {
+            const bookedBy = String(f.booked_by ?? '').toUpperCase().trim();
+            const travelers = (f.traveler_names ?? []).map((t: string) => t.toUpperCase().trim());
+            return bookedBy === passengerName || travelers.includes(passengerName);
+          });
+          existingFlights = passengerMatch ? [passengerMatch] : null;
+        } else {
+          existingFlights = candidates;
+        }
+      }
+
+      // Fallback: check by tournament if no conf code match
+      if (!existingFlights || existingFlights.length === 0) {
+        const { data: tourneyFlights } = await supabase
+          .from('flight_bookings')
+          .select('id, airline, confirmation_code, departure_date, return_date, departure_time, arrival_time, seat_number, flight_number, ticket_number, cost, booked_by, traveler_names')
+          .eq('tournament_id', match.id)
+          .eq('created_by_user_id', userId);
+
+        if (tourneyFlights && tourneyFlights.length > 0 && passengerName) {
+          const passengerMatch = tourneyFlights.find((f: any) => {
+            const bookedBy = String(f.booked_by ?? '').toUpperCase().trim();
+            const travelers = (f.traveler_names ?? []).map((t: string) => t.toUpperCase().trim());
+            return bookedBy === passengerName || travelers.includes(passengerName);
+          });
+          // Only match tournament flights without a conf code (avoid overwriting a different booking)
+          if (passengerMatch) {
+            existingFlights = [passengerMatch];
+          } else if (tourneyFlights.some((f: any) => !f.confirmation_code)) {
+            existingFlights = [tourneyFlights.find((f: any) => !f.confirmation_code)];
+          }
+        } else if (tourneyFlights && tourneyFlights.length > 0) {
+          existingFlights = tourneyFlights.length === 1 ? tourneyFlights : null;
+        }
+      }
 
       const newData: Record<string, unknown> = {
         airline: String(data.airline ?? '') || undefined,
@@ -322,13 +364,26 @@ async function autoApplyToTournament(
       const match = findNearestTournament(tournaments, checkInDate, String(data.tournament_name ?? ''));
       if (!match) return;
 
-      // Check for existing hotel booking
-      const { data: existingHotels } = await supabase
-        .from('hotel_bookings')
-        .select('id, hotel_name, reservation_number, check_in, check_out, cancellation_deadline, cost, address, booked_by')
-        .or(`reservation_number.eq.${confNum},tournament_id.eq.${match.id}`)
-        .eq('created_by_user_id', userId)
-        .limit(1);
+      // Check for existing hotel booking (by reservation number, then tournament)
+      let existingHotels: any[] | null = null;
+      if (confNum) {
+        const { data: confMatch } = await supabase
+          .from('hotel_bookings')
+          .select('id, hotel_name, reservation_number, check_in, check_out, cancellation_deadline, cost, address, booked_by')
+          .eq('reservation_number', confNum)
+          .eq('created_by_user_id', userId)
+          .limit(1);
+        existingHotels = confMatch;
+      }
+      if (!existingHotels || existingHotels.length === 0) {
+        const { data: tourneyMatch } = await supabase
+          .from('hotel_bookings')
+          .select('id, hotel_name, reservation_number, check_in, check_out, cancellation_deadline, cost, address, booked_by')
+          .eq('tournament_id', match.id)
+          .eq('created_by_user_id', userId)
+          .limit(1);
+        existingHotels = tourneyMatch;
+      }
 
       const newData: Record<string, unknown> = {
         hotel_name: String(data.hotel_name ?? '') || undefined,
