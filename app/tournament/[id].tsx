@@ -767,53 +767,58 @@ export default function TournamentDetailScreen() {
             </>
           )}
 
-          {/* GUESTS / RSVP */}
-          <SectionHeader icon="people" title="Guests" iconColor={ic.muted} />
-          <TournamentGuestList tournament={tournament} />
+          {/* ── Guests (Pink) ── */}
+          <SectionHeader icon="people" title="Guests" iconColor="#ec4899" />
+          <View className="rounded-xl overflow-hidden mb-3">
+            <View className="h-1.5 bg-pink-400" />
+            <View className="bg-pink-50 dark:bg-pink-900/10 px-3 py-3">
+              <TournamentGuestList tournament={tournament} />
 
-          {/* Send details to all guests */}
-          <View className="flex-row gap-2 mt-2">
-            <Pressable
-              className="flex-1 bg-green-50 dark:bg-green-900/20 rounded-xl py-3 items-center flex-row justify-center active:opacity-80"
-              onPress={() => {
-                const venue = tournament.venues.find((v) => v.is_confirmed) ?? tournament.venues[0];
-                const lines = [tournament.name];
-                if (tournament.ticket_link) {
-                  lines.push('', `Tickets: ${tournament.ticket_link}`);
-                  if (activeSeason?.team_code) lines.push(`Team Code: ${activeSeason.team_code}`);
-                }
-                if (venue?.address) {
-                  lines.push('', `Venue: ${venue.label || tournament.location_city}`, `Directions: https://maps.google.com/?q=${encodeURIComponent(venue.address)}`);
-                }
-                const smsBody = encodeURIComponent(lines.join('\n'));
-                const recipients = invitedPhones.join(',');
-                const smsUrl = Platform.OS === 'ios'
-                  ? `sms:${recipients}&body=${smsBody}`
-                  : `sms:${recipients}?body=${smsBody}`;
-                Platform.OS === 'web' ? window.open(smsUrl, '_blank') : Linking.openURL(smsUrl);
-              }}
-            >
-              <Ionicons name="location" size={16} color="#16a34a" />
-              <Text className="text-xs font-semibold text-green-700 dark:text-green-300 ml-1.5">Send In-Person Details</Text>
-            </Pressable>
-            <Pressable
-              className="flex-1 bg-purple-50 dark:bg-purple-900/20 rounded-xl py-3 items-center flex-row justify-center active:opacity-80"
-              onPress={() => {
-                const lines = [tournament.name];
-                const streamUrl = tournament.streaming_links[0]?.url ?? activeSeason?.default_stream_url;
-                if (streamUrl) lines.push('', `Watch: ${streamUrl}`);
-                if (tournament.schedule_link) lines.push('', `Schedule: ${tournament.schedule_link}`);
-                const smsBody = encodeURIComponent(lines.join('\n'));
-                const recipients = invitedPhones.join(',');
-                const smsUrl = Platform.OS === 'ios'
-                  ? `sms:${recipients}&body=${smsBody}`
-                  : `sms:${recipients}?body=${smsBody}`;
-                Platform.OS === 'web' ? window.open(smsUrl, '_blank') : Linking.openURL(smsUrl);
-              }}
-            >
-              <Ionicons name="videocam" size={16} color="#7c3aed" />
-              <Text className="text-xs font-semibold text-purple-700 dark:text-purple-300 ml-1.5">Send Streaming Details</Text>
-            </Pressable>
+              {/* Send details to all guests */}
+              <View className="flex-row gap-2 mt-2">
+                <Pressable
+                  className="flex-1 bg-white/70 dark:bg-bark-light rounded-xl py-3 items-center flex-row justify-center active:opacity-80 border border-pink-100"
+                  onPress={() => {
+                    const venue = tournament.venues.find((v) => v.is_confirmed) ?? tournament.venues[0];
+                    const lines = [tournament.name];
+                    if (tournament.ticket_link) {
+                      lines.push('', `Tickets: ${tournament.ticket_link}`);
+                      if (activeSeason?.team_code) lines.push(`Team Code: ${activeSeason.team_code}`);
+                    }
+                    if (venue?.address) {
+                      lines.push('', `Venue: ${venue.label || tournament.location_city}`, `Directions: https://maps.google.com/?q=${encodeURIComponent(venue.address)}`);
+                    }
+                    const smsBody = encodeURIComponent(lines.join('\n'));
+                    const recipients = invitedPhones.join(',');
+                    const smsUrl = Platform.OS === 'ios'
+                      ? `sms:${recipients}&body=${smsBody}`
+                      : `sms:${recipients}?body=${smsBody}`;
+                    Platform.OS === 'web' ? window.open(smsUrl, '_blank') : Linking.openURL(smsUrl);
+                  }}
+                >
+                  <Ionicons name="location" size={16} color="#ec4899" />
+                  <Text className="text-xs font-semibold text-pink-700 dark:text-pink-300 ml-1.5">In-Person</Text>
+                </Pressable>
+                <Pressable
+                  className="flex-1 bg-white/70 dark:bg-bark-light rounded-xl py-3 items-center flex-row justify-center active:opacity-80 border border-pink-100"
+                  onPress={() => {
+                    const lines = [tournament.name];
+                    const streamUrl = tournament.streaming_links[0]?.url ?? activeSeason?.default_stream_url;
+                    if (streamUrl) lines.push('', `Watch: ${streamUrl}`);
+                    if (tournament.schedule_link) lines.push('', `Schedule: ${tournament.schedule_link}`);
+                    const smsBody = encodeURIComponent(lines.join('\n'));
+                    const recipients = invitedPhones.join(',');
+                    const smsUrl = Platform.OS === 'ios'
+                      ? `sms:${recipients}&body=${smsBody}`
+                      : `sms:${recipients}?body=${smsBody}`;
+                    Platform.OS === 'web' ? window.open(smsUrl, '_blank') : Linking.openURL(smsUrl);
+                  }}
+                >
+                  <Ionicons name="videocam" size={16} color="#ec4899" />
+                  <Text className="text-xs font-semibold text-pink-700 dark:text-pink-300 ml-1.5">Streaming</Text>
+                </Pressable>
+              </View>
+            </View>
           </View>
 
           {/* STREAMING */}
