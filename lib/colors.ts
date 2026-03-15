@@ -10,7 +10,7 @@ export function useIconColors() {
 
   return {
     // Header / navigation icons
-    muted: dark ? '#D8E2EC' : '#8FA8BF',           // frost / mist
+    muted: dark ? '#D8E2EC' : '#6B8BA8',           // frost / stronger mist
     // Secondary / decorative icons
     subtle: dark ? '#8FA8BF' : '#8FA8BF',           // mist both
     // Placeholder / empty state

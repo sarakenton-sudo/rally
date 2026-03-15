@@ -124,11 +124,11 @@ export default function TournamentDetailScreen() {
   const confirmedVenue = tournament.venues.find((v) => v.is_confirmed);
 
   return (
-    <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['bottom']}>
+    <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['top', 'bottom']}>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor="#FEFEFE" />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor="#3B82B0" />}
       >
         {/* Hero header */}
         <View className={`px-5 pt-4 pb-5 ${
@@ -226,7 +226,7 @@ export default function TournamentDetailScreen() {
                   </>
                 ) : (
                   <Pressable
-                    className="bg-cream dark:bg-bark-light/50 rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900 active:opacity-70"
+                    className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900 active:opacity-70"
                     onPress={() => router.push({ pathname: '/tournament/edit', params: { editId: tournament.id } })}
                   >
                     <View className="flex-row items-center justify-center">
@@ -262,7 +262,7 @@ export default function TournamentDetailScreen() {
                 <View className={`rounded-xl p-4 border overflow-hidden ${
                   hasScheduleData
                     ? 'bg-warm-white dark:bg-bark-light border-parchment dark:border-rally-900'
-                    : 'bg-cream dark:bg-bark-light/50 border-dashed border-parchment dark:border-rally-900'
+                    : 'bg-warm-white dark:bg-bark-light border-parchment dark:border-rally-900'
                 }`}>
                   {/* Accent bar when alive */}
                   {hasScheduleData && (
@@ -350,7 +350,7 @@ export default function TournamentDetailScreen() {
           <View className={`rounded-xl p-4 border overflow-hidden ${
             hasTicketData
               ? 'bg-warm-white dark:bg-bark-light border-parchment dark:border-rally-900'
-              : 'bg-cream dark:bg-bark-light/50 border-dashed border-parchment dark:border-rally-900'
+              : 'bg-warm-white dark:bg-bark-light border-parchment dark:border-rally-900'
           }`}>
             {hasTicketData && (
               <View className="absolute top-0 left-0 w-1 h-full bg-amber-400" />
