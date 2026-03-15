@@ -13,7 +13,7 @@ import type { Tournament } from '@/types/database';
 
 const CLASS_CONFIG: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string }> = {
   stay_and_play: { icon: 'bed', color: '#7c3aed', label: 'Hotel / Stay & Play' },
-  travel_confirmation: { icon: 'airplane', color: '#3B82B0', label: 'Travel Confirmation' },
+  travel_confirmation: { icon: 'airplane', color: '#3B82B0', label: 'Air / Travel' },
   coach_announcement: { icon: 'megaphone', color: '#d97706', label: 'Coach Announcement' },
   schedule_change: { icon: 'swap-horizontal', color: '#dc2626', label: 'Schedule Change' },
   tournament_info: { icon: 'trophy', color: '#16a34a', label: 'Tournament Info' },

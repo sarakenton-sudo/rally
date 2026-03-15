@@ -8,7 +8,7 @@ import type { ForwardedEmail } from '@/types/database';
 
 const CLASS_CONFIG: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string; bg: string }> = {
   stay_and_play: { icon: 'bed', color: '#7c3aed', label: 'Hotel', bg: 'bg-purple-100' },
-  travel_confirmation: { icon: 'airplane', color: '#3B82B0', label: 'Travel', bg: 'bg-rally-100' },
+  travel_confirmation: { icon: 'airplane', color: '#3B82B0', label: 'Air', bg: 'bg-rally-100' },
   coach_announcement: { icon: 'megaphone', color: '#d97706', label: 'Coach', bg: 'bg-amber-100' },
   schedule_change: { icon: 'swap-horizontal', color: '#dc2626', label: 'Schedule', bg: 'bg-red-100' },
   tournament_info: { icon: 'trophy', color: '#16a34a', label: 'Tournament', bg: 'bg-green-100' },

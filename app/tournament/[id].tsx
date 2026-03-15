@@ -555,55 +555,65 @@ export default function TournamentDetailScreen() {
 
           {/* TRAVEL */}
           <>
-              <SectionHeader icon="bed" title="Hotels" iconColor={hotels.length > 0 ? '#3B82B0' : ic.muted} />
-
-              {/* Existing hotel bookings */}
-              {hotels.map((h) => (
-                <HotelBookingCard
-                  key={h.id}
-                  booking={h}
-                  onPress={() => router.push({ pathname: '/booking/add-hotel', params: { editId: h.id } })}
-                  onDelete={() => handleDeleteHotel(h.id, h.hotel_name)}
-                />
-              ))}
-
-              {/* Add hotel — hidden when marked not needed */}
-              {!tournament.hotel_not_needed && hotels.length === 0 && (
-                <Pressable
-                  className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900 items-center active:opacity-80"
-                  onPress={() => router.push({ pathname: '/booking/add-hotel', params: { tournamentId: tournament.id } })}
-                >
-                  <Ionicons name="bed" size={22} color="#3B82B0" />
-                  <Text className="text-sm text-stone mt-1">Add Hotel</Text>
-                </Pressable>
-              )}
-
-              <SectionHeader icon="airplane" title="Flights" iconColor={flights.length > 0 ? '#7c3aed' : ic.muted} />
-
-              {/* Existing flight bookings */}
-              {flights.map((f) => (
-                <View key={f.id} className="mb-2 rounded-xl overflow-hidden border border-parchment dark:border-rally-900">
-                  <View className="h-1.5 bg-purple-500" />
-                  <FlightBookingCard
-                    booking={f}
-                    onPress={() => router.push({ pathname: '/booking/add-flight', params: { editId: f.id } })}
-                    onDelete={() => handleDeleteFlight(f.id, f.airline)}
-                  />
+              {/* ── Hotels (Purple) ── */}
+              <SectionHeader icon="bed" title="Hotels" iconColor={hotels.length > 0 ? '#7c3aed' : ic.muted} />
+              <View className="rounded-xl overflow-hidden mb-3">
+                <View className="h-1.5 bg-purple-500" />
+                <View className="bg-purple-50 dark:bg-purple-900/10 px-3 py-3">
+                  {hotels.map((h) => (
+                    <View key={h.id} className="mb-2">
+                      <HotelBookingCard
+                        booking={h}
+                        onPress={() => router.push({ pathname: '/booking/add-hotel', params: { editId: h.id } })}
+                        onDelete={() => handleDeleteHotel(h.id, h.hotel_name)}
+                      />
+                    </View>
+                  ))}
+                  {!tournament.hotel_not_needed && hotels.length === 0 && (
+                    <Pressable
+                      className="bg-white/70 dark:bg-bark-light rounded-xl p-4 border border-dashed border-purple-200 dark:border-purple-900 items-center active:opacity-80"
+                      onPress={() => router.push({ pathname: '/booking/add-hotel', params: { tournamentId: tournament.id } })}
+                    >
+                      <Ionicons name="bed" size={22} color="#7c3aed" />
+                      <Text className="text-sm text-stone mt-1">Add Hotel</Text>
+                    </Pressable>
+                  )}
+                  {tournament.hotel_not_needed && hotels.length === 0 && (
+                    <Text className="text-xs text-stone text-center py-2">No hotel needed</Text>
+                  )}
                 </View>
-              ))}
+              </View>
 
-              {/* Add flight — hidden when marked not needed */}
-              {!tournament.air_not_needed && flights.length === 0 && (
-                <Pressable
-                  className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900 items-center active:opacity-80"
-                  onPress={() => router.push({ pathname: '/booking/add-flight', params: { tournamentId: tournament.id } })}
-                >
-                  <Ionicons name="airplane" size={22} color="#7c3aed" />
-                  <Text className="text-sm text-stone mt-1">Add Flight</Text>
-                </Pressable>
-              )}
+              {/* ── Flights (Blue) ── */}
+              <SectionHeader icon="airplane" title="Flights" iconColor={flights.length > 0 ? '#3B82B0' : ic.muted} />
+              <View className="rounded-xl overflow-hidden mb-3">
+                <View className="h-1.5 bg-rally-600" />
+                <View className="bg-rally-50 dark:bg-rally-900/10 px-3 py-3">
+                  {flights.map((f) => (
+                    <View key={f.id} className="mb-2">
+                      <FlightBookingCard
+                        booking={f}
+                        onPress={() => router.push({ pathname: '/booking/add-flight', params: { editId: f.id } })}
+                        onDelete={() => handleDeleteFlight(f.id, f.airline)}
+                      />
+                    </View>
+                  ))}
+                  {!tournament.air_not_needed && flights.length === 0 && (
+                    <Pressable
+                      className="bg-white/70 dark:bg-bark-light rounded-xl p-4 border border-dashed border-rally-200 dark:border-rally-900 items-center active:opacity-80"
+                      onPress={() => router.push({ pathname: '/booking/add-flight', params: { tournamentId: tournament.id } })}
+                    >
+                      <Ionicons name="airplane" size={22} color="#3B82B0" />
+                      <Text className="text-sm text-stone mt-1">Add Flight</Text>
+                    </Pressable>
+                  )}
+                  {tournament.air_not_needed && flights.length === 0 && (
+                    <Text className="text-xs text-stone text-center py-2">No flights needed</Text>
+                  )}
+                </View>
+              </View>
 
-              {/* TEAM EVENTS — inline with travel */}
+              {/* ── Team Events (Amber/Yellow) ── */}
               <View className="flex-row items-center justify-between mt-4 mb-2">
                 <View className="flex-row items-center">
                   <Ionicons name="restaurant" size={16} color={teamEvents.length > 0 ? '#d97706' : ic.muted} />
@@ -615,49 +625,54 @@ export default function TournamentDetailScreen() {
                   className="flex-row items-center active:opacity-70"
                   onPress={() => router.push({ pathname: '/booking/add-team-event', params: { tournamentId: tournament.id } })}
                 >
-                  <Ionicons name="add-circle-outline" size={16} color="#3B82B0" />
-                  <Text className="text-xs font-semibold text-rally-600 ml-1">Add</Text>
+                  <Ionicons name="add-circle-outline" size={16} color="#d97706" />
+                  <Text className="text-xs font-semibold text-amber-600 ml-1">Add</Text>
                 </Pressable>
               </View>
-              {teamEvents.length > 0 ? (
-                teamEvents.map((event) => (
-                  <Pressable
-                    key={event.id}
-                    className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900 active:opacity-80"
-                    onPress={() => router.push({ pathname: '/booking/add-team-event', params: { editId: event.id, tournamentId: tournament.id } })}
-                  >
-                    <View className="flex-row items-start justify-between">
-                      <View className="flex-1 mr-3">
-                        <Text className="text-base font-semibold text-bark dark:text-cream">{event.name}</Text>
-                        <Text className="text-sm text-stone dark:text-parchment mt-0.5">{event.venue_name}</Text>
-                        {event.time && (
-                          <View className="flex-row items-center mt-1">
-                            <Ionicons name="time-outline" size={14} color={ic.subtle} />
-                            <Text className="text-sm text-stone ml-1">{event.time}</Text>
+              <View className="rounded-xl overflow-hidden mb-3">
+                <View className="h-1.5 bg-amber-500" />
+                <View className="bg-amber-50 dark:bg-amber-900/10 px-3 py-3">
+                  {teamEvents.length > 0 ? (
+                    teamEvents.map((event) => (
+                      <Pressable
+                        key={event.id}
+                        className="bg-white/70 dark:bg-bark-light rounded-xl p-4 mb-2 border border-amber-100 dark:border-amber-900 active:opacity-80"
+                        onPress={() => router.push({ pathname: '/booking/add-team-event', params: { editId: event.id, tournamentId: tournament.id } })}
+                      >
+                        <View className="flex-row items-start justify-between">
+                          <View className="flex-1 mr-3">
+                            <Text className="text-base font-semibold text-bark dark:text-cream">{event.name}</Text>
+                            <Text className="text-sm text-stone dark:text-parchment mt-0.5">{event.venue_name}</Text>
+                            {event.time && (
+                              <View className="flex-row items-center mt-1">
+                                <Ionicons name="time-outline" size={14} color={ic.subtle} />
+                                <Text className="text-sm text-stone ml-1">{event.time}</Text>
+                              </View>
+                            )}
+                            {event.notes && <Text className="text-xs text-stone mt-2 italic">{event.notes}</Text>}
                           </View>
-                        )}
-                        {event.notes && <Text className="text-xs text-stone mt-2 italic">{event.notes}</Text>}
-                      </View>
-                      {event.address ? (
-                        <Pressable
-                          className="bg-rally-50 dark:bg-rally-900/30 px-3 py-2 rounded-lg active:opacity-70"
-                          onPress={(e) => { e.stopPropagation(); openDirections(event.address); }}
-                        >
-                          <Ionicons name="navigate" size={18} color="#3B82B0" />
-                        </Pressable>
-                      ) : null}
-                    </View>
-                  </Pressable>
-                ))
-              ) : (
-                <Pressable
-                  className="bg-warm-white dark:bg-bark-light rounded-xl p-3 border border-dashed border-parchment dark:border-rally-900 items-center active:opacity-80"
-                  onPress={() => router.push({ pathname: '/booking/add-team-event', params: { tournamentId: tournament.id } })}
-                >
-                  <Ionicons name="restaurant-outline" size={20} color="#d97706" />
-                  <Text className="text-xs text-stone mt-1">Add Team Event</Text>
-                </Pressable>
-              )}
+                          {event.address ? (
+                            <Pressable
+                              className="bg-amber-100 dark:bg-amber-900/30 px-3 py-2 rounded-lg active:opacity-70"
+                              onPress={(e) => { e.stopPropagation(); openDirections(event.address); }}
+                            >
+                              <Ionicons name="navigate" size={18} color="#d97706" />
+                            </Pressable>
+                          ) : null}
+                        </View>
+                      </Pressable>
+                    ))
+                  ) : (
+                    <Pressable
+                      className="bg-white/70 dark:bg-bark-light rounded-xl p-3 border border-dashed border-amber-200 dark:border-amber-900 items-center active:opacity-80"
+                      onPress={() => router.push({ pathname: '/booking/add-team-event', params: { tournamentId: tournament.id } })}
+                    >
+                      <Ionicons name="restaurant-outline" size={20} color="#d97706" />
+                      <Text className="text-xs text-stone mt-1">Add Team Event</Text>
+                    </Pressable>
+                  )}
+                </View>
+              </View>
 
               {/* Quick import helpers */}
               <View className="mt-3 bg-rally-50 dark:bg-rally-900/20 rounded-xl p-3 border border-rally-100 dark:border-rally-800">
