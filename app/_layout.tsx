@@ -104,7 +104,11 @@ function RootLayoutNav() {
   const segments = useSegments();
   const adminConfig = useSeasonStore((s) => s.adminConfig);
   const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
+  const adminAthletes = useSeasonStore((s) => s.adminAthletes);
   const storeLoading = useSeasonStore((s) => s.isLoading);
+
+  // Co-parent detection: admin with linked athletes but no own config
+  const isCoParent = userProfile?.role === 'admin' && !adminConfig && adminAthletes.length > 0;
 
   useEffect(() => {
     if (isLoading || storeLoading) return;
@@ -116,8 +120,11 @@ function RootLayoutNav() {
     if (!session && !inAuthFlow) {
       // No session — go to auth
       router.replace('/auth');
-    } else if (session && userProfile?.role === 'admin' && !adminConfig && !inOnboarding) {
-      // Admin with no config — go to onboarding
+    } else if (session && isCoParent && (inAuthFlow || inOnboarding)) {
+      // Co-parent — skip onboarding, go straight to tabs
+      router.replace('/(tabs)');
+    } else if (session && userProfile?.role === 'admin' && !adminConfig && !isCoParent && !inOnboarding) {
+      // Primary admin with no config — go to onboarding
       router.replace('/onboarding');
     } else if (session && userProfile?.role === 'admin' && adminConfig && !activeSeasonId && !inOnboarding) {
       // Admin with config but no active season — go to onboarding
@@ -129,7 +136,7 @@ function RootLayoutNav() {
       // Fully configured admin — go to tabs
       router.replace('/(tabs)');
     }
-  }, [session, isLoading, segments, adminConfig, activeSeasonId, storeLoading, userProfile]);
+  }, [session, isLoading, segments, adminConfig, activeSeasonId, storeLoading, userProfile, adminAthletes]);
 
   const theme = colorScheme === 'dark' ? RallyDarkTheme : RallyLightTheme;
 
@@ -232,6 +239,10 @@ function RootLayoutNav() {
         />
         <Stack.Screen
           name="settings/leagueapps-connect"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="import/paste-combined"
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen

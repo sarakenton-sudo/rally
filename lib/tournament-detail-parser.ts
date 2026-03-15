@@ -52,10 +52,13 @@ export function extractTournamentDetails(text: string): ExtractedTournamentDetai
   };
 
   // --- TOURNAMENT NAME ---
-  // Try subject line: "Subject: 2026 Mizuno Northern Lights Qualifier #2 | Important..."
-  const subjectMatch = text.match(/(?:subject|re|fwd)[:\s]+(.+?)(?:\s*\||\s*[-–—]\s*(?:important|tournament|info)|\n)/i);
+  // Try subject line: "Subject: 2026 Lone Star Classic Qualifier #1 – Houston | Tournament Information"
+  const subjectMatch = text.match(/(?:subject|re|fwd)[:\s]+(.+?)(?:\s*\||\s*[-–—]\s*(?:important|tournament|info)|\s*[-–—]\s*\w+\s*\||\n)/i);
   if (subjectMatch) {
-    result.tournament_name = subjectMatch[1].replace(/^\d{4}\s+/, '').replace(/\s*#\d+$/, '').trim();
+    // Keep qualifier number, strip year prefix
+    result.tournament_name = subjectMatch[1]
+      .replace(/^\d{4}\s+/, '')
+      .trim();
   }
   // Try first line if it looks like a tournament name (contains qualifier, classic, championship, etc.)
   if (!result.tournament_name) {
@@ -134,7 +137,8 @@ export function extractTournamentDetails(text: string): ExtractedTournamentDetai
   if (/eventbrite/i.test(text)) result.ticket_system = 'Eventbrite';
   else if (/showpass/i.test(text)) result.ticket_system = 'Showpass';
   else if (/electronic\s*ticket/i.test(text)) result.ticket_system = 'Electronic';
-  else if (/qr\s*code/i.test(text)) result.ticket_system = 'Electronic (QR)';
+  else if (/digital\s*QR\s*code/i.test(text) || /qr\s*code.*entry/i.test(text)) result.ticket_system = 'Electronic (QR)';
+  else if (/online\s*(?:and\s+)?cashless/i.test(text)) result.ticket_system = 'Electronic (Online/Cashless)';
 
   // --- SCHEDULE LINK ---
   // First check URLs
@@ -155,6 +159,10 @@ export function extractTournamentDetails(text: string): ExtractedTournamentDetai
       else if (site.includes('aes')) result.schedule_link = 'https://www.aesathletics.com';
     }
   }
+  // "Posted on AES" without full domain
+  if (!result.schedule_link && /(?:posted|available|released)\s+(?:on\s+)?AES\b/i.test(text)) {
+    result.schedule_link = 'https://www.aesathletics.com';
+  }
 
   // --- SCHEDULE AVAILABLE DATE ---
   // "Schedule: Posted March 18, 2026" — exact date
@@ -167,7 +175,7 @@ export function extractTournamentDetails(text: string): ExtractedTournamentDetai
   }
   // "Posted on VBSchedule.com on Wednesday night prior to the event" — description, goes to notes
   if (!result.schedule_available_date) {
-    const schedDescMatch = text.match(/schedule[:\s]*(?:posted|available|released|will\s+be\s+posted)\s+(?:on\s+)?(?:\w+\.com\s+)?(?:on\s+)?((?:\w+day|the\s+\w+)\s+(?:night\s+)?(?:prior|before)\s+(?:to\s+)?(?:the\s+)?event)/i);
+    const schedDescMatch = text.match(/schedule[:\s]*(?:posted|available|released|will\s+be\s+posted)\s+(?:on\s+)?(?:\w+(?:\.com)?\s+)?(?:on\s+)?((?:\w+day|the\s+\w+)\s+(?:night\s+)?(?:prior|before)\s+(?:to\s+)?(?:the\s+)?event)/i);
     if (schedDescMatch) {
       // Store as note, not as date field (DB expects YYYY-MM-DD)
       result.notes = result.notes ? result.notes + '\n' : '';
@@ -176,43 +184,39 @@ export function extractTournamentDetails(text: string): ExtractedTournamentDetai
   }
 
   // --- DIVISION ---
+  // Single line: "Division: 14 Open"
   const divisionMatch = text.match(/division[:\s]*(.+?)(?:\n|$)/i);
   if (divisionMatch) {
     result.division_info = divisionMatch[1].trim();
+  }
+  // Multi-line division listings: "14 adidas: 14 Open (AM Wave)"
+  if (!result.division_info) {
+    const divisionLines = [...text.matchAll(/^\s*\d{1,2}\s+(?:adidas|molten|helix|mizuno|nike|under armour)[:\s]+(.+?)$/gim)];
+    if (divisionLines.length > 0) {
+      result.division_info = divisionLines.map(m => m[1].trim()).join(', ');
+    }
   }
 
   // --- NOTES ---
   const noteParts: string[] = [];
 
-  // Start times
-  const startTimeMatch = text.match(/(?:tentative\s+)?start\s*time[:\s]*(.+?)(?:\n|$)/i);
-  if (startTimeMatch) noteParts.push(`Start: ${startTimeMatch[1].trim()}`);
-
-  // Division info
-  if (result.division_info) noteParts.push(`Division: ${result.division_info}`);
-
-  // Bids
-  const bidsMatch = text.match(/bids?\s*(?:available)?[:\s]*(.+?)(?:\n|$)/i);
-  if (bidsMatch) noteParts.push(`Bids: ${bidsMatch[1].trim()}`);
-
-  // Warm-up balls
-  if (/warm[- ]?up\s+balls?\s+(?:are\s+)?not\s+provided/i.test(text)) {
-    noteParts.push('Warm-up balls NOT provided');
+  // Stay to play
+  if (/stay\s*to\s*play/i.test(text)) {
+    noteParts.push('Stay to Play event');
   }
 
-  // Ticket pricing
-  const adultPass = text.match(/(?:adult|3-day\s*pass)[:\s]*\$(\d+)/i);
-  if (adultPass) noteParts.push(`Adult 3-Day: $${adultPass[1]}`);
-  const singleDay = text.match(/single\s*day[:\s]*\$(\d+)/i);
-  if (singleDay) noteParts.push(`Single Day: $${singleDay[1]}`);
-
-  // Children free
-  if (/children?\s*(?:\d+\s*(?:&|and)\s*)?under\s+(?:are\s+)?free/i.test(text)) {
-    noteParts.push('Children 6 & under free');
+  // Hotel booking info
+  const hotelBookingMatch = text.match(/(?:book\s+(?:online\s+)?through|hotel\s+booking(?:\s+via)?)\s+(.+?)(?:[\.\n]|$)/i);
+  if (hotelBookingMatch) {
+    const hotelDeadline = text.match(/(?:discount|booking|hotel)\s+deadline[:\s]*(.+?)(?:[\.\n]|$)/i);
+    let hotelNote = `Hotel: Book through ${hotelBookingMatch[1].trim()}`;
+    if (hotelDeadline) hotelNote += ` (deadline: ${hotelDeadline[1].trim()})`;
+    noteParts.push(hotelNote);
   }
 
   if (noteParts.length > 0) {
-    result.notes = noteParts.join('\n');
+    const existingNotes = result.notes ? result.notes + '\n' : '';
+    result.notes = existingNotes + noteParts.join('\n');
   }
 
   return result;

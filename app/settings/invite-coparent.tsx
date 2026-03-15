@@ -23,44 +23,60 @@ export default function InviteCoParentScreen() {
   const [sending, setSending] = useState(false);
   const [inviteType, setInviteType] = useState<InviteType>('admin');
   const [permission, setPermission] = useState<AdminPermission>('view');
-  const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
+  const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(
+    athletes.length > 1 ? 'all' : null
+  );
 
   // Get the primary athlete for this admin
   const primaryLink = adminAthletes.find((aa) => aa.admin_id === user?.id && aa.is_primary);
 
-  // Default to primary athlete if none selected
-  const effectiveAthleteId = selectedAthleteId ?? primaryLink?.athlete_id ?? null;
-  const selectedAthlete = athletes.find((a) => a.id === effectiveAthleteId);
+  // Default to primary athlete if none selected (or 'all' for multi-athlete)
+  const isAll = selectedAthleteId === 'all';
+  const effectiveAthleteId = isAll ? (primaryLink?.athlete_id ?? athletes[0]?.id ?? null) : (selectedAthleteId ?? primaryLink?.athlete_id ?? null);
+  const selectedAthlete = isAll ? null : athletes.find((a) => a.id === effectiveAthleteId);
 
   const handleSendInvite = async () => {
     if (!email.trim()) {
       Alert.alert('Missing field', 'Please enter an email address.');
       return;
     }
-    if (!effectiveAthleteId) {
+    if (!isAll && !effectiveAthleteId) {
       Alert.alert('Error', 'Please select an athlete.');
       return;
     }
 
     setSending(true);
-    const { data, error } = await supabase
-      .from('athlete_invites')
-      .insert({
-        inviter_id: user!.id,
-        athlete_id: effectiveAthleteId,
-        email: email.trim().toLowerCase(),
-        invite_type: inviteType,
-        permission: inviteType === 'athlete' ? 'view' : permission,
-      } as any)
-      .select()
-      .single();
+
+    // If "All Athletes" is selected, create an invite for each athlete
+    const athleteIds = isAll ? athletes.map((a) => a.id) : [effectiveAthleteId!];
+    let lastCode = '';
+    let firstError = '';
+
+    for (const athId of athleteIds) {
+      const { data, error } = await supabase
+        .from('athlete_invites')
+        .insert({
+          inviter_id: user!.id,
+          athlete_id: athId,
+          email: email.trim().toLowerCase(),
+          invite_type: inviteType,
+          permission: inviteType === 'athlete' ? 'view' : permission,
+        } as any)
+        .select()
+        .single();
+      if (error && !firstError) {
+        firstError = error.message;
+      } else if (data) {
+        lastCode = (data as any).invite_code;
+      }
+    }
     setSending(false);
 
-    if (error) {
-      Alert.alert('Error', error.message);
+    if (firstError && !lastCode) {
+      Alert.alert('Error', firstError);
     } else {
       notifySuccess();
-      setInviteCode((data as any).invite_code);
+      setInviteCode(lastCode);
     }
   };
 
@@ -90,20 +106,30 @@ export default function InviteCoParentScreen() {
           {!inviteCode ? (
             <>
               <Text className="text-sm text-stone dark:text-parchment mb-4">
-                Invite someone to access {selectedAthlete?.first_name ?? 'your athlete'}'s data. They'll create their own account and use the invite code to link.
+                Invite someone to access {isAll ? 'all athletes\'' : (selectedAthlete?.first_name ?? 'your athlete\'s')} data. They'll create their own account and use the invite code to link.
               </Text>
 
               {/* Athlete selector */}
               {athletes.length > 1 && (
                 <>
-                  <Text className="text-xs text-stone uppercase tracking-wider font-bold mb-2">Athlete</Text>
-                  <View className="flex-row gap-2 mb-4">
+                  <Text className="text-xs text-stone uppercase tracking-wider font-bold mb-2">Share Access To</Text>
+                  <View className="flex-row gap-2 mb-4 flex-wrap">
+                    <Pressable
+                      className={`py-3 px-4 rounded-xl items-center border ${
+                        isAll ? 'bg-rally-600 border-rally-600' : 'border-parchment dark:border-bark-light'
+                      }`}
+                      onPress={() => setSelectedAthleteId('all')}
+                    >
+                      <Text className={`text-sm font-bold ${isAll ? 'text-cream' : 'text-bark dark:text-cream'}`}>
+                        All Athletes
+                      </Text>
+                    </Pressable>
                     {athletes.map((ath) => {
-                      const isSelected = ath.id === effectiveAthleteId;
+                      const isSelected = !isAll && ath.id === effectiveAthleteId;
                       return (
                         <Pressable
                           key={ath.id}
-                          className={`flex-1 py-3 rounded-xl items-center border ${
+                          className={`py-3 px-4 rounded-xl items-center border ${
                             isSelected ? 'bg-rally-600 border-rally-600' : 'border-parchment dark:border-bark-light'
                           }`}
                           onPress={() => setSelectedAthleteId(ath.id)}

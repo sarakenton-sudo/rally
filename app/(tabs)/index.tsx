@@ -108,11 +108,18 @@ export default function HomeScreen() {
         {/* ============================================================ */}
         {/* QUICK ADD — Top of page */}
         {/* ============================================================ */}
-        <View className="flex-row gap-2 mt-3">
+        <Pressable
+          className="bg-warm-white dark:bg-bark-light rounded-xl py-3 mt-3 flex-row items-center justify-center active:opacity-80 border border-parchment dark:border-rally-900"
+          onPress={() => router.push('/settings/schedule-import')}
+        >
+          <Ionicons name="trophy-outline" size={16} color="#7c3aed" />
+          <Text className="text-sm font-semibold text-bark dark:text-cream ml-2">Add Tournament Details</Text>
+        </Pressable>
+        <View className="flex-row gap-2 mt-2">
           <Pressable
             className="flex-1 bg-rally-600 rounded-xl py-3 flex-row items-center justify-center active:opacity-80"
             style={{ shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3 }}
-            onPress={() => router.push('/import/paste-travel')}
+            onPress={() => router.push('/import/paste-combined')}
           >
             <Ionicons name="sparkles" size={16} color="#FEFEFE" />
             <Text className="text-sm font-semibold text-cream ml-2">Paste + AI</Text>

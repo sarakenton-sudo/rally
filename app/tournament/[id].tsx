@@ -202,13 +202,13 @@ export default function TournamentDetailScreen() {
         </View>
 
         <View className="px-4">
-          {/* PASTE + AI for tournament details */}
+          {/* PASTE + AI */}
           <Pressable
             className="bg-rally-50 rounded-xl p-3 mt-4 flex-row items-center justify-center active:opacity-80 border border-rally-100"
-            onPress={() => router.push({ pathname: '/import/paste-tournament-details', params: { tournamentId: tournament.id } })}
+            onPress={() => router.push('/import/paste-combined')}
           >
             <Ionicons name="sparkles" size={16} color="#7c3aed" />
-            <Text className="text-sm font-semibold text-rally-700 ml-2">Paste + AI Tournament Details</Text>
+            <Text className="text-sm font-semibold text-rally-700 ml-2">Paste + AI</Text>
           </Pressable>
 
           {/* VENUE */}

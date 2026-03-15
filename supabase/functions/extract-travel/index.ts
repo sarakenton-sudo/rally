@@ -2,41 +2,48 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
 const CLAUDE_API_KEY = Deno.env.get('CLAUDE_API_KEY') ?? '';
 
-const SYSTEM_PROMPT = `You are a schedule extraction assistant for a youth select volleyball app called Rally.
+const SYSTEM_PROMPT = `You are a travel extraction assistant for a youth select volleyball app called Rally.
 
-Your job is to extract tournament details from unstructured text that a parent might paste — such as a copied GroupMe message, forwarded email, or a schedule list from a coach.
+Your job is to extract hotel bookings and flight bookings from unstructured text that a parent might paste — such as a forwarded confirmation email, a booking receipt, a hotel block reservation, or a travel coordinator message.
 
-For each tournament you find, extract:
-- name: the tournament name (e.g. "Lonestar Classic")
-- start_date: YYYY-MM-DD format
-- end_date: YYYY-MM-DD format (same as start_date if single day)
-- location_city: city and state (e.g. "Dallas, TX")
-- venue_name: venue or facility name if mentioned (e.g. "Dallas Convention Center")
-- venue_address: full address if available, otherwise empty string
-- notes: any extra details like check-in times, format, special instructions
+For each HOTEL booking you find, extract:
+- type: "hotel"
+- hotel_name: the hotel name (e.g. "Hilton Minneapolis", "Courtyard by Marriott Dallas")
+- reservation_number: confirmation or reservation number
+- check_in: YYYY-MM-DD format
+- check_out: YYYY-MM-DD format
+- platform: booking platform — "Bonvoy" for Marriott brands, "Direct" for Hilton/Hyatt direct, "Booking.com", "Expedia", "Hotels.com", "THS" for Team Hotel Store, or "Other"
+- booking_name: primary guest name
+- booked_by: who made the booking if different from guest, otherwise empty string
+- cost: nightly rate as a number (no $ sign), or null if not found
+- cancellation_deadline: cancellation deadline date in YYYY-MM-DD if mentioned, else ""
+- notes: IMPORTANT — include ALL of these if found: room type, deposit requirements, cancellation/refund policy, minimum stay, reservation passcode, check-in/check-out times, parking info. This is critical information parents need. Format each on its own line.
+
+For each FLIGHT booking you find, extract:
+- type: "flight"
+- airline: airline name (e.g. "Southwest", "Delta", "United", "American")
+- confirmation_code: the confirmation/record locator code
+- departure_date: YYYY-MM-DD format
+- return_date: YYYY-MM-DD format (same as departure if one-way)
+- ticket_number: ticket number if available, otherwise empty string
+- booked_by: who booked if mentioned, otherwise empty string
+- traveler_names: array of passenger names
+- cost: total cost as a number, or null if not found
+- notes: seat assignments, baggage info, etc.
 
 Important rules:
-- If you cannot determine the year, assume the current season (2025-2026 school year). Fall dates = 2025, spring dates = 2026.
-- If only a month and day are given, infer the year from context.
-- If a date range like "March 20-22" is given, start_date is March 20 and end_date is March 22.
-- Extract ALL tournaments found in the text.
-- If you cannot parse any tournaments, return an empty array.
+- Dates come in MANY formats: "03/19/26", "March 19, 2026", "2026-03-19", "19MAR", "Thu, 19MAR", "3/19/2026". ALWAYS convert to YYYY-MM-DD.
+- Two-digit years: "26" = 2026, "25" = 2025.
+- "Arrival" / "Departure" for hotels = check_in / check_out.
+- Hotel block reservations (like THS, Team Hotel Store, etc.) are hotel bookings.
+- If you see both a hotel and flight in the same text, extract BOTH as separate bookings.
+- Extract ALL bookings found in the text.
+- If you cannot parse any bookings, return an empty array.
 - Return ONLY valid JSON, no markdown fencing, no explanation.
 
-Respond with a JSON object: { "tournaments": [...] }`;
-
-interface ExtractedTournament {
-  name: string;
-  start_date: string;
-  end_date: string;
-  location_city: string;
-  venue_name: string;
-  venue_address: string;
-  notes: string;
-}
+Respond with a JSON object: { "bookings": [...] }`;
 
 serve(async (req: Request) => {
-  // CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
       headers: {
@@ -78,7 +85,7 @@ serve(async (req: Request) => {
         messages: [
           {
             role: 'user',
-            content: `Extract tournament details from this text:\n\n${text}`,
+            content: `Extract travel booking details from this text:\n\n${text}`,
           },
         ],
       }),
@@ -96,12 +103,10 @@ serve(async (req: Request) => {
     const claudeData = await claudeResponse.json();
     const rawText = claudeData.content?.[0]?.text ?? '';
 
-    // Parse the JSON from Claude's response
-    let extracted: { tournaments: ExtractedTournament[] };
+    let extracted: { bookings: any[] };
     try {
       extracted = JSON.parse(rawText);
     } catch {
-      // Try to extract JSON from potential markdown fencing
       const jsonMatch = rawText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         extracted = JSON.parse(jsonMatch[0]);

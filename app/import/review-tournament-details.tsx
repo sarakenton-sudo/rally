@@ -123,6 +123,11 @@ export default function ReviewTournamentDetailsScreen() {
       if (fields.schedule_available_date && isValidDate(fields.schedule_available_date)) {
         updates.schedule_available_date = fields.schedule_available_date;
       }
+      // Combine division info and notes into the notes field
+      const notesParts: string[] = [];
+      if (fields.division_info) notesParts.push(`Division: ${fields.division_info}`);
+      if (fields.notes) notesParts.push(fields.notes);
+      if (notesParts.length > 0) updates.notes = notesParts.join('\n');
 
       if (Object.keys(updates).length === 0) {
         showError('No details to update. Fill in at least one field.');

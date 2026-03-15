@@ -14,7 +14,13 @@ import { notifySuccess } from '@/lib/haptics';
 import type { HotelBooking, FlightBooking, BookingPlatform, BookingStatus } from '@/types/database';
 
 const AIRLINES = ['Southwest', 'Delta', 'United', 'American', 'JetBlue', 'Spirit', 'Frontier', 'Alaska', 'Other'];
-const PLATFORMS: BookingPlatform[] = ['Bonvoy', 'Booking.com', 'Travel Source', 'Expedia', 'Direct', 'Other'];
+const PLATFORMS: BookingPlatform[] = ['Bonvoy', 'Booking.com', 'Travel Source', 'Expedia', 'Direct', 'THS', 'Other'];
+
+const VALID_PLATFORMS = new Set(PLATFORMS);
+function sanitizePlatform(p: string | undefined): BookingPlatform {
+  if (p && VALID_PLATFORMS.has(p as BookingPlatform)) return p as BookingPlatform;
+  return 'Other';
+}
 
 interface ExtractedBooking {
   type: 'hotel' | 'flight';
@@ -32,10 +38,11 @@ interface ExtractedBooking {
   return_date?: string;
   traveler_names?: string[];
   cost?: number | null;
+  notes?: string;
 }
 
 export default function ReviewTravelScreen() {
-  const { bookings: raw } = useLocalSearchParams<{ bookings: string }>();
+  const { bookings: raw, pendingDetails } = useLocalSearchParams<{ bookings: string; pendingDetails?: string }>();
   const parsed: ExtractedBooking[] = raw ? JSON.parse(raw) : [];
 
   const ic = useIconColors();
@@ -141,7 +148,8 @@ export default function ReviewTravelScreen() {
             created_by_user_id: userId,
             tournament_id: tournamentId,
             hotel_name: item.hotel_name || 'Unknown Hotel',
-            platform: (item.platform as BookingPlatform) || 'Other',
+            platform: sanitizePlatform(item.platform),
+            notes: item.notes || '',
             booking_name: item.booking_name || '',
             booked_by: item.booked_by || '',
             reservation_number: item.reservation_number || '',
@@ -187,7 +195,15 @@ export default function ReviewTravelScreen() {
       }
 
       notifySuccess();
-      router.dismissAll();
+      // If there are also tournament details to review, navigate there
+      if (pendingDetails) {
+        router.replace({
+          pathname: '/import/review-tournament-details',
+          params: { details: pendingDetails },
+        });
+      } else {
+        router.dismissAll();
+      }
     } catch (err: any) {
       showError(err.message || 'Failed to save bookings.');
     } finally {
@@ -283,8 +299,9 @@ export default function ReviewTravelScreen() {
                 {item.type === 'hotel' ? (
                   <>
                     <FormField label="Hotel Name" value={item.hotel_name || ''} onChangeText={(v) => updateItem(index, 'hotel_name', v)} placeholder="Hotel name" />
-                    <DropdownField label="Platform" value={item.platform || ''} options={PLATFORMS} onChange={(v) => updateItem(index, 'platform', v)} />
+                    <DropdownField label="Source" value={sanitizePlatform(item.platform)} options={PLATFORMS} onChange={(v) => updateItem(index, 'platform', v)} />
                     <FormField label="Reservation #" value={item.reservation_number || ''} onChangeText={(v) => updateItem(index, 'reservation_number', v)} placeholder="Confirmation number" />
+                    <FormField label="Guest Name" value={item.booking_name || ''} onChangeText={(v) => updateItem(index, 'booking_name', v)} placeholder="Primary guest" />
                     <View className="flex-row gap-3">
                       <View className="flex-1">
                         <FormField label="Check-in" value={item.check_in || ''} onChangeText={(v) => updateItem(index, 'check_in', v)} placeholder="YYYY-MM-DD" />
@@ -293,6 +310,9 @@ export default function ReviewTravelScreen() {
                         <FormField label="Check-out" value={item.check_out || ''} onChangeText={(v) => updateItem(index, 'check_out', v)} placeholder="YYYY-MM-DD" />
                       </View>
                     </View>
+                    {item.notes ? (
+                      <FormField label="Notes" value={item.notes || ''} onChangeText={(v) => updateItem(index, 'notes', v)} placeholder="Cancellation, deposit, etc." />
+                    ) : null}
                   </>
                 ) : (
                   <>

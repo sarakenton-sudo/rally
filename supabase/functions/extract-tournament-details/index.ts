@@ -2,41 +2,36 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
 const CLAUDE_API_KEY = Deno.env.get('CLAUDE_API_KEY') ?? '';
 
-const SYSTEM_PROMPT = `You are a schedule extraction assistant for a youth select volleyball app called Rally.
+const SYSTEM_PROMPT = `You are a tournament detail extraction assistant for a youth select volleyball app called Rally.
 
-Your job is to extract tournament details from unstructured text that a parent might paste — such as a copied GroupMe message, forwarded email, or a schedule list from a coach.
+Your job is to extract detailed tournament information from unstructured text that a parent might paste — such as a tournament info email, a coach's message, a tournament director announcement, or an info packet.
 
-For each tournament you find, extract:
-- name: the tournament name (e.g. "Lonestar Classic")
-- start_date: YYYY-MM-DD format
-- end_date: YYYY-MM-DD format (same as start_date if single day)
-- location_city: city and state (e.g. "Dallas, TX")
-- venue_name: venue or facility name if mentioned (e.g. "Dallas Convention Center")
-- venue_address: full address if available, otherwise empty string
-- notes: any extra details like check-in times, format, special instructions
+Extract these fields:
+- tournament_name: the tournament name (e.g. "Mizuno Northern Lights Qualifier", "Lonestar Classic"). Remove year prefixes like "2026" from the name.
+- venue_name: the venue or facility name (e.g. "Minneapolis Convention Center", "Kay Bailey Hutchison Convention Center")
+- venue_address: full street address if available (e.g. "1301 2nd Ave South, Minneapolis, MN 55403")
+- location_city: city and state (e.g. "Minneapolis, MN", "Dallas, TX")
+- ticket_sales_date: when tickets go on sale, in YYYY-MM-DD format. If not a specific date, leave empty.
+- ticket_link: URL for purchasing tickets
+- ticket_system: the ticketing platform (e.g. "Eventbrite", "Showpass", "Electronic", "Electronic (QR)")
+- schedule_link: URL where the tournament schedule is posted (e.g. VBSchedule.com link, SportWrench link, AES link)
+- schedule_available_date: when the schedule will be posted, in YYYY-MM-DD format. If it's a description like "Wednesday night prior to the event", leave this empty and put the description in notes instead.
+- division_info: division or age group information
+- notes: any other useful details — start times, warm-up ball info, ticket pricing, parking info, credential requirements, bids available, minimum stay requirements, etc. Format as short lines separated by newlines.
 
 Important rules:
-- If you cannot determine the year, assume the current season (2025-2026 school year). Fall dates = 2025, spring dates = 2026.
-- If only a month and day are given, infer the year from context.
-- If a date range like "March 20-22" is given, start_date is March 20 and end_date is March 22.
-- Extract ALL tournaments found in the text.
-- If you cannot parse any tournaments, return an empty array.
+- Dates come in MANY formats: "March 16, 2026", "3/16/26", "2026-03-16", "Mar 16". ALWAYS convert to YYYY-MM-DD when it's a specific date.
+- Two-digit years: "26" = 2026, "25" = 2025.
+- For schedule_available_date, ONLY use YYYY-MM-DD format. If the text says something like "Wednesday night prior" or "the week before", put that in notes instead.
+- Look for schedule sites mentioned by name: VBSchedule.com, SportWrench.com, AESAthletics.com — construct the base URL if a full link isn't provided.
+- Look for ticket pricing info (adult pass, single day, children free) and include in notes.
+- "Subject:" lines often contain the tournament name.
+- If you cannot determine a field, return an empty string for it.
 - Return ONLY valid JSON, no markdown fencing, no explanation.
 
-Respond with a JSON object: { "tournaments": [...] }`;
-
-interface ExtractedTournament {
-  name: string;
-  start_date: string;
-  end_date: string;
-  location_city: string;
-  venue_name: string;
-  venue_address: string;
-  notes: string;
-}
+Respond with a JSON object: { "details": { tournament_name, venue_name, venue_address, location_city, ticket_sales_date, ticket_link, ticket_system, schedule_link, schedule_available_date, division_info, notes } }`;
 
 serve(async (req: Request) => {
-  // CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
       headers: {
@@ -96,12 +91,10 @@ serve(async (req: Request) => {
     const claudeData = await claudeResponse.json();
     const rawText = claudeData.content?.[0]?.text ?? '';
 
-    // Parse the JSON from Claude's response
-    let extracted: { tournaments: ExtractedTournament[] };
+    let extracted: { details: any };
     try {
       extracted = JSON.parse(rawText);
     } catch {
-      // Try to extract JSON from potential markdown fencing
       const jsonMatch = rawText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         extracted = JSON.parse(jsonMatch[0]);

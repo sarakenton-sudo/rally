@@ -1,5 +1,5 @@
 export type TournamentStatus = 'upcoming' | 'travel_needed' | 'booked' | 'complete';
-export type BookingPlatform = 'Bonvoy' | 'Booking.com' | 'Travel Source' | 'Expedia' | 'Direct' | 'Other';
+export type BookingPlatform = 'Bonvoy' | 'Booking.com' | 'Travel Source' | 'Expedia' | 'Direct' | 'THS' | 'Other';
 export type BookingStatus = 'tentative' | 'confirmed' | 'cancelled';
 export type RSVPStatus = 'pending' | 'yes' | 'no' | 'maybe';
 export type NotificationPref = 'sms';
@@ -130,6 +130,7 @@ export interface HotelBooking {
   check_out: string;
   cancellation_deadline: string | null;
   cost: number | null;
+  notes: string;
   is_backup: boolean;
   status: BookingStatus;
   created_by_user_id: string;

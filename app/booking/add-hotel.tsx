@@ -134,6 +134,7 @@ export default function AddHotelBookingScreen() {
       cost: cost ? parseFloat(cost) : null,
       is_backup: isBackup,
       status: (existing?.status ?? 'confirmed') as BookingStatus,
+      notes: existing?.notes ?? '',
     };
 
     try {

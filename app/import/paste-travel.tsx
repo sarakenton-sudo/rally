@@ -186,6 +186,14 @@ export default function PasteTravelScreen() {
 function mockExtractTravel(text: string) {
   const bookings: any[] = [];
 
+  const monthMap: Record<string, string> = {
+    jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+    jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+    january: '01', february: '02', march: '03', april: '04',
+    june: '06', july: '07', august: '08', september: '09',
+    october: '10', november: '11', december: '12',
+  };
+
   // Detect airline from text
   const airlinePatterns: [RegExp, string][] = [
     [/delta/i, 'Delta'],
@@ -225,13 +233,6 @@ function mockExtractTravel(text: string) {
     let returnDate = '';
 
     const currentYear = new Date().getFullYear();
-    const monthMap: Record<string, string> = {
-      jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
-      jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
-      january: '01', february: '02', march: '03', april: '04',
-      june: '06', july: '07', august: '08', september: '09',
-      october: '10', november: '11', december: '12',
-    };
 
     if (dateLineMatches.length >= 2) {
       // "19MAR" format
@@ -287,27 +288,66 @@ function mockExtractTravel(text: string) {
   let detectedPlatform = 'Other';
   const hotelMatch = text.match(/(?:hotel|marriott|hilton|sheraton|hyatt|courtyard|residence inn|hampton|doubletree|westin|holiday inn|comfort inn|best western|la quinta)/i);
 
-  if (hotelMatch || /check[- ]?in|check[- ]?out|reservation/i.test(text)) {
+  if (hotelMatch || /check[- ]?in|check[- ]?out|reservation|arrival|departure/i.test(text)) {
     for (const [pattern, platform] of hotelPatterns) {
       if (pattern.test(text)) { detectedPlatform = platform; break; }
     }
 
-    const confirmMatch = text.match(/(?:confirmation|reservation|conf)[#:\s]*([A-Z0-9-]+)/i);
-    const checkInMatch = text.match(/check[- ]?in[:\s]*(.+?)(?:\n|$)/i);
-    const checkOutMatch = text.match(/check[- ]?out[:\s]*(.+?)(?:\n|$)/i);
-    const hotelNameMatch = text.match(/(?:hotel|resort|inn|suites|lodge)[:\s]*(.+?)(?:\n|$)/i) || hotelMatch;
+    const confirmMatch = text.match(/(?:hotel\s+)?(?:confirmation|reservation|conf)(?:\s+number)?[#:\s]*([A-Z0-9-]+)/i);
+    // Support check-in, arrival labels
+    const checkInMatch = text.match(/(?:check[- ]?in|arrival)[:\s]*(.+?)(?:\n|$)/i);
+    const checkOutMatch = text.match(/(?:check[- ]?out|departure)[:\s]*(.+?)(?:\n|$)/i);
+    // Guest name: "Primary Guest Name: Adam Kenton" or "Guest: Sara Kenton"
+    const guestMatch = text.match(/(?:primary\s+)?guest\s*name?[:\s]*(.+?)(?:\n|$)/i);
+    // Room rate
+    const rateMatch = text.match(/(?:room\s+)?rate[:\s]*\$?([\d,.]+)/i);
+
+    // Hotel name: try "Hilton Minneapolis" style (brand name on its own line)
+    let hotelName = '';
+    const hotelNameMatch = text.match(/(?:hotel|resort|inn|suites|lodge)[:\s]*(.+?)(?:\n|$)/i);
+    if (hotelNameMatch) {
+      hotelName = hotelNameMatch[1].trim();
+    }
+    // Try brand + city on its own line (e.g. "Hilton Minneapolis")
+    if (!hotelName) {
+      const brandLineMatch = text.match(/^((?:Hilton|Marriott|Hyatt|Sheraton|Westin|Hampton|Courtyard|Residence Inn|DoubleTree|Embassy Suites|Holiday Inn|Comfort Inn|Best Western|La Quinta)\s+[\w\s]+?)$/im);
+      if (brandLineMatch) hotelName = brandLineMatch[1].trim();
+    }
+    if (!hotelName && hotelMatch) hotelName = hotelMatch[0];
+
+    // Parse MM/DD/YY or MM/DD/YYYY dates
+    const parseHotelDate = (raw: string): string => {
+      const trimmed = raw.trim();
+      // MM/DD/YY or MM/DD/YYYY
+      const slashMatch = trimmed.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+      if (slashMatch) {
+        let year = slashMatch[3];
+        if (year.length === 2) year = '20' + year;
+        return `${year}-${slashMatch[1].padStart(2, '0')}-${slashMatch[2].padStart(2, '0')}`;
+      }
+      // Month Day, Year
+      const longMatch = trimmed.match(/(\w+)\s+(\d{1,2}),?\s*(\d{4})/);
+      if (longMatch) {
+        const m = monthMap[longMatch[1].toLowerCase()];
+        if (m) return `${longMatch[3]}-${m}-${longMatch[2].padStart(2, '0')}`;
+      }
+      // ISO
+      const isoMatch = trimmed.match(/(\d{4}-\d{2}-\d{2})/);
+      if (isoMatch) return isoMatch[1];
+      return trimmed;
+    };
 
     if (hotelMatch || checkInMatch) {
       bookings.push({
         type: 'hotel',
-        hotel_name: hotelNameMatch?.[1]?.trim() || hotelMatch?.[0] || '',
+        hotel_name: hotelName,
         reservation_number: confirmMatch?.[1] || '',
-        check_in: checkInMatch?.[1]?.trim() || '',
-        check_out: checkOutMatch?.[1]?.trim() || '',
+        check_in: checkInMatch ? parseHotelDate(checkInMatch[1]) : '',
+        check_out: checkOutMatch ? parseHotelDate(checkOutMatch[1]) : '',
         platform: detectedPlatform,
-        booking_name: '',
+        booking_name: guestMatch?.[1]?.trim() || '',
         booked_by: '',
-        cost: null,
+        cost: rateMatch ? parseFloat(rateMatch[1].replace(',', '')) : null,
       });
     }
   }
