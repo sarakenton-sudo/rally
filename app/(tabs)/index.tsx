@@ -258,7 +258,7 @@ export default function HomeScreen() {
             </Pressable>
             <Pressable
               className="flex-1 rounded-xl py-3.5 items-center justify-center active:opacity-80 border border-parchment dark:border-rally-900"
-              style={{ backgroundColor: '#F5F0E8' }}
+              style={{ backgroundColor: '#F4F6F8' }}
               onPress={() => router.push('/settings/email-forward')}
             >
               <Ionicons name="mail-open" size={20} color="#3B82B0" />
@@ -266,7 +266,7 @@ export default function HomeScreen() {
             </Pressable>
             <Pressable
               className="flex-1 rounded-xl py-3.5 items-center justify-center active:opacity-80 border border-parchment dark:border-rally-900"
-              style={{ backgroundColor: '#F5F0E8' }}
+              style={{ backgroundColor: '#F4F6F8' }}
               onPress={handlePlusPress}
             >
               <Ionicons name="create-outline" size={20} color="#6A9E8A" />
@@ -278,7 +278,7 @@ export default function HomeScreen() {
         {/* ============================================================ */}
         {/* SECTION 2: Actions                                           */}
         {/* ============================================================ */}
-        <View className="px-4 pt-5 pb-5" style={{ backgroundColor: '#F5F0E8' }}>
+        <View className="px-4 pt-5 pb-5" style={{ backgroundColor: '#F4F6F8' }}>
           <SectionHeader
             icon="flash"
             iconColor="#d97706"
@@ -332,7 +332,7 @@ export default function HomeScreen() {
                     ? 'bg-rally-600 border-rally-600'
                     : 'border-parchment dark:border-rally-900'
                 }`}
-                style={athleteFilter !== 'all' ? { backgroundColor: '#F5F0E8' } : undefined}
+                style={athleteFilter !== 'all' ? { backgroundColor: '#F4F6F8' } : undefined}
                 onPress={() => setAthleteFilter('all')}
               >
                 <Text className={`text-xs font-semibold ${
@@ -347,7 +347,7 @@ export default function HomeScreen() {
                 return (
                   <Pressable
                     key={a.id}
-                    style={isSelected ? { backgroundColor: avatarColor, borderColor: avatarColor, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999 } : { backgroundColor: '#F5F0E8' }}
+                    style={isSelected ? { backgroundColor: avatarColor, borderColor: avatarColor, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999 } : { backgroundColor: '#F4F6F8' }}
                     className={isSelected ? undefined : 'px-3 py-1.5 rounded-full border border-parchment'}
                     onPress={() => setAthleteFilter(a.id)}
                   >
@@ -375,7 +375,7 @@ export default function HomeScreen() {
           ) : (
             <View
               className="rounded-2xl p-5 border border-parchment dark:border-rally-900"
-              style={{ backgroundColor: '#F5F0E8' }}
+              style={{ backgroundColor: '#F4F6F8' }}
             >
               <View className="items-center py-4">
                 <Ionicons name="calendar-outline" size={32} color={ic.placeholder} />
@@ -391,7 +391,7 @@ export default function HomeScreen() {
         {/* SECTION 4: Athletes                                          */}
         {/* ============================================================ */}
         {athletes.length > 0 && (
-          <View className="px-4 pt-5 pb-5" style={{ backgroundColor: '#F5F0E8' }}>
+          <View className="px-4 pt-5 pb-5" style={{ backgroundColor: '#F4F6F8' }}>
             <SectionHeader
               icon="people-circle"
               iconColor="#0d9488"
@@ -442,7 +442,7 @@ export default function HomeScreen() {
           />
           <Pressable
             className="rounded-xl p-4 flex-row items-center border border-parchment dark:border-rally-900 active:opacity-80"
-            style={{ backgroundColor: '#F5F0E8' }}
+            style={{ backgroundColor: '#F4F6F8' }}
             onPress={() => router.push('/(tabs)/guests')}
           >
             <View className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 items-center justify-center mr-3">
@@ -463,7 +463,7 @@ export default function HomeScreen() {
         {/* ============================================================ */}
         {/* SECTION 6: Credential Vault                                  */}
         {/* ============================================================ */}
-        <View className="px-4 pt-5 pb-5" style={{ backgroundColor: '#F5F0E8' }}>
+        <View className="px-4 pt-5 pb-5" style={{ backgroundColor: '#F4F6F8' }}>
           <SectionHeader
             icon="key"
             iconColor="#ca8a04"
@@ -525,7 +525,7 @@ export default function HomeScreen() {
             iconColor="#6A9E8A"
             title="New Feature Request"
           />
-          <View className="rounded-xl p-4 border border-parchment dark:border-rally-900" style={{ backgroundColor: '#F5F0E8' }}>
+          <View className="rounded-xl p-4 border border-parchment dark:border-rally-900" style={{ backgroundColor: '#F4F6F8' }}>
             <TextInput
               className="text-sm text-bark dark:text-cream min-h-[60px]"
               placeholder="What would make Rally even better?"
@@ -559,7 +559,7 @@ export default function HomeScreen() {
         {/* ============================================================ */}
         {/* SECTION 8: Need Help?                                        */}
         {/* ============================================================ */}
-        <View className="px-4 pt-5 pb-6" style={{ backgroundColor: '#F5F0E8' }}>
+        <View className="px-4 pt-5 pb-6" style={{ backgroundColor: '#F4F6F8' }}>
           <SectionHeader
             icon="help-circle"
             iconColor="#3B82B0"
