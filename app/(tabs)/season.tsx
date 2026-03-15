@@ -1,4 +1,4 @@
-import { View, Text, FlatList, ActivityIndicator, Pressable, Alert, Platform } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, Pressable, Alert, Platform, Linking } from 'react-native';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -141,6 +141,49 @@ export default function SeasonScreen() {
                 <Ionicons name="copy-outline" size={20} color="rgba(254,254,254,0.7)" />
               </Pressable>
             ) : null}
+
+            {/* Add All to Calendar */}
+            {seasonTournaments.length > 0 && (
+              <Pressable
+                className="bg-warm-white border border-parchment rounded-xl p-3 mt-3 flex-row items-center justify-center active:opacity-80"
+                style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}
+                onPress={() => {
+                  const upcoming = seasonTournaments
+                    .filter((t) => daysUntil(t.end_date) >= 0)
+                    .sort((a, b) => a.start_date.localeCompare(b.start_date));
+                  const tourns = upcoming.length > 0 ? upcoming : seasonTournaments;
+
+                  if (Platform.OS === 'web') {
+                    // Open Google Calendar for first tournament, copy .ics for all
+                    const icsEvents = tourns.map((t) => {
+                      const start = t.start_date.replace(/-/g, '') + 'T080000';
+                      const end = t.end_date.replace(/-/g, '') + 'T200000';
+                      return `BEGIN:VEVENT\r\nDTSTART:${start}\r\nDTEND:${end}\r\nSUMMARY:${t.name}\r\nLOCATION:${t.location_city || ''}\r\nEND:VEVENT`;
+                    }).join('\r\n');
+                    const icsContent = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//RALLY//Season//EN\r\n${icsEvents}\r\nEND:VCALENDAR`;
+                    const blob = new Blob([icsContent], { type: 'text/calendar' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${teamName || 'rally'}-${seasonYear || 'season'}.ics`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  } else {
+                    const icsEvents = tourns.map((t) => {
+                      const start = t.start_date.replace(/-/g, '') + 'T080000';
+                      const end = t.end_date.replace(/-/g, '') + 'T200000';
+                      return `BEGIN:VEVENT\r\nDTSTART:${start}\r\nDTEND:${end}\r\nSUMMARY:${t.name}\r\nLOCATION:${t.location_city || ''}\r\nEND:VEVENT`;
+                    }).join('\r\n');
+                    const icsContent = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//RALLY//Season//EN\r\n${icsEvents}\r\nEND:VCALENDAR`;
+                    Linking.openURL(`data:text/calendar;charset=utf-8,${encodeURIComponent(icsContent)}`);
+                  }
+                  tapLight();
+                }}
+              >
+                <Ionicons name="calendar-outline" size={18} color="#3B82B0" />
+                <Text className="text-sm font-semibold text-rally-600 ml-2">Add All to Calendar</Text>
+              </Pressable>
+            )}
           </View>
         }
         ListFooterComponent={
