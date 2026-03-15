@@ -801,7 +801,7 @@ export default function TournamentDetailScreen() {
                   }}
                 >
                   <Ionicons name="location" size={16} color="#ec4899" />
-                  <Text className="text-xs font-semibold text-pink-700 dark:text-pink-300 ml-1.5">In-Person</Text>
+                  <Text className="text-xs font-semibold text-pink-700 dark:text-pink-300 ml-1.5">Send In-Person Details</Text>
                 </Pressable>
                 <Pressable
                   className="flex-1 bg-white/70 dark:bg-bark-light rounded-xl py-3 items-center flex-row justify-center active:opacity-80 border border-pink-100"
@@ -819,7 +819,7 @@ export default function TournamentDetailScreen() {
                   }}
                 >
                   <Ionicons name="videocam" size={16} color="#ec4899" />
-                  <Text className="text-xs font-semibold text-pink-700 dark:text-pink-300 ml-1.5">Streaming</Text>
+                  <Text className="text-xs font-semibold text-pink-700 dark:text-pink-300 ml-1.5">Send Streaming Details</Text>
                 </Pressable>
               </View>
             </View>
