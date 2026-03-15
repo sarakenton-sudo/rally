@@ -53,6 +53,31 @@ export default function ScheduleImportScreen() {
           </Text>
         </Pressable>
 
+        {/* Add Manually — Tournament */}
+        <Pressable
+          className="bg-warm-white dark:bg-bark-light rounded-xl p-5 mb-3 border border-parchment dark:border-rally-900 active:opacity-80"
+          onPress={() => {
+            const blank = [{ name: '', start_date: '', end_date: '', location_city: '', venue_name: '', venue_address: '', notes: '' }];
+            router.push({ pathname: '/import/review', params: { tournaments: JSON.stringify(blank) } });
+          }}
+        >
+          <View className="flex-row items-center mb-2">
+            <View
+              className="w-10 h-10 rounded-full items-center justify-center mr-3"
+              style={{ backgroundColor: '#6A9E8A15' }}
+            >
+              <Ionicons name="create-outline" size={20} color="#6A9E8A" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-base font-semibold text-bark dark:text-cream">Add Manually</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={ic.subtle} />
+          </View>
+          <Text className="text-sm text-stone ml-13">
+            Type in tournament details by hand — name, dates, location.
+          </Text>
+        </Pressable>
+
         {/* Card B — Forward Email */}
         <View className="bg-warm-white dark:bg-bark-light rounded-xl p-5 mb-3 border border-parchment dark:border-rally-900">
           <View className="flex-row items-center mb-2">
@@ -153,26 +178,90 @@ export default function ScheduleImportScreen() {
           </Text>
         </Pressable>
 
-        {/* Card E — Gmail Auto-Import */}
-        <Pressable
-          className="bg-warm-white dark:bg-bark-light rounded-xl p-5 mb-3 border border-parchment dark:border-rally-900 active:opacity-80"
-          onPress={() => router.push('/settings/email-forward')}
-        >
+        {/* Add Manually — Travel */}
+        <View className="bg-warm-white dark:bg-bark-light rounded-xl p-5 mb-3 border border-parchment dark:border-rally-900">
+          <View className="flex-row items-center mb-3">
+            <View
+              className="w-10 h-10 rounded-full items-center justify-center mr-3"
+              style={{ backgroundColor: '#6A9E8A15' }}
+            >
+              <Ionicons name="create-outline" size={20} color="#6A9E8A" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-base font-semibold text-bark dark:text-cream">Add Manually</Text>
+            </View>
+          </View>
+          <View className="flex-row gap-3 ml-13">
+            <Pressable
+              className="flex-1 bg-rally-50 rounded-xl py-3 items-center active:opacity-80 border border-rally-200"
+              onPress={() => router.push('/booking/add-hotel')}
+            >
+              <Ionicons name="bed-outline" size={20} color="#3B82B0" />
+              <Text className="text-xs font-semibold text-rally-600 mt-1">Hotel</Text>
+            </Pressable>
+            <Pressable
+              className="flex-1 bg-rally-50 rounded-xl py-3 items-center active:opacity-80 border border-rally-200"
+              onPress={() => router.push('/booking/add-flight')}
+            >
+              <Ionicons name="airplane-outline" size={20} color="#3B82B0" />
+              <Text className="text-xs font-semibold text-rally-600 mt-1">Flight</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Card E — Forward Email (Travel) */}
+        <View className="bg-warm-white dark:bg-bark-light rounded-xl p-5 mb-3 border border-parchment dark:border-rally-900">
           <View className="flex-row items-center mb-2">
             <View
               className="w-10 h-10 rounded-full items-center justify-center mr-3"
               style={{ backgroundColor: '#3B82B015' }}
             >
-              <Ionicons name="mail" size={20} color="#3B82B0" />
+              <Ionicons name="mail-open" size={20} color="#3B82B0" />
             </View>
             <View className="flex-1">
-              <Text className="text-base font-semibold text-bark dark:text-cream">Gmail Auto-Import</Text>
+              <Text className="text-base font-semibold text-bark dark:text-cream">Forward Email</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={ic.subtle} />
           </View>
-          <Text className="text-sm text-stone ml-13">
-            Connect Gmail to automatically detect hotel and flight confirmations and add them to your season.
+          <Text className="text-sm text-stone ml-13 mb-1">
+            Forward a hotel or flight confirmation email and AI will extract the details.
           </Text>
+          {adminConfig?.rally_forward_address && (
+            <View className="bg-rally-50 dark:bg-rally-900/20 rounded-lg p-3 ml-13 flex-row items-center">
+              <Text className="text-sm font-semibold text-rally-600 flex-1" numberOfLines={1}>
+                {adminConfig.rally_forward_address}
+              </Text>
+              <Pressable
+                onPress={async () => {
+                  await Clipboard.setStringAsync(adminConfig.rally_forward_address);
+                  tapLight();
+                  Alert.alert('Copied', 'Forward address copied to clipboard.');
+                }}
+                className="bg-rally-600 px-3 py-1.5 rounded-lg active:opacity-80 ml-2"
+              >
+                <Text className="text-xs font-semibold text-cream">Copy</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+
+        {/* Auto-Sync (Coming Soon) */}
+        <Pressable
+          className="bg-warm-white dark:bg-bark-light rounded-xl p-3 mb-3 border border-parchment dark:border-rally-900 opacity-50 flex-row items-center"
+          onPress={() => Alert.alert(
+            'Coming Soon',
+            'Auto-Sync will automatically detect hotel and flight confirmations from your email. Use Paste + AI or Forward Email for now.'
+          )}
+        >
+          <View
+            className="w-8 h-8 rounded-full items-center justify-center mr-3"
+            style={{ backgroundColor: '#3B82B015' }}
+          >
+            <Ionicons name="sync" size={16} color="#3B82B0" />
+          </View>
+          <Text className="text-sm font-medium text-bark dark:text-cream flex-1">Auto-Sync</Text>
+          <View className="bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+            <Text className="text-xs font-semibold text-amber-700 dark:text-amber-300">Coming Soon</Text>
+          </View>
         </Pressable>
 
         <View className="h-8" />
