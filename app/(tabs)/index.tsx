@@ -15,6 +15,30 @@ const AVATAR_COLORS = [
   '#0d9488', '#be185d', '#4f46e5', '#ca8a04', '#0891b2',
 ];
 
+function SectionHeader({ icon, iconColor, title, subtitle, right }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  iconColor: string;
+  title: string;
+  subtitle?: string;
+  right?: React.ReactNode;
+}) {
+  return (
+    <View className="flex-row items-start mb-3">
+      <View className="w-1 self-stretch rounded-full mr-3 mt-0.5" style={{ backgroundColor: iconColor }} />
+      <View className="flex-row items-center mr-2 mt-0.5">
+        <Ionicons name={icon} size={16} color={iconColor} />
+      </View>
+      <View className="flex-1">
+        <Text className="text-base font-bold text-bark dark:text-cream">{title}</Text>
+        {subtitle && (
+          <Text className="text-xs text-stone dark:text-parchment mt-0.5">{subtitle}</Text>
+        )}
+      </View>
+      {right}
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const tournaments = useSeasonStore((s) => s.tournaments);
   const hotelBookings = useSeasonStore((s) => s.hotelBookings);
@@ -216,13 +240,13 @@ export default function HomeScreen() {
         {/* ============================================================ */}
         {/* SECTION 1: Add to Tourney Itineraries                       */}
         {/* ============================================================ */}
-        <View className="mt-3">
-          <Text className="text-xs font-semibold text-stone uppercase tracking-wider mb-1.5 ml-1">
-            Add to Tourney Itineraries
-          </Text>
-          <Text className="text-xs text-stone dark:text-parchment mb-3 ml-1">
-            Tournaments, travel, hotels, events — if it's part of your weekend, add it here.
-          </Text>
+        <View className="mt-4">
+          <SectionHeader
+            icon="add-circle"
+            iconColor="#3B82B0"
+            title="Add to Tourney Itineraries"
+            subtitle="Tournaments, travel, hotels, events — if it's part of your weekend, add it here."
+          />
           <View className="flex-row gap-2">
             <Pressable
               className="flex-1 bg-rally-600 rounded-xl py-3.5 items-center justify-center active:opacity-80"
@@ -252,10 +276,13 @@ export default function HomeScreen() {
         {/* ============================================================ */}
         {/* SECTION 2: Actions                                           */}
         {/* ============================================================ */}
-        <View className="mt-6">
-          <Text className="text-xs font-semibold text-stone uppercase tracking-wider mb-2 ml-1">
-            Actions
-          </Text>
+        <View className="mt-7">
+          <SectionHeader
+            icon="flash"
+            iconColor="#d97706"
+            title="Actions"
+            subtitle="Your to-do list, built for you."
+          />
           {actionCards.map((card, i) => (
             <Pressable
               key={`${card.priority}-${card.text}-${i}`}
@@ -284,15 +311,16 @@ export default function HomeScreen() {
         {/* ============================================================ */}
         {/* SECTION 3: Next 30 Days                                      */}
         {/* ============================================================ */}
-        <View className="mt-6">
-          <View className="flex-row items-center justify-between mb-2">
-            <Text className="text-xs font-semibold text-stone uppercase tracking-wider ml-1">
-              Next 30 Days
-            </Text>
-            {hasMultipleAthletes && (
-              <Ionicons name="filter" size={16} color={ic.muted} />
-            )}
-          </View>
+        <View className="mt-7">
+          <SectionHeader
+            icon="calendar"
+            iconColor="#7c3aed"
+            title="Next 30 Days"
+            subtitle="Everything coming up, all in one place."
+            right={hasMultipleAthletes ? (
+              <Ionicons name="filter" size={16} color={ic.muted} style={{ marginTop: 4 }} />
+            ) : undefined}
+          />
 
           {hasMultipleAthletes && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3" contentContainerStyle={{ gap: 8 }}>
@@ -360,13 +388,13 @@ export default function HomeScreen() {
         {/* SECTION 4: Athletes                                          */}
         {/* ============================================================ */}
         {athletes.length > 0 && (
-          <View className="mt-6">
-            <Text className="text-xs font-semibold text-stone uppercase tracking-wider mb-2 ml-1">
-              Athletes
-            </Text>
-            <Text className="text-xs text-stone dark:text-parchment mb-3 ml-1">
-              Everyone on your roster, right at your fingertips.
-            </Text>
+          <View className="mt-7">
+            <SectionHeader
+              icon="people-circle"
+              iconColor="#0d9488"
+              title="Athletes"
+              subtitle="Everyone on your roster, right at your fingertips."
+            />
             {athletes.map((a) => {
               const avatarColor = a.avatar_color || AVATAR_COLORS[a.first_name.charCodeAt(0) % AVATAR_COLORS.length];
               const athleteSeasons = seasons.filter((s) => s.athlete_id === a.id);
@@ -403,7 +431,12 @@ export default function HomeScreen() {
         {/* ============================================================ */}
         {/* SECTION 5: Guests                                            */}
         {/* ============================================================ */}
-        <View className="mt-6">
+        <View className="mt-7">
+          <SectionHeader
+            icon="people"
+            iconColor="#7c3aed"
+            title="Guests"
+          />
           <Pressable
             className="bg-warm-white dark:bg-bark-light rounded-xl p-4 flex-row items-center border border-parchment dark:border-rally-900 active:opacity-80"
             onPress={() => router.push('/(tabs)/guests')}
@@ -426,18 +459,18 @@ export default function HomeScreen() {
         {/* ============================================================ */}
         {/* SECTION 6: Credential Vault                                  */}
         {/* ============================================================ */}
-        <View className="mt-6">
-          <View className="flex-row items-center justify-between mb-2">
-            <Text className="text-xs font-semibold text-stone uppercase tracking-wider ml-1">
-              Credential Vault
-            </Text>
-            <Pressable onPress={() => router.push('/profile/edit-link')} className="active:opacity-70">
-              <Text className="text-xs font-semibold text-rally-600">+ Add</Text>
-            </Pressable>
-          </View>
-          <Text className="text-xs text-stone dark:text-parchment mb-3 ml-1">
-            All your logins, one tap away.
-          </Text>
+        <View className="mt-7">
+          <SectionHeader
+            icon="key"
+            iconColor="#ca8a04"
+            title="Credential Vault"
+            subtitle="All your logins, one tap away."
+            right={
+              <Pressable onPress={() => router.push('/profile/edit-link')} className="active:opacity-70 mt-0.5">
+                <Text className="text-xs font-semibold text-rally-600">+ Add</Text>
+              </Pressable>
+            }
+          />
 
           {credentialLinks.length > 0 ? (
             <View className="flex-row flex-wrap gap-3">
@@ -482,10 +515,12 @@ export default function HomeScreen() {
         {/* ============================================================ */}
         {/* SECTION 7: Feature Request                                   */}
         {/* ============================================================ */}
-        <View className="mt-6">
-          <Text className="text-xs font-semibold text-stone uppercase tracking-wider mb-2 ml-1">
-            New Feature Request
-          </Text>
+        <View className="mt-7">
+          <SectionHeader
+            icon="bulb"
+            iconColor="#6A9E8A"
+            title="New Feature Request"
+          />
           <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900">
             <TextInput
               className="text-sm text-bark dark:text-cream min-h-[60px]"
@@ -520,8 +555,15 @@ export default function HomeScreen() {
         {/* ============================================================ */}
         {/* SECTION 8: Need Help?                                        */}
         {/* ============================================================ */}
+        <View className="mt-7">
+          <SectionHeader
+            icon="help-circle"
+            iconColor="#3B82B0"
+            title="Need Help?"
+          />
+        </View>
         <Pressable
-          className="mt-6 bg-warm-white dark:bg-bark-light rounded-xl p-4 flex-row items-center border border-parchment dark:border-rally-900 active:opacity-80"
+          className="bg-warm-white dark:bg-bark-light rounded-xl p-4 flex-row items-center border border-parchment dark:border-rally-900 active:opacity-80"
           onPress={() => Linking.openURL('mailto:hello@rally-hub.com')}
         >
           <View className="w-10 h-10 rounded-full bg-rally-50 dark:bg-rally-900/30 items-center justify-center mr-3">
