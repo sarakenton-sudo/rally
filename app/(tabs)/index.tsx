@@ -266,13 +266,13 @@ export default function HomeScreen() {
   };
 
   return (
-    <View className="flex-1 bg-cream dark:bg-bark">
-      <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 60 }}>
+    <View className="flex-1 bg-warm-white dark:bg-bark">
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 60 }}>
 
         {/* ============================================================ */}
         {/* SECTION 1: Add to Tourney Itineraries                       */}
         {/* ============================================================ */}
-        <View className="mt-4">
+        <View className="bg-warm-white dark:bg-bark px-4 pt-4 pb-5">
           <SectionHeader
             icon="add-circle"
             iconColor="#3B82B0"
@@ -305,12 +305,10 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <View className="h-px bg-parchment dark:bg-rally-900 my-5" />
-
         {/* ============================================================ */}
         {/* SECTION 2: Actions                                           */}
         {/* ============================================================ */}
-        <View>
+        <View className="bg-cream dark:bg-bark-light px-4 py-5">
           <SectionHeader
             icon="flash"
             iconColor="#d97706"
@@ -342,12 +340,10 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        <View className="h-px bg-parchment dark:bg-rally-900 my-5" />
-
         {/* ============================================================ */}
         {/* SECTION 3: Next 30 Days                                      */}
         {/* ============================================================ */}
-        <View>
+        <View className="bg-warm-white dark:bg-bark px-4 py-5">
           <SectionHeader
             icon="calendar"
             iconColor="#7c3aed"
@@ -420,14 +416,11 @@ export default function HomeScreen() {
           )}
         </View>
 
-        <View className="h-px bg-parchment dark:bg-rally-900 my-5" />
-
         {/* ============================================================ */}
         {/* SECTION 4: Athletes                                          */}
         {/* ============================================================ */}
         {athletes.length > 0 && (
-          <>
-            <View>
+            <View className="bg-cream dark:bg-bark-light px-4 py-5">
               <SectionHeader
                 icon="people-circle"
                 iconColor="#0d9488"
@@ -465,14 +458,12 @@ export default function HomeScreen() {
                 );
               })}
             </View>
-            <View className="h-px bg-parchment dark:bg-rally-900 my-5" />
-          </>
         )}
 
         {/* ============================================================ */}
         {/* SECTION 5: Guests                                            */}
         {/* ============================================================ */}
-        <View>
+        <View className="bg-warm-white dark:bg-bark px-4 py-5">
           <SectionHeader
             icon="people"
             iconColor="#7c3aed"
@@ -497,12 +488,10 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        <View className="h-px bg-parchment dark:bg-rally-900 my-5" />
-
         {/* ============================================================ */}
         {/* SECTION 6: Credential Vault                                  */}
         {/* ============================================================ */}
-        <View>
+        <View className="bg-cream dark:bg-bark-light px-4 py-5">
           <SectionHeader
             icon="key"
             iconColor="#ca8a04"
@@ -555,12 +544,10 @@ export default function HomeScreen() {
           )}
         </View>
 
-        <View className="h-px bg-parchment dark:bg-rally-900 my-5" />
-
         {/* ============================================================ */}
         {/* SECTION 7: Feature Request                                   */}
         {/* ============================================================ */}
-        <View>
+        <View className="bg-warm-white dark:bg-bark px-4 py-5">
           <SectionHeader
             icon="bulb"
             iconColor="#6A9E8A"
@@ -597,12 +584,10 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <View className="h-px bg-parchment dark:bg-rally-900 my-5" />
-
         {/* ============================================================ */}
         {/* SECTION 8: Need Help?                                        */}
         {/* ============================================================ */}
-        <View>
+        <View className="bg-cream dark:bg-bark-light px-4 py-5">
           <SectionHeader
             icon="help-circle"
             iconColor="#3B82B0"
