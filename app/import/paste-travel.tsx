@@ -205,12 +205,13 @@ function mockExtractTravel(text: string) {
   }
 
   if (detectedAirline || /flight|depart|arrive|seat/i.test(text)) {
-    // Extract confirmation code
-    const confirmMatch = text.match(/(?:confirmation|conf(?:irmation)?)[#:\s]*([A-Z0-9]{5,8})/i);
+    // Extract confirmation code — same line or next line
+    const confirmMatch = text.match(/(?:confirmation|conf(?:irmation)?)[\s#:]*(?:number)?[\s#:]*([A-Z0-9]{5,8})/i)
+      || text.match(/(?:confirmation|conf(?:irmation)?)[\s\S]*?\n\s*([A-Z0-9]{5,8})\s*\n/i);
 
-    // Extract passenger name
-    const nameMatch = text.match(/(?:name|passenger)[:\s]*([A-Z][A-Z\s]+)/i);
-    const travelerNames = nameMatch ? [nameMatch[1].trim().split(/\s+/).map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')] : [];
+    // Extract passenger name (stop at newline)
+    const nameMatch = text.match(/(?:name|passenger)[:\s]*([A-Z][A-Z ]+[A-Z])/i);
+    const travelerNames = nameMatch ? [nameMatch[1].trim().split(/\s+/).map((w: string) => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')] : [];
 
     // Extract dates — multiple formats
     // Format: "Thu, 19MAR" or "Mon, 23MAR"

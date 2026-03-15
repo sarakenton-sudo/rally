@@ -42,12 +42,38 @@ export default function ReviewTravelScreen() {
   const [items, setItems] = useState<ExtractedBooking[]>(parsed);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [selectedTournamentIds, setSelectedTournamentIds] = useState<Record<number, string>>({});
-
   const addHotelBooking = useSeasonStore((s) => s.addHotelBooking);
   const addFlightBooking = useSeasonStore((s) => s.addFlightBooking);
   const tournaments = useSeasonStore((s) => s.tournaments);
   const { user } = useAuth();
+
+  // Auto-match tournaments by date overlap (±3 days)
+  const autoMatched = useMemo(() => {
+    const matches: Record<number, string> = {};
+    parsed.forEach((item, index) => {
+      const bookingStart = item.type === 'hotel' ? item.check_in : item.departure_date;
+      const bookingEnd = item.type === 'hotel' ? item.check_out : item.return_date;
+      if (!bookingStart) return;
+
+      const bStart = new Date(bookingStart + 'T12:00:00').getTime();
+      const bEnd = bookingEnd ? new Date(bookingEnd + 'T12:00:00').getTime() : bStart;
+      if (isNaN(bStart)) return;
+
+      const DAY = 86400000;
+      for (const t of tournaments) {
+        const tStart = new Date(t.start_date + 'T12:00:00').getTime();
+        const tEnd = new Date(t.end_date + 'T12:00:00').getTime();
+        // Check if booking dates overlap or are within 3 days of tournament dates
+        if (bStart <= tEnd + 3 * DAY && (isNaN(bEnd) ? bStart : bEnd) >= tStart - 3 * DAY) {
+          matches[index] = t.id;
+          break;
+        }
+      }
+    });
+    return matches;
+  }, [parsed, tournaments]);
+
+  const [selectedTournamentIds, setSelectedTournamentIds] = useState<Record<number, string>>(autoMatched);
 
   const tournamentOptions = useMemo(
     () => tournaments.map((t) => t.name),
@@ -145,7 +171,7 @@ export default function ReviewTravelScreen() {
             departure_date: item.departure_date || '',
             return_date: item.return_date || '',
             booked_by: item.booked_by || '',
-            traveler_names: item.traveler_names || [],
+            traveler_names: (item.traveler_names || []).map((s: string) => s.trim()).filter(Boolean),
             cost: item.cost ?? null,
           };
 
@@ -283,7 +309,7 @@ export default function ReviewTravelScreen() {
                     <FormField
                       label="Travelers"
                       value={(item.traveler_names || []).join(', ')}
-                      onChangeText={(v) => updateItem(index, 'traveler_names', v.split(',').map((s: string) => s.trim()).filter(Boolean))}
+                      onChangeText={(v) => updateItem(index, 'traveler_names', v.split(','))}
                       placeholder="Names separated by commas"
                     />
                   </>
