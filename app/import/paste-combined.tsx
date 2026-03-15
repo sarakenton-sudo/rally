@@ -39,7 +39,7 @@ export default function PasteCombinedScreen() {
               'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
               'apikey': SUPABASE_ANON_KEY,
             },
-            body: JSON.stringify({ text: trimmed }),
+            body: JSON.stringify({ text: trimmed.replace(/[^\p{L}\p{N}\p{P}\p{Z}\n\r\t]/gu, '') }),
             signal: controller.signal,
           });
           clearTimeout(timeout);
@@ -87,8 +87,13 @@ export default function PasteCombinedScreen() {
 
       // Filter out false-positive hotel/flight matches (e.g. "Hotel Information" section header)
       const realTravel = travelBookings.filter((b: any) => {
-        if (b.type === 'hotel') return !!(b.reservation_number || b.check_in || b.cost);
-        if (b.type === 'flight') return !!(b.confirmation_code || b.departure_date);
+        if (b.type === 'hotel') {
+          // Must have a confirmation number AND a parseable check-in date to be real
+          const hasConfirm = !!(b.reservation_number && b.reservation_number.length >= 4);
+          const hasRealDate = !!(b.check_in && /^\d{4}-\d{2}-\d{2}$/.test(b.check_in));
+          return hasConfirm || (hasRealDate && b.cost);
+        }
+        if (b.type === 'flight') return !!(b.confirmation_code || (b.departure_date && /^\d{4}-\d{2}-\d{2}$/.test(b.departure_date)));
         return false;
       });
       const hasTravel = realTravel.length > 0;
