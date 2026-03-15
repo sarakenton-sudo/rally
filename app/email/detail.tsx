@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DropdownField from '@/components/DropdownField';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { updateTournament as updateTournamentDB, insertHotelBooking, insertFlightBooking } from '@/hooks/useSupabaseData';
+import { updateTournament as updateTournamentDB, insertHotelBooking, insertFlightBooking, updateFlightBooking, updateHotelBooking } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/providers/AuthProvider';
 import { useIconColors } from '@/lib/colors';
 import type { Tournament } from '@/types/database';
@@ -409,28 +409,74 @@ export default function EmailDetailScreen() {
       const d = extractedData;
       const outbound = d.outbound as Record<string, unknown> | undefined;
       const returnLeg = (d.return ?? d.return_flight ?? d.return_leg) as Record<string, unknown> | undefined;
-      const activeSeasonId = useSeasonStore.getState().activeSeasonId;
 
-      const { error } = await insertFlightBooking({
+      const confCode = String(d.confirmation_number ?? d.confirmation_code ?? d.booking_reference ?? '');
+      const flightData: Record<string, unknown> = {
         tournament_id: activeMatch.id,
-        created_by_user_id: user.id,
         airline: String(d.airline ?? outbound?.airline ?? ''),
-        confirmation_code: String(d.confirmation_number ?? d.confirmation_code ?? d.booking_reference ?? ''),
-        departure_date: String(d.departure_date ?? outbound?.departure_date ?? ''),
-        return_date: String(d.return_date ?? returnLeg?.departure_date ?? ''),
-        booked_by: String(d.passenger_name ?? d.traveler_name ?? ''),
-        traveler_names: d.passenger_name ? [String(d.passenger_name)] : [],
-        cost: d.total_cost ? Number(d.total_cost) : null,
-        ticket_number: String(d.ticket_number ?? ''),
-        departure_time: String(d.departure_time ?? outbound?.departure_time ?? ''),
-        arrival_time: String(d.arrival_time ?? outbound?.arrival_time ?? ''),
-        seat_number: String(d.seat_number ?? outbound?.seat_number ?? ''),
-        flight_number: String(d.flight_number ?? outbound?.flight_number ?? ''),
-      });
-      if (error) throw error;
-      setSavedBooking('flight');
-      if (Platform.OS === 'web') window.alert('Flight booking saved!');
-      else Alert.alert('Saved', 'Flight booking created and linked to tournament.');
+        confirmation_code: confCode,
+        departure_date: String(d.departure_date ?? outbound?.departure_date ?? '') || undefined,
+        return_date: String(d.return_date ?? returnLeg?.departure_date ?? '') || undefined,
+        booked_by: String(d.passenger_name ?? d.traveler_name ?? '') || undefined,
+        traveler_names: d.passenger_name ? [String(d.passenger_name)] : undefined,
+        cost: d.total_cost ? Number(d.total_cost) : undefined,
+        ticket_number: String(d.ticket_number ?? '') || undefined,
+        departure_time: String(d.departure_time ?? outbound?.departure_time ?? '') || undefined,
+        arrival_time: String(d.arrival_time ?? outbound?.arrival_time ?? '') || undefined,
+        seat_number: String(d.seat_number ?? outbound?.seat_number ?? '') || undefined,
+        flight_number: String(d.flight_number ?? outbound?.flight_number ?? '') || undefined,
+      };
+
+      // Remove undefined values so we don't overwrite existing data with blanks
+      const cleanData = Object.fromEntries(Object.entries(flightData).filter(([_, v]) => v !== undefined));
+
+      // Check if a flight booking already exists for this tournament (match by confirmation code or tournament)
+      const flightBookings = useSeasonStore.getState().flightBookings;
+      const existing = flightBookings.find((f) =>
+        (confCode && f.confirmation_code === confCode) ||
+        f.tournament_id === activeMatch.id
+      );
+
+      if (existing) {
+        // Update existing — only fill in fields that are currently empty
+        const updates: Record<string, unknown> = {};
+        for (const [key, val] of Object.entries(cleanData)) {
+          if (key === 'tournament_id') continue;
+          const current = (existing as any)[key];
+          if (!current || current === '' || current === null) {
+            updates[key] = val;
+          }
+        }
+        if (Object.keys(updates).length > 0) {
+          const { error } = await updateFlightBooking(existing.id, updates as any);
+          if (error) throw error;
+        }
+        setSavedBooking('flight');
+        const msg = Object.keys(updates).length > 0
+          ? `Updated ${Object.keys(updates).length} fields on existing flight booking.`
+          : 'Flight booking already has all this data.';
+        if (Platform.OS === 'web') window.alert(msg);
+        else Alert.alert('Updated', msg);
+      } else {
+        // Create new
+        const { error } = await insertFlightBooking({
+          ...cleanData,
+          created_by_user_id: user.id,
+          tournament_id: activeMatch.id,
+          airline: cleanData.airline as string ?? '',
+          confirmation_code: confCode,
+          departure_date: cleanData.departure_date as string ?? '',
+          return_date: cleanData.return_date as string ?? '',
+          booked_by: cleanData.booked_by as string ?? '',
+          traveler_names: cleanData.traveler_names as string[] ?? [],
+          cost: cleanData.cost as number ?? null,
+          ticket_number: cleanData.ticket_number as string ?? '',
+        } as any);
+        if (error) throw error;
+        setSavedBooking('flight');
+        if (Platform.OS === 'web') window.alert('Flight booking saved!');
+        else Alert.alert('Saved', 'Flight booking created and linked to tournament.');
+      }
     } catch (err: any) {
       if (Platform.OS === 'web') window.alert(`Save failed: ${err.message}`);
       else Alert.alert('Save Failed', err.message);
@@ -444,28 +490,71 @@ export default function EmailDetailScreen() {
     setIsSavingBooking(true);
     try {
       const d = extractedData;
-      const activeSeasonId = useSeasonStore.getState().activeSeasonId;
+      const confNum = String(d.confirmation_number ?? d.reservation_number ?? '');
 
-      const { error } = await insertHotelBooking({
+      const hotelData: Record<string, unknown> = {
         tournament_id: activeMatch.id,
-        created_by_user_id: user.id,
-        hotel_name: String(d.hotel_name ?? ''),
-        platform: 'Other',
-        booking_name: String(d.hotel_name ?? ''),
-        booked_by: String(d.passenger_name ?? d.guest_name ?? ''),
-        reservation_number: String(d.confirmation_number ?? d.reservation_number ?? ''),
-        check_in: String(d.check_in_date ?? ''),
-        check_out: String(d.check_out_date ?? ''),
-        cancellation_deadline: String(d.cancellation_deadline ?? ''),
-        cost: d.total_cost ? Number(d.total_cost) : (d.nightly_rate ? Number(d.nightly_rate) : null),
-        is_backup: false,
-        status: 'confirmed' as const,
-        address: String(d.address ?? d.hotel_address ?? ''),
-      } as any);
-      if (error) throw error;
-      setSavedBooking('hotel');
-      if (Platform.OS === 'web') window.alert('Hotel booking saved!');
-      else Alert.alert('Saved', 'Hotel booking created and linked to tournament.');
+        hotel_name: String(d.hotel_name ?? '') || undefined,
+        booking_name: String(d.hotel_name ?? '') || undefined,
+        booked_by: String(d.passenger_name ?? d.guest_name ?? '') || undefined,
+        reservation_number: confNum || undefined,
+        check_in: String(d.check_in_date ?? '') || undefined,
+        check_out: String(d.check_out_date ?? '') || undefined,
+        cancellation_deadline: String(d.cancellation_deadline ?? '') || undefined,
+        cost: d.total_cost ? Number(d.total_cost) : (d.nightly_rate ? Number(d.nightly_rate) : undefined),
+        address: String(d.address ?? d.hotel_address ?? '') || undefined,
+      };
+      const cleanData = Object.fromEntries(Object.entries(hotelData).filter(([_, v]) => v !== undefined));
+
+      // Check if hotel booking already exists
+      const hotelBookings = useSeasonStore.getState().hotelBookings;
+      const existing = hotelBookings.find((h) =>
+        (confNum && h.reservation_number === confNum) ||
+        h.tournament_id === activeMatch.id
+      );
+
+      if (existing) {
+        const updates: Record<string, unknown> = {};
+        for (const [key, val] of Object.entries(cleanData)) {
+          if (key === 'tournament_id') continue;
+          const current = (existing as any)[key];
+          if (!current || current === '' || current === null) {
+            updates[key] = val;
+          }
+        }
+        if (Object.keys(updates).length > 0) {
+          const { error } = await updateHotelBooking(existing.id, updates as any);
+          if (error) throw error;
+        }
+        setSavedBooking('hotel');
+        const msg = Object.keys(updates).length > 0
+          ? `Updated ${Object.keys(updates).length} fields on existing hotel booking.`
+          : 'Hotel booking already has all this data.';
+        if (Platform.OS === 'web') window.alert(msg);
+        else Alert.alert('Updated', msg);
+      } else {
+        const { error } = await insertHotelBooking({
+          ...cleanData,
+          created_by_user_id: user.id,
+          tournament_id: activeMatch.id,
+          hotel_name: cleanData.hotel_name as string ?? '',
+          platform: 'Other',
+          booking_name: cleanData.booking_name as string ?? '',
+          booked_by: cleanData.booked_by as string ?? '',
+          reservation_number: confNum,
+          check_in: cleanData.check_in as string ?? '',
+          check_out: cleanData.check_out as string ?? '',
+          cancellation_deadline: cleanData.cancellation_deadline as string ?? '',
+          cost: cleanData.cost as number ?? null,
+          is_backup: false,
+          status: 'confirmed',
+          address: cleanData.address as string ?? '',
+        } as any);
+        if (error) throw error;
+        setSavedBooking('hotel');
+        if (Platform.OS === 'web') window.alert('Hotel booking saved!');
+        else Alert.alert('Saved', 'Hotel booking created and linked to tournament.');
+      }
     } catch (err: any) {
       if (Platform.OS === 'web') window.alert(`Save failed: ${err.message}`);
       else Alert.alert('Save Failed', err.message);
