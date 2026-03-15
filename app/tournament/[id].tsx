@@ -8,6 +8,7 @@ import HotelBookingCard from '@/components/HotelBookingCard';
 import FlightBookingCard from '@/components/FlightBookingCard';
 import TournamentGuestList from '@/components/TournamentGuestList';
 import { useSeasonStore } from '@/stores/useSeasonStore';
+import { useGuestStore } from '@/stores/useGuestStore';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { useTeamEvents, deleteTournament as deleteTournamentDB, updateTournament as updateTournamentDB, deleteHotelBooking as deleteHotelBookingDB, deleteFlightBooking as deleteFlightBookingDB } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/providers/AuthProvider';
@@ -70,6 +71,18 @@ export default function TournamentDetailScreen() {
   const teamCode = activeSeason?.team_code;
   const ic = useIconColors();
   const { refresh, isRefreshing } = useDataRefresh();
+
+  // Invited guest phone numbers for bulk SMS
+  const allGuests = useGuestStore((s) => s.guests);
+  const tournamentGuests = useGuestStore((s) => s.tournamentGuests);
+  const invitedPhones = useMemo(() => {
+    const invitedGuestIds = tournamentGuests
+      .filter((tg) => tg.tournament_id === id && tg.invited)
+      .map((tg) => tg.guest_id);
+    return allGuests
+      .filter((g) => invitedGuestIds.includes(g.id) && g.phone)
+      .map((g) => g.phone);
+  }, [allGuests, tournamentGuests, id]);
 
   const { user } = useAuth();
   const removeTournament = useSeasonStore((s) => s.removeTournament);
@@ -753,7 +766,10 @@ export default function TournamentDetailScreen() {
                   lines.push('', `Venue: ${venue.label || tournament.location_city}`, `Directions: https://maps.google.com/?q=${encodeURIComponent(venue.address)}`);
                 }
                 const smsBody = encodeURIComponent(lines.join('\n'));
-                const smsUrl = Platform.OS === 'ios' ? `sms:&body=${smsBody}` : `sms:?body=${smsBody}`;
+                const recipients = invitedPhones.join(',');
+                const smsUrl = Platform.OS === 'ios'
+                  ? `sms:${recipients}&body=${smsBody}`
+                  : `sms:${recipients}?body=${smsBody}`;
                 Platform.OS === 'web' ? window.open(smsUrl, '_blank') : Linking.openURL(smsUrl);
               }}
             >
@@ -768,7 +784,10 @@ export default function TournamentDetailScreen() {
                 if (streamUrl) lines.push('', `Watch: ${streamUrl}`);
                 if (tournament.schedule_link) lines.push('', `Schedule: ${tournament.schedule_link}`);
                 const smsBody = encodeURIComponent(lines.join('\n'));
-                const smsUrl = Platform.OS === 'ios' ? `sms:&body=${smsBody}` : `sms:?body=${smsBody}`;
+                const recipients = invitedPhones.join(',');
+                const smsUrl = Platform.OS === 'ios'
+                  ? `sms:${recipients}&body=${smsBody}`
+                  : `sms:${recipients}?body=${smsBody}`;
                 Platform.OS === 'web' ? window.open(smsUrl, '_blank') : Linking.openURL(smsUrl);
               }}
             >
