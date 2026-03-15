@@ -59,7 +59,7 @@ function ProgressBar({ step }: { step: number }) {
     width: `${progress.value * 100}%`,
   }));
   return (
-    <View style={{ height: 4, backgroundColor: '#264868' }}>
+    <View style={{ height: 4, backgroundColor: '#D8E2EC' }}>
       <Animated.View style={[{ height: 4, backgroundColor: '#3B82B0', borderRadius: 2 }, animStyle]} />
     </View>
   );
@@ -68,12 +68,12 @@ function ProgressBar({ step }: { step: number }) {
 function StepHeader({ icon, title, subtitle }: { icon: keyof typeof Ionicons.glyphMap; title: string; subtitle: string }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-      <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: '#264868', alignItems: 'center', justifyContent: 'center' }}>
-        <Ionicons name={icon} size={22} color="#FEFEFE" />
+      <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: '#E8F0F8', alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name={icon} size={22} color="#3B82B0" />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 24, fontFamily: 'Nunito-Black', color: '#FEFEFE' }}>{title}</Text>
-        <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#D4E3F0' }}>{subtitle}</Text>
+        <Text style={{ fontSize: 24, fontFamily: 'Nunito-Black', color: '#1E3A5F' }}>{title}</Text>
+        <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#6B8BA8' }}>{subtitle}</Text>
       </View>
     </View>
   );
@@ -82,7 +82,7 @@ function StepHeader({ icon, title, subtitle }: { icon: keyof typeof Ionicons.gly
 function SkipButton({ onPress }: { onPress: () => void }) {
   return (
     <Pressable style={{ paddingVertical: 8, alignItems: 'center', marginBottom: 8 }} className="active:opacity-70" onPress={onPress}>
-      <Text style={{ fontSize: 13, color: '#C8D8E8', fontFamily: 'NunitoSans-Regular' }}>I'll do this later</Text>
+      <Text style={{ fontSize: 13, color: '#8FA8BF', fontFamily: 'NunitoSans-Regular' }}>I'll do this later</Text>
     </Pressable>
   );
 }
@@ -126,10 +126,10 @@ function ContinueButton({ onPress, disabled, label = 'Continue' }: { onPress: ()
         alignItems: 'center',
         opacity: disabled ? 0.4 : 1,
         shadowColor: '#3B82B0',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.45,
-        shadowRadius: 20,
-        elevation: 6,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 3,
       }}
       className="active:opacity-80"
       onPress={onPress}
@@ -143,25 +143,25 @@ function ContinueButton({ onPress, disabled, label = 'Continue' }: { onPress: ()
 function BackButton({ onPress }: { onPress: () => void }) {
   return (
     <Pressable
-      style={{ paddingVertical: 16, paddingHorizontal: 24, borderRadius: 14, borderWidth: 1.5, borderColor: '#3A6490' }}
+      style={{ paddingVertical: 16, paddingHorizontal: 24, borderRadius: 14, borderWidth: 1.5, borderColor: '#D8E2EC' }}
       className="active:opacity-70"
       onPress={onPress}
     >
-      <Ionicons name="arrow-back" size={20} color="#FEFEFE" />
+      <Ionicons name="arrow-back" size={20} color="#1E3A5F" />
     </Pressable>
   );
 }
 
 // Input style constants
 const INPUT_STYLE = {
-  backgroundColor: '#284B6F',
+  backgroundColor: '#FEFEFE',
   borderWidth: 1.5,
-  borderColor: '#3A6490',
+  borderColor: '#D8E2EC',
   borderRadius: 14,
   paddingHorizontal: 16,
   paddingVertical: 12,
   fontSize: 15,
-  color: '#FEFEFE',
+  color: '#1E3A5F',
   fontFamily: 'NunitoSans-Regular',
 } as const;
 
@@ -205,6 +205,7 @@ export default function OnboardingScreen() {
 
   // Step 5: Credentials
   const [credentials, setCredentials] = useState<Record<string, { username: string; password: string }>>({});
+  const [savedCredentials, setSavedCredentials] = useState<Set<string>>(new Set());
   const [expandedCredential, setExpandedCredential] = useState<string | null>(null);
 
   // Step 6: Guests
@@ -289,7 +290,16 @@ export default function OnboardingScreen() {
 
   const toggleCredential = (key: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setExpandedCredential(expandedCredential === key ? null : key);
+    if (expandedCredential === key) {
+      // Collapsing — mark as saved if it has content
+      const cred = credentials[key];
+      if (cred && (cred.username.trim() || cred.password.trim())) {
+        setSavedCredentials((prev) => new Set(prev).add(key));
+      }
+      setExpandedCredential(null);
+    } else {
+      setExpandedCredential(key);
+    }
   };
 
   const updateCredential = (key: string, field: 'username' | 'password', value: string) => {
@@ -495,7 +505,7 @@ export default function OnboardingScreen() {
   const canFinish = step >= 3;
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#1E3A5F' }}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#F4F6F8' }}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
         {/* Animated progress bar */}
         <ProgressBar step={step} />
@@ -503,8 +513,8 @@ export default function OnboardingScreen() {
         {/* ========== Step 0: Welcome ========== */}
         {step === 0 && (
           <View className="flex-1 justify-center items-center px-8">
-            <Image source={require('@/assets/images/rallyhub_lockup_white.png')} style={{ width: 220, height: 64 }} resizeMode="contain" />
-            <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-SemiBold', color: '#D4E3F0', textAlign: 'center', marginTop: 12, marginBottom: 8, maxWidth: 280 }}>
+            <Image source={require('@/assets/images/rallyhub_lockup_light.png')} style={{ width: 220, height: 64 }} resizeMode="contain" />
+            <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-SemiBold', color: '#6B8BA8', textAlign: 'center', marginTop: 12, marginBottom: 8, maxWidth: 280 }}>
               Your hub for everything volleyball.
             </Text>
 
@@ -515,10 +525,10 @@ export default function OnboardingScreen() {
                 { icon: 'heart' as const, text: 'Keep grandparents and family in the loop' },
               ].map((item) => (
                 <View key={item.text} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(59,130,176,0.15)', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name={item.icon} size={16} color="#7DBDD9" />
+                  <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(59,130,176,0.1)', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name={item.icon} size={16} color="#3B82B0" />
                   </View>
-                  <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Regular', color: '#E0ECF5', flex: 1 }}>{item.text}</Text>
+                  <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Regular', color: '#1E3A5F', flex: 1 }}>{item.text}</Text>
                 </View>
               ))}
             </View>
@@ -526,7 +536,7 @@ export default function OnboardingScreen() {
             <Pressable
               style={{
                 backgroundColor: '#3B82B0', borderRadius: 14, paddingVertical: 16, paddingHorizontal: 56,
-                shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.45, shadowRadius: 20, elevation: 6,
+                shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
               }}
               className="active:opacity-80"
               onPress={() => goTo(1)}
@@ -534,7 +544,7 @@ export default function OnboardingScreen() {
               <Text style={{ fontSize: 16, fontFamily: 'Nunito-ExtraBold', color: '#FEFEFE' }}>Let's Go</Text>
             </Pressable>
 
-            <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-SemiBold', color: '#9AB5CC', textAlign: 'center', marginTop: 24, maxWidth: 280 }}>
+            <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-SemiBold', color: '#8FA8BF', textAlign: 'center', marginTop: 24, maxWidth: 280 }}>
               RALLY is for tournaments, not practices.{'\n'}Plenty of apps exist for that.
             </Text>
           </View>
@@ -546,7 +556,7 @@ export default function OnboardingScreen() {
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <StepHeader icon="person" title="Your Athlete" subtitle="Who's playing?" />
 
-              <Text style={{ fontSize: 17, fontFamily: 'NunitoSans-SemiBold', color: '#E0ECF5', marginBottom: 12 }}>
+              <Text style={{ fontSize: 17, fontFamily: 'NunitoSans-SemiBold', color: '#1E3A5F', marginBottom: 12 }}>
                 What's your athlete's name?
               </Text>
 
@@ -554,7 +564,7 @@ export default function OnboardingScreen() {
                 value={athleteFirstName}
                 onChangeText={setAthleteFirstName}
                 placeholder="First name"
-                placeholderTextColor="#7A9AB5"
+                placeholderTextColor="#8FA8BF"
                 style={{ ...INPUT_STYLE, fontSize: 20, paddingVertical: 16, marginBottom: 12 }}
                 autoFocus
               />
@@ -562,13 +572,13 @@ export default function OnboardingScreen() {
               <TextInput
                 value={athleteLastName}
                 onChangeText={setAthleteLastName}
-                placeholder="Last name (optional)"
-                placeholderTextColor="#7A9AB5"
+                placeholder="Last name"
+                placeholderTextColor="#8FA8BF"
                 style={{ ...INPUT_STYLE, fontSize: 20, paddingVertical: 16 }}
               />
 
               {/* Avatar Color Picker */}
-              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#9AB5CC', marginTop: 20, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>
+              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#8FA8BF', marginTop: 20, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>
                 Pick a color
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
@@ -596,7 +606,7 @@ export default function OnboardingScreen() {
                 </View>
               </View>
 
-              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#B0C4D8', marginTop: 12 }}>
+              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#6B8BA8', marginTop: 12 }}>
                 You can add more players later in Settings.
               </Text>
             </ScrollView>
@@ -625,27 +635,27 @@ export default function OnboardingScreen() {
               <StepHeader icon="trophy" title="Season & Team" subtitle={`${athleteName.trim()}'s team info`} />
 
               <View style={{ marginBottom: 16 }}>
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#FEFEFE', marginBottom: 6 }}>Team Name</Text>
-                <TextInput value={teamName} onChangeText={setTeamName} placeholder="e.g. AJV Travel 14u" placeholderTextColor="#7A9AB5" style={INPUT_STYLE} />
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#1E3A5F', marginBottom: 6 }}>Team Name</Text>
+                <TextInput value={teamName} onChangeText={setTeamName} placeholder="e.g. AJV Travel 14u" placeholderTextColor="#8FA8BF" style={INPUT_STYLE} />
               </View>
 
               <View style={{ marginBottom: 16 }}>
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#FEFEFE', marginBottom: 6 }}>
-                  Club Name <Text style={{ fontFamily: 'NunitoSans-Regular', color: '#9AB5CC' }}>(optional)</Text>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#1E3A5F', marginBottom: 6 }}>
+                  Club Name <Text style={{ fontFamily: 'NunitoSans-Regular', color: '#8FA8BF' }}>(optional)</Text>
                 </Text>
-                <TextInput value={clubName} onChangeText={setClubName} placeholder="e.g. Austin Juniors Volleyball" placeholderTextColor="#7A9AB5" style={INPUT_STYLE} />
+                <TextInput value={clubName} onChangeText={setClubName} placeholder="e.g. Austin Juniors Volleyball" placeholderTextColor="#8FA8BF" style={INPUT_STYLE} />
               </View>
 
               <View style={{ marginBottom: 16 }}>
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#FEFEFE', marginBottom: 6 }}>Season</Text>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#1E3A5F', marginBottom: 6 }}>Season</Text>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   {SEASON_OPTIONS.map((opt) => (
                     <Pressable key={opt} style={{
                       flex: 1, paddingVertical: 12, borderRadius: 14, alignItems: 'center',
-                      backgroundColor: seasonYear === opt ? '#3B82B0' : '#264868',
-                      borderWidth: 1.5, borderColor: seasonYear === opt ? '#3B82B0' : '#3A6490',
+                      backgroundColor: seasonYear === opt ? '#3B82B0' : '#E8F0F8',
+                      borderWidth: 1.5, borderColor: seasonYear === opt ? '#3B82B0' : '#D8E2EC',
                     }} onPress={() => setSeasonYear(opt)}>
-                      <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: seasonYear === opt ? '#FEFEFE' : '#B0C4D8' }}>{opt}</Text>
+                      <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: seasonYear === opt ? '#FEFEFE' : '#8FA8BF' }}>{opt}</Text>
                     </Pressable>
                   ))}
                 </View>
@@ -675,21 +685,24 @@ export default function OnboardingScreen() {
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <StepHeader icon="calendar" title="Tournaments" subtitle="Add your upcoming tournaments" />
 
-              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#C8D8E8', marginBottom: 16 }}>
+              <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: '#3B82B0', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
+                Option 1: Paste + AI
+              </Text>
+              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#4A6E8A', marginBottom: 16 }}>
                 Paste a coach message, email, or tournament list and we'll extract the details.
               </Text>
 
               <TextInput
                 value={pasteText} onChangeText={setPasteText} multiline textAlignVertical="top"
                 placeholder={"Paste schedule here...\n\ne.g. Lonestar Classic - Jan 17-19, 2026 - Dallas, TX"}
-                placeholderTextColor="#7A9AB5"
+                placeholderTextColor="#8FA8BF"
                 style={{ ...INPUT_STYLE, minHeight: 120, marginBottom: 12, paddingTop: 12 }}
               />
 
               <Pressable
                 style={{
                   borderRadius: 14, paddingVertical: 12, alignItems: 'center', marginBottom: 16,
-                  backgroundColor: isExtracting || !pasteText.trim() ? '#264868' : '#3B82B0',
+                  backgroundColor: isExtracting || !pasteText.trim() ? '#E8F0F8' : '#3B82B0',
                   shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: !pasteText.trim() ? 0 : 0.45, shadowRadius: 20,
                 }}
                 onPress={handleExtractSchedule} disabled={isExtracting || !pasteText.trim()}
@@ -700,7 +713,7 @@ export default function OnboardingScreen() {
                     <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#FEFEFE' }}>Extracting...</Text>
                   </View>
                 ) : (
-                  <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: !pasteText.trim() ? '#5A7A95' : '#FEFEFE' }}>Extract Tournaments</Text>
+                  <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: !pasteText.trim() ? '#8FA8BF' : '#FEFEFE' }}>Extract Tournaments</Text>
                 )}
               </Pressable>
 
@@ -719,13 +732,13 @@ export default function OnboardingScreen() {
                     </Text>
                   </View>
                   {extractedTournaments.map((t, i) => (
-                    <View key={i} style={{ backgroundColor: '#264868', borderWidth: 1, borderColor: 'rgba(106,158,138,0.2)', borderRadius: 14, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View key={i} style={{ backgroundColor: '#FEFEFE', borderWidth: 1, borderColor: 'rgba(106,158,138,0.2)', borderRadius: 14, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                       <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(106,158,138,0.15)', alignItems: 'center', justifyContent: 'center' }}>
                         <Ionicons name="trophy" size={18} color="#6A9E8A" />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Bold', color: '#FEFEFE' }}>{t.name}</Text>
-                        <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Regular', color: '#C8D8E8', marginTop: 2 }}>
+                        <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Bold', color: '#1E3A5F' }}>{t.name}</Text>
+                        <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Regular', color: '#6B8BA8', marginTop: 2 }}>
                           {t.start_date}{t.end_date !== t.start_date ? ` → ${t.end_date}` : ''}{t.location_city ? `  •  ${t.location_city}` : ''}
                         </Text>
                       </View>
@@ -736,15 +749,18 @@ export default function OnboardingScreen() {
               )}
 
               {/* Forward email hint */}
-              <View style={{ backgroundColor: '#1E4468', borderWidth: 1.5, borderColor: '#2E5A82', borderRadius: 16, padding: 16, marginBottom: 16 }}>
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#D4E3F0', marginBottom: 4 }}>
-                  Or forward an email to:
+              <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: '#3B82B0', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8, marginTop: 8 }}>
+                Option 2: Forward Email
+              </Text>
+              <View style={{ backgroundColor: '#E8F4FF', borderWidth: 1.5, borderColor: '#B8D4EC', borderRadius: 16, padding: 16, marginBottom: 16 }}>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#1E3A5F', marginBottom: 4 }}>
+                  Forward a schedule email to RALLY
                 </Text>
-                <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Regular', color: '#9AB5CC', marginBottom: 10 }}>
+                <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Regular', color: '#6B8BA8', marginBottom: 10 }}>
                   We'll create your tournament weekend itinerary like magic.
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text selectable style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#7DBDD9', flex: 1 }}>
+                  <Text selectable style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#3B82B0', flex: 1 }}>
                     plans@rally-hub.com
                   </Text>
                   <Pressable
@@ -752,8 +768,8 @@ export default function OnboardingScreen() {
                     className="active:opacity-70"
                     onPress={handleCopyForwardAddress}
                   >
-                    <Ionicons name={forwardAddressCopied ? 'checkmark' : 'copy-outline'} size={14} color={forwardAddressCopied ? '#6A9E8A' : '#7DBDD9'} />
-                    <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: forwardAddressCopied ? '#6A9E8A' : '#7DBDD9' }}>
+                    <Ionicons name={forwardAddressCopied ? 'checkmark' : 'copy-outline'} size={14} color={forwardAddressCopied ? '#6A9E8A' : '#3B82B0'} />
+                    <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: forwardAddressCopied ? '#6A9E8A' : '#3B82B0' }}>
                       {forwardAddressCopied ? 'Copied!' : 'Copy'}
                     </Text>
                   </Pressable>
@@ -785,21 +801,24 @@ export default function OnboardingScreen() {
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <StepHeader icon="airplane" title="Travel" subtitle="Add hotel or flight bookings" />
 
-              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#C8D8E8', marginBottom: 16 }}>
+              <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: '#3B82B0', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
+                Option 1: Paste + AI
+              </Text>
+              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#4A6E8A', marginBottom: 16 }}>
                 Paste a hotel or flight confirmation and we'll extract the details.
               </Text>
 
               <TextInput
                 value={travelPasteText} onChangeText={setTravelPasteText} multiline textAlignVertical="top"
                 placeholder={"Paste confirmation here...\n\ne.g. Marriott Marquis - Check-in April 3"}
-                placeholderTextColor="#7A9AB5"
+                placeholderTextColor="#8FA8BF"
                 style={{ ...INPUT_STYLE, minHeight: 120, marginBottom: 12, paddingTop: 12 }}
               />
 
               <Pressable
                 style={{
                   borderRadius: 14, paddingVertical: 12, alignItems: 'center', marginBottom: 16,
-                  backgroundColor: isExtractingTravel || !travelPasteText.trim() ? '#264868' : '#3B82B0',
+                  backgroundColor: isExtractingTravel || !travelPasteText.trim() ? '#E8F0F8' : '#3B82B0',
                   shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: !travelPasteText.trim() ? 0 : 0.45, shadowRadius: 20,
                 }}
                 onPress={handleExtractTravel} disabled={isExtractingTravel || !travelPasteText.trim()}
@@ -810,7 +829,7 @@ export default function OnboardingScreen() {
                     <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#FEFEFE' }}>Extracting...</Text>
                   </View>
                 ) : (
-                  <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: !travelPasteText.trim() ? '#5A7A95' : '#FEFEFE' }}>Extract Travel Details</Text>
+                  <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: !travelPasteText.trim() ? '#8FA8BF' : '#FEFEFE' }}>Extract Travel Details</Text>
                 )}
               </Pressable>
 
@@ -829,15 +848,15 @@ export default function OnboardingScreen() {
                     </Text>
                   </View>
                   {extractedBookings.map((b, i) => (
-                    <View key={i} style={{ backgroundColor: '#264868', borderWidth: 1, borderColor: 'rgba(106,158,138,0.2)', borderRadius: 14, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View key={i} style={{ backgroundColor: '#FEFEFE', borderWidth: 1, borderColor: 'rgba(106,158,138,0.2)', borderRadius: 14, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                       <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(106,158,138,0.15)', alignItems: 'center', justifyContent: 'center' }}>
                         <Ionicons name={b.type === 'hotel' ? 'bed' : 'airplane'} size={18} color="#6A9E8A" />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Bold', color: '#FEFEFE' }}>
+                        <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Bold', color: '#1E3A5F' }}>
                           {b.type === 'hotel' ? (b.hotel_name || 'Hotel') : (b.airline || 'Flight')}
                         </Text>
-                        <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Regular', color: '#C8D8E8', marginTop: 2 }}>
+                        <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Regular', color: '#4A6E8A', marginTop: 2 }}>
                           {b.type === 'hotel' ? `${b.check_in || ''} → ${b.check_out || ''}` : `${b.departure_date || ''}`}
                         </Text>
                       </View>
@@ -848,15 +867,18 @@ export default function OnboardingScreen() {
               )}
 
               {/* Forward email hint */}
-              <View style={{ backgroundColor: '#1E4468', borderWidth: 1.5, borderColor: '#2E5A82', borderRadius: 16, padding: 16, marginBottom: 16 }}>
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#D4E3F0', marginBottom: 4 }}>
-                  Or forward confirmations to:
+              <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: '#3B82B0', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8, marginTop: 8 }}>
+                Option 2: Forward Email
+              </Text>
+              <View style={{ backgroundColor: '#E8F4FF', borderWidth: 1.5, borderColor: '#B8D4EC', borderRadius: 16, padding: 16, marginBottom: 16 }}>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#1E3A5F', marginBottom: 4 }}>
+                  Forward a confirmation email to RALLY
                 </Text>
-                <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Regular', color: '#9AB5CC', marginBottom: 10 }}>
+                <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Regular', color: '#6B8BA8', marginBottom: 10 }}>
                   We'll create your tournament weekend itinerary like magic.
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text selectable style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#7DBDD9', flex: 1 }}>
+                  <Text selectable style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#3B82B0', flex: 1 }}>
                     plans@rally-hub.com
                   </Text>
                   <Pressable
@@ -864,8 +886,8 @@ export default function OnboardingScreen() {
                     className="active:opacity-70"
                     onPress={handleCopyForwardAddress}
                   >
-                    <Ionicons name={forwardAddressCopied ? 'checkmark' : 'copy-outline'} size={14} color={forwardAddressCopied ? '#6A9E8A' : '#7DBDD9'} />
-                    <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: forwardAddressCopied ? '#6A9E8A' : '#7DBDD9' }}>
+                    <Ionicons name={forwardAddressCopied ? 'checkmark' : 'copy-outline'} size={14} color={forwardAddressCopied ? '#6A9E8A' : '#3B82B0'} />
+                    <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: forwardAddressCopied ? '#6A9E8A' : '#3B82B0' }}>
                       {forwardAddressCopied ? 'Copied!' : 'Copy'}
                     </Text>
                   </Pressable>
@@ -892,7 +914,7 @@ export default function OnboardingScreen() {
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <StepHeader icon="key" title="Credentials" subtitle="Save logins you always forget" />
 
-              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#C8D8E8', marginBottom: 20 }}>
+              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#4A6E8A', marginBottom: 20 }}>
                 Tap a service to add your login. These are stored securely and only visible to you.
               </Text>
 
@@ -900,6 +922,7 @@ export default function OnboardingScreen() {
                 const isExpanded = expandedCredential === brand.key;
                 const cred = credentials[brand.key];
                 const hasValue = cred && (cred.username.trim() || cred.password.trim());
+                const isSaved = savedCredentials.has(brand.key);
                 return (
                   <View key={brand.key} style={{ marginBottom: 12 }}>
                     <Pressable
@@ -910,17 +933,17 @@ export default function OnboardingScreen() {
                         padding: 14,
                         borderRadius: 16,
                         borderWidth: 1.5,
-                        borderColor: isExpanded ? '#4A7A9E' : hasValue ? '#3D7A66' : '#3A6490',
-                        backgroundColor: isExpanded ? '#264868' : hasValue ? '#1E4040' : '#223D58',
+                        borderColor: isExpanded ? '#3B82B0' : isSaved ? '#6A9E8A' : '#D8E2EC',
+                        backgroundColor: '#FEFEFE',
                       }}
                       onPress={() => toggleCredential(brand.key)}
                     >
                       <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: brand.bg, alignItems: 'center', justifyContent: 'center' }}>
                         <Ionicons name={brand.icon} size={20} color="#FFFFFF" />
                       </View>
-                      <Text style={{ flex: 1, fontSize: 15, fontFamily: 'NunitoSans-Bold', color: '#FEFEFE' }}>{brand.label}</Text>
-                      {hasValue && <Ionicons name="checkmark-circle" size={20} color="#6A9E8A" />}
-                      <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={18} color="#9AB5CC" />
+                      <Text style={{ flex: 1, fontSize: 15, fontFamily: 'NunitoSans-Bold', color: '#1E3A5F' }}>{brand.label}</Text>
+                      {isSaved && <Ionicons name="checkmark-circle" size={20} color="#6A9E8A" />}
+                      <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={18} color="#8FA8BF" />
                     </Pressable>
 
                     {isExpanded && (
@@ -929,7 +952,7 @@ export default function OnboardingScreen() {
                           value={cred?.username || ''}
                           onChangeText={(v) => updateCredential(brand.key, 'username', v)}
                           placeholder={brand.membershipOnly ? 'Membership # or ID' : 'Username or email'}
-                          placeholderTextColor="#7A9AB5"
+                          placeholderTextColor="#8FA8BF"
                           autoCapitalize="none"
                           style={{ ...INPUT_STYLE, marginBottom: 8 }}
                         />
@@ -938,7 +961,7 @@ export default function OnboardingScreen() {
                             value={cred?.password || ''}
                             onChangeText={(v) => updateCredential(brand.key, 'password', v)}
                             placeholder="Password"
-                            placeholderTextColor="#7A9AB5"
+                            placeholderTextColor="#8FA8BF"
                             secureTextEntry
                             autoCapitalize="none"
                             style={{ ...INPUT_STYLE, marginBottom: 8 }}
@@ -946,7 +969,7 @@ export default function OnboardingScreen() {
                         )}
                         <Pressable
                           style={{
-                            backgroundColor: hasValue ? '#2A6B50' : '#264868',
+                            backgroundColor: hasValue ? '#3B82B0' : '#D8E2EC',
                             borderRadius: 10,
                             paddingVertical: 10,
                             alignItems: 'center',
@@ -958,9 +981,9 @@ export default function OnboardingScreen() {
                           className="active:opacity-80"
                           onPress={() => toggleCredential(brand.key)}
                         >
-                          <Ionicons name={hasValue ? 'checkmark-circle' : 'chevron-up'} size={16} color={hasValue ? '#FEFEFE' : '#9AB5CC'} />
-                          <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Bold', color: hasValue ? '#FEFEFE' : '#9AB5CC' }}>
-                            {hasValue ? 'Saved' : 'Done'}
+                          <Ionicons name={hasValue ? 'checkmark' : 'chevron-up'} size={16} color={hasValue ? '#FEFEFE' : '#8FA8BF'} />
+                          <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Bold', color: hasValue ? '#FEFEFE' : '#8FA8BF' }}>
+                            {hasValue ? 'Save' : 'Done'}
                           </Text>
                         </Pressable>
                       </View>
@@ -989,14 +1012,14 @@ export default function OnboardingScreen() {
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <StepHeader icon="heart" title="Invite Guests" subtitle="Keep family in the loop" />
 
-              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#C8D8E8', marginBottom: 16, lineHeight: 20 }}>
+              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#4A6E8A', marginBottom: 16, lineHeight: 20 }}>
                 Add people who need regular updates — grandparents, extended family, anyone who wants to know when and where the next tournament is.
               </Text>
 
               {guests.map((guest, i) => (
-                <View key={i} style={{ backgroundColor: '#264868', borderWidth: 1.5, borderColor: '#3A6490', borderRadius: 20, padding: 16, marginBottom: 12 }}>
+                <View key={i} style={{ backgroundColor: '#FEFEFE', borderWidth: 1.5, borderColor: '#D8E2EC', borderRadius: 20, padding: 16, marginBottom: 12 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: '#C8D8E8', letterSpacing: 1, textTransform: 'uppercase' }}>Guest {i + 1}</Text>
+                    <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: '#4A6E8A', letterSpacing: 1, textTransform: 'uppercase' }}>Guest {i + 1}</Text>
                     {guests.length > 1 && (
                       <Pressable onPress={() => setGuests(guests.filter((_, j) => j !== i))} className="active:opacity-70">
                         <Ionicons name="close-circle" size={20} color="#8FA8BF" />
@@ -1005,23 +1028,23 @@ export default function OnboardingScreen() {
                   </View>
 
                   <TextInput value={guest.name} onChangeText={(v) => { const u = [...guests]; u[i] = { ...u[i], name: v }; setGuests(u); }}
-                    placeholder="Name (e.g. Grandma Sue)" placeholderTextColor="#7A9AB5" style={{ ...INPUT_STYLE, marginBottom: 8 }} />
+                    placeholder="Name (e.g. Grandma Sue)" placeholderTextColor="#8FA8BF" style={{ ...INPUT_STYLE, marginBottom: 8 }} />
 
                   <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
                     {RELATIONSHIP_OPTIONS.map((rel) => (
                       <Pressable key={rel} style={{
                         paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10,
-                        backgroundColor: guest.relation === rel ? 'rgba(59,130,176,0.2)' : 'transparent',
-                        borderWidth: 1.5, borderColor: guest.relation === rel ? '#4A8BBD' : '#3A6490',
+                        backgroundColor: guest.relation === rel ? 'rgba(59,130,176,0.1)' : 'transparent',
+                        borderWidth: 1.5, borderColor: guest.relation === rel ? '#3B82B0' : '#D8E2EC',
                       }} onPress={() => { const u = [...guests]; u[i] = { ...u[i], relation: rel }; setGuests(u); }}>
-                        <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-SemiBold', color: guest.relation === rel ? '#7DBDD9' : '#9AB5CC' }}>{rel}</Text>
+                        <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-SemiBold', color: guest.relation === rel ? '#3B82B0' : '#8FA8BF' }}>{rel}</Text>
                       </Pressable>
                     ))}
                   </View>
 
                   <TextInput value={guest.phone} onChangeText={(v) => { const u = [...guests]; u[i] = { ...u[i], phone: v }; setGuests(u); }}
-                    placeholder="Phone number (required for SMS updates)" placeholderTextColor="#7A9AB5" keyboardType="phone-pad"
-                    style={{ ...INPUT_STYLE, borderColor: guest.name.trim() && !guest.phone.trim() ? '#ef4444' : '#3A6490' }} />
+                    placeholder="Phone number (required for SMS updates)" placeholderTextColor="#8FA8BF" keyboardType="phone-pad"
+                    style={{ ...INPUT_STYLE, borderColor: guest.name.trim() && !guest.phone.trim() ? '#ef4444' : '#D8E2EC' }} />
                   {guest.name.trim() && !guest.phone.trim() && (
                     <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-SemiBold', color: '#fca5a5', marginTop: 4 }}>Phone required to send updates</Text>
                   )}
@@ -1029,12 +1052,12 @@ export default function OnboardingScreen() {
               ))}
 
               <Pressable
-                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#3A6490', borderRadius: 20, marginBottom: 16 }}
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#D8E2EC', borderRadius: 20, marginBottom: 16 }}
                 className="active:opacity-70"
                 onPress={addGuest}
               >
-                <Ionicons name="add-circle" size={20} color="#7DBDD9" />
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#C8D8E8' }}>Add another guest</Text>
+                <Ionicons name="add-circle" size={20} color="#3B82B0" />
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#4A6E8A' }}>Add another guest</Text>
               </Pressable>
             </ScrollView>
 
@@ -1057,17 +1080,17 @@ export default function OnboardingScreen() {
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <StepHeader icon="people" title="Co-Parent or Admin" subtitle="Add someone who helps manage" />
 
-              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#C8D8E8', marginBottom: 20, lineHeight: 20 }}>
+              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#4A6E8A', marginBottom: 20, lineHeight: 20 }}>
                 A co-parent or co-admin is someone who helps book travel or needs full visibility into tournament details.
               </Text>
 
               <View style={{ marginBottom: 16 }}>
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#FEFEFE', marginBottom: 6 }}>Email</Text>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#1E3A5F', marginBottom: 6 }}>Email</Text>
                 <TextInput
                   value={coParentEmail}
                   onChangeText={setCoParentEmail}
                   placeholder="email@example.com"
-                  placeholderTextColor="#7A9AB5"
+                  placeholderTextColor="#8FA8BF"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoComplete="email"
@@ -1076,27 +1099,27 @@ export default function OnboardingScreen() {
               </View>
 
               <View style={{ marginBottom: 16 }}>
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#FEFEFE', marginBottom: 6 }}>Permission</Text>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#1E3A5F', marginBottom: 6 }}>Permission</Text>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   <Pressable
                     style={{
                       flex: 1, paddingVertical: 12, borderRadius: 14, alignItems: 'center',
-                      backgroundColor: coParentPermission === 'view' ? '#3B82B0' : '#264868',
-                      borderWidth: 1.5, borderColor: coParentPermission === 'view' ? '#3B82B0' : '#3A6490',
+                      backgroundColor: coParentPermission === 'view' ? '#3B82B0' : '#FEFEFE',
+                      borderWidth: 1.5, borderColor: coParentPermission === 'view' ? '#3B82B0' : '#D8E2EC',
                     }}
                     onPress={() => setCoParentPermission('view')}
                   >
-                    <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: coParentPermission === 'view' ? '#FEFEFE' : '#B0C4D8' }}>View Only</Text>
+                    <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: coParentPermission === 'view' ? '#FEFEFE' : '#8FA8BF' }}>View Only</Text>
                   </Pressable>
                   <Pressable
                     style={{
                       flex: 1, paddingVertical: 12, borderRadius: 14, alignItems: 'center',
-                      backgroundColor: coParentPermission === 'manage' ? '#3B82B0' : '#264868',
-                      borderWidth: 1.5, borderColor: coParentPermission === 'manage' ? '#3B82B0' : '#3A6490',
+                      backgroundColor: coParentPermission === 'manage' ? '#3B82B0' : '#FEFEFE',
+                      borderWidth: 1.5, borderColor: coParentPermission === 'manage' ? '#3B82B0' : '#D8E2EC',
                     }}
                     onPress={() => setCoParentPermission('manage')}
                   >
-                    <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: coParentPermission === 'manage' ? '#FEFEFE' : '#B0C4D8' }}>Full Access</Text>
+                    <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: coParentPermission === 'manage' ? '#FEFEFE' : '#8FA8BF' }}>Full Access</Text>
                   </Pressable>
                 </View>
               </View>
@@ -1121,22 +1144,22 @@ export default function OnboardingScreen() {
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <StepHeader icon="person-add" title="Athlete Login" subtitle={`Give ${athleteName.trim() || 'your athlete'} access`} />
 
-              <View style={{ backgroundColor: '#1E4468', borderWidth: 1.5, borderColor: '#2E5A82', borderRadius: 20, padding: 20, marginBottom: 20 }}>
-                <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-SemiBold', color: '#FEFEFE', marginBottom: 8 }}>
+              <View style={{ backgroundColor: '#E8F4FF', borderWidth: 1.5, borderColor: '#B8D4EC', borderRadius: 20, padding: 20, marginBottom: 20 }}>
+                <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-SemiBold', color: '#1E3A5F', marginBottom: 8 }}>
                   Want {athleteName.trim() || 'your athlete'} to have their own login?
                 </Text>
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#D4E3F0', lineHeight: 20 }}>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#4A6E8A', lineHeight: 20 }}>
                   They'll see their schedule, team info, and streaming links. They won't be able to edit travel or bookings.
                 </Text>
               </View>
 
               <View style={{ marginBottom: 16 }}>
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#FEFEFE', marginBottom: 6 }}>Athlete's Email</Text>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#1E3A5F', marginBottom: 6 }}>Athlete's Email</Text>
                 <TextInput
                   value={athleteLoginEmail}
                   onChangeText={setAthleteLoginEmail}
                   placeholder="athlete@example.com"
-                  placeholderTextColor="#7A9AB5"
+                  placeholderTextColor="#8FA8BF"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoComplete="email"
@@ -1158,7 +1181,7 @@ export default function OnboardingScreen() {
               />
               {!athleteLoginEmail.trim() && (
                 <Pressable style={{ paddingVertical: 8, alignItems: 'center' }} className="active:opacity-70" onPress={() => { setFinishError(''); handleFinish(); }}>
-                  <Text style={{ fontSize: 13, color: '#C8D8E8', fontFamily: 'NunitoSans-Regular' }}>Skip & Finish</Text>
+                  <Text style={{ fontSize: 13, color: '#4A6E8A', fontFamily: 'NunitoSans-Regular' }}>Skip & Finish</Text>
                 </Pressable>
               )}
               <View style={{ flexDirection: 'row', gap: 12 }}>

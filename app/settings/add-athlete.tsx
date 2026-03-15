@@ -42,6 +42,10 @@ export default function AddAthleteScreen() {
       showError('Missing field', 'First name is required.');
       return;
     }
+    if (!lastName.trim()) {
+      showError('Missing field', 'Last name is required.');
+      return;
+    }
     if (!teamName.trim()) {
       showError('Missing field', 'Team name is required.');
       return;
@@ -119,7 +123,7 @@ export default function AddAthleteScreen() {
 
           <Text className="text-xs font-semibold text-stone uppercase tracking-wider mb-2 ml-1">Athlete</Text>
           <FormField label="First Name" value={firstName} onChangeText={setFirstName} placeholder="e.g. Jake" />
-          <FormField label="Last Name (optional)" value={lastName} onChangeText={setLastName} placeholder="" />
+          <FormField label="Last Name" value={lastName} onChangeText={setLastName} placeholder="Last name" />
 
           <Text className="text-xs font-semibold text-stone uppercase tracking-wider mb-2 ml-1 mt-4">First Season</Text>
           <FormField label="Team Name" value={teamName} onChangeText={setTeamName} placeholder="e.g. CEVA 12u" />
