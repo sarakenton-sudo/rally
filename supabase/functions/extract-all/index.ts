@@ -33,18 +33,22 @@ For each HOTEL booking:
 For each FLIGHT booking:
 - type: "flight"
 - airline: airline name
-- confirmation_code: record locator
-- flight_number: flight number (e.g. "SW 1234"), else ""
-- departure_date: YYYY-MM-DD
-- return_date: YYYY-MM-DD
-- departure_time: departure time as text (e.g. "6:00 AM"), else ""
-- arrival_time: arrival time as text (e.g. "9:30 AM"), else ""
-- seat_number: seat assignment (e.g. "12A"), else ""
+- confirmation_code: record locator / confirmation number
+- flight_number: outbound flight number (e.g. "DL4027"), MUST extract — do NOT put in notes
+- departure_date: YYYY-MM-DD (outbound)
+- return_date: YYYY-MM-DD (return leg)
+- departure_time: outbound departure time (e.g. "1:55 PM"), MUST extract — do NOT put in notes
+- arrival_time: outbound arrival time (e.g. "5:25 PM"), MUST extract — do NOT put in notes
+- departure_airport: 3-letter code or city name (e.g. "AUS"), MUST extract
+- arrival_airport: 3-letter code or city name (e.g. "IND"), MUST extract
+- seat_number: seat assignment (e.g. "12C"), MUST extract — do NOT put in notes
 - ticket_number: if available, else ""
 - booked_by: ""
 - traveler_names: array of passenger names
-- cost: total cost as number, or null
-- notes: baggage, connection details, etc.
+- cost: total dollar cost as number, or null. For award tickets, use the cash portion only.
+- notes: ONLY for info that doesn't fit above fields (baggage, operated-by, change policy, etc.)
+
+CRITICAL: departure_time, arrival_time, flight_number, seat_number, departure_airport, arrival_airport MUST be in their own fields. Do NOT bury them in notes.
 
 ## Tournament Details
 

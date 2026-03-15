@@ -40,6 +40,8 @@ interface ExtractedBooking {
   departure_time?: string;
   arrival_time?: string;
   seat_number?: string;
+  departure_airport?: string;
+  arrival_airport?: string;
   traveler_names?: string[];
   cost?: number | null;
   notes?: string;
@@ -71,14 +73,23 @@ export default function ReviewTravelScreen() {
       if (isNaN(bStart)) return;
 
       const DAY = 86400000;
+      let bestMatch: { id: string; gap: number } | null = null;
       for (const t of tournaments) {
         const tStart = new Date(t.start_date + 'T12:00:00').getTime();
         const tEnd = new Date(t.end_date + 'T12:00:00').getTime();
+        if (isNaN(tStart)) continue;
         // Check if booking dates overlap or are within 3 days of tournament dates
-        if (bStart <= tEnd + 3 * DAY && (isNaN(bEnd) ? bStart : bEnd) >= tStart - 3 * DAY) {
-          matches[index] = t.id;
-          break;
+        const effectiveEnd = isNaN(bEnd) ? bStart : bEnd;
+        if (bStart <= tEnd + 3 * DAY && effectiveEnd >= tStart - 3 * DAY) {
+          // Calculate how close the dates are (0 = perfect overlap)
+          const gap = Math.abs(bStart - tStart) + Math.abs(effectiveEnd - (isNaN(tEnd) ? tStart : tEnd));
+          if (!bestMatch || gap < bestMatch.gap) {
+            bestMatch = { id: t.id, gap };
+          }
         }
+      }
+      if (bestMatch) {
+        matches[index] = bestMatch.id;
       }
     });
     return matches;
@@ -342,6 +353,14 @@ export default function ReviewTravelScreen() {
                       </View>
                       <View className="flex-1">
                         <FormField label="Arrival Time" value={item.arrival_time || ''} onChangeText={(v) => updateItem(index, 'arrival_time', v)} placeholder="e.g. 9:30 AM" />
+                      </View>
+                    </View>
+                    <View className="flex-row gap-3">
+                      <View className="flex-1">
+                        <FormField label="From" value={item.departure_airport || ''} onChangeText={(v) => updateItem(index, 'departure_airport', v)} placeholder="e.g. AUS" />
+                      </View>
+                      <View className="flex-1">
+                        <FormField label="To" value={item.arrival_airport || ''} onChangeText={(v) => updateItem(index, 'arrival_airport', v)} placeholder="e.g. IND" />
                       </View>
                     </View>
                     <FormField label="Seat Number" value={item.seat_number || ''} onChangeText={(v) => updateItem(index, 'seat_number', v)} placeholder="e.g. 12A" />

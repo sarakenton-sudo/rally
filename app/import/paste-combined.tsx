@@ -250,6 +250,26 @@ function localExtractTravel(text: string): any[] {
     const nameMatch = text.match(/(?:name|passenger)[:\s]*([A-Z][A-Z ]+[A-Z])/i);
     const travelerNames = nameMatch ? [nameMatch[1].trim().split(/\s+/).map((w: string) => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')] : [];
 
+    // Extract flight number (e.g. DL4027, SW 1234, UA123)
+    const flightNumMatch = text.match(/(?:flight|flt)[:\s#]*([A-Z]{2}\s?\d{1,4})/i)
+      || text.match(/\b([A-Z]{2}\s?\d{3,4})\b/);
+    const flightNumber = flightNumMatch?.[1]?.replace(/\s/g, '') || '';
+
+    // Extract departure/arrival times
+    const timeMatches = [...text.matchAll(/(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))/g)];
+    const departureTime = timeMatches.length >= 1 ? timeMatches[0][1].trim() : '';
+    const arrivalTime = timeMatches.length >= 2 ? timeMatches[1][1].trim() : '';
+
+    // Extract airport codes (3-letter uppercase)
+    const airportMatches = [...text.matchAll(/\b([A-Z]{3})\b/g)].map(m => m[1])
+      .filter(code => !['THE', 'AND', 'FOR', 'NOT', 'ARE', 'BUT', 'ALL', 'CAN', 'HER', 'WAS', 'ONE', 'OUR', 'OUT', 'DAY', 'HAD', 'HAS', 'HIS', 'HOW', 'MAN', 'NEW', 'NOW', 'OLD', 'SEE', 'WAY', 'WHO', 'BOY', 'DID', 'GET', 'LET', 'SAY', 'SHE', 'TOO', 'USE', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'].includes(code));
+    const departureAirport = airportMatches.length >= 1 ? airportMatches[0] : '';
+    const arrivalAirport = airportMatches.length >= 2 ? airportMatches[1] : '';
+
+    // Extract seat number
+    const seatMatch = text.match(/(?:seat)[:\s]*(\d{1,2}[A-F])/i);
+    const seatNumber = seatMatch?.[1] || '';
+
     const dateLineMatches = [...text.matchAll(/(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s*(\d{1,2})([A-Z]{3})/gi)];
     const longDateMatches = [...text.matchAll(/(\w+)\s+(\d{1,2}),?\s*(\d{4})/g)];
     const isoDateMatches = [...text.matchAll(/(\d{4}-\d{2}-\d{2})/g)];
@@ -281,8 +301,14 @@ function localExtractTravel(text: string): any[] {
       type: 'flight',
       airline: detectedAirline || 'Other',
       confirmation_code: confirmMatch?.[1] || '',
+      flight_number: flightNumber,
       departure_date: departureDate,
       return_date: returnDate,
+      departure_time: departureTime,
+      arrival_time: arrivalTime,
+      departure_airport: departureAirport,
+      arrival_airport: arrivalAirport,
+      seat_number: seatNumber,
       ticket_number: '',
       booked_by: '',
       traveler_names: travelerNames,
