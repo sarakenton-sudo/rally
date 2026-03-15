@@ -73,10 +73,10 @@ export default function HubScreen() {
               <Ionicons name="mail-open" size={16} color="#3B82B0" />
             </View>
             <View className="flex-1">
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text className="text-sm font-semibold text-bark dark:text-cream">Email Forwarding</Text>
-                <View style={{ backgroundColor: 'rgba(251,146,60,0.25)', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 }}>
-                  <Text style={{ fontSize: 8, fontWeight: '700', color: '#FB923C', letterSpacing: 0.4 }}>EMAIL AUTO-SYNC COMING SOON!</Text>
+              <Text className="text-sm font-semibold text-bark dark:text-cream">Email Forwarding</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
+                <View style={{ backgroundColor: 'rgba(251,146,60,0.2)', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#FB923C' }}>Email Auto-Sync coming soon!</Text>
                 </View>
               </View>
               <Text className="text-xs text-stone dark:text-parchment mt-0.5">
