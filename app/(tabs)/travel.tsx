@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { View, Text, SectionList, Pressable, ActivityIndicator, Alert, Platform } from 'react-native';
+import { View, Text, SectionList, Pressable, ActivityIndicator, Alert, Platform, Switch } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useIconColors } from '@/lib/colors';
@@ -57,6 +57,8 @@ export default function TravelScreen() {
   const isLoading = useSeasonStore((s) => s.isLoading);
   const removeHotelBooking = useSeasonStore((s) => s.removeHotelBooking);
   const removeFlightBooking = useSeasonStore((s) => s.removeFlightBooking);
+  const hideTravelCosts = useSeasonStore((s) => s.hideTravelCosts);
+  const setHideTravelCosts = useSeasonStore((s) => s.setHideTravelCosts);
   const { refresh, isRefreshing } = useDataRefresh();
   const { user } = useAuth();
   const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
@@ -167,7 +169,7 @@ export default function TravelScreen() {
               </View>
             </View>
 
-            {(totalHotelCost > 0 || totalFlightCost > 0) && (
+            {(totalHotelCost > 0 || totalFlightCost > 0) && !hideTravelCosts && (
               <View
                 className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mt-4 flex-row items-center justify-between border border-parchment dark:border-rally-900"
                 style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
@@ -193,6 +195,25 @@ export default function TravelScreen() {
                   </View>
                 </View>
               </View>
+            )}
+
+            {/* Hide costs toggle */}
+            {(totalHotelCost > 0 || totalFlightCost > 0) && (
+              <Pressable
+                className="flex-row items-center mt-3"
+                onPress={() => setHideTravelCosts(!hideTravelCosts)}
+              >
+                <Switch
+                  value={hideTravelCosts}
+                  onValueChange={setHideTravelCosts}
+                  trackColor={{ false: '#D8E2EC', true: '#6A9E8A' }}
+                  thumbColor="#FEFEFE"
+                  style={{ transform: [{ scale: 0.75 }], marginRight: 4 }}
+                />
+                <Text className="text-xs text-stone dark:text-parchment">
+                  Hide costs for my mental health
+                </Text>
+              </Pressable>
             )}
           </View>
         }

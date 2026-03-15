@@ -13,6 +13,7 @@ interface SeasonState {
   adminAthletes: AdminAthlete[];
   activeSeasonId: string | null;
   isLoading: boolean;
+  hideTravelCosts: boolean;
 
   setTournaments: (tournaments: Tournament[]) => void;
   addTournament: (tournament: Tournament) => void;
@@ -45,6 +46,7 @@ interface SeasonState {
   setAdminAthletes: (adminAthletes: AdminAthlete[]) => void;
   setActiveSeasonId: (id: string | null) => void;
   setLoading: (loading: boolean) => void;
+  setHideTravelCosts: (hide: boolean) => void;
 }
 
 export const useSeasonStore = create<SeasonState>((set) => ({
@@ -59,6 +61,7 @@ export const useSeasonStore = create<SeasonState>((set) => ({
   adminAthletes: [],
   activeSeasonId: null,
   isLoading: false,
+  hideTravelCosts: false,
 
   setTournaments: (tournaments) => set({ tournaments }),
   addTournament: (tournament) =>
@@ -127,4 +130,5 @@ export const useSeasonStore = create<SeasonState>((set) => ({
   setAdminAthletes: (adminAthletes) => set({ adminAthletes }),
   setActiveSeasonId: (activeSeasonId) => set({ activeSeasonId }),
   setLoading: (isLoading) => set({ isLoading }),
+  setHideTravelCosts: (hideTravelCosts) => set({ hideTravelCosts }),
 }));

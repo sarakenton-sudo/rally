@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, RefreshControl, Pressable, Alert, Linking } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, Pressable, Alert, Linking, Switch } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,8 @@ import { openDeepLink } from '@/lib/deepLink';
 export default function HubScreen() {
   const adminConfig = useSeasonStore((s) => s.adminConfig);
   const forwardedEmails = useSeasonStore((s) => s.forwardedEmails);
+  const hideTravelCosts = useSeasonStore((s) => s.hideTravelCosts);
+  const setHideTravelCosts = useSeasonStore((s) => s.setHideTravelCosts);
   const ic = useIconColors();
   const { refresh, isRefreshing } = useDataRefresh();
   const externalLinks = adminConfig?.external_links ?? [];
@@ -176,6 +178,34 @@ export default function HubScreen() {
           comingSoon
           onPress={() => Alert.alert('Coming Soon', 'Automatic Gmail sync will be available in a future release.')}
         />
+
+        {/* ============================================================ */}
+        {/* PREFERENCES */}
+        {/* ============================================================ */}
+        <View className="mt-6">
+          <HubSectionHeader icon="options" title="Preferences" iconColor={ic.muted} />
+        </View>
+
+        <View
+          className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 mb-2 flex-row items-center justify-between"
+          style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
+        >
+          <View className="flex-row items-center flex-1 mr-3">
+            <View className="w-8 h-8 rounded-full items-center justify-center mr-3" style={{ backgroundColor: 'rgba(106,158,138,0.15)' }}>
+              <Ionicons name="eye-off" size={16} color="#6A9E8A" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-sm font-semibold text-bark dark:text-cream">Hide Travel Costs</Text>
+              <Text className="text-xs text-stone dark:text-parchment mt-0.5">For my mental health</Text>
+            </View>
+          </View>
+          <Switch
+            value={hideTravelCosts}
+            onValueChange={(val) => { setHideTravelCosts(val); tapLight(); }}
+            trackColor={{ false: '#D8E2EC', true: '#6A9E8A' }}
+            thumbColor="#FEFEFE"
+          />
+        </View>
 
         {/* ============================================================ */}
         {/* GUEST MANAGEMENT */}
