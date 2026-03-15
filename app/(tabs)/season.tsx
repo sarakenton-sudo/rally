@@ -108,13 +108,15 @@ export default function SeasonScreen() {
                   {seasonYear ? `${seasonYear} · ` : ''}{seasonTournaments.length} tournament{seasonTournaments.length !== 1 ? 's' : ''}
                 </Text>
               </View>
-              <Pressable
-                className="flex-row items-center bg-rally-50 dark:bg-rally-900/30 px-3 py-1.5 rounded-lg active:opacity-70"
-                onPress={() => router.push('/settings/schedule-import')}
-              >
-                <Ionicons name="add-circle" size={14} color="#3B82B0" />
-                <Text className="text-xs font-semibold text-rally-600 ml-1">Add</Text>
-              </Pressable>
+              {activeSeason?.default_stream_url ? (
+                <Pressable
+                  className="flex-row items-center bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg active:opacity-70"
+                  onPress={() => Linking.openURL(activeSeason.default_stream_url!)}
+                >
+                  <Ionicons name="tv-outline" size={14} color="#dc2626" />
+                  <Text className="text-xs font-semibold text-red-600 ml-1">Watch Live</Text>
+                </Pressable>
+              ) : null}
             </View>
 
             {/* Team Code Block */}
