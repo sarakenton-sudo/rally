@@ -858,12 +858,45 @@ export default function OnboardingScreen() {
         {step === 4 && (
           <View className="flex-1 px-6 pt-4">
             <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              <StepHeader icon="airplane" title="Travel" subtitle="Add hotel or flight bookings" />
+              <StepHeader icon="airplane" title="Add Travel Details" subtitle="Let's add your existing hotel or flight bookings" />
 
+              {/* Option 1: Forward Emails */}
+              <View style={{ backgroundColor: 'rgba(219,39,119,0.08)', borderWidth: 1.5, borderColor: 'rgba(219,39,119,0.25)', borderRadius: 16, padding: 16, marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <Text style={{ fontSize: 20 }}>🪄</Text>
+                  <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-Bold', color: '#DB2777' }}>
+                    Option 1: Forward Emails
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#1E3A5F', marginBottom: 14, lineHeight: 19 }}>
+                  Forward any hotel, flight, or tournament email to this address and we'll build your itinerary automatically.
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(219,39,119,0.08)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
+                  <Text selectable style={{ fontSize: 15, fontFamily: 'NunitoSans-Bold', color: '#DB2777', flex: 1 }}>
+                    plans@rally-hub.com
+                  </Text>
+                  <Pressable
+                    style={{ backgroundColor: forwardAddressCopied ? 'rgba(106,158,138,0.2)' : 'rgba(219,39,119,0.15)', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                    className="active:opacity-70"
+                    onPress={handleCopyForwardAddress}
+                  >
+                    <Ionicons name={forwardAddressCopied ? 'checkmark' : 'copy-outline'} size={14} color={forwardAddressCopied ? '#6A9E8A' : '#DB2777'} />
+                    <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: forwardAddressCopied ? '#6A9E8A' : '#DB2777' }}>
+                      {forwardAddressCopied ? 'Copied!' : 'Copy'}
+                    </Text>
+                  </Pressable>
+                </View>
+                <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Regular', color: '#6B8BA8', marginTop: 12, lineHeight: 17 }}>
+                  Plan with other emails too? Add more emails we should accept forwards from in{' '}
+                  <Text style={{ fontFamily: 'NunitoSans-Bold', color: '#3B82B0' }} onPress={() => router.push('/settings/email-forward')}>settings</Text>.
+                </Text>
+              </View>
+
+              {/* Option 2: Paste + AI */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, backgroundColor: '#E8F4FF', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
                 <Ionicons name="sparkles" size={18} color="#3B82B0" />
                 <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-Bold', color: '#1E3A5F' }}>
-                  Option 1: Paste + AI
+                  Option 2: Paste + AI
                 </Text>
               </View>
               <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#4A6E8A', marginBottom: 16 }}>
@@ -927,90 +960,6 @@ export default function OnboardingScreen() {
                   ))}
                 </View>
               )}
-
-              {/* Email Import Section */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 8, backgroundColor: 'rgba(59,130,176,0.12)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
-                <Ionicons name="mail" size={18} color="#3B82B0" />
-                <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-Bold', color: '#1E3A5F' }}>
-                  Email & Travel Import
-                </Text>
-              </View>
-              <View style={{ backgroundColor: 'rgba(59,130,176,0.06)', borderWidth: 1.5, borderColor: 'rgba(59,130,176,0.2)', borderRadius: 16, padding: 16, marginBottom: 16 }}>
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#1E3A5F', marginBottom: 6 }}>
-                  RallyHUB builds your itinerary from your emails
-                </Text>
-                <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Regular', color: '#6B8BA8', marginBottom: 14, lineHeight: 18 }}>
-                  We already have the email you signed up with — you're all set there. If you also book travel from a work email, partner's email, or any other account, add those below so we recognize confirmations from all of them as yours. Then forward any confirmation to our address and we'll do the rest.
-                </Text>
-
-                {/* Other email addresses */}
-                <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: '#4A6E8A', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
-                  Other Email Addresses
-                </Text>
-                {trustedEmails.length > 0 && (
-                  <View style={{ marginBottom: 10, gap: 6 }}>
-                    {trustedEmails.map((email) => (
-                      <View key={email} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(106,158,138,0.15)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 }}>
-                        <Ionicons name="mail" size={14} color="#6A9E8A" />
-                        <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#1E3A5F', flex: 1, marginLeft: 8 }}>{email}</Text>
-                        <Pressable onPress={() => setTrustedEmails(trustedEmails.filter((e) => e !== email))} className="active:opacity-60">
-                          <Ionicons name="close-circle" size={18} color="#ef4444" />
-                        </Pressable>
-                      </View>
-                    ))}
-                  </View>
-                )}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                  <View style={{ flex: 1, backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(106,158,138,0.3)', paddingHorizontal: 12, paddingVertical: 8 }}>
-                    <TextInput
-                      value={trustedEmailInput}
-                      onChangeText={setTrustedEmailInput}
-                      placeholder="e.g. sara@work.com"
-                      placeholderTextColor="#8FA8BF"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#1E3A5F' }}
-                    />
-                  </View>
-                  <Pressable
-                    style={{ backgroundColor: '#6A9E8A', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14 }}
-                    className="active:opacity-70"
-                    onPress={() => {
-                      const email = trustedEmailInput.trim().toLowerCase();
-                      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
-                      if (trustedEmails.includes(email)) { setTrustedEmailInput(''); return; }
-                      setTrustedEmails([...trustedEmails, email]);
-                      setTrustedEmailInput('');
-                    }}
-                  >
-                    <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Bold', color: '#fff' }}>Add</Text>
-                  </Pressable>
-                </View>
-
-                {/* Forward address */}
-                <View style={{ height: 1, backgroundColor: 'rgba(59,130,176,0.15)', marginBottom: 14 }} />
-                <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: '#4A6E8A', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>
-                  Forward Confirmations Here
-                </Text>
-                <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-Regular', color: '#6B8BA8', marginBottom: 10 }}>
-                  Forward any hotel, flight, or tournament email to this address and we'll build your itinerary automatically.
-                </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text selectable style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#3B82B0', flex: 1 }}>
-                    plans@rally-hub.com
-                  </Text>
-                  <Pressable
-                    style={{ backgroundColor: forwardAddressCopied ? 'rgba(106,158,138,0.2)' : 'rgba(59,130,176,0.2)', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 4 }}
-                    className="active:opacity-70"
-                    onPress={handleCopyForwardAddress}
-                  >
-                    <Ionicons name={forwardAddressCopied ? 'checkmark' : 'copy-outline'} size={14} color={forwardAddressCopied ? '#6A9E8A' : '#3B82B0'} />
-                    <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: forwardAddressCopied ? '#6A9E8A' : '#3B82B0' }}>
-                      {forwardAddressCopied ? 'Copied!' : 'Copy'}
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
             </ScrollView>
 
             <View style={{ marginTop: 'auto', paddingBottom: 16, gap: 8 }}>
