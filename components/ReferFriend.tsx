@@ -39,11 +39,26 @@ export default function ReferFriend() {
 
     try {
       if (isSupabaseConfigured && user) {
-        await supabase.from('referrals').insert({
+        const { data: referral } = await supabase.from('referrals').insert({
           referrer_user_id: user.id,
           referred_email: email,
           referred_phone: phone,
-        });
+        }).select().single();
+
+        // Send the invite via edge function (email or SMS)
+        if (referral) {
+          supabase.functions.invoke('send-referral', {
+            body: {
+              referral_id: referral.id,
+              referrer_user_id: user.id,
+              referred_email: email,
+              referred_phone: phone,
+              invite_type: 'referral',
+            },
+          }).catch(() => {
+            // Silent fail — referral is saved, invite delivery is best-effort
+          });
+        }
       }
       setSent(true);
       setValue('');

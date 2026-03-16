@@ -77,6 +77,20 @@ export default function InviteCoParentScreen() {
     } else {
       notifySuccess();
       setInviteCode(lastCode);
+
+      // Send the invite code to the invitee via email
+      if (lastCode && email.trim()) {
+        supabase.functions.invoke('send-referral', {
+          body: {
+            referrer_user_id: user!.id,
+            referred_email: email.trim().toLowerCase(),
+            invite_code: lastCode,
+            invite_type: 'coparent',
+          },
+        }).catch(() => {
+          // Silent fail — code is created, email delivery is best-effort
+        });
+      }
     }
   };
 
