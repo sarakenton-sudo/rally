@@ -15,6 +15,7 @@ serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://rally-hub.com';
     const supabase = createClient(supabaseUrl, serviceKey);
 
     // Verify caller is admin owner via their JWT
@@ -58,12 +59,23 @@ serve(async (req: Request) => {
       type: 'magiclink',
       email: targetUser.user.email,
       options: {
-        redirectTo: `${supabaseUrl.replace('.supabase.co', '')}.vercel.app/auth-callback`,
+        redirectTo: `${siteUrl}/auth-callback`,
       },
     });
 
     if (linkError) {
       return new Response(JSON.stringify({ error: linkError.message }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // generateLink returns { properties: { action_link, hashed_token, ... } }
+    // action_link is the full verification URL — just override its redirect_to
+    const actionLink = linkData?.properties?.action_link;
+    const hashedToken = linkData?.properties?.hashed_token;
+
+    if (!actionLink && !hashedToken) {
+      return new Response(JSON.stringify({ error: 'No link generated', debug: JSON.stringify(linkData) }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -77,9 +89,16 @@ serve(async (req: Request) => {
       metadata: { target_email: targetUser.user.email, caller_email: caller.email },
     });
 
-    // The generated link has hashed_token etc. — construct the verification URL
-    const properties = linkData?.properties;
-    const verifyUrl = `${supabaseUrl}/auth/v1/verify?token=${properties?.hashed_token}&type=magiclink&redirect_to=${encodeURIComponent(supabaseUrl.replace('.supabase.co', '') + '.vercel.app/auth-callback')}`;
+    // Use the action_link directly if available, otherwise construct manually
+    let verifyUrl: string;
+    if (actionLink) {
+      // Replace the redirect_to in the action_link to point to our consumer app
+      const url = new URL(actionLink);
+      url.searchParams.set('redirect_to', `${siteUrl}/auth-callback`);
+      verifyUrl = url.toString();
+    } else {
+      verifyUrl = `${supabaseUrl}/auth/v1/verify?token=${hashedToken}&type=magiclink&redirect_to=${encodeURIComponent(siteUrl + '/auth-callback')}`;
+    }
 
     return new Response(JSON.stringify({
       url: verifyUrl,
