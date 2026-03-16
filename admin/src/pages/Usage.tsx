@@ -43,37 +43,37 @@ export function Usage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-slate-900">Usage Metrics</h1>
+      <h1 className="mb-6 text-2xl font-bold text-bark">Usage Metrics</h1>
 
       {loading ? (
-        <p className="text-sm text-slate-400">Loading...</p>
+        <p className="text-sm text-stone">Loading...</p>
       ) : (
         <div className="space-y-8">
           {/* Sessions chart */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <h2 className="mb-4 text-lg font-semibold text-slate-800">Daily Sessions (30d)</h2>
+          <div className="rounded-xl border border-frost bg-warm-white p-5">
+            <h2 className="mb-4 text-lg font-semibold text-bark">Daily Sessions (30d)</h2>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={sessionsByDay}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#D8E2EC" />
+                <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#4A6E8A' }} />
+                <YAxis tick={{ fontSize: 12, fill: '#4A6E8A' }} />
                 <Tooltip />
-                <Line type="monotone" dataKey="sessions" stroke="#6366f1" strokeWidth={2} name="Sessions" />
-                <Line type="monotone" dataKey="uniqueUsers" stroke="#10b981" strokeWidth={2} name="Unique Users" />
+                <Line type="monotone" dataKey="sessions" stroke="#3B82B0" strokeWidth={2} name="Sessions" />
+                <Line type="monotone" dataKey="uniqueUsers" stroke="#6A9E8A" strokeWidth={2} name="Unique Users" />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
           {/* Notifications chart */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <h2 className="mb-4 text-lg font-semibold text-slate-800">Notifications by Channel (30d)</h2>
+          <div className="rounded-xl border border-frost bg-warm-white p-5">
+            <h2 className="mb-4 text-lg font-semibold text-bark">Notifications by Channel (30d)</h2>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={notifsByChannel}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="channel" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#D8E2EC" />
+                <XAxis dataKey="channel" tick={{ fontSize: 12, fill: '#4A6E8A' }} />
+                <YAxis tick={{ fontSize: 12, fill: '#4A6E8A' }} />
                 <Tooltip />
-                <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" fill="#3B82B0" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

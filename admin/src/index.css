@@ -1,1 +1,24 @@
 @import "tailwindcss";
+
+@theme {
+  /* RallyHUB steel-blue palette */
+  --color-rally-50: #F0F7FB;
+  --color-rally-100: #D6EAF4;
+  --color-rally-200: #ADD5E9;
+  --color-rally-300: #7DBDD9;
+  --color-rally-400: #54A1C5;
+  --color-rally-500: #3B82B0;
+  --color-rally-600: #2E6A93;
+  --color-rally-700: #245476;
+  --color-rally-800: #1C405A;
+  --color-rally-900: #152F43;
+
+  --color-bark: #1E3A5F;
+  --color-bark-light: #264B73;
+  --color-cream: #F4F6F8;
+  --color-warm-white: #FEFEFE;
+  --color-sage: #6A9E8A;
+  --color-stone: #4A6E8A;
+  --color-frost: #D8E2EC;
+  --color-gold: #F59E0B;
+}

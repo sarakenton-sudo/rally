@@ -28,16 +28,16 @@ export function DataTable<T>({ data, columns, onRowClick }: DataTableProps<T>) {
   });
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+    <div className="overflow-x-auto rounded-lg border border-frost bg-warm-white">
       <table className="w-full text-left text-sm">
         <thead>
           {table.getHeaderGroups().map((hg) => (
-            <tr key={hg.id} className="border-b border-slate-200 bg-slate-50">
+            <tr key={hg.id} className="border-b border-frost bg-cream">
               {hg.headers.map((header) => (
                 <th
                   key={header.id}
                   onClick={header.column.getToggleSortingHandler()}
-                  className="cursor-pointer px-4 py-3 font-medium text-slate-600 select-none"
+                  className="cursor-pointer px-4 py-3 font-medium text-stone select-none"
                 >
                   {flexRender(header.column.columnDef.header, header.getContext())}
                   {{ asc: ' ↑', desc: ' ↓' }[header.column.getIsSorted() as string] ?? ''}
@@ -51,10 +51,10 @@ export function DataTable<T>({ data, columns, onRowClick }: DataTableProps<T>) {
             <tr
               key={row.id}
               onClick={() => onRowClick?.(row.original)}
-              className={`border-b border-slate-100 ${onRowClick ? 'cursor-pointer hover:bg-slate-50' : ''}`}
+              className={`border-b border-frost/50 ${onRowClick ? 'cursor-pointer hover:bg-rally-50' : ''}`}
             >
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="px-4 py-3 text-slate-700">
+                <td key={cell.id} className="px-4 py-3 text-bark">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}
@@ -62,7 +62,7 @@ export function DataTable<T>({ data, columns, onRowClick }: DataTableProps<T>) {
           ))}
           {data.length === 0 && (
             <tr>
-              <td colSpan={columns.length} className="px-4 py-8 text-center text-slate-400">
+              <td colSpan={columns.length} className="px-4 py-8 text-center text-stone">
                 No data
               </td>
             </tr>

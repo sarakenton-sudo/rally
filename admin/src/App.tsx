@@ -9,14 +9,15 @@ import { Usage } from '@/pages/Usage';
 import { Errors } from '@/pages/Errors';
 import { FeatureRequests } from '@/pages/FeatureRequests';
 import { Reports } from '@/pages/Reports';
+import { Imports } from '@/pages/Imports';
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { admin, loading } = useAdminAuth();
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
-        <div className="text-slate-400 text-sm">Loading...</div>
+      <div className="flex h-screen items-center justify-center bg-cream">
+        <div className="text-stone text-sm">Loading...</div>
       </div>
     );
   }
@@ -47,6 +48,7 @@ export function App() {
           <Route path="usage" element={<Usage />} />
           <Route path="errors" element={<Errors />} />
           <Route path="feature-requests" element={<FeatureRequests />} />
+          <Route path="imports" element={<Imports />} />
           <Route path="reports" element={<Reports />} />
         </Route>
         <Route path="*" element={<Navigate to="/admin" replace />} />

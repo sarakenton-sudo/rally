@@ -6,15 +6,16 @@ const links = [
   { to: '/admin/usage', label: 'Usage' },
   { to: '/admin/errors', label: 'Errors' },
   { to: '/admin/feature-requests', label: 'Feature Requests' },
+  { to: '/admin/imports', label: 'Imports' },
   { to: '/admin/reports', label: 'Reports' },
 ];
 
 export function Sidebar() {
   return (
-    <aside className="flex w-56 flex-col bg-slate-900 text-white">
+    <aside className="flex w-56 flex-col bg-bark text-white">
       <div className="flex h-14 items-center px-5">
         <span className="text-lg font-bold tracking-tight">RallyHUB</span>
-        <span className="ml-2 rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold uppercase text-slate-900">
+        <span className="ml-2 rounded bg-gold px-1.5 py-0.5 text-[10px] font-bold uppercase text-bark">
           Admin
         </span>
       </div>
@@ -27,8 +28,8 @@ export function Sidebar() {
             className={({ isActive }) =>
               `rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                 isActive
-                  ? 'bg-slate-700 text-white'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                  ? 'bg-bark-light text-white'
+                  : 'text-rally-200 hover:bg-bark-light hover:text-white'
               }`
             }
           >

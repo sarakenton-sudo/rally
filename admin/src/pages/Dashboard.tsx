@@ -7,10 +7,10 @@ export function Dashboard() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-slate-900">Dashboard</h1>
+      <h1 className="mb-6 text-2xl font-bold text-bark">Dashboard</h1>
 
       {loading ? (
-        <p className="text-sm text-slate-400">Loading stats...</p>
+        <p className="text-sm text-stone">Loading stats...</p>
       ) : stats ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Total Users" value={stats.totalUsers} />

@@ -77,7 +77,7 @@ export function FeatureRequests() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">Feature Requests</h1>
+        <h1 className="text-2xl font-bold text-bark">Feature Requests</h1>
         <CSVExportButton data={(data ?? []) as Record<string, unknown>[]} filename="rally-feature-requests" />
       </div>
 
@@ -85,7 +85,7 @@ export function FeatureRequests() {
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="rounded-md border border-frost px-2 py-1.5 text-sm text-bark"
         >
           <option value="">All statuses</option>
           {statusOptions.map((s) => (
@@ -95,7 +95,7 @@ export function FeatureRequests() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-400">Loading...</p>
+        <p className="text-sm text-stone">Loading...</p>
       ) : (
         <>
           <DataTable<FeatureRow>
@@ -107,15 +107,15 @@ export function FeatureRequests() {
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="rounded border border-slate-300 px-3 py-1 text-sm disabled:opacity-40"
+              className="rounded border border-frost px-3 py-1 text-sm text-bark disabled:opacity-40"
             >
               Previous
             </button>
-            <span className="text-sm text-slate-500">Page {page + 1}</span>
+            <span className="text-sm text-stone">Page {page + 1}</span>
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={(data?.length ?? 0) < 50}
-              className="rounded border border-slate-300 px-3 py-1 text-sm disabled:opacity-40"
+              className="rounded border border-frost px-3 py-1 text-sm text-bark disabled:opacity-40"
             >
               Next
             </button>
@@ -126,24 +126,24 @@ export function FeatureRequests() {
       {/* Detail/respond modal */}
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setSelected(null)}>
-          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h2 className="mb-4 text-lg font-semibold text-slate-900">Feature Request</h2>
-            <div className="mb-4 rounded-lg bg-slate-50 p-3 text-sm">
-              <p className="font-medium">{String(selected.metadata?.title ?? 'No title')}</p>
+          <div className="w-full max-w-lg rounded-xl bg-warm-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="mb-4 text-lg font-semibold text-bark">Feature Request</h2>
+            <div className="mb-4 rounded-lg bg-cream p-3 text-sm">
+              <p className="font-medium text-bark">{String(selected.metadata?.title ?? 'No title')}</p>
               {selected.metadata?.description ? (
-                <p className="mt-1 text-slate-600">{String(selected.metadata.description)}</p>
+                <p className="mt-1 text-stone">{String(selected.metadata.description)}</p>
               ) : null}
-              <p className="mt-2 text-xs text-slate-400">
+              <p className="mt-2 text-xs text-stone">
                 {new Date(selected.occurred_at).toLocaleString()}
               </p>
             </div>
 
             <div className="mb-3">
-              <label className="mb-1 block text-sm font-medium text-slate-700">Status</label>
+              <label className="mb-1 block text-sm font-medium text-bark">Status</label>
               <select
                 value={newStatus}
                 onChange={(e) => setNewStatus(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                className="w-full rounded-md border border-frost px-2 py-1.5 text-sm text-bark"
               >
                 {statusOptions.map((s) => (
                   <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
@@ -152,12 +152,12 @@ export function FeatureRequests() {
             </div>
 
             <div className="mb-4">
-              <label className="mb-1 block text-sm font-medium text-slate-700">Admin Response</label>
+              <label className="mb-1 block text-sm font-medium text-bark">Admin Response</label>
               <textarea
                 value={responseText}
                 onChange={(e) => setResponseText(e.target.value)}
                 rows={3}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-md border border-frost px-3 py-2 text-sm text-bark focus:border-rally-500 focus:outline-none focus:ring-1 focus:ring-rally-500"
                 placeholder="Optional response..."
               />
             </div>
@@ -165,13 +165,13 @@ export function FeatureRequests() {
             <div className="flex gap-2">
               <button
                 onClick={handleUpdate}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                className="rounded-md bg-rally-500 px-4 py-2 text-sm font-medium text-white hover:bg-rally-600"
               >
                 Update
               </button>
               <button
                 onClick={() => setSelected(null)}
-                className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+                className="rounded-md border border-frost px-4 py-2 text-sm text-stone hover:bg-cream"
               >
                 Cancel
               </button>

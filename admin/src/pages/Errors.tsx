@@ -74,7 +74,7 @@ export function Errors() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">Errors</h1>
+        <h1 className="text-2xl font-bold text-bark">Errors</h1>
         <CSVExportButton data={(data ?? []) as Record<string, unknown>[]} filename="rally-errors" />
       </div>
 
@@ -82,7 +82,7 @@ export function Errors() {
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="rounded-md border border-frost px-2 py-1.5 text-sm text-bark"
         >
           <option value="">All statuses</option>
           <option value="new">New</option>
@@ -92,7 +92,7 @@ export function Errors() {
         <select
           value={severityFilter}
           onChange={(e) => { setSeverityFilter(e.target.value); setPage(0); }}
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="rounded-md border border-frost px-2 py-1.5 text-sm text-bark"
         >
           <option value="">All severities</option>
           <option value="warning">Warning</option>
@@ -102,7 +102,7 @@ export function Errors() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-400">Loading...</p>
+        <p className="text-sm text-stone">Loading...</p>
       ) : (
         <>
           <DataTable<ErrorRow>
@@ -114,15 +114,15 @@ export function Errors() {
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="rounded border border-slate-300 px-3 py-1 text-sm disabled:opacity-40"
+              className="rounded border border-frost px-3 py-1 text-sm text-bark disabled:opacity-40"
             >
               Previous
             </button>
-            <span className="text-sm text-slate-500">Page {page + 1}</span>
+            <span className="text-sm text-stone">Page {page + 1}</span>
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={(data?.length ?? 0) < 50}
-              className="rounded border border-slate-300 px-3 py-1 text-sm disabled:opacity-40"
+              className="rounded border border-frost px-3 py-1 text-sm text-bark disabled:opacity-40"
             >
               Next
             </button>
@@ -133,24 +133,24 @@ export function Errors() {
       {/* Detail modal */}
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setSelected(null)}>
-          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h2 className="mb-4 text-lg font-semibold text-slate-900">Error Detail</h2>
+          <div className="w-full max-w-lg rounded-xl bg-warm-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="mb-4 text-lg font-semibold text-bark">Error Detail</h2>
             <div className="mb-3 flex gap-2">
               <StatusBadge value={selected.severity} />
               <StatusBadge value={selected.status} />
             </div>
             <dl className="space-y-2 text-sm">
-              <div><dt className="font-medium text-slate-500">Type</dt><dd>{selected.error_type}</dd></div>
-              <div><dt className="font-medium text-slate-500">Message</dt><dd className="break-all">{selected.error_message}</dd></div>
-              <div><dt className="font-medium text-slate-500">Screen</dt><dd>{selected.screen || '—'}</dd></div>
-              <div><dt className="font-medium text-slate-500">Action</dt><dd>{selected.action || '—'}</dd></div>
-              <div><dt className="font-medium text-slate-500">Time</dt><dd>{new Date(selected.created_at).toLocaleString()}</dd></div>
+              <div><dt className="font-medium text-stone">Type</dt><dd className="text-bark">{selected.error_type}</dd></div>
+              <div><dt className="font-medium text-stone">Message</dt><dd className="break-all text-bark">{selected.error_message}</dd></div>
+              <div><dt className="font-medium text-stone">Screen</dt><dd className="text-bark">{selected.screen || '—'}</dd></div>
+              <div><dt className="font-medium text-stone">Action</dt><dd className="text-bark">{selected.action || '—'}</dd></div>
+              <div><dt className="font-medium text-stone">Time</dt><dd className="text-bark">{new Date(selected.created_at).toLocaleString()}</dd></div>
             </dl>
             <div className="mt-6 flex gap-2">
               {selected.status === 'new' && (
                 <button
                   onClick={() => handleReview(selected.id)}
-                  className="rounded-md bg-yellow-100 px-3 py-1.5 text-sm font-medium text-yellow-700 hover:bg-yellow-200"
+                  className="rounded-md bg-gold/20 px-3 py-1.5 text-sm font-medium text-yellow-700 hover:bg-gold/30"
                 >
                   Mark Reviewed
                 </button>
@@ -158,14 +158,14 @@ export function Errors() {
               {selected.status !== 'resolved' && (
                 <button
                   onClick={() => handleResolve(selected.id)}
-                  className="rounded-md bg-green-100 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-200"
+                  className="rounded-md bg-sage/20 px-3 py-1.5 text-sm font-medium text-sage hover:bg-sage/30"
                 >
                   Mark Resolved
                 </button>
               )}
               <button
                 onClick={() => setSelected(null)}
-                className="ml-auto rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+                className="ml-auto rounded-md border border-frost px-3 py-1.5 text-sm text-stone hover:bg-cream"
               >
                 Close
               </button>

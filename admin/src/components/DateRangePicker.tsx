@@ -11,14 +11,14 @@ export function DateRangePicker({ from, to, onChange }: Props) {
         type="date"
         value={from}
         onChange={(e) => onChange(e.target.value, to)}
-        className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+        className="rounded-md border border-frost px-2 py-1.5 text-sm text-bark"
       />
-      <span className="text-slate-400">to</span>
+      <span className="text-stone">to</span>
       <input
         type="date"
         value={to}
         onChange={(e) => onChange(from, e.target.value)}
-        className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+        className="rounded-md border border-frost px-2 py-1.5 text-sm text-bark"
       />
     </div>
   );

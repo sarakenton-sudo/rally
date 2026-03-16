@@ -54,7 +54,7 @@ export function Accounts() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-slate-900">Accounts</h1>
+      <h1 className="mb-6 text-2xl font-bold text-bark">Accounts</h1>
 
       <div className="mb-4 flex items-center gap-4">
         <input
@@ -65,12 +65,12 @@ export function Accounts() {
             setSearch(e.target.value);
             setPage(0);
           }}
-          className="w-72 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="w-72 rounded-md border border-frost px-3 py-2 text-sm text-bark focus:border-rally-500 focus:outline-none focus:ring-1 focus:ring-rally-500"
         />
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-400">Loading...</p>
+        <p className="text-sm text-stone">Loading...</p>
       ) : (
         <>
           <DataTable<UserRow>
@@ -82,15 +82,15 @@ export function Accounts() {
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="rounded border border-slate-300 px-3 py-1 text-sm disabled:opacity-40"
+              className="rounded border border-frost px-3 py-1 text-sm text-bark disabled:opacity-40"
             >
               Previous
             </button>
-            <span className="text-sm text-slate-500">Page {page + 1}</span>
+            <span className="text-sm text-stone">Page {page + 1}</span>
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={(data?.length ?? 0) < 50}
-              className="rounded border border-slate-300 px-3 py-1 text-sm disabled:opacity-40"
+              className="rounded border border-frost px-3 py-1 text-sm text-bark disabled:opacity-40"
             >
               Next
             </button>

@@ -22,11 +22,11 @@ export function Reports() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-slate-900">Reports & Exports</h1>
+      <h1 className="mb-6 text-2xl font-bold text-bark">Reports & Exports</h1>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6">
-        <h2 className="mb-4 text-lg font-semibold text-slate-800">CSV Exports</h2>
-        <p className="mb-4 text-sm text-slate-500">
+      <div className="rounded-xl border border-frost bg-warm-white p-6">
+        <h2 className="mb-4 text-lg font-semibold text-bark">CSV Exports</h2>
+        <p className="mb-4 text-sm text-stone">
           Download data as CSV for analysis in spreadsheets or BI tools.
         </p>
 
@@ -34,7 +34,7 @@ export function Reports() {
           <select
             value={exportType}
             onChange={(e) => setExportType(e.target.value as typeof exportType)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="rounded-md border border-frost px-3 py-2 text-sm text-bark"
           >
             <option value="users">All Users</option>
             <option value="errors">Error Log</option>
@@ -48,7 +48,7 @@ export function Reports() {
           />
         </div>
 
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-stone">
           {current.data.length} records available for export
         </p>
       </div>

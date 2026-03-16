@@ -11,7 +11,7 @@ export function CSVExportButton({ data, filename, label = 'Export CSV' }: Props)
     <button
       onClick={() => downloadCSV(data, filename)}
       disabled={data.length === 0}
-      className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+      className="rounded-md border border-frost bg-warm-white px-3 py-1.5 text-sm font-medium text-bark hover:bg-cream disabled:opacity-50"
     >
       {label}
     </button>
