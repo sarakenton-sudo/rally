@@ -490,11 +490,17 @@ export default function TournamentDetailScreen() {
 
             <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-green-100 dark:border-green-900">
               <Text className="text-sm text-stone dark:text-parchment">Tickets purchased</Text>
-              <View className={`px-3 py-1 rounded-full ${tournament.tickets_purchased ? 'bg-green-100' : 'bg-cream'}`}>
-                <Text className={`text-xs font-semibold ${tournament.tickets_purchased ? 'text-green-700' : 'text-stone'}`}>
-                  {tournament.tickets_purchased ? 'Yes' : 'Not yet'}
-                </Text>
-              </View>
+              <Switch
+                value={!!tournament.tickets_purchased}
+                onValueChange={async (value) => {
+                  if (isSupabaseConfigured && user) {
+                    await updateTournamentDB(tournament.id, { tickets_purchased: value });
+                  }
+                  updateTournamentStore(tournament.id, { tickets_purchased: value });
+                }}
+                trackColor={{ false: '#D8E2EC', true: '#86EFAC' }}
+                thumbColor={tournament.tickets_purchased ? '#16a34a' : '#FEFEFE'}
+              />
             </View>
           </View>
                   </>

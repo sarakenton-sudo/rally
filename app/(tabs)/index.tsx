@@ -1,11 +1,13 @@
-import { useState, useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, Alert, Platform, ActionSheetIOS, Modal, Linking, TextInput } from 'react-native';
+import { useState, useMemo, useCallback } from 'react';
+import { View, Text, ScrollView, RefreshControl, Pressable, Alert, Platform, ActionSheetIOS, Modal, Linking, TextInput } from 'react-native';
 import { router } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import TournamentCard from '@/components/TournamentCard';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useGuestStore } from '@/stores/useGuestStore';
+import { useDataRefresh } from '@/providers/DataProvider';
 import { daysUntil } from '@/lib/dates';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
@@ -54,6 +56,14 @@ export default function HomeScreen() {
   const guests = useGuestStore((s) => s.guests);
   const ic = useIconColors();
   const { user } = useAuth();
+  const { refresh, isRefreshing } = useDataRefresh();
+
+  // Refresh data when Home tab gains focus (keeps co-admins in sync)
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [athleteFilter, setAthleteFilter] = useState<string>('all');
@@ -88,9 +98,12 @@ export default function HomeScreen() {
     [tournaments, activeSeasonId]
   );
 
-  // Emails needing review
+  // Emails needing review — unclassified emails, or classified ones that haven't been acted on yet
   const emailsToReview = useMemo(() =>
-    forwardedEmails.filter((e) => e.classification === 'unclassified' || e.action_taken === 'none'),
+    forwardedEmails.filter((e) =>
+      e.classification === 'unclassified' ||
+      (e.classification !== 'other' && e.action_taken === 'none')
+    ),
     [forwardedEmails]
   );
 
@@ -279,7 +292,11 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-warm-white dark:bg-bark">
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 60 }}>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 60 }}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor="#3B82B0" />}
+      >
 
         {/* ============================================================ */}
         {/* SECTION 1: Add to Tourney Itineraries                       */}
