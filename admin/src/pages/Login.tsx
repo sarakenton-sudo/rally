@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 
@@ -11,10 +11,9 @@ export function Login() {
   const [submitting, setSubmitting] = useState(false);
 
   // If already authed, redirect
-  if (admin) {
-    navigate('/admin', { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (admin) navigate('/admin', { replace: true });
+  }, [admin, navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

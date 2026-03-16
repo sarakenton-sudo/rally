@@ -32,11 +32,8 @@ export function useAdminAuth() {
         return;
       }
 
-      const { data: adminRecord } = await supabase
-        .from('admin_users')
-        .select('id, email, role')
-        .eq('email', user.email)
-        .single();
+      const { data: adminRecords } = await supabase.rpc('get_admin_self');
+      const adminRecord = adminRecords?.[0] ?? null;
 
       if (adminRecord) {
         setAdmin({
