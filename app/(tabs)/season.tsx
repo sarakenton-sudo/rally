@@ -11,6 +11,7 @@ import { useDataRefresh } from '@/providers/DataProvider';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
 import { daysUntil } from '@/lib/dates';
+import ReferFriend from '@/components/ReferFriend';
 import type { Tournament } from '@/types/database';
 
 type ListItem = { type: 'tournament'; data: Tournament } | { type: 'divider'; label: string };
@@ -189,7 +190,8 @@ export default function SeasonScreen() {
           </View>
         }
         ListFooterComponent={
-          activeSeason ? (
+          <>
+          {activeSeason ? (
             <View className="mt-6">
               <HubSectionHeader
                 icon="settings"
@@ -242,7 +244,9 @@ export default function SeasonScreen() {
                 />
               )}
             </View>
-          ) : null
+          ) : null}
+          <ReferFriend />
+          </>
         }
         ListEmptyComponent={
           <View className="items-center justify-center py-16">

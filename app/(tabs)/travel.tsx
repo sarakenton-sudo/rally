@@ -10,6 +10,7 @@ import { useDataRefresh } from '@/providers/DataProvider';
 import { useAuth } from '@/providers/AuthProvider';
 import { deleteHotelBooking as deleteHotelBookingDB, deleteFlightBooking as deleteFlightBookingDB } from '@/hooks/useSupabaseData';
 import { formatDateRange } from '@/lib/dates';
+import ReferFriend from '@/components/ReferFriend';
 import type { HotelBooking, FlightBooking } from '@/types/database';
 
 type BookingItem =
@@ -270,6 +271,7 @@ export default function TravelScreen() {
             </View>
           );
         }}
+        ListFooterComponent={() => <ReferFriend />}
         ListEmptyComponent={
           <View className="items-center justify-center py-16">
             <Ionicons name="airplane-outline" size={48} color={ic.placeholder} />

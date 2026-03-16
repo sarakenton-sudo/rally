@@ -9,6 +9,7 @@ import { useDataRefresh } from '@/providers/DataProvider';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
 import { openDeepLink } from '@/lib/deepLink';
+import ReferFriend from '@/components/ReferFriend';
 
 export default function HubScreen() {
   const adminConfig = useSeasonStore((s) => s.adminConfig);
@@ -373,6 +374,8 @@ export default function HubScreen() {
         <Text className="text-xs text-stone/50 text-center mt-4 mb-2">
           © 2026 Quiet Standard Consulting LLC
         </Text>
+
+        <ReferFriend />
       </ScrollView>
     </View>
   );

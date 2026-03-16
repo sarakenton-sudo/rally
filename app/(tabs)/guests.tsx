@@ -5,6 +5,7 @@ import { useIconColors } from '@/lib/colors';
 import GuestCard from '@/components/GuestCard';
 import { useGuestStore } from '@/stores/useGuestStore';
 import { useDataRefresh } from '@/providers/DataProvider';
+import ReferFriend from '@/components/ReferFriend';
 import type { Guest } from '@/types/database';
 
 export default function GuestsScreen() {
@@ -36,6 +37,7 @@ export default function GuestsScreen() {
         renderItem={({ item }: { item: Guest }) => (
           <GuestCard guest={item} onPress={() => router.push({ pathname: '/guest/add', params: { editId: item.id } })} />
         )}
+        ListFooterComponent={() => <ReferFriend />}
         ListEmptyComponent={
           <View className="items-center justify-center py-16">
             <Ionicons name="people-outline" size={48} color={ic.placeholder} />

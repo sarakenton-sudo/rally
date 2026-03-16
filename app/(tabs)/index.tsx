@@ -11,6 +11,7 @@ import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
+import ReferFriend from '@/components/ReferFriend';
 
 const AVATAR_COLORS = [
   '#3B82B0', '#7c3aed', '#6A9E8A', '#d97706', '#dc2626',
@@ -620,6 +621,8 @@ export default function HomeScreen() {
             <Ionicons name="mail-outline" size={18} color="#3B82B0" />
           </Pressable>
         </View>
+
+        <ReferFriend />
 
         <View className="h-6" />
       </ScrollView>
