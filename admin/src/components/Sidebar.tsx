@@ -1,5 +1,7 @@
 import { NavLink } from 'react-router-dom';
 
+import { Bell, Send } from 'lucide-react';
+
 const links = [
   { to: '/admin', label: 'Dashboard', end: true },
   { to: '/admin/accounts', label: 'Accounts' },
@@ -7,6 +9,8 @@ const links = [
   { to: '/admin/errors', label: 'Errors' },
   { to: '/admin/feature-requests', label: 'Feature Requests' },
   { to: '/admin/imports', label: 'Imports' },
+  { to: '/admin/notifications', label: 'Notifications', icon: Bell },
+  { to: '/admin/delivery-log', label: 'Delivery Log', icon: Send },
   { to: '/admin/reports', label: 'Reports' },
 ];
 
@@ -20,19 +24,20 @@ export function Sidebar() {
         </span>
       </div>
       <nav className="mt-4 flex flex-col gap-1 px-3">
-        {links.map(({ to, label, ...rest }) => (
+        {links.map(({ to, label, icon: Icon, ...rest }) => (
           <NavLink
             key={to}
             to={to}
             end={'end' in rest}
             className={({ isActive }) =>
-              `rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              `flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-bark-light text-white'
                   : 'text-rally-200 hover:bg-bark-light hover:text-white'
               }`
             }
           >
+            {Icon && <Icon size={16} />}
             {label}
           </NavLink>
         ))}

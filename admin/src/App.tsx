@@ -10,6 +10,9 @@ import { Errors } from '@/pages/Errors';
 import { FeatureRequests } from '@/pages/FeatureRequests';
 import { Reports } from '@/pages/Reports';
 import { Imports } from '@/pages/Imports';
+import { Notifications } from '@/pages/Notifications';
+import { NotificationDetail } from '@/pages/NotificationDetail';
+import { DeliveryLog } from '@/pages/DeliveryLog';
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { admin, loading } = useAdminAuth();
@@ -49,6 +52,9 @@ export function App() {
           <Route path="errors" element={<Errors />} />
           <Route path="feature-requests" element={<FeatureRequests />} />
           <Route path="imports" element={<Imports />} />
+          <Route path="notifications" element={<Notifications />} />
+          <Route path="notifications/:templateId" element={<NotificationDetail />} />
+          <Route path="delivery-log" element={<DeliveryLog />} />
           <Route path="reports" element={<Reports />} />
         </Route>
         <Route path="*" element={<Navigate to="/admin" replace />} />

@@ -156,6 +156,90 @@ export async function fetchEmails(
   return data ?? [];
 }
 
+// ---- Notification Templates ----
+
+export async function fetchNotificationTemplates(
+  opts: { channel?: string; category?: string; status?: string; page?: number; pageSize?: number } = {}
+) {
+  const { channel, category, status, page = 0, pageSize = 50 } = opts;
+  const { data, error } = await supabase.rpc('admin_list_notification_templates', {
+    channel_filter: channel || null,
+    category_filter: category || null,
+    status_filter: status || null,
+    page_size: pageSize,
+    page_offset: page * pageSize,
+  });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchNotificationTemplate(templateId: string) {
+  const { data, error } = await supabase.rpc('admin_get_notification_template', {
+    template_id: templateId,
+  });
+  if (error) throw error;
+  return data?.[0] ?? null;
+}
+
+export async function updateNotificationTemplate(
+  templateId: string,
+  title: string,
+  body: string,
+  isActive: boolean,
+  status: string,
+  adminUserId: string,
+  changeNote?: string
+) {
+  const { error } = await supabase.rpc('admin_update_notification_template', {
+    p_template_id: templateId,
+    new_title: title,
+    new_body: body,
+    new_is_active: isActive,
+    new_status: status,
+    admin_id: adminUserId,
+    change_note: changeNote || null,
+  });
+  if (error) throw error;
+}
+
+export async function revertNotificationTemplate(
+  templateId: string,
+  targetVersion: number,
+  adminUserId: string
+) {
+  const { error } = await supabase.rpc('admin_revert_notification_template', {
+    p_template_id: templateId,
+    target_version: targetVersion,
+    admin_id: adminUserId,
+  });
+  if (error) throw error;
+}
+
+export async function fetchTemplateVersions(templateId: string) {
+  const { data, error } = await supabase.rpc('admin_list_template_versions', {
+    p_template_id: templateId,
+  });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchDeliveryLog(
+  opts: { channel?: string; type?: string; status?: string; dateFrom?: string; dateTo?: string; page?: number; pageSize?: number } = {}
+) {
+  const { channel, type, status, dateFrom, dateTo, page = 0, pageSize = 50 } = opts;
+  const { data, error } = await supabase.rpc('admin_list_delivery_log', {
+    channel_filter: channel || null,
+    type_filter: type || null,
+    status_filter: status || null,
+    date_from: dateFrom || null,
+    date_to: dateTo || null,
+    page_size: pageSize,
+    page_offset: page * pageSize,
+  });
+  if (error) throw error;
+  return data ?? [];
+}
+
 // ---- Audit Log ----
 
 export async function logAdminAction(
