@@ -17,7 +17,7 @@ interface SendReferralPayload {
   referred_phone?: string | null;
   // Optional: for co-parent invite emails
   invite_code?: string;
-  invite_type?: 'referral' | 'coparent';
+  invite_type?: 'referral' | 'coparent' | 'athlete';
 }
 
 serve(async (req: Request) => {
@@ -77,13 +77,18 @@ serve(async (req: Request) => {
 
     // Send email via SendGrid
     if (referredEmail && SENDGRID_API_KEY) {
-      const html = inviteType === 'coparent'
-        ? buildCoParentEmailHtml(referrerName, inviteCode!)
-        : buildReferralEmailHtml(referrerName);
-
-      const subject = inviteType === 'coparent'
-        ? "You've been invited to join RALLY!"
-        : "You've been invited to RALLY!";
+      let html: string;
+      let subject: string;
+      if (inviteType === 'athlete') {
+        html = buildAthleteEmailHtml(referrerName, inviteCode!);
+        subject = "You've been added to RALLY!";
+      } else if (inviteType === 'coparent') {
+        html = buildCoParentEmailHtml(referrerName, inviteCode!);
+        subject = "You've been invited to join RALLY!";
+      } else {
+        html = buildReferralEmailHtml(referrerName);
+        subject = "You've been invited to RALLY!";
+      }
 
       const emailResult = await sendSendGridEmail(referredEmail, subject, html);
       results.push({ channel: 'email', status: emailResult.ok ? 'sent' : 'failed', error: emailResult.error });
@@ -92,7 +97,9 @@ serve(async (req: Request) => {
     // Send SMS via Twilio
     if (referredPhone && TWILIO_ACCOUNT_SID) {
       let smsBody: string;
-      if (inviteType === 'coparent' && inviteCode) {
+      if (inviteType === 'athlete' && inviteCode) {
+        smsBody = `${referrerName} added you to RALLY! Use code ${inviteCode} to see your schedule and team info. Sign up at rally-hub.com`;
+      } else if (inviteType === 'coparent' && inviteCode) {
         smsBody = `${referrerName} invited you to RALLY — the volleyball family hub. Your invite code: ${inviteCode}. Sign up at rally-hub.com`;
       } else {
         smsBody = `${referrerName} invited you to RALLY — the volleyball family hub. Download at rally-hub.com`;
@@ -221,6 +228,80 @@ function buildReferralEmailHtml(referrerName: string): string {
                   <td align="center">
                     <a href="https://rally-hub.com" target="_blank" style="display:inline-block;background-color:#3B82B0;color:#FFFFFF;text-decoration:none;font-size:16px;font-weight:700;padding:14px 40px;border-radius:12px;letter-spacing:0.3px;">
                       Get Started with RALLY
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 32px;border-top:1px solid #E8E2D8;text-align:center;">
+              <p style="margin:0;color:#8FA8BF;font-size:12px;">
+                RALLY by Quiet Standard LLC
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function buildAthleteEmailHtml(referrerName: string, inviteCode: string): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>You've been added to RALLY!</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F5F3EE;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5F3EE;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:520px;background-color:#FFFFFF;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(30,58,95,0.06);">
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#3B82B0;padding:28px 32px;text-align:center;">
+              <h1 style="margin:0;color:#FFFFFF;font-size:28px;font-weight:800;letter-spacing:1px;">RALLY</h1>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:32px;">
+              <h2 style="margin:0 0 16px;color:#1E3A5F;font-size:22px;font-weight:700;">
+                You've been added to RALLY!
+              </h2>
+              <p style="margin:0 0 16px;color:#4A6B8A;font-size:15px;line-height:1.6;">
+                <strong>${escapeHtml(referrerName)}</strong> added you to RALLY so you can see your tournament schedule, team info, and travel details all in one place.
+              </p>
+              <p style="margin:0 0 8px;color:#4A6B8A;font-size:15px;line-height:1.6;">
+                Your invite code:
+              </p>
+              <!-- Invite Code -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td align="center">
+                    <div style="display:inline-block;background-color:#EFF6FF;border:2px solid #3B82B0;border-radius:12px;padding:16px 32px;">
+                      <span style="font-size:28px;font-weight:800;color:#3B82B0;letter-spacing:4px;font-family:'Courier New',monospace;">
+                        ${escapeHtml(inviteCode)}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 24px;color:#4A6B8A;font-size:14px;line-height:1.6;">
+                Sign up at rally-hub.com and enter the code above to get started.
+              </p>
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <a href="https://rally-hub.com" target="_blank" style="display:inline-block;background-color:#3B82B0;color:#FFFFFF;text-decoration:none;font-size:16px;font-weight:700;padding:14px 40px;border-radius:12px;letter-spacing:0.3px;">
+                      Join RALLY
                     </a>
                   </td>
                 </tr>

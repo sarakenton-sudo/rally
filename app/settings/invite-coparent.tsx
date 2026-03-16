@@ -85,7 +85,7 @@ export default function InviteCoParentScreen() {
             referrer_user_id: user!.id,
             referred_email: email.trim().toLowerCase(),
             invite_code: lastCode,
-            invite_type: 'coparent',
+            invite_type: inviteType === 'athlete' ? 'athlete' : 'coparent',
           },
         }).catch(() => {
           // Silent fail — code is created, email delivery is best-effort
