@@ -15,6 +15,7 @@ interface UserRow {
   tournament_count: number;
   booking_count: number;
   session_count: number;
+  referral_count: number;
 }
 
 const col = createColumnHelper<UserRow>();
@@ -29,6 +30,7 @@ const columns = [
   col.accessor('tournament_count', { header: 'Tournaments' }),
   col.accessor('booking_count', { header: 'Bookings' }),
   col.accessor('session_count', { header: 'Sessions' }),
+  col.accessor('referral_count', { header: 'Referrals' }),
   col.accessor('created_at', {
     header: 'Joined',
     cell: (info) => new Date(info.getValue()).toLocaleDateString(),

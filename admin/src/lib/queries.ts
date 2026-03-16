@@ -23,6 +23,8 @@ export async function fetchDashboardStats() {
     activeSessionsWeek: row?.active_sessions_week ?? 0,
     pendingErrors: row?.pending_errors ?? 0,
     pendingFeatureRequests: row?.pending_feature_requests ?? 0,
+    totalReferrals: row?.total_referrals ?? 0,
+    convertedReferrals: row?.converted_referrals ?? 0,
   };
 }
 

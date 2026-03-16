@@ -12,11 +12,13 @@ export function Dashboard() {
       {loading ? (
         <p className="text-sm text-stone">Loading stats...</p>
       ) : stats ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard label="Total Users" value={stats.totalUsers} />
           <StatCard label="Active Sessions (7d)" value={stats.activeSessionsWeek} />
           <StatCard label="Pending Errors" value={stats.pendingErrors} />
           <StatCard label="Feature Requests" value={stats.pendingFeatureRequests} sublabel="new / unreviewed" />
+          <StatCard label="Referrals Sent" value={stats.totalReferrals} />
+          <StatCard label="Referral Conversions" value={stats.convertedReferrals} sublabel="signed up from referral" />
         </div>
       ) : (
         <p className="text-sm text-red-500">Failed to load stats</p>
