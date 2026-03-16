@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAdminData } from '@/hooks/useAdminData';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { fetchEmailTemplate, updateEmailTemplate } from '@/lib/queries';
-import { ArrowLeft, Save, Eye, Code, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Code, RotateCcw, SendHorizonal } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export function EmailDetail() {
   const { templateId } = useParams<{ templateId: string }>();
@@ -20,6 +21,10 @@ export function EmailDetail() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [tab, setTab] = useState<'edit' | 'preview'>('edit');
+  const [testEmail, setTestEmail] = useState('');
+  const [showTestModal, setShowTestModal] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
+  const [testSent, setTestSent] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -73,6 +78,39 @@ export function EmailDetail() {
     }
   };
 
+  const handleSendTest = async () => {
+    if (!testEmail.trim()) return;
+    setSendingTest(true);
+    try {
+      // Build preview HTML with example values
+      let preview = htmlBody;
+      const examples: Record<string, string> = {
+        referrer_name: 'Sarah K.',
+        invite_code: 'RALLY-TEST',
+      };
+      for (const [key, val] of Object.entries(examples)) {
+        preview = preview.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val);
+      }
+
+      await supabase.functions.invoke('send-test-email', {
+        body: {
+          to: testEmail.trim(),
+          subject: `[TEST] ${subject}`,
+          html: preview,
+        },
+      });
+      setTestSent(true);
+      setTimeout(() => {
+        setTestSent(false);
+        setShowTestModal(false);
+      }, 2000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
   if (loading) return <p className="text-sm text-stone">Loading...</p>;
   if (!data) return <p className="text-sm text-red-500">Template not found.</p>;
 
@@ -104,6 +142,13 @@ export function EmailDetail() {
               Discard
             </button>
           )}
+          <button
+            onClick={() => { setTestEmail(admin?.email ?? ''); setShowTestModal(true); }}
+            className="flex items-center gap-1.5 rounded-lg border border-frost px-3 py-1.5 text-sm text-stone hover:bg-frost/30"
+          >
+            <SendHorizonal size={14} />
+            Send Test
+          </button>
           <button
             onClick={handleSave}
             disabled={!dirty || saving}
@@ -202,6 +247,43 @@ export function EmailDetail() {
           </div>
         )}
       </div>
+
+      {/* Send Test Modal */}
+      {showTestModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="mb-1 text-base font-semibold text-bark">Send Test Email</h3>
+            <p className="mb-4 text-xs text-stone">
+              Sends the current template with example data to the address below.
+            </p>
+            <input
+              type="email"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+              placeholder="Email address"
+              className="mb-4 w-full rounded-lg border border-frost bg-white px-3 py-2 text-sm text-bark focus:border-rally-400 focus:outline-none focus:ring-1 focus:ring-rally-400"
+              autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && handleSendTest()}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowTestModal(false)}
+                className="rounded-lg px-3 py-1.5 text-sm text-stone hover:bg-frost/30"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendTest}
+                disabled={sendingTest || !testEmail.trim()}
+                className="flex items-center gap-1.5 rounded-lg bg-rally-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-rally-700 disabled:opacity-50"
+              >
+                <SendHorizonal size={14} />
+                {sendingTest ? 'Sending...' : testSent ? 'Sent!' : 'Send'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

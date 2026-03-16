@@ -235,7 +235,7 @@ function buildReferralEmailHtml(referrerName: string): string {
           <!-- Header -->
           <tr>
             <td style="background-color:#1E3A5F;padding:28px 32px;text-align:center;">
-              <img src="https://rally-hub.com/rallyhub_lockup_white.png" alt="RallyHUB" style="height:40px;width:auto;" />
+              <img src="https://rally-hub.com/rallyhub_lockup_white.png" alt="RallyHUB" style="height:100px;width:auto;" />
             </td>
           </tr>
           <!-- Body -->
@@ -294,7 +294,7 @@ function buildAthleteEmailHtml(referrerName: string, inviteCode: string): string
           <!-- Header -->
           <tr>
             <td style="background-color:#1E3A5F;padding:28px 32px;text-align:center;">
-              <img src="https://rally-hub.com/rallyhub_lockup_white.png" alt="RallyHUB" style="height:40px;width:auto;" />
+              <img src="https://rally-hub.com/rallyhub_lockup_white.png" alt="RallyHUB" style="height:100px;width:auto;" />
             </td>
           </tr>
           <!-- Body -->
@@ -368,7 +368,7 @@ function buildCoParentEmailHtml(referrerName: string, inviteCode: string): strin
           <!-- Header -->
           <tr>
             <td style="background-color:#1E3A5F;padding:28px 32px;text-align:center;">
-              <img src="https://rally-hub.com/rallyhub_lockup_white.png" alt="RallyHUB" style="height:40px;width:auto;" />
+              <img src="https://rally-hub.com/rallyhub_lockup_white.png" alt="RallyHUB" style="height:100px;width:auto;" />
             </td>
           </tr>
           <!-- Body -->
