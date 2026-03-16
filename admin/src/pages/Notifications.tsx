@@ -9,11 +9,10 @@ import { fetchNotificationTemplates } from '@/lib/queries';
 interface TemplateRow {
   id: string;
   slug: string;
-  name: string;
   category: string;
   channels: string[];
-  title: string;
-  body: string;
+  title_template: string;
+  body_template: string;
   is_active: boolean;
   status: string;
   updated_at: string;
@@ -59,7 +58,7 @@ const columns = [
       </div>
     ),
   }),
-  col.accessor('title', {
+  col.accessor('title_template', {
     header: 'Title',
     cell: (info) => (
       <span className="max-w-xs truncate block">{info.getValue()}</span>

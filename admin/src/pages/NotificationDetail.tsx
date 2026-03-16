@@ -15,11 +15,12 @@ import {
 interface Template {
   id: string;
   slug: string;
-  name: string;
   category: string;
   channels: string[];
-  title: string;
-  body: string;
+  title_template: string;
+  body_template: string;
+  title_char_limit: number;
+  body_char_limit: number;
   is_active: boolean;
   status: string;
   variables: string[];
@@ -28,9 +29,9 @@ interface Template {
 
 interface Version {
   version: number;
-  title: string;
-  body: string;
-  changed_by_email: string;
+  title_template: string;
+  body_template: string;
+  changed_by: string;
   changed_at: string;
   change_note: string | null;
 }
@@ -40,7 +41,12 @@ interface Version {
 const EXAMPLE_VALUES: Record<string, string> = {
   tournament_name: 'AJV 14u Showcase',
   hotel_name: 'Marriott Downtown',
+  location_city: 'Indianapolis, IN',
   city: 'Indianapolis',
+  deadline: 'Mar 15, 2026',
+  sender: 'Coach Williams',
+  subject: 'Updated pool assignments for Saturday',
+  summary: 'Coach Williams posted new pool assignments for Saturday morning.',
   date: 'Mar 22, 2026',
   check_in: 'Mar 21, 2026',
   check_out: 'Mar 23, 2026',
@@ -163,8 +169,8 @@ export function NotificationDetail() {
   // Sync form when template loads
   const tpl = template as Template | null;
   if (tpl && !initialized) {
-    setTitle(tpl.title);
-    setBody(tpl.body);
+    setTitle(tpl.title_template);
+    setBody(tpl.body_template);
     setIsActive(tpl.is_active);
     setInitialized(true);
   }
@@ -238,8 +244,10 @@ export function NotificationDetail() {
 
   // ---- Derived ----
 
-  const titleOverLimit = title.length > 50;
-  const bodyOverLimit = body.length > 160;
+  const titleLimit = tpl?.title_char_limit ?? 50;
+  const bodyLimit = tpl?.body_char_limit ?? 160;
+  const titleOverLimit = title.length > titleLimit;
+  const bodyOverLimit = body.length > bodyLimit;
   const hasChannels = useMemo(() => {
     const ch = tpl?.channels ?? [];
     return { push: ch.includes('push'), sms: ch.includes('sms') };
@@ -276,7 +284,7 @@ export function NotificationDetail() {
       </button>
 
       <div className="mb-6 flex items-center gap-3">
-        <h1 className="text-2xl font-bold text-bark">{tpl.name || tpl.slug}</h1>
+        <h1 className="text-2xl font-bold text-bark">{tpl.slug.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</h1>
         <span className="font-mono text-xs text-stone">{tpl.slug}</span>
       </div>
 
@@ -293,7 +301,7 @@ export function NotificationDetail() {
               <span
                 className={`text-xs ${titleOverLimit ? 'font-semibold text-red-600' : 'text-stone'}`}
               >
-                {title.length}/50
+                {title.length}/{titleLimit}
               </span>
             </div>
             <input
@@ -315,7 +323,7 @@ export function NotificationDetail() {
               <span
                 className={`text-xs ${bodyOverLimit ? 'font-semibold text-red-600' : 'text-stone'}`}
               >
-                {body.length}/160
+                {body.length}/{bodyLimit}
               </span>
             </div>
             <textarea
@@ -485,16 +493,16 @@ export function NotificationDetail() {
                 {((versions as Version[]) ?? []).map((v) => (
                   <tr key={v.version} className="border-b border-frost/50">
                     <td className="px-4 py-3 text-bark font-mono">v{v.version}</td>
-                    <td className="px-4 py-3 text-bark">{v.changed_by_email || '—'}</td>
+                    <td className="px-4 py-3 text-bark text-xs">{v.changed_by ? v.changed_by.slice(0, 8) + '…' : '—'}</td>
                     <td className="px-4 py-3 text-bark">
                       {new Date(v.changed_at).toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-bark">{v.change_note || '—'}</td>
                     <td className="px-4 py-3 text-bark">
-                      <span className="max-w-[10rem] truncate block">{v.title}</span>
+                      <span className="max-w-[10rem] truncate block">{v.title_template}</span>
                     </td>
                     <td className="px-4 py-3 text-bark">
-                      <span className="max-w-[12rem] truncate block">{v.body}</span>
+                      <span className="max-w-[12rem] truncate block">{v.body_template}</span>
                     </td>
                     <td className="px-4 py-3">
                       <button
