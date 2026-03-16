@@ -242,6 +242,37 @@ export async function fetchDeliveryLog(
   return data ?? [];
 }
 
+// ---- Email Templates ----
+
+export async function fetchEmailTemplates() {
+  const { data, error } = await supabase.rpc('admin_list_email_templates');
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchEmailTemplate(templateId: string) {
+  const { data, error } = await supabase.rpc('admin_get_email_template', {
+    template_id: templateId,
+  });
+  if (error) throw error;
+  return data?.[0] ?? null;
+}
+
+export async function updateEmailTemplate(
+  templateId: string,
+  subject: string,
+  htmlBody: string,
+  adminUserId: string
+) {
+  const { error } = await supabase.rpc('admin_update_email_template', {
+    template_id: templateId,
+    new_subject: subject,
+    new_html_body: htmlBody,
+    admin_id: adminUserId,
+  });
+  if (error) throw error;
+}
+
 // ---- Audit Log ----
 
 export async function logAdminAction(

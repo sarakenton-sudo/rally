@@ -77,17 +77,45 @@ serve(async (req: Request) => {
 
     // Send email via SendGrid
     if (referredEmail && SENDGRID_API_KEY) {
-      let html: string;
+      const slugMap: Record<string, string> = {
+        referral: 'referral_invite',
+        coparent: 'coparent_invite',
+        athlete: 'athlete_invite',
+      };
+      const templateSlug = slugMap[inviteType] ?? 'referral_invite';
+
+      // Try to load template from DB (editable via admin panel)
+      const { data: tpl } = await supabase
+        .from('email_templates')
+        .select('subject, html_body')
+        .eq('slug', templateSlug)
+        .single();
+
       let subject: string;
-      if (inviteType === 'athlete') {
-        html = buildAthleteEmailHtml(referrerName, inviteCode!);
-        subject = "You've been added to RALLY!";
-      } else if (inviteType === 'coparent') {
-        html = buildCoParentEmailHtml(referrerName, inviteCode!);
-        subject = "You've been invited to join RALLY!";
+      let html: string;
+      if (tpl) {
+        subject = tpl.subject;
+        // Replace template variables
+        const vars: Record<string, string> = {
+          referrer_name: escapeHtml(referrerName),
+          invite_code: inviteCode ? escapeHtml(inviteCode) : '',
+        };
+        html = tpl.html_body;
+        for (const [key, val] of Object.entries(vars)) {
+          html = html.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val);
+        }
       } else {
-        html = buildReferralEmailHtml(referrerName);
-        subject = "You've been invited to RALLY!";
+        // Fallback to hardcoded templates if DB lookup fails
+        if (inviteType === 'athlete') {
+          html = buildAthleteEmailHtml(referrerName, inviteCode!);
+          subject = "You've been added to RALLY!";
+        } else if (inviteType === 'coparent') {
+          html = buildCoParentEmailHtml(referrerName, inviteCode!);
+          subject = "You've been invited to join RALLY!";
+        } else {
+          html = buildReferralEmailHtml(referrerName);
+          subject = "You've been invited to RALLY!";
+        }
       }
 
       const emailResult = await sendSendGridEmail(referredEmail, subject, html);

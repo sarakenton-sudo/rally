@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Bell, Send, Menu, X } from 'lucide-react';
+import { Bell, Send, Mail, Menu, X } from 'lucide-react';
 
 const links = [
   { to: '/admin', label: 'Dashboard', end: true },
@@ -10,6 +10,7 @@ const links = [
   { to: '/admin/feature-requests', label: 'Feature Requests' },
   { to: '/admin/imports', label: 'Imports' },
   { to: '/admin/notifications', label: 'Notifications', icon: Bell },
+  { to: '/admin/emails', label: 'Emails', icon: Mail },
   { to: '/admin/delivery-log', label: 'Delivery Log', icon: Send },
   { to: '/admin/reports', label: 'Reports' },
 ];
