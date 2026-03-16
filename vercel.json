@@ -1,11 +1,12 @@
 {
-  "buildCommand": "npx expo export --platform web && cp dist/index.html dist/app.html && cp -r public/* dist/ && cp public/homepage.html dist/index.html",
+  "buildCommand": "bash scripts/build.sh",
   "outputDirectory": "dist",
   "framework": null,
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/auth-callback", "destination": "/app.html" }
+    { "source": "/auth-callback", "destination": "/app.html" },
+    { "source": "/admin/:path*", "destination": "/admin/index.html" }
   ],
   "redirects": [
     { "source": "/landing", "destination": "/", "permanent": true }
