@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.rally"
+      "bundleIdentifier": "com.rallyhub.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +23,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.rally"
+      "package": "com.rallyhub.app"
     },
     "web": {
       "bundler": "metro",
