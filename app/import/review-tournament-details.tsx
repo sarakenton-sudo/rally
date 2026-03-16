@@ -12,6 +12,7 @@ import { isSupabaseConfigured } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 import type { ExtractedTournamentDetails } from '@/lib/tournament-detail-parser';
+import { trackEvent } from '@/lib/track-event';
 
 export default function ReviewTournamentDetailsScreen() {
   const { details: raw, tournamentId: preselectedId } = useLocalSearchParams<{
@@ -28,6 +29,11 @@ export default function ReviewTournamentDetailsScreen() {
   const tournaments = useSeasonStore((s) => s.tournaments);
   const updateTournamentStore = useSeasonStore((s) => s.updateTournament);
   const { user } = useAuth();
+
+  // Track import attempt on mount
+  useState(() => {
+    if (user?.id) trackEvent(user.id, 'import_attempt', { type: 'tournament_details_paste', tournament_name: parsed.tournament_name });
+  });
 
   // Auto-match tournament by name if no preselectedId
   const autoMatchedId = (() => {
@@ -144,6 +150,7 @@ export default function ReviewTournamentDetailsScreen() {
       }
       updateTournamentStore(selectedTournamentId, updates);
 
+      if (user?.id) trackEvent(user.id, 'import_completed', { type: 'tournament_details_paste', tournament_id: selectedTournamentId });
       notifySuccess();
       router.dismissAll();
     } catch (err: any) {

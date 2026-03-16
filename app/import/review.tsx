@@ -11,6 +11,7 @@ import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 import DatePickerField from '@/components/DatePickerField';
 import type { Tournament } from '@/types/database';
+import { trackEvent } from '@/lib/track-event';
 
 interface ExtractedTournament {
   name: string;
@@ -41,6 +42,11 @@ export default function PasteReviewScreen() {
   const addTournament = useSeasonStore((s) => s.addTournament);
   const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
   const { user } = useAuth();
+
+  // Track import attempt on mount
+  useState(() => {
+    if (user?.id) trackEvent(user.id, 'import_attempt', { type: 'tournament_paste', item_count: parsed.length });
+  });
 
   const updateField = useCallback((index: number, field: keyof ExtractedTournament, value: string) => {
     setItems((prev) => {
@@ -122,6 +128,7 @@ export default function PasteReviewScreen() {
         }
       }
 
+      if (user?.id) trackEvent(user.id, 'import_completed', { type: 'tournament_paste', item_count: items.length });
       notifySuccess();
       const msg = `${items.length} tournament${items.length !== 1 ? 's' : ''} added to your season.`;
       if (Platform.OS === 'web') {

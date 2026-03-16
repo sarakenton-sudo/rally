@@ -10,6 +10,7 @@ import { updateTournament as updateTournamentDB, insertHotelBooking, insertFligh
 import { useAuth } from '@/providers/AuthProvider';
 import { useIconColors } from '@/lib/colors';
 import type { Tournament } from '@/types/database';
+import { trackEvent } from '@/lib/track-event';
 
 const CLASS_CONFIG: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string }> = {
   stay_and_play: { icon: 'bed', color: '#7c3aed', label: 'Hotel / Stay & Play' },
@@ -522,6 +523,7 @@ export default function EmailDetailScreen() {
         setSavedBooking('flight');
         // Mark email as imported
         await markEmailImported('travel_import_queued');
+        if (user?.id) trackEvent(user.id, 'import_completed', { type: 'email_flight', email_id: email.id, tournament_id: activeMatch.id });
         if (Platform.OS === 'web') window.alert('Flight booking saved!');
         else Alert.alert('Saved', 'Flight booking created and linked to tournament.');
       }
@@ -602,6 +604,7 @@ export default function EmailDetailScreen() {
         if (error) throw error;
         setSavedBooking('hotel');
         await markEmailImported('booking_alert_sent');
+        if (user?.id) trackEvent(user.id, 'import_completed', { type: 'email_hotel', email_id: email.id, tournament_id: activeMatch.id });
         if (Platform.OS === 'web') window.alert('Hotel booking saved!');
         else Alert.alert('Saved', 'Hotel booking created and linked to tournament.');
       }

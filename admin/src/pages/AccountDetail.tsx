@@ -3,12 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { useAdminData } from '@/hooks/useAdminData';
 import { fetchAdminNotes, createAdminNote, fetchUsers } from '@/lib/queries';
+import { supabase } from '@/lib/supabase';
 
 export function AccountDetail() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { admin } = useAdminAuth();
   const [newNote, setNewNote] = useState('');
+  const [impersonating, setImpersonating] = useState(false);
 
   const { data: users } = useAdminData(
     () => fetchUsers(undefined, 0, 10000),
@@ -28,6 +30,38 @@ export function AccountDetail() {
     refreshNotes();
   }
 
+  async function handleImpersonate() {
+    if (!userId || !admin) return;
+    setImpersonating(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No session');
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-impersonate`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ target_user_id: userId }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to generate link');
+
+      // Open the magic link in a new tab — user sees the consumer app as that user
+      window.open(data.url, '_blank');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Impersonation failed');
+    } finally {
+      setImpersonating(false);
+    }
+  }
+
   if (!user) {
     return (
       <div>
@@ -45,10 +79,23 @@ export function AccountDetail() {
         &larr; Back to Accounts
       </button>
 
-      <h1 className="mb-2 text-2xl font-bold text-bark">
-        {user.display_name || user.email}
-      </h1>
-      <p className="mb-6 text-sm text-stone">{user.email}</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="mb-1 text-2xl font-bold text-bark">
+            {user.display_name || user.email}
+          </h1>
+          <p className="text-sm text-stone">{user.email}</p>
+        </div>
+        {admin?.role === 'owner' && (
+          <button
+            onClick={handleImpersonate}
+            disabled={impersonating}
+            className="rounded-md border border-rally-500 px-4 py-2 text-sm font-medium text-rally-600 hover:bg-rally-50 disabled:opacity-50"
+          >
+            {impersonating ? 'Generating...' : 'View as User'}
+          </button>
+        )}
+      </div>
 
       {/* User stats */}
       <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">

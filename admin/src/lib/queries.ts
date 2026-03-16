@@ -126,6 +126,21 @@ export async function fetchNotificationStats(days = 30) {
   return data ?? [];
 }
 
+// ---- Import Attempts Report ----
+
+export async function fetchImportReport(
+  opts: { type?: string; page?: number; pageSize?: number } = {}
+) {
+  const { type, page = 0, pageSize = 50 } = opts;
+  const { data, error } = await supabase.rpc('admin_import_report', {
+    type_filter: type || null,
+    page_size: pageSize,
+    page_offset: page * pageSize,
+  });
+  if (error) throw error;
+  return data ?? [];
+}
+
 // ---- Forwarded Emails (Import Report) ----
 
 export async function fetchEmails(

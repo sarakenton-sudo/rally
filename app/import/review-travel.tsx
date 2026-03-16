@@ -12,6 +12,7 @@ import { isSupabaseConfigured } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 import type { HotelBooking, FlightBooking, BookingPlatform, BookingStatus } from '@/types/database';
+import { trackEvent } from '@/lib/track-event';
 
 const AIRLINES = ['Southwest', 'Delta', 'United', 'American', 'JetBlue', 'Spirit', 'Frontier', 'Alaska', 'Other'];
 const PLATFORMS: BookingPlatform[] = ['Bonvoy', 'Booking.com', 'Travel Source', 'Expedia', 'Direct', 'THS', 'Other'];
@@ -59,6 +60,15 @@ export default function ReviewTravelScreen() {
   const addFlightBooking = useSeasonStore((s) => s.addFlightBooking);
   const tournaments = useSeasonStore((s) => s.tournaments);
   const { user } = useAuth();
+
+  // Track import attempt on mount
+  useState(() => {
+    if (user?.id) {
+      const hotels = parsed.filter((b) => b.type === 'hotel').length;
+      const flights = parsed.filter((b) => b.type === 'flight').length;
+      trackEvent(user.id, 'import_attempt', { type: 'travel_paste', hotels, flights, item_count: parsed.length });
+    }
+  });
 
   // Auto-match tournaments by date overlap (±3 days)
   const autoMatched = useMemo(() => {
@@ -214,6 +224,11 @@ export default function ReviewTravelScreen() {
         }
       }
 
+      if (user?.id) {
+        const hotels = items.filter((b) => b.type === 'hotel').length;
+        const flights = items.filter((b) => b.type === 'flight').length;
+        trackEvent(user.id, 'import_completed', { type: 'travel_paste', hotels, flights, item_count: items.length });
+      }
       notifySuccess();
       // If there are also tournament details to review, navigate there
       if (pendingDetails) {
