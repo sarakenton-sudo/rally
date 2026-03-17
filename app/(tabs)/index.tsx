@@ -154,14 +154,31 @@ export default function HomeScreen() {
       return false;
     });
     for (const t of buyTickets) {
+      const activeSeason = seasons.find((s) => s.id === activeSeasonId);
+      const teamCode = activeSeason?.team_code;
       cards.push({
         priority: 3,
         text: `Buy Tickets for ${t.name}`,
-        subtitle: t.ticket_link ? 'Tickets available now' : 'Check tournament page',
+        subtitle: teamCode ? `Code copied: ${teamCode}` : 'Tickets available now',
         icon: 'ticket-outline',
         color: '#7c3aed',
         bgColor: '#EDE9FE',
-        onPress: () => router.push(`/tournament/${t.id}`),
+        onPress: async () => {
+          if (teamCode) {
+            if (Platform.OS === 'web') {
+              navigator.clipboard.writeText(teamCode);
+            } else {
+              await Clipboard.setStringAsync(teamCode);
+            }
+          }
+          if (t.ticket_link) {
+            if (Platform.OS === 'web') {
+              window.open(t.ticket_link, '_blank');
+            } else {
+              Linking.openURL(t.ticket_link);
+            }
+          }
+        },
       });
     }
 

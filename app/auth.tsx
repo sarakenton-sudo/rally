@@ -6,9 +6,17 @@ import FormField from '@/components/FormField';
 import { useAuth } from '@/providers/AuthProvider';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
+function getInitialSignUp(): boolean {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('signup') === 'true';
+  }
+  return false;
+}
+
 export default function AuthScreen() {
   const { signIn, signUp, signInWithGoogle, resetPassword, acceptInvite } = useAuth();
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(getInitialSignUp);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [inviteCode, setInviteCode] = useState('');
