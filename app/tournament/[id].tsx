@@ -432,7 +432,7 @@ export default function TournamentDetailScreen() {
                       )}
 
                       {/* Schedule available date */}
-                      {tournament.schedule_available_date && (
+                      {tournament.schedule_available_date && daysUntil(tournament.schedule_available_date) > 0 && (
                         <View className="flex-row items-center mt-3 pt-3 border-t border-green-100 dark:border-green-900">
                           <Ionicons name="calendar-outline" size={14} color={daysUntil(tournament.schedule_available_date) <= 0 ? '#16a34a' : '#d97706'} />
                           <Text className={`text-sm ml-2 font-medium ${daysUntil(tournament.schedule_available_date) <= 0 ? 'text-green-700' : 'text-amber-600'}`}>
