@@ -114,15 +114,21 @@ export default function TournamentDetailScreen() {
   const hotels = useMemo(() => hotelBookings.filter((h) => h.tournament_id === id), [hotelBookings, id]);
   const flights = useMemo(() => flightBookings.filter((f) => f.tournament_id === id), [flightBookings, id]);
   const flightsByTraveler = useMemo(() => {
-    const map = new Map<string, typeof flights>();
+    const map = new Map<string, { displayName: string; flights: typeof flights }>();
     for (const f of flights) {
       for (const name of f.traveler_names) {
-        const list = map.get(name) ?? [];
-        list.push(f);
-        map.set(name, list);
+        const key = name.toLowerCase().trim();
+        const existing = map.get(key);
+        if (existing) {
+          existing.flights.push(f);
+        } else {
+          // Use title case for display
+          const display = name.trim().replace(/\b\w/g, (c) => c.toUpperCase()).replace(/\B\w+/g, (w) => w.toLowerCase());
+          map.set(key, { displayName: display, flights: [f] });
+        }
       }
     }
-    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    return Array.from(map.values()).sort((a, b) => a.displayName.localeCompare(b.displayName));
   }, [flights]);
   const tickets = useMemo(() => tournamentTickets.filter((t) => t.tournament_id === id), [tournamentTickets, id]);
 
@@ -694,11 +700,11 @@ export default function TournamentDetailScreen() {
               <View className="rounded-xl overflow-hidden mb-3">
                 <View className="h-1.5 bg-rally-600" />
                 <View className="bg-rally-50 dark:bg-rally-900/10 px-3 py-3">
-                  {flightsByTraveler.map(([travelerName, travelerFlights]) => (
-                    <View key={travelerName} className="mb-3">
+                  {flightsByTraveler.map(({ displayName, flights: travelerFlights }) => (
+                    <View key={displayName} className="mb-3">
                       <View className="flex-row items-center mb-1.5">
                         <Ionicons name="person" size={13} color="#3B82B0" />
-                        <Text className="text-xs font-semibold text-rally-700 dark:text-rally-300 ml-1.5 uppercase tracking-wider">{travelerName}</Text>
+                        <Text className="text-xs font-semibold text-rally-700 dark:text-rally-300 ml-1.5 uppercase tracking-wider">{displayName}</Text>
                       </View>
                       {travelerFlights.map((f) => (
                         <View key={f.id} className="mb-2">

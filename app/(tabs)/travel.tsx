@@ -115,16 +115,21 @@ export default function TravelScreen() {
     }
 
     // Group flights by tournament, then by traveler name
-    const flightsByTournament = new Map<string, Map<string, FlightBooking[]>>();
+    const flightsByTournament = new Map<string, Map<string, { displayName: string; flights: FlightBooking[] }>>();
     for (const flight of flightBookings) {
       if (!flightsByTournament.has(flight.tournament_id)) {
         flightsByTournament.set(flight.tournament_id, new Map());
       }
       const travelerMap = flightsByTournament.get(flight.tournament_id)!;
       for (const name of flight.traveler_names) {
-        const list = travelerMap.get(name) ?? [];
-        list.push(flight);
-        travelerMap.set(name, list);
+        const key = name.toLowerCase().trim();
+        const existing = travelerMap.get(key);
+        if (existing) {
+          existing.flights.push(flight);
+        } else {
+          const display = name.trim().replace(/\b\w/g, (c) => c.toUpperCase()).replace(/\B\w+/g, (w) => w.toLowerCase());
+          travelerMap.set(key, { displayName: display, flights: [flight] });
+        }
       }
     }
 
@@ -140,9 +145,9 @@ export default function TravelScreen() {
           data: [],
         });
       }
-      const sortedTravelers = Array.from(travelerMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-      for (const [travelerName, flights] of sortedTravelers) {
-        map.get(tournamentId)!.data.push({ type: 'flight-traveler', travelerName, flights });
+      const sortedTravelers = Array.from(travelerMap.values()).sort((a, b) => a.displayName.localeCompare(b.displayName));
+      for (const { displayName, flights } of sortedTravelers) {
+        map.get(tournamentId)!.data.push({ type: 'flight-traveler', travelerName: displayName, flights });
       }
     }
 
