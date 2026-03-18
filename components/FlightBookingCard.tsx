@@ -5,6 +5,7 @@ import type { FlightBooking } from '@/types/database';
 interface FlightBookingCardProps {
   booking: FlightBooking;
   tournamentName?: string;
+  hideTravelers?: boolean;
   onPress?: () => void;
   onDelete?: () => void;
 }
@@ -14,7 +15,7 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export default function FlightBookingCard({ booking, tournamentName, onPress, onDelete }: FlightBookingCardProps) {
+export default function FlightBookingCard({ booking, tournamentName, hideTravelers, onPress, onDelete }: FlightBookingCardProps) {
   return (
     <Pressable
       className="bg-warm-white dark:bg-bark-light rounded-2xl mb-3 overflow-hidden border border-parchment dark:border-rally-900 active:opacity-90"
@@ -65,12 +66,14 @@ export default function FlightBookingCard({ booking, tournamentName, onPress, on
             )}
           </View>
 
-          <View className="flex-row items-center mt-1.5">
-            <Ionicons name="people-outline" size={14} color="#8FA8BF" />
-            <Text className="text-sm text-stone dark:text-parchment ml-2">
-              {booking.traveler_names.join(', ')}
-            </Text>
-          </View>
+          {!hideTravelers && (
+            <View className="flex-row items-center mt-1.5">
+              <Ionicons name="people-outline" size={14} color="#8FA8BF" />
+              <Text className="text-sm text-stone dark:text-parchment ml-2">
+                {booking.traveler_names.join(', ')}
+              </Text>
+            </View>
+          )}
 
           {booking.cost != null && (
             <View className="flex-row items-center mt-1.5">
