@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Tournament, HotelBooking, FlightBooking, AdminConfig, USAVProfile, ForwardedEmail, Athlete, Season, AdminAthlete } from '@/types/database';
+import type { Tournament, TournamentTicket, HotelBooking, FlightBooking, AdminConfig, USAVProfile, ForwardedEmail, Athlete, Season, AdminAthlete } from '@/types/database';
 
 interface SeasonState {
   tournaments: Tournament[];
@@ -11,10 +11,12 @@ interface SeasonState {
   athletes: Athlete[];
   seasons: Season[];
   adminAthletes: AdminAthlete[];
+  tournamentTickets: TournamentTicket[];
   activeSeasonId: string | null;
   isLoading: boolean;
   hideTravelCosts: boolean;
 
+  setTournamentTickets: (tickets: TournamentTicket[]) => void;
   setTournaments: (tournaments: Tournament[]) => void;
   addTournament: (tournament: Tournament) => void;
   updateTournament: (id: string, updates: Partial<Tournament>) => void;
@@ -59,10 +61,12 @@ export const useSeasonStore = create<SeasonState>((set) => ({
   athletes: [],
   seasons: [],
   adminAthletes: [],
+  tournamentTickets: [],
   activeSeasonId: null,
   isLoading: false,
   hideTravelCosts: false,
 
+  setTournamentTickets: (tournamentTickets) => set({ tournamentTickets }),
   setTournaments: (tournaments) => set({ tournaments }),
   addTournament: (tournament) =>
     set((state) => ({ tournaments: [...state.tournaments, tournament] })),

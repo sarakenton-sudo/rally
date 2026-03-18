@@ -118,6 +118,28 @@ export interface Tournament {
   created_at: string;
 }
 
+export interface TournamentTicket {
+  id: string;
+  tournament_id: string;
+  created_by_user_id: string;
+  ticket_holder_name: string;
+  ticket_type: string | null;
+  ticket_id: string | null;
+  order_id: string | null;
+  ticket_url: string | null;
+  ticket_price: number | null;
+  sales_tax: number | null;
+  total_cost: number | null;
+  order_date: string | null;
+  age_category: string | null;
+  photo_required: boolean;
+  refund_policy: string | null;
+  parking_notes: string | null;
+  source_email_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface HotelBooking {
   id: string;
   tournament_id: string;

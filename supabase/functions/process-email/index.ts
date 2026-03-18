@@ -94,6 +94,12 @@ serve(async (req: Request) => {
           console.log(`[process-email] Routed via envelope to user ${matchingUser.email}`);
           return await processForUser(supabase, userConfig, email);
         }
+        // Co-parent fallback: no admin_config, find primary admin via shared athletes
+        const primaryConfig = await findPrimaryAdminConfig(supabase, matchingUser.id);
+        if (primaryConfig) {
+          console.log(`[process-email] Routed co-parent ${matchingUser.email} to primary admin ${primaryConfig.user_id}`);
+          return await processForUser(supabase, primaryConfig, email);
+        }
       }
       console.log(`[process-email] Envelope from "${forwarderEmail}" did not match any auth user`);
     }
@@ -122,6 +128,12 @@ serve(async (req: Request) => {
         console.log(`[process-email] Routed via from-header to user ${fromMatch.email}`);
         return await processForUser(supabase, fromConfig, email);
       }
+      // Co-parent fallback
+      const primaryConfig = await findPrimaryAdminConfig(supabase, fromMatch.id);
+      if (primaryConfig) {
+        console.log(`[process-email] Routed co-parent ${fromMatch.email} via from-header to primary admin ${primaryConfig.user_id}`);
+        return await processForUser(supabase, primaryConfig, email);
+      }
     }
 
     console.error(`[process-email] Could not route email. From: "${email.from}", Envelope: "${email.envelopeFrom}", To: "${email.to}"`);
@@ -131,6 +143,36 @@ serve(async (req: Request) => {
     return jsonResponse({ error: 'Internal server error' }, 500);
   }
 });
+
+// Co-parent fallback: find the primary admin's config via shared athletes
+async function findPrimaryAdminConfig(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+): Promise<{ id: string; user_id: string } | null> {
+  // Find athletes this user is linked to
+  const { data: myAthletes } = await supabase
+    .from('admin_athletes')
+    .select('athlete_id')
+    .eq('admin_id', userId);
+  if (!myAthletes || myAthletes.length === 0) return null;
+
+  // Find the primary admin for any of those athletes
+  const { data: primaryAdmins } = await supabase
+    .from('admin_athletes')
+    .select('admin_id')
+    .in('athlete_id', myAthletes.map((a: any) => a.athlete_id))
+    .eq('is_primary', true)
+    .neq('admin_id', userId)
+    .limit(1);
+  if (!primaryAdmins || primaryAdmins.length === 0) return null;
+
+  const { data: config } = await supabase
+    .from('admin_config')
+    .select('id, user_id')
+    .eq('user_id', primaryAdmins[0].admin_id)
+    .single();
+  return config ?? null;
+}
 
 async function processForUser(
   supabase: ReturnType<typeof createClient>,

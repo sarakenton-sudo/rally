@@ -5,6 +5,7 @@ import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useGuestStore } from '@/stores/useGuestStore';
 import type {
   Tournament,
+  TournamentTicket,
   HotelBooking,
   FlightBooking,
   AdminConfig,
@@ -34,6 +35,7 @@ export function useSupabaseData() {
 
   const {
     setTournaments,
+    setTournamentTickets,
     setHotelBookings,
     setFlightBookings,
     setAdminConfig,
@@ -61,6 +63,7 @@ export function useSupabaseData() {
         tournamentsRes,
         hotelsRes,
         flightsRes,
+        ticketsRes,
         configRes,
         guestsRes,
         tgRes,
@@ -83,10 +86,13 @@ export function useSupabaseData() {
           .select('*')
           .order('departure_date', { ascending: true }),
         supabase
+          .from('tournament_tickets')
+          .select('*')
+          .order('created_at', { ascending: true }),
+        supabase
           .from('admin_config')
           .select('*')
-          .order('created_at', { ascending: true })
-          .limit(1)
+          .eq('user_id', user.id)
           .single(),
         supabase
           .from('guests')
@@ -126,6 +132,9 @@ export function useSupabaseData() {
       setTournaments(tournamentsRes.data as Tournament[]);
       setHotelBookings(hotelsRes.data as HotelBooking[]);
       setFlightBookings(flightsRes.data as FlightBooking[]);
+      if (!ticketsRes.error && ticketsRes.data) {
+        setTournamentTickets(ticketsRes.data as TournamentTicket[]);
+      }
       setAdminConfig((configRes.data as AdminConfig | null) ?? null);
       setGuests(guestsRes.data as Guest[]);
       setTournamentGuests(tgRes.data as TournamentGuest[]);
@@ -150,15 +159,15 @@ export function useSupabaseData() {
       // Set active season from admin_config
       let config = configRes.data as AdminConfig | null;
 
-      // If no config for current user, try to read the primary admin's config (co-parent case)
+      // If no config for current user, try to read a shared primary admin's config (co-parent case)
       if (!config) {
-        const { data: sharedConfig } = await supabase
+        const { data: sharedConfigs } = await supabase
           .from('admin_config')
           .select('*')
-          .limit(1)
-          .single();
-        if (sharedConfig) {
-          config = sharedConfig as AdminConfig;
+          .neq('user_id', user.id)
+          .limit(1);
+        if (sharedConfigs && sharedConfigs.length > 0) {
+          config = sharedConfigs[0] as AdminConfig;
           setAdminConfig(config);
         }
       }

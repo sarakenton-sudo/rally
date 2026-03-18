@@ -37,6 +37,55 @@ function openDirections(address: string) {
   if (url) Linking.openURL(url);
 }
 
+function TicketDetail({ ticket }: { ticket: import('@/types/database').TournamentTicket }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const details: { label: string; value: string }[] = [];
+  if (ticket.order_id) details.push({ label: 'Order ID', value: ticket.order_id });
+  if (ticket.ticket_id) details.push({ label: 'Ticket ID', value: ticket.ticket_id });
+  if (ticket.age_category) details.push({ label: 'Category', value: ticket.age_category });
+  if (ticket.order_date) details.push({ label: 'Purchased', value: new Date(ticket.order_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) });
+  if (ticket.ticket_price != null) details.push({ label: 'Price', value: `$${ticket.ticket_price.toFixed(2)}` });
+  if (ticket.sales_tax != null) details.push({ label: 'Tax', value: `$${ticket.sales_tax.toFixed(2)}` });
+  if (ticket.photo_required) details.push({ label: 'Photo ID', value: 'Required for entry' });
+
+  if (details.length === 0 && !ticket.refund_policy && !ticket.parking_notes) return null;
+
+  return (
+    <View className="mt-1">
+      <Pressable
+        className="flex-row items-center py-1.5 active:opacity-70"
+        onPress={() => setExpanded(!expanded)}
+      >
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color="#8FA8BF" />
+        <Text className="text-xs text-stone ml-1">{expanded ? 'Hide details' : 'Show details'}</Text>
+      </Pressable>
+      {expanded && (
+        <View className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 mt-1">
+          {details.map((d) => (
+            <View key={d.label} className="flex-row justify-between py-1">
+              <Text className="text-xs text-stone">{d.label}</Text>
+              <Text className="text-xs font-medium text-bark dark:text-cream">{d.value}</Text>
+            </View>
+          ))}
+          {ticket.parking_notes && (
+            <View className="mt-2 pt-2 border-t border-green-100 dark:border-green-800">
+              <Text className="text-xs font-medium text-stone">Parking</Text>
+              <Text className="text-xs text-stone/80 mt-0.5">{ticket.parking_notes}</Text>
+            </View>
+          )}
+          {ticket.refund_policy && (
+            <View className="mt-2 pt-2 border-t border-green-100 dark:border-green-800">
+              <Text className="text-xs font-medium text-stone">Refund Policy</Text>
+              <Text className="text-xs text-stone/80 mt-0.5">{ticket.refund_policy}</Text>
+            </View>
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
 function SectionHeader({ icon, title, iconColor }: { icon: keyof typeof Ionicons.glyphMap; title: string; iconColor: string }) {
   return (
     <View className="flex-row items-center mt-6 mb-3">
@@ -59,9 +108,12 @@ export default function TournamentDetailScreen() {
   const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
   const activeSeason = seasons.find((s) => s.id === activeSeasonId);
 
+  const tournamentTickets = useSeasonStore((s) => s.tournamentTickets);
+
   const tournament = useMemo(() => tournaments.find((t) => t.id === id) ?? null, [tournaments, id]);
   const hotels = useMemo(() => hotelBookings.filter((h) => h.tournament_id === id), [hotelBookings, id]);
   const flights = useMemo(() => flightBookings.filter((f) => f.tournament_id === id), [flightBookings, id]);
+  const tickets = useMemo(() => tournamentTickets.filter((t) => t.tournament_id === id), [tournamentTickets, id]);
 
   // Team events: try Supabase hook, fallback to mock
   const { events: supabaseEvents } = useTeamEvents(id);
@@ -425,7 +477,7 @@ export default function TournamentDetailScreen() {
 
               {/* TICKETS */}
               {(() => {
-                const hasTicketData = !!(tournament.ticket_link || teamCode || tournament.tickets_purchased);
+                const hasTicketData = !!(tournament.ticket_link || teamCode || tickets.length > 0);
                 return (
                   <>
                     <View className="flex-row items-center mb-2">
@@ -435,7 +487,8 @@ export default function TournamentDetailScreen() {
                       </Text>
                     </View>
                     <View className="bg-white/70 dark:bg-bark-light rounded-xl p-4 border border-green-100 dark:border-green-900">
-            {/* Team code + QR */}
+
+            {/* Team code */}
             <View className="flex-row items-start justify-between mb-3">
               <View className="flex-1">
                 <Text className="text-xs text-stone uppercase tracking-wider">Team Code</Text>
@@ -446,7 +499,11 @@ export default function TournamentDetailScreen() {
                   className="bg-green-100 dark:bg-green-900/30 px-3 py-1.5 rounded-lg active:opacity-70 flex-row items-center self-start mt-2"
                   onPress={async () => {
                     if (teamCode) {
-                      await Clipboard.setStringAsync(teamCode);
+                      if (Platform.OS === 'web') {
+                        navigator.clipboard.writeText(teamCode);
+                      } else {
+                        await Clipboard.setStringAsync(teamCode);
+                      }
                       tapLight();
                       Alert.alert('Copied', 'Team code copied to clipboard.');
                     }
@@ -456,20 +513,83 @@ export default function TournamentDetailScreen() {
                   <Text className="text-xs font-semibold text-green-700 dark:text-parchment ml-1">Copy</Text>
                 </Pressable>
               </View>
-
             </View>
 
             {tournament.ticket_system && (
               <Text className="text-xs text-stone mb-2">Platform: {tournament.ticket_system}</Text>
             )}
 
-            {tournament.ticket_link ? (
+            {/* Purchased tickets */}
+            {tickets.length > 0 ? (
+              <>
+                {tickets.map((ticket) => (
+                  <View key={ticket.id} className="mb-3">
+                    {/* Primary action: open ticket */}
+                    <Pressable
+                      className="bg-green-600 rounded-lg py-3 px-4 active:opacity-80"
+                      onPress={() => {
+                        if (ticket.ticket_url) {
+                          if (Platform.OS === 'web') {
+                            window.open(ticket.ticket_url, '_blank');
+                          } else {
+                            Linking.openURL(ticket.ticket_url);
+                          }
+                        }
+                      }}
+                    >
+                      <View className="flex-row items-center justify-between">
+                        <View className="flex-row items-center flex-1">
+                          <Ionicons name="ticket" size={18} color="#FEFEFE" />
+                          <View className="ml-3 flex-1">
+                            <Text className="text-sm font-bold text-cream">{ticket.ticket_holder_name}</Text>
+                            <Text className="text-xs text-cream/70">{ticket.ticket_type ?? 'Ticket'}</Text>
+                          </View>
+                        </View>
+                        <View className="flex-row items-center">
+                          {ticket.total_cost != null && (
+                            <Text className="text-sm font-semibold text-cream mr-2">${ticket.total_cost.toFixed(2)}</Text>
+                          )}
+                          <Ionicons name="open-outline" size={14} color="rgba(255,255,255,0.7)" />
+                        </View>
+                      </View>
+                    </Pressable>
+
+                    {/* Expandable detail */}
+                    <TicketDetail ticket={ticket} />
+                  </View>
+                ))}
+
+                {/* Add more tickets via ticket_link */}
+                {tournament.ticket_link && (
+                  <Pressable
+                    className="border border-green-300 dark:border-green-700 rounded-lg py-2.5 items-center active:opacity-70 mt-1"
+                    onPress={async () => {
+                      if (teamCode) {
+                        if (Platform.OS === 'web') {
+                          navigator.clipboard.writeText(teamCode);
+                        } else {
+                          await Clipboard.setStringAsync(teamCode);
+                        }
+                        tapLight();
+                      }
+                      Linking.openURL(tournament.ticket_link!);
+                    }}
+                  >
+                    <View className="flex-row items-center">
+                      <Ionicons name="add-circle-outline" size={16} color="#16a34a" />
+                      <Text className="text-sm font-semibold text-green-700 dark:text-green-400 ml-1.5">Buy More Tickets</Text>
+                      {teamCode && <Text className="text-xs text-stone ml-2">(code copied)</Text>}
+                    </View>
+                  </Pressable>
+                )}
+              </>
+            ) : tournament.ticket_link ? (
               <Pressable
                 className="bg-green-600 rounded-lg py-3 items-center active:opacity-80"
                 onPress={async () => {
                   if (teamCode) {
                     if (Platform.OS === 'web') {
-                      await navigator.clipboard.writeText(teamCode);
+                      navigator.clipboard.writeText(teamCode);
                     } else {
                       await Clipboard.setStringAsync(teamCode);
                     }
@@ -488,20 +608,22 @@ export default function TournamentDetailScreen() {
               <Text className="text-sm text-stone">No ticket link set for this tournament.</Text>
             )}
 
-            <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-green-100 dark:border-green-900">
-              <Text className="text-sm text-stone dark:text-parchment">Tickets purchased</Text>
-              <Switch
-                value={!!tournament.tickets_purchased}
-                onValueChange={async (value) => {
-                  if (isSupabaseConfigured && user) {
-                    await updateTournamentDB(tournament.id, { tickets_purchased: value });
-                  }
-                  updateTournamentStore(tournament.id, { tickets_purchased: value });
-                }}
-                trackColor={{ false: '#D8E2EC', true: '#86EFAC' }}
-                thumbColor={tournament.tickets_purchased ? '#16a34a' : '#FEFEFE'}
-              />
-            </View>
+            {tickets.length === 0 && (
+              <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-green-100 dark:border-green-900">
+                <Text className="text-sm text-stone dark:text-parchment">Tickets purchased</Text>
+                <Switch
+                  value={!!tournament.tickets_purchased}
+                  onValueChange={async (value) => {
+                    if (isSupabaseConfigured && user) {
+                      await updateTournamentDB(tournament.id, { tickets_purchased: value });
+                    }
+                    updateTournamentStore(tournament.id, { tickets_purchased: value });
+                  }}
+                  trackColor={{ false: '#D8E2EC', true: '#86EFAC' }}
+                  thumbColor={tournament.tickets_purchased ? '#16a34a' : '#FEFEFE'}
+                />
+              </View>
+            )}
           </View>
                   </>
                 );

@@ -48,6 +48,7 @@ export default function HomeScreen() {
   const tournaments = useSeasonStore((s) => s.tournaments);
   const hotelBookings = useSeasonStore((s) => s.hotelBookings);
   const flightBookings = useSeasonStore((s) => s.flightBookings);
+  const tournamentTickets = useSeasonStore((s) => s.tournamentTickets);
   const adminConfig = useSeasonStore((s) => s.adminConfig);
   const forwardedEmails = useSeasonStore((s) => s.forwardedEmails);
   const seasons = useSeasonStore((s) => s.seasons);
@@ -141,11 +142,15 @@ export default function HomeScreen() {
       });
     }
 
-    // Priority 3: Buy tickets (within 7 days or past ticket date)
-    const buyTickets = seasonTournaments.filter((t) => {
-      if (t.tickets_purchased) return false;
+    // Priority 3: Tickets — either "View Tickets" (purchased) or "Buy Tickets" (not yet)
+    const ticketTournaments = seasonTournaments.filter((t) => {
       if (!t.ticket_link) return false;
       const d = daysUntil(t.start_date);
+      // Show purchased tickets within 7 days of tournament
+      const tix = tournamentTickets.filter((tk) => tk.tournament_id === t.id);
+      if (tix.length > 0 && d >= 0 && d <= 7) return true;
+      // Show buy prompt if not purchased
+      if (t.tickets_purchased || tix.length > 0) return false;
       if (d >= 0 && d <= 7) return true;
       if (t.ticket_sales_date) {
         const salesD = daysUntil(t.ticket_sales_date);
@@ -153,33 +158,57 @@ export default function HomeScreen() {
       }
       return false;
     });
-    for (const t of buyTickets) {
+    for (const t of ticketTournaments) {
       const activeSeason = seasons.find((s) => s.id === activeSeasonId);
       const teamCode = activeSeason?.team_code;
-      cards.push({
-        priority: 3,
-        text: `Buy Tickets for ${t.name}`,
-        subtitle: teamCode ? `Code copied: ${teamCode}` : 'Tickets available now',
-        icon: 'ticket-outline',
-        color: '#7c3aed',
-        bgColor: '#EDE9FE',
-        onPress: async () => {
-          if (teamCode) {
+      const tix = tournamentTickets.filter((tk) => tk.tournament_id === t.id);
+      const hasPurchased = tix.length > 0;
+      const firstTicket = tix[0];
+
+      if (hasPurchased && firstTicket?.ticket_url) {
+        // View purchased ticket
+        cards.push({
+          priority: 3,
+          text: `View Tickets — ${t.name}`,
+          subtitle: `${tix.length} ticket${tix.length > 1 ? 's' : ''} · ${firstTicket.ticket_holder_name}${tix.length > 1 ? ` +${tix.length - 1}` : ''}`,
+          icon: 'ticket',
+          color: '#16a34a',
+          bgColor: '#DCFCE7',
+          onPress: () => {
             if (Platform.OS === 'web') {
-              navigator.clipboard.writeText(teamCode);
+              window.open(firstTicket.ticket_url!, '_blank');
             } else {
-              await Clipboard.setStringAsync(teamCode);
+              Linking.openURL(firstTicket.ticket_url!);
             }
-          }
-          if (t.ticket_link) {
-            if (Platform.OS === 'web') {
-              window.open(t.ticket_link, '_blank');
-            } else {
-              Linking.openURL(t.ticket_link);
+          },
+        });
+      } else {
+        // Buy tickets
+        cards.push({
+          priority: 3,
+          text: `Buy Tickets for ${t.name}`,
+          subtitle: teamCode ? `Code copied: ${teamCode}` : 'Tickets available now',
+          icon: 'ticket-outline',
+          color: '#7c3aed',
+          bgColor: '#EDE9FE',
+          onPress: async () => {
+            if (teamCode) {
+              if (Platform.OS === 'web') {
+                navigator.clipboard.writeText(teamCode);
+              } else {
+                await Clipboard.setStringAsync(teamCode);
+              }
             }
-          }
-        },
-      });
+            if (t.ticket_link) {
+              if (Platform.OS === 'web') {
+                window.open(t.ticket_link, '_blank');
+              } else {
+                Linking.openURL(t.ticket_link);
+              }
+            }
+          },
+        });
+      }
     }
 
     // Priority 4: Book air (within 90 days, no flight, not marked unnecessary)
@@ -266,7 +295,7 @@ export default function HomeScreen() {
     }
 
     return cards.sort((a, b) => a.priority - b.priority);
-  }, [emailsToReview, seasonTournaments, hotelBookings, flightBookings]);
+  }, [emailsToReview, seasonTournaments, hotelBookings, flightBookings, tournamentTickets]);
 
   // ─── SECTION 3: Next 30 Days ───
   const hasMultipleAthletes = athletes.length > 1;

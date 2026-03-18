@@ -65,6 +65,18 @@ const DATA_LABELS: Record<string, string> = {
   number_of_nights: 'Nights',
   outbound: 'Outbound Flight',
   return: 'Return Flight',
+  ticket_confirmation: 'Ticket Details',
+  refund_policy: 'Refund Policy',
+  parking_notes: 'Parking',
+  ticket_holder_name: 'Ticket Holder',
+  ticket_type: 'Ticket Type',
+  ticket_id: 'Ticket ID',
+  order_id: 'Order ID',
+  ticket_price: 'Price',
+  sales_tax: 'Tax',
+  order_date: 'Order Date',
+  age_category: 'Age Category',
+  photo_upload_required: 'Photo Required',
 };
 
 function stripHtml(html: string): string {
@@ -420,7 +432,7 @@ export default function EmailDetailScreen() {
     await markEmailImported('notification_sent');
   };
 
-  const [savedBooking, setSavedBooking] = useState<'flight' | 'hotel' | null>(null);
+  const [savedBooking, setSavedBooking] = useState<'flight' | 'hotel' | 'ticket' | null>(null);
   const [isSavingBooking, setIsSavingBooking] = useState(false);
 
   // Update email record to reflect that data was saved/imported
@@ -608,6 +620,53 @@ export default function EmailDetailScreen() {
         if (Platform.OS === 'web') window.alert('Hotel booking saved!');
         else Alert.alert('Saved', 'Hotel booking created and linked to tournament.');
       }
+    } catch (err: any) {
+      if (Platform.OS === 'web') window.alert(`Save failed: ${err.message}`);
+      else Alert.alert('Save Failed', err.message);
+    } finally {
+      setIsSavingBooking(false);
+    }
+  };
+
+  const handleSaveTicket = async () => {
+    if (!activeMatch || !extractedData || !user) return;
+    const tc = extractedData.ticket_confirmation as Record<string, unknown> | undefined;
+    if (!tc) return;
+    setIsSavingBooking(true);
+    try {
+      const ticketData = {
+        tournament_id: activeMatch.id,
+        created_by_user_id: user.id,
+        ticket_holder_name: String(tc.ticket_holder_name ?? ''),
+        ticket_type: tc.ticket_type ? String(tc.ticket_type) : null,
+        ticket_id: tc.ticket_id ? String(tc.ticket_id) : null,
+        order_id: tc.order_id ? String(tc.order_id) : null,
+        ticket_url: tc.ticket_url ? String(tc.ticket_url) : null,
+        ticket_price: tc.ticket_price != null ? Number(tc.ticket_price) : null,
+        sales_tax: tc.sales_tax != null ? Number(tc.sales_tax) : null,
+        total_cost: tc.total_cost != null ? Number(tc.total_cost) : null,
+        order_date: tc.order_date ? String(tc.order_date) : null,
+        age_category: tc.age_category ? String(tc.age_category) : null,
+        photo_required: !!tc.photo_upload_required,
+        refund_policy: extractedData.refund_policy ? String(extractedData.refund_policy) : null,
+        parking_notes: extractedData.parking_notes ? String(extractedData.parking_notes) : null,
+        source_email_id: email.id,
+      };
+
+      const { error } = await supabase
+        .from('tournament_tickets')
+        .insert(ticketData as any);
+      if (error) throw error;
+
+      // Also mark tournament as tickets_purchased
+      await updateTournamentDB(activeMatch.id, { tickets_purchased: true });
+      updateTournamentStore(activeMatch.id, { tickets_purchased: true });
+
+      setSavedBooking('ticket');
+      await markEmailImported('notification_sent');
+      if (user?.id) trackEvent(user.id, 'import_completed', { type: 'email_ticket', email_id: email.id, tournament_id: activeMatch.id });
+      if (Platform.OS === 'web') window.alert('Ticket saved!');
+      else Alert.alert('Saved', 'Ticket added to tournament.');
     } catch (err: any) {
       if (Platform.OS === 'web') window.alert(`Save failed: ${err.message}`);
       else Alert.alert('Save Failed', err.message);
@@ -999,6 +1058,25 @@ export default function EmailDetailScreen() {
                       <Ionicons name="bed" size={18} color="white" />
                       <Text className="text-sm font-semibold text-white ml-2">
                         {isSavingBooking ? 'Saving...' : `Save Hotel to "${activeMatch.name}"`}
+                      </Text>
+                    </Pressable>
+                  )
+                )}
+                {!!extractedData?.ticket_confirmation && (
+                  savedBooking === 'ticket' ? (
+                    <View className="flex-row items-center justify-center py-3">
+                      <Ionicons name="checkmark-circle" size={20} color="#16a34a" />
+                      <Text className="text-sm font-semibold text-green-600 ml-2">Ticket Saved</Text>
+                    </View>
+                  ) : (
+                    <Pressable
+                      onPress={handleSaveTicket}
+                      disabled={isSavingBooking}
+                      className={`rounded-lg py-3 items-center flex-row justify-center active:opacity-80 mt-2 ${isSavingBooking ? 'bg-green-400' : 'bg-green-600'}`}
+                    >
+                      <Ionicons name="ticket" size={18} color="white" />
+                      <Text className="text-sm font-semibold text-white ml-2">
+                        {isSavingBooking ? 'Saving...' : `Save Ticket to "${activeMatch.name}"`}
                       </Text>
                     </Pressable>
                   )
