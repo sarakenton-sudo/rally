@@ -445,14 +445,29 @@ export default function TournamentDetailScreen() {
 
                       {/* Ticket sales date — hide once tickets are purchased */}
                       {tournament.ticket_sales_date && tickets.length === 0 && !tournament.tickets_purchased && (
-                        <View className="flex-row items-center mt-3 pt-3 border-t border-green-100 dark:border-green-900">
+                        <Pressable
+                          className="flex-row items-center mt-3 pt-3 border-t border-green-100 dark:border-green-900 active:opacity-70"
+                          disabled={!(daysUntil(tournament.ticket_sales_date) <= 0 && tournament.ticket_link)}
+                          onPress={() => {
+                            if (tournament.ticket_link) {
+                              if (Platform.OS === 'web') {
+                                window.open(tournament.ticket_link, '_blank');
+                              } else {
+                                Linking.openURL(tournament.ticket_link);
+                              }
+                            }
+                          }}
+                        >
                           <Ionicons name="ticket-outline" size={14} color={daysUntil(tournament.ticket_sales_date) <= 0 ? '#16a34a' : '#d97706'} />
                           <Text className={`text-sm ml-2 font-medium ${daysUntil(tournament.ticket_sales_date) <= 0 ? 'text-green-700' : 'text-amber-600'}`}>
                             {daysUntil(tournament.ticket_sales_date) <= 0
                               ? 'Tickets should be on sale!'
                               : `Tickets on sale ${new Date(tournament.ticket_sales_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`}
                           </Text>
-                        </View>
+                          {daysUntil(tournament.ticket_sales_date) <= 0 && tournament.ticket_link && (
+                            <Ionicons name="open-outline" size={12} color="#16a34a" style={{ marginLeft: 6 }} />
+                          )}
+                        </Pressable>
                       )}
 
                       {/* Dormant state */}
