@@ -469,27 +469,34 @@ export default function EmailDetailScreen() {
         departure_date: String(d.departure_date ?? outbound?.departure_date ?? '') || undefined,
         return_date: String(d.return_date ?? returnLeg?.departure_date ?? '') || undefined,
         booked_by: String(d.passenger_name ?? d.traveler_name ?? '') || undefined,
-        traveler_names: d.passenger_name ? [String(d.passenger_name)] : undefined,
+        traveler_names: Array.isArray(d.passengers) && d.passengers.length > 0
+          ? d.passengers.map((p: any) => String(p.passenger_name ?? p.name ?? '')).filter(Boolean)
+          : d.passenger_name ? [String(d.passenger_name)]
+          : undefined,
         cost: d.total_cost ? Number(d.total_cost) : undefined,
         ticket_number: String(d.ticket_number ?? '') || undefined,
         departure_time: String(d.departure_time ?? outbound?.departure_time ?? '') || undefined,
         arrival_time: String(d.arrival_time ?? outbound?.arrival_time ?? '') || undefined,
-        seat_number: String(d.seat_number ?? outbound?.seat_number ?? '') || undefined,
+        seat_number: (Array.isArray(d.passengers) && d.passengers.length > 0
+          ? d.passengers.map((p: any) => p.seat_number).filter(Boolean).join(', ')
+          : String(d.seat_number ?? outbound?.seat_number ?? '')) || undefined,
         flight_number: String(d.flight_number ?? outbound?.flight_number ?? '') || undefined,
       };
 
       // Remove undefined values so we don't overwrite existing data with blanks
       const cleanData = Object.fromEntries(Object.entries(flightData).filter(([_, v]) => v !== undefined));
 
-      // Check if a flight booking already exists — match by confirmation code + same passenger
-      const passengerName = String(d.passenger_name ?? d.traveler_name ?? '').toUpperCase();
+      // Check if a flight booking already exists — match by confirmation code + overlapping travelers
+      const importedNames = (Array.isArray(d.passengers) && d.passengers.length > 0
+        ? d.passengers.map((p: any) => String(p.passenger_name ?? p.name ?? '').toUpperCase()).filter(Boolean)
+        : d.passenger_name ? [String(d.passenger_name).toUpperCase()]
+        : []);
       const flightBookings = useSeasonStore.getState().flightBookings;
       const existing = flightBookings.find((f) => {
         if (!confCode || f.confirmation_code !== confCode) return false;
-        // Same confirmation but different passenger = different booking (family travel)
-        if (passengerName && f.booked_by) {
-          return f.booked_by.toUpperCase() === passengerName ||
-            (f.traveler_names ?? []).some((t: string) => t.toUpperCase() === passengerName);
+        // Same confirmation but check if traveler lists overlap
+        if (importedNames.length > 0 && f.traveler_names?.length > 0) {
+          return f.traveler_names.some((t: string) => importedNames.includes(t.toUpperCase()));
         }
         return true; // Same conf code, no passenger to compare
       });
