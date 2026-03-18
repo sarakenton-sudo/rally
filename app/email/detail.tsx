@@ -826,13 +826,25 @@ export default function EmailDetailScreen() {
   const renderValue = (key: string, value: unknown) => {
     if (value === null || value === undefined || value === '') return null;
     if (Array.isArray(value)) {
-      return value.map((v, i) => (
-        <Text key={i} className="text-sm text-bark dark:text-cream">
-          {typeof v === 'string' && isUrl(v) ? (
-            <Text className="text-rally-600 underline" onPress={() => openUrl(v)}>{v}</Text>
-          ) : String(v)}
-        </Text>
-      ));
+      return value.map((v, i) => {
+        if (v && typeof v === 'object') {
+          // Render object entries as "key: value" pairs
+          const parts = Object.entries(v as Record<string, unknown>)
+            .filter(([, val]) => val !== null && val !== undefined && val !== '')
+            .map(([k, val]) => `${DATA_LABELS[k] ?? k.replace(/_/g, ' ')}: ${String(val)}`)
+            .join('  ·  ');
+          return (
+            <Text key={i} className="text-sm text-bark dark:text-cream mb-0.5">{parts}</Text>
+          );
+        }
+        return (
+          <Text key={i} className="text-sm text-bark dark:text-cream">
+            {typeof v === 'string' && isUrl(v) ? (
+              <Text className="text-rally-600 underline" onPress={() => openUrl(v)}>{v}</Text>
+            ) : String(v)}
+          </Text>
+        );
+      });
     }
     const str = String(value);
     if (isUrl(str)) {
