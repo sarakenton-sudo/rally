@@ -733,6 +733,86 @@ export default function TournamentDetailScreen() {
                 </View>
               </View>
 
+              {/* ── Share Travel Details ── */}
+              {(hotels.length > 0 || flights.length > 0) && (
+                <View className="flex-row gap-2 mt-1 mb-3">
+                  {/* Share All Travel */}
+                  <Pressable
+                    className="flex-1 bg-white/70 dark:bg-bark-light rounded-xl py-2.5 items-center flex-row justify-center active:opacity-80 border border-parchment dark:border-rally-900"
+                    onPress={() => {
+                      const lines = [`✈️ Travel Details: ${tournament.name}`, formatDateRange(tournament.start_date, tournament.end_date)];
+                      for (const h of hotels) {
+                        lines.push('', `🏨 ${h.hotel_name}`);
+                        if (h.reservation_number) lines.push(`Confirmation: ${h.reservation_number}`);
+                        lines.push(`Check-in: ${new Date(h.check_in + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`);
+                        lines.push(`Check-out: ${new Date(h.check_out + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`);
+                        if (h.address) lines.push(h.address);
+                      }
+                      for (const f of flights) {
+                        lines.push('', `✈️ ${f.airline} ${f.flight_number ?? ''}`);
+                        if (f.confirmation_code) lines.push(`Confirmation: ${f.confirmation_code}`);
+                        lines.push(`Departs: ${new Date(f.departure_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}${f.departure_time ? ` at ${f.departure_time}` : ''}`);
+                        if (f.return_date) lines.push(`Returns: ${new Date(f.return_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}${f.arrival_time ? ` at ${f.arrival_time}` : ''}`);
+                        if (f.traveler_names.length > 0) lines.push(`Travelers: ${f.traveler_names.join(', ')}`);
+                      }
+                      const smsBody = encodeURIComponent(lines.join('\n'));
+                      const smsUrl = Platform.OS === 'ios' ? `sms:&body=${smsBody}` : `sms:?body=${smsBody}`;
+                      Platform.OS === 'web' ? window.open(smsUrl, '_blank') : Linking.openURL(smsUrl);
+                    }}
+                  >
+                    <Ionicons name="share-outline" size={15} color="#3B82B0" />
+                    <Text className="text-xs font-semibold text-rally-700 dark:text-rally-300 ml-1.5">Share All Travel</Text>
+                  </Pressable>
+
+                  {/* Share Hotel Only */}
+                  {hotels.length > 0 && (
+                    <Pressable
+                      className="flex-1 bg-white/70 dark:bg-bark-light rounded-xl py-2.5 items-center flex-row justify-center active:opacity-80 border border-parchment dark:border-rally-900"
+                      onPress={() => {
+                        const lines = [`🏨 Hotel: ${tournament.name}`];
+                        for (const h of hotels) {
+                          lines.push('', h.hotel_name);
+                          if (h.reservation_number) lines.push(`Confirmation: ${h.reservation_number}`);
+                          lines.push(`Check-in: ${new Date(h.check_in + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`);
+                          lines.push(`Check-out: ${new Date(h.check_out + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`);
+                          if (h.address) lines.push(h.address);
+                        }
+                        const smsBody = encodeURIComponent(lines.join('\n'));
+                        const smsUrl = Platform.OS === 'ios' ? `sms:&body=${smsBody}` : `sms:?body=${smsBody}`;
+                        Platform.OS === 'web' ? window.open(smsUrl, '_blank') : Linking.openURL(smsUrl);
+                      }}
+                    >
+                      <Ionicons name="bed-outline" size={15} color="#7c3aed" />
+                      <Text className="text-xs font-semibold text-purple-700 dark:text-purple-300 ml-1.5">Share Hotel</Text>
+                    </Pressable>
+                  )}
+
+                  {/* Share Flight Only */}
+                  {flights.length > 0 && (
+                    <Pressable
+                      className="flex-1 bg-white/70 dark:bg-bark-light rounded-xl py-2.5 items-center flex-row justify-center active:opacity-80 border border-parchment dark:border-rally-900"
+                      onPress={() => {
+                        const lines = [`✈️ Flight: ${tournament.name}`];
+                        for (const f of flights) {
+                          lines.push('', `${f.airline} ${f.flight_number ?? ''}`);
+                          if (f.confirmation_code) lines.push(`Confirmation: ${f.confirmation_code}`);
+                          lines.push(`Departs: ${new Date(f.departure_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}${f.departure_time ? ` at ${f.departure_time}` : ''}`);
+                          if (f.return_date) lines.push(`Returns: ${new Date(f.return_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}${f.arrival_time ? ` at ${f.arrival_time}` : ''}`);
+                          if (f.traveler_names.length > 0) lines.push(`Travelers: ${f.traveler_names.join(', ')}`);
+                          if (f.seat_number) lines.push(`Seats: ${f.seat_number}`);
+                        }
+                        const smsBody = encodeURIComponent(lines.join('\n'));
+                        const smsUrl = Platform.OS === 'ios' ? `sms:&body=${smsBody}` : `sms:?body=${smsBody}`;
+                        Platform.OS === 'web' ? window.open(smsUrl, '_blank') : Linking.openURL(smsUrl);
+                      }}
+                    >
+                      <Ionicons name="airplane-outline" size={15} color="#3B82B0" />
+                      <Text className="text-xs font-semibold text-rally-700 dark:text-rally-300 ml-1.5">Share Air</Text>
+                    </Pressable>
+                  )}
+                </View>
+              )}
+
               {/* ── Team Events (Amber/Yellow) — only show when events exist ── */}
               {teamEvents.length > 0 && (
                 <>
