@@ -15,7 +15,8 @@ import type { HotelBooking, FlightBooking } from '@/types/database';
 
 type BookingItem =
   | { type: 'hotel'; data: HotelBooking }
-  | { type: 'flight'; data: FlightBooking };
+  | { type: 'flight'; data: FlightBooking }
+  | { type: 'flight-traveler'; travelerName: string; flights: FlightBooking[] };
 
 interface Section {
   title: string;
@@ -113,20 +114,36 @@ export default function TravelScreen() {
       map.get(key)!.data.push({ type: 'hotel', data: hotel });
     }
 
+    // Group flights by tournament, then by traveler name
+    const flightsByTournament = new Map<string, Map<string, FlightBooking[]>>();
     for (const flight of flightBookings) {
-      const t = tournaments.find((tour) => tour.id === flight.tournament_id);
-      const key = flight.tournament_id;
-      if (!map.has(key)) {
-        map.set(key, {
+      if (!flightsByTournament.has(flight.tournament_id)) {
+        flightsByTournament.set(flight.tournament_id, new Map());
+      }
+      const travelerMap = flightsByTournament.get(flight.tournament_id)!;
+      for (const name of flight.traveler_names) {
+        const list = travelerMap.get(name) ?? [];
+        list.push(flight);
+        travelerMap.set(name, list);
+      }
+    }
+
+    for (const [tournamentId, travelerMap] of flightsByTournament) {
+      const t = tournaments.find((tour) => tour.id === tournamentId);
+      if (!map.has(tournamentId)) {
+        map.set(tournamentId, {
           title: t?.name ?? 'Unknown Tournament',
-          tournamentId: key,
+          tournamentId,
           sectionIndex: 0,
           locationCity: t?.location_city ?? '',
           dateRange: t ? formatDateRange(t.start_date, t.end_date) : '',
           data: [],
         });
       }
-      map.get(key)!.data.push({ type: 'flight', data: flight });
+      const sortedTravelers = Array.from(travelerMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+      for (const [travelerName, flights] of sortedTravelers) {
+        map.get(tournamentId)!.data.push({ type: 'flight-traveler', travelerName, flights });
+      }
     }
 
     const sorted = Array.from(map.values()).sort((a, b) => {
@@ -154,7 +171,7 @@ export default function TravelScreen() {
     <View className="flex-1 bg-cream dark:bg-bark">
       <SectionList
         sections={sections}
-        keyExtractor={(item) => `${item.type}-${item.data.id}`}
+        keyExtractor={(item) => item.type === 'flight-traveler' ? `traveler-${item.travelerName}-${item.flights[0]?.id}` : `${item.type}-${item.data.id}`}
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
         stickySectionHeadersEnabled={false}
         onRefresh={refresh}
@@ -258,6 +275,24 @@ export default function TravelScreen() {
                   onPress={() => router.push({ pathname: '/booking/hotel-detail', params: { id: item.data.id } })}
                   onDelete={() => handleDeleteHotel(item.data.id, item.data.hotel_name)}
                 />
+              </View>
+            );
+          }
+          if (item.type === 'flight-traveler') {
+            return (
+              <View className={`px-2 pb-1 ${accent.bg}`}>
+                <View className="flex-row items-center mb-1 mt-1">
+                  <Ionicons name="person" size={13} color="#3B82B0" />
+                  <Text className="text-xs font-semibold text-rally-700 dark:text-rally-300 ml-1.5 uppercase tracking-wider">{item.travelerName}</Text>
+                </View>
+                {item.flights.map((f) => (
+                  <FlightBookingCard
+                    key={f.id}
+                    booking={f}
+                    onPress={() => router.push({ pathname: '/booking/flight-detail', params: { id: f.id } })}
+                    onDelete={() => handleDeleteFlight(f.id, f.airline)}
+                  />
+                ))}
               </View>
             );
           }

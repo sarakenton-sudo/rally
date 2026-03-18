@@ -54,8 +54,15 @@ export default function FlightBookingCard({ booking, tournamentName, onPress, on
           <View className="flex-row items-center mt-1.5">
             <Ionicons name="calendar-outline" size={14} color="#8FA8BF" />
             <Text className="text-sm text-stone dark:text-parchment ml-2">
-              {formatDate(booking.departure_date)} — {formatDate(booking.return_date)}
+              {booking.return_date
+                ? `${formatDate(booking.departure_date)} — ${formatDate(booking.return_date)}`
+                : formatDate(booking.departure_date)}
             </Text>
+            {!booking.return_date && (
+              <View className="bg-amber-100 dark:bg-amber-900/30 rounded px-1.5 py-0.5 ml-2">
+                <Text className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">One-way</Text>
+              </View>
+            )}
           </View>
 
           <View className="flex-row items-center mt-1.5">

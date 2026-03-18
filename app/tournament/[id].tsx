@@ -113,6 +113,17 @@ export default function TournamentDetailScreen() {
   const tournament = useMemo(() => tournaments.find((t) => t.id === id) ?? null, [tournaments, id]);
   const hotels = useMemo(() => hotelBookings.filter((h) => h.tournament_id === id), [hotelBookings, id]);
   const flights = useMemo(() => flightBookings.filter((f) => f.tournament_id === id), [flightBookings, id]);
+  const flightsByTraveler = useMemo(() => {
+    const map = new Map<string, typeof flights>();
+    for (const f of flights) {
+      for (const name of f.traveler_names) {
+        const list = map.get(name) ?? [];
+        list.push(f);
+        map.set(name, list);
+      }
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [flights]);
   const tickets = useMemo(() => tournamentTickets.filter((t) => t.tournament_id === id), [tournamentTickets, id]);
 
   // Team events: try Supabase hook, fallback to mock
@@ -683,13 +694,21 @@ export default function TournamentDetailScreen() {
               <View className="rounded-xl overflow-hidden mb-3">
                 <View className="h-1.5 bg-rally-600" />
                 <View className="bg-rally-50 dark:bg-rally-900/10 px-3 py-3">
-                  {flights.map((f) => (
-                    <View key={f.id} className="mb-2">
-                      <FlightBookingCard
-                        booking={f}
-                        onPress={() => router.push({ pathname: '/booking/flight-detail', params: { id: f.id } })}
-                        onDelete={() => handleDeleteFlight(f.id, f.airline)}
-                      />
+                  {flightsByTraveler.map(([travelerName, travelerFlights]) => (
+                    <View key={travelerName} className="mb-3">
+                      <View className="flex-row items-center mb-1.5">
+                        <Ionicons name="person" size={13} color="#3B82B0" />
+                        <Text className="text-xs font-semibold text-rally-700 dark:text-rally-300 ml-1.5 uppercase tracking-wider">{travelerName}</Text>
+                      </View>
+                      {travelerFlights.map((f) => (
+                        <View key={f.id} className="mb-2">
+                          <FlightBookingCard
+                            booking={f}
+                            onPress={() => router.push({ pathname: '/booking/flight-detail', params: { id: f.id } })}
+                            onDelete={() => handleDeleteFlight(f.id, f.airline)}
+                          />
+                        </View>
+                      ))}
                     </View>
                   ))}
                   {!tournament.air_not_needed && flights.length === 0 && (

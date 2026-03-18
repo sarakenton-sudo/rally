@@ -135,10 +135,21 @@ export default function FlightDetailScreen() {
               <Ionicons name="airplane" size={16} color="rgba(254,254,254,0.4)" />
             </View>
             <View className="flex-1 items-center">
-              <Text className="text-xs text-purple-200 uppercase">Return</Text>
-              <Text className="text-lg font-bold text-cream mt-1">{formatShortDate(booking.return_date)}</Text>
-              {booking.arrival_time && (
-                <Text className="text-sm text-purple-200 mt-0.5">{booking.arrival_time}</Text>
+              {booking.return_date ? (
+                <>
+                  <Text className="text-xs text-purple-200 uppercase">Return</Text>
+                  <Text className="text-lg font-bold text-cream mt-1">{formatShortDate(booking.return_date)}</Text>
+                  {booking.arrival_time && (
+                    <Text className="text-sm text-purple-200 mt-0.5">{booking.arrival_time}</Text>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Text className="text-xs text-purple-200 uppercase">Type</Text>
+                  <View className="bg-amber-100/20 rounded px-2 py-0.5 mt-1">
+                    <Text className="text-sm font-semibold text-amber-200">One-way</Text>
+                  </View>
+                </>
               )}
             </View>
           </View>
@@ -159,7 +170,9 @@ export default function FlightDetailScreen() {
             <DetailRow icon="airplane" label="Flight Number" value={booking.flight_number} />
           ) : null}
           <DetailRow icon="calendar-outline" label="Departure" value={`${formatDate(booking.departure_date)}${booking.departure_time ? ` at ${booking.departure_time}` : ''}`} />
-          <DetailRow icon="calendar-outline" label="Return" value={`${formatDate(booking.return_date)}${booking.arrival_time ? ` at ${booking.arrival_time}` : ''}`} />
+          {booking.return_date && (
+            <DetailRow icon="calendar-outline" label="Return" value={`${formatDate(booking.return_date)}${booking.arrival_time ? ` at ${booking.arrival_time}` : ''}`} />
+          )}
           {booking.seat_number ? (
             <DetailRow icon="grid-outline" label="Seat" value={booking.seat_number} />
           ) : null}

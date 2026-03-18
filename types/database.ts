@@ -167,7 +167,7 @@ export interface FlightBooking {
   confirmation_code: string;
   ticket_number: string | null;
   departure_date: string;
-  return_date: string;
+  return_date: string | null;
   booked_by: string;
   traveler_names: string[];
   cost: number | null;

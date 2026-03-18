@@ -150,7 +150,7 @@ export default function AddFlightBookingScreen() {
   const handleSave = async () => {
     if (!airline) { showAlert('Missing field', 'Please select an airline.'); return; }
     if (!confirmationCode.trim()) { showAlert('Missing field', 'Please enter a confirmation code.'); return; }
-    if (!departureDate || !returnDate) { showAlert('Missing field', 'Please set departure and return dates.'); return; }
+    if (!departureDate) { showAlert('Missing field', 'Please set a departure date.'); return; }
     if (!selectedTournamentId) { showAlert('Missing field', 'Please select a tournament.'); return; }
 
     const travelerNames = travelers.map((t) => t.trim()).filter(Boolean);
@@ -166,7 +166,7 @@ export default function AddFlightBookingScreen() {
       ticket_number: ticketNumber.trim() || null,
       flight_number: flightNumber.trim() || null,
       departure_date: departureDate.toISOString().split('T')[0],
-      return_date: returnDate.toISOString().split('T')[0],
+      return_date: returnDate ? returnDate.toISOString().split('T')[0] : null,
       departure_time: departureTime.trim() || null,
       arrival_time: arrivalTime.trim() || null,
       seat_number: seatNumber.trim() || null,

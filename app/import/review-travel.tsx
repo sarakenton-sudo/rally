@@ -204,7 +204,7 @@ export default function ReviewTravelScreen() {
             flight_number: item.flight_number || null,
             ticket_number: item.ticket_number || null,
             departure_date: item.departure_date || '',
-            return_date: item.return_date || '',
+            return_date: item.return_date || null,
             departure_time: item.departure_time || null,
             arrival_time: item.arrival_time || null,
             seat_number: item.seat_number || null,
