@@ -294,7 +294,7 @@ export default function TravelScreen() {
                   <FlightBookingCard
                     key={f.id}
                     booking={f}
-                    hideTravelers
+                    singleTraveler={item.travelerName}
                     onPress={() => router.push({ pathname: '/booking/flight-detail', params: { id: f.id } })}
                     onDelete={() => handleDeleteFlight(f.id, f.airline)}
                   />

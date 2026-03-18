@@ -710,7 +710,7 @@ export default function TournamentDetailScreen() {
                         <View key={f.id} className="mb-2">
                           <FlightBookingCard
                             booking={f}
-                            hideTravelers
+                            singleTraveler={displayName}
                             onPress={() => router.push({ pathname: '/booking/flight-detail', params: { id: f.id } })}
                             onDelete={() => handleDeleteFlight(f.id, f.airline)}
                           />
