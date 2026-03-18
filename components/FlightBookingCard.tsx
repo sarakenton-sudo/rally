@@ -27,7 +27,7 @@ export default function FlightBookingCard({ booking, tournamentName, singleTrave
           <View className="flex-row items-center flex-1">
             <Ionicons name="airplane" size={18} color="#8FA8BF" />
             <Text className="text-lg font-bold text-bark dark:text-cream ml-2">
-              {booking.airline}
+              {booking.airline}{booking.flight_number ? ` ${booking.flight_number}` : ''}
             </Text>
             {tournamentName && (
               <Text className="text-xs text-stone ml-2" numberOfLines={1}>
@@ -55,9 +55,8 @@ export default function FlightBookingCard({ booking, tournamentName, singleTrave
           <View className="flex-row items-center mt-1.5">
             <Ionicons name="calendar-outline" size={14} color="#8FA8BF" />
             <Text className="text-sm text-stone dark:text-parchment ml-2">
-              {booking.return_date
-                ? `${formatDate(booking.departure_date)} — ${formatDate(booking.return_date)}`
-                : formatDate(booking.departure_date)}
+              {formatDate(booking.departure_date)}{booking.departure_time ? ` at ${booking.departure_time}` : ''}
+              {booking.return_date ? ` — ${formatDate(booking.return_date)}${booking.arrival_time ? ` at ${booking.arrival_time}` : ''}` : ''}
             </Text>
             {!booking.return_date && (
               <View className="bg-amber-100 dark:bg-amber-900/30 rounded px-1.5 py-0.5 ml-2">
