@@ -74,6 +74,18 @@ export default function SeasonScreen() {
         hotelCount={hotelBookings.filter((h) => h.tournament_id === item.data.id).length}
         flightCount={flightBookings.filter((f) => f.tournament_id === item.data.id).length}
         backupHotelCount={hotelBookings.filter((h) => h.tournament_id === item.data.id && h.is_backup).length}
+        hasFlightConflict={(() => {
+          const tf = flightBookings.filter((f) => f.tournament_id === item.data.id);
+          const seen = new Set<string>();
+          for (const f of tf) {
+            for (const name of f.traveler_names) {
+              const key = `${name.toLowerCase().trim()}|${f.departure_date}`;
+              if (seen.has(key)) return true;
+              seen.add(key);
+            }
+          }
+          return false;
+        })()}
         athlete={activeAthlete}
         onPress={() => router.push(`/tournament/${item.data.id}`)}
       />

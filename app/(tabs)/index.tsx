@@ -477,6 +477,18 @@ export default function HomeScreen() {
                 hotelCount={hotelBookings.filter((h) => h.tournament_id === t.id).length}
                 flightCount={flightBookings.filter((f) => f.tournament_id === t.id).length}
                 backupHotelCount={hotelBookings.filter((h) => h.tournament_id === t.id && h.is_backup).length}
+                hasFlightConflict={(() => {
+                  const tf = flightBookings.filter((f) => f.tournament_id === t.id);
+                  const seen = new Set<string>();
+                  for (const f of tf) {
+                    for (const name of f.traveler_names) {
+                      const key = `${name.toLowerCase().trim()}|${f.departure_date}`;
+                      if (seen.has(key)) return true;
+                      seen.add(key);
+                    }
+                  }
+                  return false;
+                })()}
                 athlete={getAthleteForTournament(t)}
                 onPress={() => router.push(`/tournament/${t.id}`)}
               />

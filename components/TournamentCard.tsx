@@ -13,6 +13,7 @@ interface TournamentCardProps {
   hotelCount?: number;
   flightCount?: number;
   backupHotelCount?: number;
+  hasFlightConflict?: boolean;
   athlete?: Athlete | null;
   onPress?: () => void;
 }
@@ -35,10 +36,10 @@ function openDirections(address: string) {
   if (url) Linking.openURL(url);
 }
 
-export default function TournamentCard({ tournament, hotelCount = 0, flightCount = 0, backupHotelCount = 0, athlete, onPress }: TournamentCardProps) {
+export default function TournamentCard({ tournament, hotelCount = 0, flightCount = 0, backupHotelCount = 0, hasFlightConflict = false, athlete, onPress }: TournamentCardProps) {
   const hasHotel = hotelCount > 0;
   const hasFlight = flightCount > 0;
-  const hasMultipleBookings = backupHotelCount > 0 || hotelCount > 1 || flightCount > 1;
+  const hasMultipleBookings = backupHotelCount > 0 || hotelCount > 1 || hasFlightConflict;
   // Compute display status based on actual booking state for upcoming tournaments
   const hotelResolved = tournament.hotel_not_needed || hasHotel;
   const airResolved = tournament.air_not_needed || hasFlight;
@@ -147,7 +148,7 @@ export default function TournamentCard({ tournament, hotelCount = 0, flightCount
               Multiple Bookings
             </Text>
             <Text className="text-xs text-red-400 ml-1">
-              — {[hotelCount > 1 ? `${hotelCount} hotels` : null, flightCount > 1 ? `${flightCount} flights` : null, backupHotelCount > 0 ? `${backupHotelCount} backup` : null].filter(Boolean).join(' · ')}
+              — {[hotelCount > 1 ? `${hotelCount} hotels` : null, hasFlightConflict ? 'conflicting flights' : null, backupHotelCount > 0 ? `${backupHotelCount} backup` : null].filter(Boolean).join(' · ')}
             </Text>
           </View>
         )}
