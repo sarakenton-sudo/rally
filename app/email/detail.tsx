@@ -507,6 +507,20 @@ export default function EmailDetailScreen() {
         for (const [key, val] of Object.entries(cleanData)) {
           if (key === 'tournament_id') continue;
           const current = (existing as any)[key];
+          // Special handling: merge traveler_names arrays
+          if (key === 'traveler_names' && Array.isArray(current) && Array.isArray(val)) {
+            const existingUpper = current.map((n: string) => n.toUpperCase().trim());
+            const newNames = (val as string[]).filter((n) => !existingUpper.includes(n.toUpperCase().trim()));
+            if (newNames.length > 0) {
+              updates[key] = [...current, ...newNames];
+            }
+            continue;
+          }
+          // Special handling: merge seat_number if it has new info
+          if (key === 'seat_number' && current && val && String(val).includes(',') && !String(current).includes(',')) {
+            updates[key] = val;
+            continue;
+          }
           if (!current || current === '' || current === null) {
             updates[key] = val;
           }
