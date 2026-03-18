@@ -1,4 +1,4 @@
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, Linking, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { FlightBooking } from '@/types/database';
 
@@ -15,7 +15,56 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+/** Extract just the numeric portion from a flight number like "WN 1234" or "DL1234" or "1234" */
+function extractFlightNum(flightNumber: string): string {
+  const match = flightNumber.match(/(\d+)\s*$/);
+  return match ? match[1] : flightNumber.replace(/\s/g, '');
+}
+
+/** Build a flight status URL for major airlines. Returns null if unsupported. */
+function getFlightStatusUrl(airline: string, flightNumber: string | null, departureDate: string): string | null {
+  if (!flightNumber) return null;
+  const num = extractFlightNum(flightNumber);
+  // YYYY-MM-DD
+  const date = departureDate;
+  // MM/DD/YYYY
+  const [y, m, d] = date.split('-');
+  const dateSlash = `${m}/${d}/${y}`;
+
+  const a = airline.toLowerCase();
+
+  if (a.includes('southwest')) {
+    // Southwest uses flight number + date
+    return `https://www.southwest.com/air/flight-status/?departureDate=${date}&flightNumber=${num}`;
+  }
+  if (a.includes('delta')) {
+    return `https://www.delta.com/flight-status/results?flightNo=${num}&depDate=${dateSlash}`;
+  }
+  if (a.includes('united')) {
+    return `https://www.united.com/en/us/flightstatus/results/${num}/${date}`;
+  }
+  if (a.includes('american')) {
+    return `https://www.aa.com/travelInformation/flights/status?search=AA&flightNumber=${num}&departureDate=${date}`;
+  }
+  if (a.includes('jetblue')) {
+    return `https://www.jetblue.com/flight-status?flightNumber=${num}&departDate=${date}`;
+  }
+  if (a.includes('spirit')) {
+    return `https://www.spirit.com/flight-status?DN=${date}&FN=${num}`;
+  }
+  if (a.includes('frontier')) {
+    return `https://www.flyfrontier.com/travel/flight-status/?flightNumber=${num}&date=${date}`;
+  }
+  if (a.includes('alaska')) {
+    return `https://www.alaskaair.com/flightstatus?fno=${num}&date=${dateSlash}`;
+  }
+  // Generic fallback — Google flight status search
+  return `https://www.google.com/search?q=${encodeURIComponent(`${airline} flight ${num} status ${date}`)}`;
+}
+
 export default function FlightBookingCard({ booking, tournamentName, singleTraveler, onPress, onDelete }: FlightBookingCardProps) {
+  const statusUrl = getFlightStatusUrl(booking.airline, booking.flight_number, booking.departure_date);
+
   return (
     <Pressable
       className="bg-warm-white dark:bg-bark-light rounded-2xl mb-3 overflow-hidden border border-parchment dark:border-rally-900 active:opacity-90"
@@ -79,6 +128,24 @@ export default function FlightBookingCard({ booking, tournamentName, singleTrave
                 ${booking.cost.toFixed(2)}
               </Text>
             </View>
+          )}
+
+          {statusUrl && (
+            <Pressable
+              className="flex-row items-center mt-2 active:opacity-70"
+              onPress={(e) => {
+                e.stopPropagation();
+                if (Platform.OS === 'web') {
+                  window.open(statusUrl, '_blank');
+                } else {
+                  Linking.openURL(statusUrl);
+                }
+              }}
+            >
+              <Ionicons name="pulse" size={14} color="#3B82B0" />
+              <Text className="text-xs font-semibold text-rally-600 ml-1.5">Check Flight Status</Text>
+              <Ionicons name="open-outline" size={10} color="#3B82B0" style={{ marginLeft: 4 }} />
+            </Pressable>
           )}
         </View>
       </View>
