@@ -146,9 +146,10 @@ export default function HomeScreen() {
     const ticketTournaments = seasonTournaments.filter((t) => {
       if (!t.ticket_link) return false;
       const d = daysUntil(t.start_date);
-      // Show purchased tickets within 7 days of tournament
+      const isActive = d <= 0 && daysUntil(t.end_date) >= 0;
       const tix = tournamentTickets.filter((tk) => tk.tournament_id === t.id);
-      if (tix.length > 0 && d >= 0 && d <= 7) return true;
+      // Always show purchased tickets during active tournament or within 7 days
+      if (tix.length > 0 && (isActive || (d >= 0 && d <= 7))) return true;
       // Show buy prompt if not purchased
       if (t.tickets_purchased || tix.length > 0) return false;
       if (d >= 0 && d <= 7) return true;
@@ -165,10 +166,14 @@ export default function HomeScreen() {
       const hasPurchased = tix.length > 0;
       const firstTicket = tix[0];
 
+      // Active tournament = current date is within start/end dates → top priority
+      const isActive = daysUntil(t.start_date) <= 0 && daysUntil(t.end_date) >= 0;
+      const ticketPriority = isActive ? 0 : 3;
+
       if (hasPurchased && firstTicket?.ticket_url) {
         // View purchased ticket
         cards.push({
-          priority: 3,
+          priority: ticketPriority,
           text: `View Tickets — ${t.name}`,
           subtitle: `${tix.length} ticket${tix.length > 1 ? 's' : ''} · ${firstTicket.ticket_holder_name}${tix.length > 1 ? ` +${tix.length - 1}` : ''}`,
           icon: 'ticket',
@@ -185,7 +190,7 @@ export default function HomeScreen() {
       } else {
         // Buy tickets
         cards.push({
-          priority: 3,
+          priority: ticketPriority,
           text: `Buy Tickets for ${t.name}`,
           subtitle: teamCode ? `Code copied: ${teamCode}` : 'Tickets available now',
           icon: 'ticket-outline',

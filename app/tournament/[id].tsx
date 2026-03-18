@@ -443,8 +443,8 @@ export default function TournamentDetailScreen() {
                         </View>
                       )}
 
-                      {/* Ticket sales date */}
-                      {tournament.ticket_sales_date && (
+                      {/* Ticket sales date — hide once tickets are purchased */}
+                      {tournament.ticket_sales_date && tickets.length === 0 && !tournament.tickets_purchased && (
                         <View className="flex-row items-center mt-3 pt-3 border-t border-green-100 dark:border-green-900">
                           <Ionicons name="ticket-outline" size={14} color={daysUntil(tournament.ticket_sales_date) <= 0 ? '#16a34a' : '#d97706'} />
                           <Text className={`text-sm ml-2 font-medium ${daysUntil(tournament.ticket_sales_date) <= 0 ? 'text-green-700' : 'text-amber-600'}`}>
