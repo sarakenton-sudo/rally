@@ -273,6 +273,64 @@ export async function updateEmailTemplate(
   if (error) throw error;
 }
 
+// ---- Leads ----
+
+export async function fetchLeads(
+  opts: { status?: string; search?: string; page?: number; pageSize?: number } = {}
+) {
+  const { status, search, page = 0, pageSize = 50 } = opts;
+  let query = supabase
+    .from('leads')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .range(page * pageSize, (page + 1) * pageSize - 1);
+
+  if (status) query = query.eq('status', status);
+  if (search) query = query.or(`email.ilike.%${search}%,phone.ilike.%${search}%`);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchLeadStats() {
+  const { data, error } = await supabase.from('leads').select('status');
+  if (error) throw error;
+  const rows = data ?? [];
+  return {
+    total: rows.length,
+    new: rows.filter((r) => r.status === 'new').length,
+    invited: rows.filter((r) => r.status === 'invited').length,
+    signed_up: rows.filter((r) => r.status === 'signed_up').length,
+  };
+}
+
+export async function insertLead(email: string, phone: string | null, source = 'admin') {
+  const { data, error } = await supabase
+    .from('leads')
+    .insert({ email: email.trim().toLowerCase(), phone: phone || null, source, marketing_opt_in: false })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function inviteLead(leadId: string) {
+  const { data, error } = await supabase.functions.invoke('send-invite', {
+    body: { lead_id: leadId },
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function inviteLeadsBulk(leadIds: string[]) {
+  const { data, error } = await supabase.functions.invoke('send-invite', {
+    body: { lead_ids: leadIds },
+  });
+  if (error) throw error;
+  return data;
+}
+
 // ---- Audit Log ----
 
 export async function logAdminAction(

@@ -125,6 +125,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string) => {
+    // Early access gate: check if email has been invited before allowing signup
+    try {
+      const { data: leadData, error: leadError } = await supabase.rpc('check_lead_status', {
+        check_email: email.trim().toLowerCase(),
+      });
+      if (leadError) {
+        console.error('[Auth] check_lead_status error:', leadError.message);
+        return { error: 'Unable to verify early access status. Please try again.' };
+      }
+      if (!leadData || (Array.isArray(leadData) && leadData.length === 0) || leadData?.status !== 'invited') {
+        return { error: 'EARLY_ACCESS_REQUIRED' };
+      }
+    } catch (err: any) {
+      console.error('[Auth] Early access check failed:', err);
+      return { error: 'Unable to verify early access status. Please try again.' };
+    }
+
     const { error } = await supabase.auth.signUp({ email, password });
     return { error: error?.message ?? null };
   };

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Get Early Access — RallyHUB</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700&family=Nunito+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#1E3A5F;--steel:#3B82B0;--teal:#6A9E8A;--mist:#8FA8BF;--frost:#D8E2EC;--ice:#F4F6F8;}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Nunito Sans',sans-serif;color:var(--navy);background:var(--ice);overflow-x:hidden;}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(30,58,95,0.97);backdrop-filter:blur(12px);padding:0 48px;height:68px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.07);}
+.nav-logo{display:flex;align-items:center;gap:6px;text-decoration:none;}
+.nav-links{display:flex;align-items:center;gap:32px;}
+.nav-links a{font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);text-decoration:none;transition:color 0.2s;}
+.nav-links a:hover{color:white;}
+.nav-login{color:white!important;padding:9px 18px;border-radius:9px;font-weight:700!important;border:1.5px solid rgba(255,255,255,0.25)!important;transition:all 0.2s!important;}
+.nav-login:hover{border-color:rgba(255,255,255,0.5)!important;background:rgba(255,255,255,0.06)!important;}
+
+/* HERO */
+.ea-hero{min-height:100vh;background:var(--navy);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:120px 48px 100px;}
+.ea-grid{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,0.05) 1px,transparent 1px);background-size:36px 36px;pointer-events:none;}
+.ea-glow-1{position:absolute;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(59,130,176,0.2) 0%,transparent 70%);top:-200px;right:-100px;pointer-events:none;}
+.ea-glow-2{position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(106,158,138,0.13) 0%,transparent 70%);bottom:-150px;left:-50px;pointer-events:none;}
+
+.ea-content{position:relative;z-index:2;max-width:520px;width:100%;text-align:center;}
+.ea-eyebrow{display:inline-flex;align-items:center;gap:8px;background:rgba(59,130,176,0.28);border:1px solid rgba(59,130,176,0.5);border-radius:9999px;padding:6px 16px;margin-bottom:26px;animation:fadeUp 0.5s ease both;}
+.eyebrow-dot{width:7px;height:7px;border-radius:50%;background:#fff;}
+.eyebrow-text{font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#fff;}
+.ea-headline{font-family:'Nunito',sans-serif;font-weight:900;font-size:clamp(32px,4vw,48px);line-height:1.05;letter-spacing:-0.03em;color:white;margin-bottom:14px;animation:fadeUp 0.5s 0.08s ease both;}
+.ea-headline .accent{color:var(--steel);}
+.ea-sub{font-size:16px;font-weight:400;line-height:1.75;color:rgba(255,255,255,0.7);max-width:420px;margin:0 auto 36px;animation:fadeUp 0.5s 0.14s ease both;}
+
+/* FORM */
+.ea-form-card{background:white;border-radius:20px;padding:36px 32px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:left;animation:fadeUp 0.5s 0.2s ease both;}
+.ea-form-card label{display:block;font-family:'Nunito',sans-serif;font-weight:700;font-size:13px;color:var(--navy);margin-bottom:6px;}
+.ea-form-card input[type="email"],
+.ea-form-card input[type="tel"]{width:100%;padding:12px 14px;border:1.5px solid var(--frost);border-radius:10px;font-family:'Nunito Sans',sans-serif;font-size:15px;color:var(--navy);outline:none;transition:border-color 0.2s;}
+.ea-form-card input[type="email"]:focus,
+.ea-form-card input[type="tel"]:focus{border-color:var(--steel);}
+.ea-form-card input::placeholder{color:var(--mist);}
+.field-group{margin-bottom:20px;}
+.field-hint{font-size:12px;color:var(--mist);margin-top:4px;}
+.checkbox-group{display:flex;align-items:flex-start;gap:10px;margin-bottom:24px;}
+.checkbox-group input[type="checkbox"]{margin-top:3px;width:16px;height:16px;accent-color:var(--steel);flex-shrink:0;}
+.checkbox-group label{font-size:13px;font-weight:400;color:var(--navy);margin-bottom:0;cursor:pointer;}
+.btn-submit{width:100%;background:var(--steel);color:white;font-family:'Nunito',sans-serif;font-weight:800;font-size:16px;padding:14px 32px;border-radius:12px;border:none;cursor:pointer;transition:all 0.2s;}
+.btn-submit:hover{background:#2d6a96;transform:translateY(-1px);}
+.btn-submit:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+
+/* MESSAGES */
+.ea-message{display:none;text-align:center;padding:32px 24px;}
+.ea-message.success{display:block;}
+.ea-message.duplicate{display:block;}
+.ea-message h3{font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--navy);margin-bottom:10px;}
+.ea-message p{font-size:15px;color:var(--mist);line-height:1.6;}
+.ea-message .msg-icon{font-size:42px;margin-bottom:14px;display:block;}
+.ea-error{color:#e74c3c;font-size:13px;margin-top:10px;display:none;text-align:center;}
+
+/* FOOTER */
+footer{background:var(--navy);border-top:1px solid rgba(255,255,255,0.07);padding:44px 48px;}
+.footer-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;}
+.footer-logo{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.f-cap{height:72px;object-fit:contain;}
+.f-tag{font-size:15px;font-weight:700;color:rgba(255,255,255,0.5);margin-top:8px;font-family:'Nunito',sans-serif;}
+.footer-right{text-align:right;font-size:13px;color:rgba(255,255,255,0.4);line-height:1.8;}
+.footer-right a{color:rgba(255,255,255,0.5);text-decoration:none;transition:color 0.2s;}
+.footer-right a:hover{color:white;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+
+/* MOBILE */
+@media(max-width:768px){
+nav{padding:0 12px;height:56px;}
+.nav-links{gap:8px!important;}
+.nav-links a:not(.nav-login){display:none;}
+.nav-login{padding:6px 12px;font-size:11px;}
+.ea-hero{padding:90px 20px 60px;}
+.ea-headline{font-size:28px!important;}
+.ea-sub{font-size:14px;}
+.ea-form-card{padding:28px 20px;border-radius:16px;}
+footer{padding:30px 20px;}
+.footer-inner{flex-direction:column;gap:16px;text-align:center;}
+.footer-right{text-align:center;}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="/" class="nav-logo">
+    <img src="/rallyhub_lockup_white.png" style="height:64px;object-fit:contain;" alt="RallyHUB">
+  </a>
+  <div class="nav-links">
+    <a href="/auth" class="nav-login">Log In</a>
+  </div>
+</nav>
+
+<!-- HERO + FORM -->
+<section class="ea-hero">
+  <div class="ea-grid"></div>
+  <div class="ea-glow-1"></div>
+  <div class="ea-glow-2"></div>
+
+  <div class="ea-content">
+    <div class="ea-eyebrow">
+      <div class="eyebrow-dot"></div>
+      <div class="eyebrow-text">Early Access</div>
+    </div>
+    <h1 class="ea-headline">Get on the <span class="accent">list.</span></h1>
+    <p class="ea-sub">We're opening RALLY to volleyball families in waves. Drop your email and we'll send you an invite when your spot is ready.</p>
+
+    <div class="ea-form-card" id="formCard">
+      <form id="earlyAccessForm">
+        <div class="field-group">
+          <label for="email">Email address</label>
+          <input type="email" id="email" name="email" placeholder="you@example.com" required>
+        </div>
+        <div class="field-group">
+          <label for="phone">Phone number</label>
+          <input type="tel" id="phone" name="phone" placeholder="(555) 123-4567">
+          <div class="field-hint">For text message updates (optional)</div>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="marketing" name="marketing">
+          <label for="marketing">Send me updates about RALLY features and volleyball tips</label>
+        </div>
+        <button type="submit" class="btn-submit" id="submitBtn">Get Early Access</button>
+        <div class="ea-error" id="errorMsg"></div>
+      </form>
+    </div>
+
+    <!-- Success message (hidden by default) -->
+    <div class="ea-form-card" id="successCard" style="display:none;">
+      <div class="ea-message success" style="display:block;">
+        <span class="msg-icon">&#127952;</span>
+        <h3>You're on the list!</h3>
+        <p>We'll send you an invite when your spot is ready. Keep an eye on your inbox.</p>
+      </div>
+    </div>
+
+    <!-- Duplicate message (hidden by default) -->
+    <div class="ea-form-card" id="duplicateCard" style="display:none;">
+      <div class="ea-message duplicate" style="display:block;">
+        <span class="msg-icon">&#9996;&#65039;</span>
+        <h3>You've already applied!</h3>
+        <p>We've got your info. Sit tight — we'll reach out when your invite is ready.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-logo">
+        <img class="f-cap" src="/rallyhub_lockup_white.png" alt="RallyHUB">
+      </div>
+      <div class="f-tag">Built by club parents, for club parents.</div>
+    </div>
+    <div class="footer-right">&copy; 2026 Quiet Standard Consulting LLC &middot; All rights reserved<br><a href="/terms">Terms of Use</a> &middot; <a href="/privacy">Privacy Policy</a><br>hello@rally-hub.com</div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = 'https://dtoolzolnxfjlivwyblv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0b29sem9sbnhmamxpdnd5Ymx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDUzMDAsImV4cCI6MjA4ODU4MTMwMH0.RETMf8NonNVZSKcguAxKQ1cXK8ZHv8glzJ9nHnfwfAg';
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const form = document.getElementById('earlyAccessForm');
+const formCard = document.getElementById('formCard');
+const successCard = document.getElementById('successCard');
+const duplicateCard = document.getElementById('duplicateCard');
+const submitBtn = document.getElementById('submitBtn');
+const errorMsg = document.getElementById('errorMsg');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  errorMsg.style.display = 'none';
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting...';
+
+  const email = document.getElementById('email').value.trim().toLowerCase();
+  const phone = document.getElementById('phone').value.trim() || null;
+  const marketingOptIn = document.getElementById('marketing').checked;
+
+  try {
+    const { error } = await supabase
+      .from('leads')
+      .insert({
+        email: email,
+        phone: phone,
+        marketing_opt_in: marketingOptIn,
+        source: 'website'
+      });
+
+    if (error) {
+      // Unique constraint violation on email
+      if (error.code === '23505') {
+        formCard.style.display = 'none';
+        duplicateCard.style.display = 'block';
+        return;
+      }
+      throw error;
+    }
+
+    formCard.style.display = 'none';
+    successCard.style.display = 'block';
+  } catch (err) {
+    errorMsg.textContent = 'Something went wrong. Please try again.';
+    errorMsg.style.display = 'block';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Get Early Access';
+  }
+});
+</script>
+</body>
+</html>

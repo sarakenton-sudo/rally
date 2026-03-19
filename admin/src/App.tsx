@@ -15,6 +15,7 @@ import { NotificationDetail } from '@/pages/NotificationDetail';
 import { DeliveryLog } from '@/pages/DeliveryLog';
 import { EmailTemplates } from '@/pages/EmailTemplates';
 import { EmailDetail } from '@/pages/EmailDetail';
+import { Leads } from '@/pages/Leads';
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { admin, loading } = useAdminAuth();
@@ -59,6 +60,7 @@ export function App() {
           <Route path="delivery-log" element={<DeliveryLog />} />
           <Route path="emails" element={<EmailTemplates />} />
           <Route path="emails/:templateId" element={<EmailDetail />} />
+          <Route path="leads" element={<Leads />} />
           <Route path="reports" element={<Reports />} />
         </Route>
         <Route path="*" element={<Navigate to="/admin" replace />} />

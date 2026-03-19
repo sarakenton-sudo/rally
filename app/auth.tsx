@@ -23,7 +23,9 @@ export default function AuthScreen() {
   const [hasInviteCode, setHasInviteCode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
+  const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' | 'info' } | null>(null);
+  // Early access gate: set to false to re-enable Google OAuth signup
+  const earlyAccessMode = true;
 
   const handleSubmit = async () => {
     setMessage(null);
@@ -35,6 +37,11 @@ export default function AuthScreen() {
     try {
       if (isSignUp) {
         const { error } = await signUp(email.trim(), password);
+        if (error === 'EARLY_ACCESS_REQUIRED') {
+          setLoading(false);
+          setMessage({ text: 'RALLY is currently in Early Access. Apply at rally-hub.com/early-access and we\'ll send you an invite!', type: 'info' });
+          return;
+        }
         if (error) { setLoading(false); setMessage({ text: `Sign up error: ${error}`, type: 'error' }); return; }
         if (hasInviteCode && inviteCode.trim()) {
           const { error: inviteError } = await acceptInvite(inviteCode.trim());
@@ -102,19 +109,41 @@ export default function AuthScreen() {
                 borderRadius: 14,
                 padding: 14,
                 marginBottom: 16,
-                backgroundColor: message.type === 'error' ? 'rgba(239,68,68,0.15)' : 'rgba(106,158,138,0.15)',
+                backgroundColor: message.type === 'info' ? 'rgba(59,130,176,0.15)' : message.type === 'error' ? 'rgba(239,68,68,0.15)' : 'rgba(106,158,138,0.15)',
                 borderWidth: 1.5,
-                borderColor: message.type === 'error' ? 'rgba(239,68,68,0.3)' : 'rgba(106,158,138,0.35)',
+                borderColor: message.type === 'info' ? 'rgba(59,130,176,0.35)' : message.type === 'error' ? 'rgba(239,68,68,0.3)' : 'rgba(106,158,138,0.35)',
               }}
             >
               <Text style={{
                 fontSize: 13,
                 textAlign: 'center',
                 fontFamily: 'NunitoSans-SemiBold',
-                color: message.type === 'error' ? '#fca5a5' : '#6A9E8A',
+                color: message.type === 'info' ? '#7DBDD9' : message.type === 'error' ? '#fca5a5' : '#6A9E8A',
               }}>
                 {message.text}
               </Text>
+              {message.type === 'info' && (
+                <Pressable
+                  style={{ marginTop: 10, alignItems: 'center' }}
+                  onPress={() => {
+                    const url = 'https://rally-hub.com/early-access';
+                    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                      window.open(url, '_blank');
+                    } else {
+                      Linking.openURL(url);
+                    }
+                  }}
+                >
+                  <Text style={{
+                    fontSize: 13,
+                    fontFamily: 'NunitoSans-Bold',
+                    color: '#3B82B0',
+                    textDecorationLine: 'underline',
+                  }}>
+                    Apply for Early Access
+                  </Text>
+                </Pressable>
+              )}
             </View>
           )}
 
@@ -127,38 +156,42 @@ export default function AuthScreen() {
             </View>
           )}
 
-          {/* Google Sign-In Button */}
-          <Pressable
-            style={{
-              backgroundColor: '#FEFEFE',
-              borderRadius: 14,
-              paddingVertical: 14,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 20,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.12,
-              shadowRadius: 12,
-              elevation: 4,
-              opacity: googleLoading ? 0.6 : 1,
-            }}
-            onPress={handleGoogleSignIn}
-            disabled={googleLoading || loading}
-          >
-            <Ionicons name="logo-google" size={20} color="#4285F4" style={{ marginRight: 10 }} />
-            <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-Bold', color: '#3a5a7a' }}>
-              {googleLoading ? 'Please wait...' : 'Continue with Google'}
-            </Text>
-          </Pressable>
+          {/* Google Sign-In Button — disabled during early access. Set earlyAccessMode = false to re-enable. */}
+          {!earlyAccessMode && (
+            <Pressable
+              style={{
+                backgroundColor: '#FEFEFE',
+                borderRadius: 14,
+                paddingVertical: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 20,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.12,
+                shadowRadius: 12,
+                elevation: 4,
+                opacity: googleLoading ? 0.6 : 1,
+              }}
+              onPress={handleGoogleSignIn}
+              disabled={googleLoading || loading}
+            >
+              <Ionicons name="logo-google" size={20} color="#4285F4" style={{ marginRight: 10 }} />
+              <Text style={{ fontSize: 15, fontFamily: 'NunitoSans-Bold', color: '#3a5a7a' }}>
+                {googleLoading ? 'Please wait...' : 'Continue with Google'}
+              </Text>
+            </Pressable>
+          )}
 
-          {/* Divider */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
-            <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.12)' }} />
-            <Text style={{ marginHorizontal: 16, fontSize: 12, color: 'rgba(255,255,255,0.35)', fontFamily: 'NunitoSans-Regular' }}>or</Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.12)' }} />
-          </View>
+          {/* Divider — hidden when Google button is hidden during early access */}
+          {!earlyAccessMode && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+              <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.12)' }} />
+              <Text style={{ marginHorizontal: 16, fontSize: 12, color: 'rgba(255,255,255,0.35)', fontFamily: 'NunitoSans-Regular' }}>or</Text>
+              <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.12)' }} />
+            </View>
+          )}
 
           {/* Form */}
           <FormField

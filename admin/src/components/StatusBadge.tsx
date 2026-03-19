@@ -17,6 +17,8 @@ const colors: Record<string, string> = {
   bounced: 'bg-red-200 text-red-800',
   push: 'bg-rally-100 text-rally-700',
   sms: 'bg-amber-100 text-amber-700',
+  invited: 'bg-rally-100 text-rally-700',
+  signed_up: 'bg-sage/20 text-sage',
 };
 
 export function StatusBadge({ value }: { value: string }) {
