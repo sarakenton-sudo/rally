@@ -301,7 +301,38 @@ export default function TournamentDetailScreen() {
 
         <View className="px-4">
           {/* ── Tournament Info (Green) — Venue, Schedule, Tickets ── */}
-          <SectionHeader icon="trophy" title="Tournament Info" iconColor="#16a34a" />
+          <View className="flex-row items-center justify-between mt-6 mb-3">
+            <View className="flex-row items-center">
+              <Ionicons name="trophy" size={18} color="#16a34a" />
+              <Text className="text-sm font-semibold text-stone dark:text-parchment ml-2 uppercase tracking-wider">Tournament Info</Text>
+            </View>
+            <Pressable
+              className="flex-row items-center active:opacity-70 bg-green-50 dark:bg-green-900/20 px-2.5 py-1 rounded-full"
+              onPress={() => {
+                const lines = [`🏐 ${tournament.name}`, formatDateRange(tournament.start_date, tournament.end_date)];
+                const venue = tournament.venues.find((v) => v.is_confirmed) ?? tournament.venues[0];
+                if (venue) {
+                  lines.push(`📍 ${venue.label || tournament.location_city}`);
+                  if (venue.address) lines.push(`https://maps.google.com/?q=${encodeURIComponent(venue.address)}`);
+                } else if (tournament.location_city) {
+                  lines.push(`📍 ${tournament.location_city}`);
+                }
+                if (tournament.schedule_link) lines.push('', `Schedule: ${tournament.schedule_link}`);
+                if (tournament.ticket_link) {
+                  lines.push('', `Tickets: ${tournament.ticket_link}`);
+                  if (activeSeason?.team_code) lines.push(`Team Code: ${activeSeason.team_code}`);
+                }
+                const streamUrl = tournament.streaming_links[0]?.url ?? activeSeason?.default_stream_url;
+                if (streamUrl) lines.push('', `Watch: ${streamUrl}`);
+                const smsBody = encodeURIComponent(lines.join('\n'));
+                const smsUrl = Platform.OS === 'ios' ? `sms:&body=${smsBody}` : `sms:?body=${smsBody}`;
+                Platform.OS === 'web' ? window.open(smsUrl, '_blank') : Linking.openURL(smsUrl);
+              }}
+            >
+              <Ionicons name="share-outline" size={13} color="#16a34a" />
+              <Text className="text-[10px] font-semibold text-green-700 dark:text-green-300 ml-1">Share</Text>
+            </Pressable>
+          </View>
           <View className="rounded-xl overflow-hidden mb-3">
             <View className="h-1.5 bg-green-500" />
             <View className="bg-green-50 dark:bg-green-900/10 px-3 py-3">
