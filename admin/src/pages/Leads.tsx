@@ -100,7 +100,7 @@ export function Leads() {
   }
 
   async function handleInvite(lead: LeadRow) {
-    if (lead.status !== 'new') return;
+    if (lead.status !== 'new' && lead.status !== 'invited') return;
     setInviting(lead.id);
     try {
       await inviteLead(lead.id);
@@ -305,7 +305,7 @@ export function Leads() {
             </div>
 
             <div className="flex gap-2">
-              {selected.status === 'new' && (
+              {(selected.status === 'new' || selected.status === 'invited') && (
                 <button
                   onClick={async () => {
                     const lead = selected;
@@ -315,7 +315,7 @@ export function Leads() {
                   disabled={inviting === selected.id}
                   className="rounded-md bg-rally-500 px-4 py-2 text-sm font-medium text-white hover:bg-rally-600 disabled:opacity-50"
                 >
-                  Send Invite
+                  {selected.status === 'invited' ? 'Resend Invite' : 'Send Invite'}
                 </button>
               )}
               <button
