@@ -199,6 +199,8 @@ form.addEventListener('submit', async (e) => {
       lead_source: 'website'
     });
 
+    console.log('submit_lead response:', { data, error });
+
     if (error) throw error;
 
     // Check for duplicate response from RPC
@@ -211,6 +213,7 @@ form.addEventListener('submit', async (e) => {
     formCard.style.display = 'none';
     successCard.style.display = 'block';
   } catch (err) {
+    console.error('submit_lead error:', err);
     errorMsg.textContent = 'Something went wrong. Please try again.';
     errorMsg.style.display = 'block';
     submitBtn.disabled = false;
