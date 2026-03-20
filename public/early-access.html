@@ -169,60 +169,55 @@ footer{padding:30px 20px;}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-const SUPABASE_URL = 'https://dtoolzolnxfjlivwyblv.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0b29sem9sbnhmamxpdnd5Ymx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDUzMDAsImV4cCI6MjA4ODU4MTMwMH0.RETMf8NonNVZSKcguAxKQ1cXK8ZHv8glzJ9nHnfwfAg';
+(function() {
+  var client = window.supabase.createClient(
+    'https://dtoolzolnxfjlivwyblv.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0b29sem9sbnhmamxpdnd5Ymx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDUzMDAsImV4cCI6MjA4ODU4MTMwMH0.RETMf8NonNVZSKcguAxKQ1cXK8ZHv8glzJ9nHnfwfAg'
+  );
 
-// CDN build may expose as window.supabase or window.supabase.createClient
-const _sb = window.supabase;
-const createClient = _sb.createClient || (_sb.default && _sb.default.createClient) || _sb;
-const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  var form = document.getElementById('earlyAccessForm');
+  var formCard = document.getElementById('formCard');
+  var successCard = document.getElementById('successCard');
+  var duplicateCard = document.getElementById('duplicateCard');
+  var submitBtn = document.getElementById('submitBtn');
+  var errorMsg = document.getElementById('errorMsg');
 
-const form = document.getElementById('earlyAccessForm');
-const formCard = document.getElementById('formCard');
-const successCard = document.getElementById('successCard');
-const duplicateCard = document.getElementById('duplicateCard');
-const submitBtn = document.getElementById('submitBtn');
-const errorMsg = document.getElementById('errorMsg');
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    errorMsg.style.display = 'none';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting...';
 
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  errorMsg.style.display = 'none';
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Submitting...';
+    var email = document.getElementById('email').value.trim().toLowerCase();
+    var phone = document.getElementById('phone').value.trim() || null;
+    var marketingOptIn = document.getElementById('marketing').checked;
 
-  const email = document.getElementById('email').value.trim().toLowerCase();
-  const phone = document.getElementById('phone').value.trim() || null;
-  const marketingOptIn = document.getElementById('marketing').checked;
+    try {
+      var res = await client.rpc('submit_lead', {
+        lead_email: email,
+        lead_phone: phone,
+        lead_marketing_opt_in: marketingOptIn,
+        lead_source: 'website'
+      });
 
-  try {
-    const { data, error } = await sb.rpc('submit_lead', {
-      lead_email: email,
-      lead_phone: phone,
-      lead_marketing_opt_in: marketingOptIn,
-      lead_source: 'website'
-    });
+      if (res.error) throw res.error;
 
-    console.log('submit_lead response:', { data, error });
+      if (res.data && res.data.error === 'duplicate') {
+        formCard.style.display = 'none';
+        duplicateCard.style.display = 'block';
+        return;
+      }
 
-    if (error) throw error;
-
-    // Check for duplicate response from RPC
-    if (data && data.error === 'duplicate') {
       formCard.style.display = 'none';
-      duplicateCard.style.display = 'block';
-      return;
+      successCard.style.display = 'block';
+    } catch (err) {
+      errorMsg.textContent = 'Something went wrong. Please try again.';
+      errorMsg.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Get Early Access';
     }
-
-    formCard.style.display = 'none';
-    successCard.style.display = 'block';
-  } catch (err) {
-    console.error('submit_lead error:', err);
-    errorMsg.textContent = 'Something went wrong: ' + (err.message || JSON.stringify(err));
-    errorMsg.style.display = 'block';
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Get Early Access';
-  }
-});
+  });
+})();
 </script>
 </body>
 </html>
