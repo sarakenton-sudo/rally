@@ -321,7 +321,13 @@ export async function inviteLead(leadId: string) {
   const { data, error } = await supabase.functions.invoke('send-invite', {
     body: { lead_id: leadId },
   });
-  if (error) throw error;
+  if (error) {
+    // functions.invoke wraps errors — extract the message
+    const msg = error instanceof Error ? error.message : (error as any)?.context?.message || JSON.stringify(error);
+    throw new Error(msg);
+  }
+  // Also check if the function returned an error in the response body
+  if (data?.error) throw new Error(data.error);
   return data;
 }
 
@@ -329,7 +335,11 @@ export async function inviteLeadsBulk(leadIds: string[]) {
   const { data, error } = await supabase.functions.invoke('send-invite', {
     body: { lead_ids: leadIds },
   });
-  if (error) throw error;
+  if (error) {
+    const msg = error instanceof Error ? error.message : (error as any)?.context?.message || JSON.stringify(error);
+    throw new Error(msg);
+  }
+  if (data?.error) throw new Error(data.error);
   return data;
 }
 
