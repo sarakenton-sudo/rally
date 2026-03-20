@@ -30,11 +30,6 @@ export default function PasteCombinedScreen() {
     try {
       // Try schedule parser FIRST — fast, handles simple tournament lists
       const scheduleTournaments = smartExtract(trimmed);
-      // DEBUG: show what parser sees (remove after debugging)
-      const lineCount = trimmed.split('\n').length;
-      const dayMatches = (trimmed.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/gim) || []).length;
-      const vsMatches = (trimmed.match(/\bvs\.?\b/gi) || []).length;
-      alert(`DEBUG: ${lineCount} lines, ${dayMatches} day-abbrevs, ${vsMatches} "vs" matches, smartExtract found ${scheduleTournaments.length} tournaments. First 100 chars: ${JSON.stringify(trimmed.slice(0, 100))}`);
       if (scheduleTournaments.length > 0) {
         router.push({
           pathname: '/import/review',
