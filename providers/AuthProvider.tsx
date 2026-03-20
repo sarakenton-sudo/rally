@@ -134,7 +134,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('[Auth] check_lead_status error:', leadError.message);
         return { error: 'Unable to verify early access status. Please try again.' };
       }
-      if (!leadData || (Array.isArray(leadData) && leadData.length === 0) || leadData?.status !== 'invited') {
+      const leadStatus = Array.isArray(leadData) ? leadData[0]?.status : leadData?.status;
+      if (!leadStatus || leadStatus !== 'invited') {
         return { error: 'EARLY_ACCESS_REQUIRED' };
       }
     } catch (err: any) {
