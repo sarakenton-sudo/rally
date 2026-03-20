@@ -25,7 +25,7 @@ export default function AuthScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' | 'info' } | null>(null);
   // Early access gate: set to false to re-enable Google OAuth signup
-  const earlyAccessMode = true;
+  const earlyAccessMode = false;
 
   const handleSubmit = async () => {
     setMessage(null);
