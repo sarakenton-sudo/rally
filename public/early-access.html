@@ -172,7 +172,10 @@ footer{padding:30px 20px;}
 const SUPABASE_URL = 'https://dtoolzolnxfjlivwyblv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0b29sem9sbnhmamxpdnd5Ymx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDUzMDAsImV4cCI6MjA4ODU4MTMwMH0.RETMf8NonNVZSKcguAxKQ1cXK8ZHv8glzJ9nHnfwfAg';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// CDN build may expose as window.supabase or window.supabase.createClient
+const _sb = window.supabase;
+const createClient = _sb.createClient || (_sb.default && _sb.default.createClient) || _sb;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const form = document.getElementById('earlyAccessForm');
 const formCard = document.getElementById('formCard');
@@ -192,7 +195,7 @@ form.addEventListener('submit', async (e) => {
   const marketingOptIn = document.getElementById('marketing').checked;
 
   try {
-    const { data, error } = await supabase.rpc('submit_lead', {
+    const { data, error } = await sb.rpc('submit_lead', {
       lead_email: email,
       lead_phone: phone,
       lead_marketing_opt_in: marketingOptIn,
@@ -214,7 +217,7 @@ form.addEventListener('submit', async (e) => {
     successCard.style.display = 'block';
   } catch (err) {
     console.error('submit_lead error:', err);
-    errorMsg.textContent = 'Something went wrong. Please try again.';
+    errorMsg.textContent = 'Something went wrong: ' + (err.message || JSON.stringify(err));
     errorMsg.style.display = 'block';
     submitBtn.disabled = false;
     submitBtn.textContent = 'Get Early Access';
