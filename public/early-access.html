@@ -192,23 +192,20 @@ form.addEventListener('submit', async (e) => {
   const marketingOptIn = document.getElementById('marketing').checked;
 
   try {
-    const { error } = await supabase
-      .from('leads')
-      .insert({
-        email: email,
-        phone: phone,
-        marketing_opt_in: marketingOptIn,
-        source: 'website'
-      });
+    const { data, error } = await supabase.rpc('submit_lead', {
+      lead_email: email,
+      lead_phone: phone,
+      lead_marketing_opt_in: marketingOptIn,
+      lead_source: 'website'
+    });
 
-    if (error) {
-      // Unique constraint violation on email
-      if (error.code === '23505') {
-        formCard.style.display = 'none';
-        duplicateCard.style.display = 'block';
-        return;
-      }
-      throw error;
+    if (error) throw error;
+
+    // Check for duplicate response from RPC
+    if (data && data.error === 'duplicate') {
+      formCard.style.display = 'none';
+      duplicateCard.style.display = 'block';
+      return;
     }
 
     formCard.style.display = 'none';

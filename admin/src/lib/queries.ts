@@ -306,12 +306,14 @@ export async function fetchLeadStats() {
 }
 
 export async function insertLead(email: string, phone: string | null, source = 'admin') {
-  const { data, error } = await supabase
-    .from('leads')
-    .insert({ email: email.trim().toLowerCase(), phone: phone || null, source, marketing_opt_in: false })
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc('submit_lead', {
+    lead_email: email,
+    lead_phone: phone || null,
+    lead_marketing_opt_in: false,
+    lead_source: source,
+  });
   if (error) throw error;
+  if (data?.error === 'duplicate') throw { code: '23505', message: 'Email already on the list' };
   return data;
 }
 

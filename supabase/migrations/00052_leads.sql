@@ -31,6 +31,30 @@ CREATE POLICY "Admins can update leads"
     ON leads FOR UPDATE
     USING (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.jwt()->>'email'));
 
+-- Submit lead RPC (bypasses RLS for anon inserts)
+CREATE OR REPLACE FUNCTION submit_lead(
+  lead_email TEXT,
+  lead_phone TEXT DEFAULT NULL,
+  lead_marketing_opt_in BOOLEAN DEFAULT false,
+  lead_source TEXT DEFAULT 'website'
+)
+RETURNS JSON AS $$
+DECLARE
+  result JSON;
+BEGIN
+  INSERT INTO leads (email, phone, marketing_opt_in, source)
+  VALUES (lower(trim(lead_email)), lead_phone, lead_marketing_opt_in, lead_source)
+  RETURNING row_to_json(leads.*) INTO result;
+  RETURN result;
+EXCEPTION
+  WHEN unique_violation THEN
+    RETURN json_build_object('error', 'duplicate', 'message', 'Email already registered');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+GRANT EXECUTE ON FUNCTION submit_lead TO anon;
+GRANT EXECUTE ON FUNCTION submit_lead TO authenticated;
+
 -- Check lead status RPC (callable by anon for signup gating)
 CREATE OR REPLACE FUNCTION check_lead_status(check_email TEXT)
 RETURNS TABLE (status TEXT) AS $$
