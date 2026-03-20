@@ -19,6 +19,8 @@ const colors: Record<string, string> = {
   sms: 'bg-amber-100 text-amber-700',
   invited: 'bg-rally-100 text-rally-700',
   signed_up: 'bg-sage/20 text-sage',
+  owner: 'bg-rally-100 text-rally-700',
+  cs_rep: 'bg-frost text-stone',
 };
 
 export function StatusBadge({ value }: { value: string }) {

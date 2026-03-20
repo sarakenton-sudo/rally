@@ -333,6 +333,43 @@ export async function inviteLeadsBulk(leadIds: string[]) {
   return data;
 }
 
+// ---- Admin Users ----
+
+export async function fetchAdminUsers() {
+  const { data, error } = await supabase
+    .from('admin_users')
+    .select('*')
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function addAdminUser(email: string, role: 'owner' | 'cs_rep') {
+  const { data, error } = await supabase
+    .from('admin_users')
+    .insert({ email: email.trim().toLowerCase(), role })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateAdminUserRole(id: string, role: 'owner' | 'cs_rep') {
+  const { error } = await supabase
+    .from('admin_users')
+    .update({ role })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteAdminUser(id: string) {
+  const { error } = await supabase
+    .from('admin_users')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+}
+
 // ---- Audit Log ----
 
 export async function logAdminAction(
