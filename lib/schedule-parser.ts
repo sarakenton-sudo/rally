@@ -424,7 +424,163 @@ function simpleLineExtract(text: string): ExtractedTournament[] | null {
 }
 
 /**
+ * Parse PlayMetrics calendar paste format.
+ * Structure: day-abbrev line, day-number line, team name, event description, time, location.
+ * Month headers like "April 2026" set the current month context.
+ * Only extracts game events (containing "vs"). Skips practices, fundraisers, etc.
+ *
+ * The paste may start mid-block (no day-abbrev for the first event),
+ * contain huge embedded content (flyers, rules docs), and have trailing HTML.
+ */
+function playMetricsExtract(text: string): ExtractedTournament[] | null {
+  // Normalize: strip zero-width chars, BOM, and other invisible Unicode
+  const cleaned = text.replace(/[\u200B-\u200D\uFEFF\u00A0]/g, ' ').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const lines = cleaned.split('\n').map((l) => l.replace(/[^\x20-\x7E\u00C0-\u024F]/g, '').trim());
+  const dayAbbrevRe = /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/i;
+  const monthYearRe = /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})$/i;
+
+  // Detect: need at least 2 day-abbreviation-then-number pairs
+  let dayNumConfirms = 0;
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (dayAbbrevRe.test(lines[i]) && /^\d{1,2}$/.test(lines[i + 1])) {
+      dayNumConfirms++;
+    }
+  }
+  if (dayNumConfirms < 2) return null;
+
+  // Step 1: Find all event block start positions (day-abbrev + day-number)
+  interface EventBlock { dayAbbrev: string; dayNum: number; startIdx: number; }
+  const blocks: EventBlock[] = [];
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (dayAbbrevRe.test(lines[i]) && /^\d{1,2}$/.test(lines[i + 1])) {
+      blocks.push({ dayAbbrev: lines[i], dayNum: parseInt(lines[i + 1]), startIdx: i });
+    }
+  }
+
+  // Step 2: Scan forward through month headers to infer month for each block.
+  // First, find all month headers and their positions.
+  const monthHeaders: { month: string; year: string; lineIdx: number }[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const mh = lines[i].match(monthYearRe);
+    if (mh) {
+      monthHeaders.push({ month: parseMonth(mh[1]) || '', year: mh[2], lineIdx: i });
+    }
+  }
+
+  // Also scan for inline "Month Year" in lines like "December 2025 – April 2026"
+  // that might appear in embedded content — we only use standalone month headers.
+
+  // Infer initial month: if there's a month header before the first block, use it.
+  // Otherwise, look at the first month header after and work backwards.
+  // Common case: the paste starts in the middle of a month with no header.
+  function getMonthYear(blockLineIdx: number): { month: string; year: string } | null {
+    // Find the most recent month header at or before this line
+    let best: { month: string; year: string } | null = null;
+    for (const mh of monthHeaders) {
+      if (mh.lineIdx < blockLineIdx) {
+        best = { month: mh.month, year: mh.year };
+      }
+    }
+    if (best) return best;
+
+    // No header before this block. Look at the first header after and infer.
+    // If the first header is "April 2026" and events before it have day numbers >= 20,
+    // they're likely in March 2026.
+    if (monthHeaders.length > 0) {
+      const first = monthHeaders[0];
+      const m = parseInt(first.month);
+      const prevMonth = m === 1 ? '12' : String(m - 1).padStart(2, '0');
+      const prevYear = m === 1 ? String(parseInt(first.year) - 1) : first.year;
+      return { month: prevMonth, year: prevYear };
+    }
+
+    return null;
+  }
+
+  // Step 3: For each block, collect its content lines and check for "vs"
+  const tournaments: ExtractedTournament[] = [];
+
+  for (let bi = 0; bi < blocks.length; bi++) {
+    const block = blocks[bi];
+    const contentStart = block.startIdx + 2; // skip day-abbrev and day-number lines
+    const contentEnd = bi + 1 < blocks.length
+      ? blocks[bi + 1].startIdx
+      : lines.length;
+
+    // Collect content lines, but stop at month headers (they start a new section)
+    // and limit to ~10 lines to skip embedded junk (flyers, rules, etc.)
+    const blockLines: string[] = [];
+    for (let j = contentStart; j < contentEnd && blockLines.length < 10; j++) {
+      const l = lines[j];
+      if (!l) continue;
+      if (monthYearRe.test(l)) break;
+      // Stop if we hit markdown headers or obvious non-calendar content
+      if (/^#{1,3}\s/.test(l)) break;
+      // Stop at HTML tags
+      if (/^<\w+/.test(l)) break;
+      blockLines.push(l);
+    }
+
+    // Only care about game events — must have "vs" in a line
+    const vsLine = blockLines.find((l) => /\bvs\.?\b/i.test(l));
+    if (!vsLine) continue;
+
+    const my = getMonthYear(block.startIdx);
+    if (!my) continue;
+
+    const day = String(block.dayNum).padStart(2, '0');
+    const dateStr = `${my.year}-${my.month}-${day}`;
+
+    // Extract time line
+    const timeLine = blockLines.find((l) => /\d{1,2}:\d{2}\s*(AM|PM)/i.test(l));
+    const timeNote = timeLine && !/TBD/i.test(timeLine) ? timeLine : '';
+
+    // Location: lines after the team name and event type that aren't the time
+    // Typically: team name, event desc (vs), time, location
+    const vsIdx = blockLines.indexOf(vsLine);
+    const afterVs = blockLines.slice(vsIdx + 1);
+    const locationLines = afterVs.filter((l) =>
+      l !== timeLine &&
+      l.length > 1 &&
+      !/^TBD$/i.test(l) &&
+      !/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/i.test(l) &&
+      !/^\d{1,2}$/.test(l)
+    );
+    // Clean "TBD (Arrive by TBD)" from location
+    const location = locationLines
+      .map((l) => l.replace(/\s*\(Arrive by .*?\)/i, '').trim())
+      .filter((l) => l && !/^TBD$/i.test(l))
+      .join(', ');
+
+    const name = vsLine;
+    const noteParts: string[] = [];
+    if (timeNote) noteParts.push(timeNote);
+    // Include arrive-by note if present
+    const arriveBy = afterVs.find((l) => /Arrive by/i.test(l));
+    if (arriveBy) {
+      const arriveMatch = arriveBy.match(/\(Arrive by (.+?)\)/i);
+      if (arriveMatch && !/TBD/i.test(arriveMatch[1])) {
+        noteParts.push(`Arrive by ${arriveMatch[1]}`);
+      }
+    }
+
+    tournaments.push({
+      name,
+      start_date: dateStr,
+      end_date: dateStr,
+      location_city: '',
+      venue_name: location,
+      venue_address: '',
+      notes: noteParts.join(' | '),
+    });
+  }
+
+  return tournaments.length > 0 ? tournaments : null;
+}
+
+/**
  * Smart local extraction — handles various messy real-world formats:
+ * - PlayMetrics calendar paste (day abbreviations + day numbers)
  * - Tab-separated spreadsheet data (from Google Sheets, Excel, etc.)
  * - "Name - Date - City - Venue" (dash-separated)
  * - "Name, Date, City" (comma-separated)
@@ -444,7 +600,11 @@ export function smartExtract(text: string): ExtractedTournament[] {
     processed = reconstructRows(text);
   }
 
-  // Try TSV/spreadsheet format first
+  // Try PlayMetrics calendar format first (day-abbrev + day-number blocks)
+  const playMetricsResult = playMetricsExtract(text);
+  if (playMetricsResult) return playMetricsResult;
+
+  // Try TSV/spreadsheet format
   const tsvResult = tsvExtract(processed);
   if (tsvResult) return tsvResult;
 
@@ -463,6 +623,15 @@ export function smartExtract(text: string): ExtractedTournament[] {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line || line.length < 5) continue;
+
+    // Skip markdown list items, headers, and promotional/rules content
+    if (/^[\*\-•]\s/.test(line)) continue;
+    if (/^#{1,3}\s/.test(line)) continue;
+    if (/^---+$/.test(line)) continue;
+    // Skip lines with bold markdown labels (e.g., "**Eligible Spirit Nights:** Dec 1...")
+    if (/\*\*[^*]+\*\*/.test(line) && !/tournament|qualifier|championship|classic|cup|invitational|open\b/i.test(line)) continue;
+    // Skip lines that are clearly labels/descriptions with dates embedded
+    if (/(?:Eligible|Competition|Winners|Leaderboard|Timeline|Prize|Rules|How to|Tips|Bonus|Spirit Night|Announced|Updates)/i.test(line)) continue;
 
     let startDate = '';
     let endDate = '';

@@ -1,9 +1,10 @@
 import { StatCard } from '@/components/StatCard';
 import { useAdminData } from '@/hooks/useAdminData';
-import { fetchDashboardStats } from '@/lib/queries';
+import { fetchDashboardStats, fetchLeadStats } from '@/lib/queries';
 
 export function Dashboard() {
   const { data: stats, loading } = useAdminData(() => fetchDashboardStats());
+  const { data: leadStats, loading: leadsLoading } = useAdminData(() => fetchLeadStats(), []);
 
   return (
     <div>
@@ -17,6 +18,14 @@ export function Dashboard() {
           <StatCard label="Active Sessions (7d)" value={stats.activeSessionsWeek} />
           <StatCard label="Pending Errors" value={stats.pendingErrors} />
           <StatCard label="Feature Requests" value={stats.pendingFeatureRequests} sublabel="new / unreviewed" />
+          {!leadsLoading && leadStats && (
+            <>
+              <StatCard label="Total Leads" value={leadStats.total} />
+              <StatCard label="New Leads" value={leadStats.new} sublabel="awaiting invite" />
+              <StatCard label="Invited" value={leadStats.invited} />
+              <StatCard label="Signed Up" value={leadStats.signed_up} sublabel="converted" />
+            </>
+          )}
           <StatCard label="Referrals Sent" value={stats.totalReferrals} />
           <StatCard label="Referral Conversions" value={stats.convertedReferrals} sublabel="signed up from referral" />
         </div>

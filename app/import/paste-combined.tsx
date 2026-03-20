@@ -30,11 +30,26 @@ export default function PasteCombinedScreen() {
     try {
       // Try schedule parser FIRST — fast, handles simple tournament lists
       const scheduleTournaments = smartExtract(trimmed);
+      // DEBUG: show what parser sees (remove after debugging)
+      const lineCount = trimmed.split('\n').length;
+      const dayMatches = (trimmed.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/gim) || []).length;
+      const vsMatches = (trimmed.match(/\bvs\.?\b/gi) || []).length;
+      alert(`DEBUG: ${lineCount} lines, ${dayMatches} day-abbrevs, ${vsMatches} "vs" matches, smartExtract found ${scheduleTournaments.length} tournaments. First 100 chars: ${JSON.stringify(trimmed.slice(0, 100))}`);
       if (scheduleTournaments.length > 0) {
         router.push({
           pathname: '/import/review',
           params: { tournaments: JSON.stringify(scheduleTournaments) },
         });
+        return;
+      }
+
+      // Detect PlayMetrics-like content (day abbreviations + team names) even if no games found.
+      // If it looks like a PlayMetrics schedule with no games, show a helpful message instead
+      // of falling through to AI which will extract junk from embedded flyers/rules.
+      const dayAbbrevCount = (trimmed.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/gim) || []).length;
+      if (dayAbbrevCount >= 3) {
+        setErrorMsg('This looks like a PlayMetrics schedule, but no game days were found. Only events with "vs" (e.g., "Home vs TBA") are imported as tournaments.');
+        setIsExtracting(false);
         return;
       }
 
