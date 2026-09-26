@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, Image, ActivityIndicator, Platform, Alert, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { tapLight } from '@/lib/haptics';
 import { useAuth } from '@/providers/AuthProvider';
 import { useCoachStore } from '@/stores/useCoachStore';
-import { fetchMyCoach, fetchFacilities, isSupabaseConfigured } from '@/lib/coach';
+import { fetchMyCoach, fetchFacilities, fetchPendingRequests, isSupabaseConfigured } from '@/lib/coach';
 import { useIconColors } from '@/lib/colors';
 
 export default function CoachDashboardScreen() {
@@ -17,6 +17,16 @@ export default function CoachDashboardScreen() {
   const setCoachProfile = useCoachStore((s) => s.setCoachProfile);
   const [loading, setLoading] = useState(!coachProfile);
   const [facilityCount, setFacilityCount] = useState<number | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  // Refresh on every visit so the count drops right after approving/declining.
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    if (coachProfile && isSupabaseConfigured) {
+      fetchPendingRequests(coachProfile.id).then(({ data }) => { if (active) setPendingCount(data.length); });
+    }
+    return () => { active = false; };
+  }, [coachProfile]));
 
   useEffect(() => {
     let active = true;
@@ -92,6 +102,26 @@ export default function CoachDashboardScreen() {
       ) : (
         // ---- Coach dashboard ----
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+          {/* Pending requests alert */}
+          {pendingCount > 0 && (
+            <Pressable
+              onPress={() => { tapLight(); router.push('/coach/requests'); }}
+              className="rounded-2xl p-4 mb-4 flex-row items-center active:opacity-80"
+              style={{ backgroundColor: '#d97706', shadowColor: '#d97706', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 3 }}
+            >
+              <View className="w-10 h-10 rounded-full items-center justify-center mr-3" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+                <Ionicons name="notifications" size={20} color="#fff" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-bold text-white">
+                  {pendingCount} lesson request{pendingCount === 1 ? '' : 's'} waiting
+                </Text>
+                <Text className="text-xs text-white/90 mt-0.5">Tap to review and approve or decline</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#fff" />
+            </Pressable>
+          )}
+
           {/* Listing summary card */}
           <View
             className="bg-warm-white dark:bg-bark-light rounded-2xl p-4 border border-parchment dark:border-rally-900 mb-4"
@@ -241,7 +271,8 @@ export default function CoachDashboardScreen() {
             icon="people-outline"
             color="#d97706"
             title="Requests"
-            subtitle="Review & accept lesson requests"
+            subtitle={pendingCount ? `${pendingCount} waiting for your reply` : 'Review & accept lesson requests'}
+            badge={pendingCount}
             onPress={() => router.push('/coach/requests')}
           />
           <DashRow icon="cash-outline" color="#16a34a" title="Earnings" subtitle="Payouts & history" comingSoon />
@@ -251,7 +282,7 @@ export default function CoachDashboardScreen() {
   );
 }
 
-function DashRow({ icon, color = '#3B82B0', title, subtitle, comingSoon, onPress }: { icon: keyof typeof Ionicons.glyphMap; color?: string; title: string; subtitle: string; comingSoon?: boolean; onPress?: () => void }) {
+function DashRow({ icon, color = '#3B82B0', title, subtitle, badge, comingSoon, onPress }: { icon: keyof typeof Ionicons.glyphMap; color?: string; title: string; subtitle: string; badge?: number; comingSoon?: boolean; onPress?: () => void }) {
   return (
     <Pressable
       disabled={!onPress}
@@ -266,6 +297,11 @@ function DashRow({ icon, color = '#3B82B0', title, subtitle, comingSoon, onPress
         <Text className="text-sm font-semibold text-bark dark:text-cream">{title}</Text>
         <Text className="text-xs text-stone dark:text-parchment mt-0.5">{subtitle}</Text>
       </View>
+      {badge ? (
+        <View className="min-w-[22px] h-[22px] px-1.5 rounded-full items-center justify-center mr-2" style={{ backgroundColor: '#dc2626' }}>
+          <Text className="text-xs font-bold text-white">{badge}</Text>
+        </View>
+      ) : null}
       {comingSoon ? (
         <View className="bg-parchment dark:bg-rally-900/30 px-2 py-1 rounded-md">
           <Text className="text-[10px] font-bold text-stone dark:text-parchment">SOON</Text>

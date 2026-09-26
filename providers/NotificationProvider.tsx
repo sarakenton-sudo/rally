@@ -6,6 +6,7 @@ import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useAuth } from './AuthProvider';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { acceptRequest, declineRequest } from '@/lib/coach';
 
 // Configure how notifications appear when app is in foreground
 if (Platform.OS !== 'web') {
@@ -18,6 +19,32 @@ if (Platform.OS !== 'web') {
       shouldShowList: true,
     }),
   });
+
+  // Coach lesson requests: long-press (iOS) / expand (Android) shows these buttons.
+  // Both open the app so the action runs with the coach's signed-in session.
+  Notifications.setNotificationCategoryAsync('booking_request', [
+    { identifier: 'approve', buttonTitle: 'Approve', options: { opensAppToForeground: true, isAuthenticationRequired: true } },
+    { identifier: 'decline', buttonTitle: 'Decline', options: { opensAppToForeground: true, isAuthenticationRequired: true, isDestructive: true } },
+  ]).catch(() => {});
+}
+
+/** Approve/Decline straight from a lesson-request push, else open Requests. */
+async function handleBookingRequestResponse(response: Notifications.NotificationResponse) {
+  const requestId = response.notification.request.content.data?.requestId as string | undefined;
+  const action = response.actionIdentifier;
+  if (!requestId || (action !== 'approve' && action !== 'decline')) {
+    router.push('/coach/requests');
+    return;
+  }
+  const { error } = action === 'approve' ? await acceptRequest(requestId) : await declineRequest(requestId);
+  if (error) {
+    Alert.alert("Couldn't update request", error.message);
+    router.push('/coach/requests');
+  } else {
+    Alert.alert(action === 'approve' ? 'Lesson approved' : 'Request declined',
+      action === 'approve' ? "It's on your schedule." : 'The family has been notified.');
+    router.push(action === 'approve' ? '/coach/schedule' : '/coach/requests');
+  }
 }
 
 interface NotificationContextValue {
@@ -84,6 +111,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notifications.Notification[]>([]);
   const notificationListener = useRef<Notifications.EventSubscription>(null);
   const responseListener = useRef<Notifications.EventSubscription>(null);
+  const handledResponses = useRef(new Set<string>());
   const { user } = useAuth();
 
   // Register for push and store token
@@ -105,12 +133,25 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       });
 
       // Listen for notification taps (opens app)
-      responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      const onResponse = (response: Notifications.NotificationResponse) => {
+        // Same response can arrive via listener and getLastNotificationResponseAsync.
+        const key = `${response.notification.request.identifier}:${response.actionIdentifier}`;
+        if (handledResponses.current.has(key)) return;
+        handledResponses.current.add(key);
+
         const data = response.notification.request.content.data;
-        if (data?.tournamentId) {
+        if (data?.type === 'booking_request') {
+          if (user) handleBookingRequestResponse(response);
+          else handledResponses.current.delete(key); // retry once signed in
+        } else if (data?.type === 'booking_confirmed') {
+          router.push('/coach/schedule');
+        } else if (data?.tournamentId) {
           router.push(`/tournament/${data.tournamentId}`);
         }
-      });
+      };
+      responseListener.current = Notifications.addNotificationResponseReceivedListener(onResponse);
+      // App cold-started from a notification tap/action.
+      Notifications.getLastNotificationResponseAsync().then((r) => { if (r) onResponse(r); });
     }
 
     return () => {
@@ -138,17 +179,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   );
 }
 
-/** Store the Expo push token in a user metadata field or dedicated table */
-async function savePushToken(userId: string, token: string) {
-  try {
-    // Store in app_sessions table (from admin migration)
-    await supabase.from('app_sessions' as any).upsert({
-      user_id: userId,
-      push_token: token,
-      platform: Platform.OS,
-      last_active: new Date().toISOString(),
-    } as any);
-  } catch (err) {
-    console.warn('Failed to save push token:', err);
-  }
+/** Store the Expo push token for server-side push (push_tokens, 00065). */
+async function savePushToken(_userId: string, token: string) {
+  const { error } = await (supabase.rpc as any)('register_push_token', { p_token: token, p_platform: Platform.OS });
+  if (error) console.warn('Failed to save push token:', error.message);
 }

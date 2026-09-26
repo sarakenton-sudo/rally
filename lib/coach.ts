@@ -366,6 +366,12 @@ export async function requestBooking(args: {
   return { data: (data as { request_id: string; booking_mode: string } | null) ?? null, error: error ?? null };
 }
 
+/** Push the coach about a new request (notify-coach-request). Fire-and-forget — the request already exists. */
+export function notifyCoachOfRequest(requestId: string): void {
+  supabase.functions.invoke('notify-coach-request', { body: { request_id: requestId } })
+    .then(({ error }) => { if (error) console.warn('[coach] notify failed:', error.message); });
+}
+
 export async function fetchMyRequests(): Promise<{ data: BookingRequest[]; error: Error | null }> {
   const { data, error } = await supabase
     .from('booking_requests')

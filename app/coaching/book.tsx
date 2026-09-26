@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import FormField from '@/components/FormField';
 import DropdownField from '@/components/DropdownField';
 import { useSeasonStore } from '@/stores/useSeasonStore';
-import { fetchSlot, fetchSessionTypes, requestBooking, isSupabaseConfigured, type SlotWithRefs } from '@/lib/coach';
+import { fetchSlot, fetchSessionTypes, requestBooking, notifyCoachOfRequest, isSupabaseConfigured, type SlotWithRefs } from '@/lib/coach';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess, notifyError } from '@/lib/haptics';
 import type { SessionType } from '@/types/database';
@@ -59,8 +59,9 @@ export default function BookScreen() {
     const filmLinks = film.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
     setSubmitting(true);
     try {
-      const { error } = await requestBooking({ slotId: slotId!, sessionTypeId, athleteId, notes: notes.trim() || null, filmLinks });
+      const { data, error } = await requestBooking({ slotId: slotId!, sessionTypeId, athleteId, notes: notes.trim() || null, filmLinks });
       if (error) { showAlert("Couldn't send request", error.message); notifyError(); return; }
+      if (data?.request_id) notifyCoachOfRequest(data.request_id);
       notifySuccess();
       showAlert('Request sent', "The coach gets your athlete's info and film — you'll hear back soon.", () => router.back());
     } finally {
