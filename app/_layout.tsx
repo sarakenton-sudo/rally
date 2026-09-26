@@ -384,6 +384,10 @@ function RootLayoutNav() {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="coaching/availability"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="coaching/book"
           options={{ presentation: 'modal', headerShown: false }}
         />

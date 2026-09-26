@@ -14,6 +14,7 @@ import { tapLight } from '@/lib/haptics';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 import ReferFriend from '@/components/ReferFriend';
+import { fetchMyUpcomingLessons, sessionKindStyle, isSupabaseConfigured as coachingConfigured, type ParentLesson } from '@/lib/coach';
 
 const AVATAR_COLORS = [
   '#3B82B0', '#7c3aed', '#6A9E8A', '#d97706', '#dc2626',
@@ -44,6 +45,39 @@ function SectionHeader({ icon, iconColor, title, subtitle, right }: {
   );
 }
 
+function LessonCard({ lesson, athleteName }: { lesson: ParentLesson; athleteName?: string }) {
+  const st = sessionKindStyle(lesson.session_kind);
+  const start = new Date(lesson.starts_at);
+  const confirmed = lesson.status === 'accepted';
+  return (
+    <Pressable
+      onPress={() => router.push('/coaching')}
+      className="bg-warm-white dark:bg-bark-light rounded-2xl p-4 mb-3 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
+      style={{ borderLeftWidth: 4, borderLeftColor: st.color, shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
+    >
+      <View className="w-11 h-11 rounded-xl items-center justify-center mr-3" style={{ backgroundColor: st.color + '15' }}>
+        <Text className="text-[10px] font-bold uppercase" style={{ color: st.color }}>
+          {start.toLocaleDateString(undefined, { month: 'short' })}
+        </Text>
+        <Text className="text-base font-bold -mt-0.5" style={{ color: st.color }}>{start.getDate()}</Text>
+      </View>
+      <View className="flex-1">
+        <Text className="text-sm font-bold text-bark dark:text-cream" numberOfLines={1}>
+          {lesson.session_type ?? st.label}{athleteName ? ` · ${athleteName}` : ''}
+        </Text>
+        <Text className="text-xs text-stone dark:text-parchment mt-0.5" numberOfLines={1}>
+          {start.toLocaleDateString(undefined, { weekday: 'short' })} {start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })} · {lesson.coach_name}{lesson.facility ? ` · ${lesson.facility}` : ''}
+        </Text>
+      </View>
+      <View className={`px-2 py-1 rounded-md ml-2 ${confirmed ? 'bg-green-100 dark:bg-green-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}`}>
+        <Text className={`text-[10px] font-bold ${confirmed ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
+          {confirmed ? 'CONFIRMED' : 'REQUESTED'}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
 export default function HomeScreen() {
   const tournaments = useSeasonStore((s) => s.tournaments);
   const hotelBookings = useSeasonStore((s) => s.hotelBookings);
@@ -59,11 +93,19 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const { refresh, isRefreshing } = useDataRefresh();
 
+  // Lessons/clinics booked with coaches, merged into Next 30 Days.
+  const [lessons, setLessons] = useState<ParentLesson[]>([]);
+  const loadLessons = useCallback(() => {
+    if (!coachingConfigured) return;
+    fetchMyUpcomingLessons(30).then(({ data }) => setLessons(data));
+  }, []);
+
   // Refresh data when Home tab gains focus (keeps co-admins in sync)
   useFocusEffect(
     useCallback(() => {
       refresh();
-    }, [refresh])
+      loadLessons();
+    }, [refresh, loadLessons])
   );
 
   const [showAddMenu, setShowAddMenu] = useState(false);
@@ -319,6 +361,20 @@ export default function HomeScreen() {
     return allNext30.filter((t) => athleteSeasonIds.has(t.season_id));
   }, [allNext30, athleteFilter, seasons]);
 
+  const filteredLessons = useMemo(
+    () => (athleteFilter === 'all' ? lessons : lessons.filter((l) => l.athlete_id === athleteFilter)),
+    [lessons, athleteFilter],
+  );
+
+  // One chronological timeline: tournaments + lessons.
+  const next30Timeline = useMemo(() => {
+    const items: ({ kind: 'tournament'; date: string; t: typeof tournaments[0] } | { kind: 'lesson'; date: string; l: ParentLesson })[] = [
+      ...filteredNext30.map((t) => ({ kind: 'tournament' as const, date: t.start_date, t })),
+      ...filteredLessons.map((l) => ({ kind: 'lesson' as const, date: l.starts_at.slice(0, 10), l })),
+    ];
+    return items.sort((a, b) => a.date.localeCompare(b.date));
+  }, [filteredNext30, filteredLessons]);
+
   const getAthleteForTournament = (t: typeof tournaments[0]) => {
     const season = seasons.find((s) => s.id === t.season_id);
     return season ? athletes.find((a) => a.id === season.athlete_id) ?? null : null;
@@ -469,30 +525,55 @@ export default function HomeScreen() {
             </ScrollView>
           )}
 
-          {filteredNext30.length > 0 ? (
-            filteredNext30.map((t) => (
-              <TournamentCard
-                key={t.id}
-                tournament={t}
-                hotelCount={hotelBookings.filter((h) => h.tournament_id === t.id).length}
-                flightCount={flightBookings.filter((f) => f.tournament_id === t.id).length}
-                backupHotelCount={hotelBookings.filter((h) => h.tournament_id === t.id && h.is_backup).length}
-                hasFlightConflict={(() => {
-                  const tf = flightBookings.filter((f) => f.tournament_id === t.id);
-                  const seen = new Set<string>();
-                  for (const f of tf) {
-                    for (const name of f.traveler_names) {
-                      const key = `${name.toLowerCase().trim()}|${f.departure_date}`;
-                      if (seen.has(key)) return true;
-                      seen.add(key);
-                    }
-                  }
-                  return false;
-                })()}
-                athlete={getAthleteForTournament(t)}
-                onPress={() => router.push(`/tournament/${t.id}`)}
+          {/* Book a private — callout */}
+          <Pressable
+            onPress={() => { tapLight(); router.push({ pathname: '/coaching/availability', params: { kind: 'private_1' } }); }}
+            className="rounded-2xl p-4 mb-3 flex-row items-center active:opacity-80"
+            style={{ backgroundColor: '#3B82B0', shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 3 }}
+          >
+            <View className="w-10 h-10 rounded-full items-center justify-center mr-3" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+              <Ionicons name="person" size={20} color="#fff" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-base font-bold text-white">Book a private lesson</Text>
+              <Text className="text-xs text-white/90 mt-0.5">See every open time from your coaches</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#fff" />
+          </Pressable>
+
+          {next30Timeline.length > 0 ? (
+            next30Timeline.map((item) => item.kind === 'lesson' ? (
+              <LessonCard
+                key={`l-${item.l.id}`}
+                lesson={item.l}
+                athleteName={hasMultipleAthletes ? athletes.find((a) => a.id === item.l.athlete_id)?.first_name : undefined}
               />
-            ))
+            ) : (() => {
+              const t = item.t;
+              return (
+                <TournamentCard
+                  key={`t-${t.id}`}
+                  tournament={t}
+                  hotelCount={hotelBookings.filter((h) => h.tournament_id === t.id).length}
+                  flightCount={flightBookings.filter((f) => f.tournament_id === t.id).length}
+                  backupHotelCount={hotelBookings.filter((h) => h.tournament_id === t.id && h.is_backup).length}
+                  hasFlightConflict={(() => {
+                    const tf = flightBookings.filter((f) => f.tournament_id === t.id);
+                    const seen = new Set<string>();
+                    for (const f of tf) {
+                      for (const name of f.traveler_names) {
+                        const key = `${name.toLowerCase().trim()}|${f.departure_date}`;
+                        if (seen.has(key)) return true;
+                        seen.add(key);
+                      }
+                    }
+                    return false;
+                  })()}
+                  athlete={getAthleteForTournament(t)}
+                  onPress={() => router.push(`/tournament/${t.id}`)}
+                />
+              );
+            })())
           ) : (
             <View
               className="bg-warm-white dark:bg-bark-light rounded-2xl p-5 border border-parchment dark:border-rally-900"
@@ -501,7 +582,7 @@ export default function HomeScreen() {
               <View className="items-center py-4">
                 <Ionicons name="calendar-outline" size={32} color={ic.placeholder} />
                 <Text className="text-sm text-stone dark:text-parchment mt-2">
-                  No upcoming tournaments in the next 30 days
+                  No tournaments or lessons in the next 30 days
                 </Text>
               </View>
             </View>

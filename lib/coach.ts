@@ -420,6 +420,73 @@ export async function fetchBookableSlots(coachId: string): Promise<{ data: SlotW
   return { data: avail, error: error ?? null };
 }
 
+// ---- Parent: lessons on Home + cross-coach availability ----
+
+export interface ParentLesson {
+  id: string;                       // booking_request id
+  status: 'requested' | 'accepted';
+  athlete_id: string;
+  coach_name: string;
+  session_type: string | null;
+  session_kind: SessionKind | null;
+  starts_at: string;
+  ends_at: string;
+  facility: string | null;
+}
+
+/** The parent's requested + confirmed lessons starting in the next `days` days. */
+export async function fetchMyUpcomingLessons(days = 30): Promise<{ data: ParentLesson[]; error: Error | null }> {
+  const now = new Date();
+  const until = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+  const { data, error } = await supabase
+    .from('booking_requests')
+    .select('id, status, athlete_id, coaches(display_name), session_types(name, kind), slots!inner(starts_at, ends_at, facilities(label)), bookings(status)')
+    .in('status', ['requested', 'accepted'])
+    .gte('slots.starts_at', now.toISOString())
+    .lte('slots.starts_at', until.toISOString());
+  const rows = ((data as any[]) ?? [])
+    // an accepted request whose booking was later cancelled isn't a lesson any more
+    .filter((r) => !(r.bookings ?? []).some((b: any) => b.status === 'cancelled'))
+    .map((r): ParentLesson => ({
+      id: r.id,
+      status: r.status,
+      athlete_id: r.athlete_id,
+      coach_name: r.coaches?.display_name ?? 'Coach',
+      session_type: r.session_types?.name ?? null,
+      session_kind: r.session_types?.kind ?? null,
+      starts_at: r.slots.starts_at,
+      ends_at: r.slots.ends_at,
+      facility: r.slots.facilities?.label ?? null,
+    }))
+    .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+  return { data: rows, error: error ?? null };
+}
+
+export interface CoachOpening extends SlotWithRefs {
+  coach_name: string;
+  eligible_types: SessionType[];    // resolved; all active types when the slot is open to any
+}
+
+/** Open, bookable times across every coach the parent is connected to. */
+export async function fetchAllCoachAvailability(): Promise<{ data: CoachOpening[]; coaches: Coach[]; error: Error | null }> {
+  const { data: coaches, error } = await fetchMyCoaches();
+  if (error) return { data: [], coaches: [], error };
+  const perCoach = await Promise.all(coaches.map(async (c) => {
+    const [s, t] = await Promise.all([fetchBookableSlots(c.id), fetchSessionTypes(c.id)]);
+    const active = t.data.filter((x) => x.is_active);
+    return s.data.map((slot): CoachOpening => {
+      const ids = slot.eligible_session_type_ids ?? [];
+      return {
+        ...slot,
+        coach_name: c.display_name,
+        eligible_types: ids.length ? active.filter((x) => ids.includes(x.id)) : active,
+      };
+    });
+  }));
+  const data = perCoach.flat().sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+  return { data, coaches, error: null };
+}
+
 export async function requestBooking(args: {
   slotId: string; sessionTypeId: string; athleteId: string; notes?: string | null; filmLinks?: string[];
 }): Promise<{ data: { request_id: string; booking_mode: string } | null; error: Error | null }> {
