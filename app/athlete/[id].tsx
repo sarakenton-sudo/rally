@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, RefreshControl, Pressable, Alert, Platform } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from '@/components/SafeAreaView';
 import { Ionicons } from '@expo/vector-icons';
 import HubSectionHeader from '@/components/HubSectionHeader';
 import AthleteCredentialCard from '@/components/AthleteCredentialCard';

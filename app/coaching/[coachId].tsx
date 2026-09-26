@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, Image, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from '@/components/SafeAreaView';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchCoachById, fetchBookableSlots, fetchSessionTypes, isSupabaseConfigured, type SlotWithRefs } from '@/lib/coach';

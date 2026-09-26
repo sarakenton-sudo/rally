@@ -312,6 +312,64 @@ export async function addGroupMember(groupId: string, connectionId: string): Pro
   return { error: error ?? null };
 }
 
+// ---- Client roster (00066) ----
+
+export interface ClientAthlete {
+  id: string;
+  first_name: string;
+  last_name: string | null;
+  grad_year: number | null;
+  positions: string[] | null;
+  level: string | null;
+  club_team: string | null;
+  height_inches: number | null;
+  goals: string | null;
+}
+
+export interface RosterClient {
+  connection_id: string;
+  status: string;
+  connected_at: string;
+  parent_name: string | null;
+  parent_email: string | null;
+  athletes: ClientAthlete[];
+  group_ids: string[];
+  lessons_booked: number;
+  pending_requests: number;
+  next_lesson_at: string | null;
+  last_lesson_at: string | null;
+}
+
+// Group chips / client avatars cycle through the parent-app accent palette.
+export const GROUP_COLORS = ['#3B82B0', '#7c3aed', '#0d9488', '#d97706', '#6A9E8A', '#be185d', '#4f46e5', '#ca8a04'];
+export const AVATAR_COLORS = ['#3B82B0', '#7c3aed', '#6A9E8A', '#d97706', '#0d9488', '#be185d', '#4f46e5', '#0891b2'];
+
+/** Stable avatar color per client, so it matches across list + detail and filtering. */
+export function avatarColor(id: string): string {
+  let h = 0;
+  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+
+export function initials(name: string): string {
+  return name.split(/[\s&]+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
+}
+
+export async function fetchClientRoster(): Promise<{ data: RosterClient[]; error: Error | null }> {
+  const { data, error } = await (supabase.rpc as any)('get_coach_client_roster');
+  return { data: (data as RosterClient[]) ?? [], error: error ?? null };
+}
+
+/** "Drue & Miles Kenton" → falls back to parent name, then email. */
+export function clientDisplayName(c: RosterClient): string {
+  if (c.athletes.length) {
+    const lasts = [...new Set(c.athletes.map((a) => a.last_name).filter(Boolean))];
+    const firsts = c.athletes.map((a) => a.first_name).join(' & ');
+    return lasts.length === 1 ? `${firsts} ${lasts[0]}` : c.athletes.map((a) => `${a.first_name}${a.last_name ? ' ' + a.last_name : ''}`).join(' & ');
+  }
+  return c.parent_name?.trim() || c.parent_email?.split('@')[0] || 'New client';
+}
+
 export async function removeGroupMember(groupId: string, connectionId: string): Promise<{ error: Error | null }> {
   const { error } = await supabase
     .from('client_group_members')

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from '@/components/SafeAreaView';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { isSupabaseConfigured } from '@/lib/supabase';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, ScrollView, Pressable, Switch, Alert, Platform, Linking } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from '@/components/SafeAreaView';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, Pressable, KeyboardAvoidingView, Platform, Image, ScrollView, Linking } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from '@/components/SafeAreaView';
 import { Ionicons } from '@expo/vector-icons';
 import FormField from '@/components/FormField';
 import { useAuth } from '@/providers/AuthProvider';
