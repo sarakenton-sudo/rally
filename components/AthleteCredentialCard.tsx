@@ -22,12 +22,12 @@ const BRAND_STYLES: Record<string, { bg: string; color: string; icon: keyof type
   'usa volleyball': { bg: '#dc2626', color: '#FFFFFF', icon: 'shield-checkmark' },
 };
 
-function getBrand(label: string) {
+function getBrand(label: string, fallbackIcon?: string) {
   const lower = label.toLowerCase();
   for (const [key, style] of Object.entries(BRAND_STYLES)) {
     if (lower.includes(key)) return style;
   }
-  return { bg: '#3B82B0', color: '#FFFFFF', icon: 'globe' as keyof typeof Ionicons.glyphMap, defaultUrl: undefined };
+  return { bg: '#3B82B0', color: '#FFFFFF', icon: (fallbackIcon || 'globe') as keyof typeof Ionicons.glyphMap, defaultUrl: undefined };
 }
 
 interface Props {
@@ -36,15 +36,20 @@ interface Props {
   username: string | null;
   password: string | null;
   onEdit: () => void;
+  /** Icon for services without a brand style (family vault links carry their own). */
+  icon?: string | null;
+  /** Custom open behavior (e.g. Hub's app deep links); defaults to opening `url`. */
+  onOpen?: () => void;
 }
 
-export default function AthleteCredentialCard({ label, url, username, password, onEdit }: Props) {
-  const brand = getBrand(label);
+/** Credential tile: tap logo to open, bottom bar copies username / password, pencil edits. Used by the athlete page and the Home + Hub vaults. */
+export default function AthleteCredentialCard({ label, url, username, password, onEdit, icon, onOpen }: Props) {
+  const brand = getBrand(label, icon ?? undefined);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const lower = label.toLowerCase();
   const isMembershipOnly = MEMBERSHIP_ONLY.some((k) => lower.includes(k));
   const isLoaded = isMembershipOnly ? !!username : !!(username || password);
-  const hasLink = !!(url || brand.defaultUrl);
+  const hasLink = !!(onOpen || url || brand.defaultUrl);
 
   const handleCopy = async (value: string, field: string) => {
     if (Platform.OS === 'web') {
@@ -58,6 +63,7 @@ export default function AthleteCredentialCard({ label, url, username, password, 
   };
 
   const handleOpen = async () => {
+    if (onOpen) { onOpen(); return; }
     const targetUrl = url || brand.defaultUrl;
     if (!targetUrl) return;
     const fullUrl = targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`;

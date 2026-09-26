@@ -10,6 +10,7 @@ import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
 import { openDeepLink } from '@/lib/deepLink';
 import ReferFriend from '@/components/ReferFriend';
+import AthleteCredentialCard from '@/components/AthleteCredentialCard';
 
 export default function HubScreen() {
   const adminConfig = useSeasonStore((s) => s.adminConfig);
@@ -262,78 +263,17 @@ export default function HubScreen() {
         <View className="flex-row flex-wrap gap-3 mb-4">
           {configuredAdminLinks.map((link, i) => {
             const originalIndex = externalLinks.indexOf(link);
-            const hasCredentials = !!(link.username || link.password);
             return (
-              <View
-                key={`${link.label}-${i}`}
-                className="bg-warm-white dark:bg-bark-light rounded-xl border border-parchment dark:border-rally-900 overflow-hidden"
-                style={{ width: '47%', shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
-              >
-                <Pressable
-                  className="items-center pt-4 pb-2 px-4 active:opacity-70"
-                  onPress={() => openDeepLink(link)}
-                >
-                  <View>
-                    <Ionicons
-                      name={link.icon_name as keyof typeof Ionicons.glyphMap}
-                      size={28}
-                      color="#3B82B0"
-                    />
-                    {hasCredentials && (
-                      <View className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-green-500 border border-warm-white dark:border-bark-light" />
-                    )}
-                  </View>
-                  <Text className="text-sm font-medium text-bark dark:text-parchment mt-2 text-center">
-                    {link.label}
-                  </Text>
-                </Pressable>
-                {hasCredentials ? (
-                  <View className="flex-row border-t border-parchment dark:border-rally-900 bg-green-50 dark:bg-green-900/20">
-                    {link.username ? (
-                      <Pressable
-                        className="flex-1 flex-row items-center justify-center py-2 active:opacity-60"
-                        onPress={async () => {
-                          await Clipboard.setStringAsync(link.username!);
-                          tapLight();
-                          Alert.alert('Copied', 'Username copied.');
-                        }}
-                      >
-                        <Ionicons name="person-outline" size={12} color="#6A9E8A" />
-                        <Text className="text-xs font-semibold ml-1" style={{ color: '#6A9E8A' }}>Copy ID</Text>
-                      </Pressable>
-                    ) : null}
-                    {link.username && link.password ? (
-                      <View className="w-px bg-parchment dark:bg-rally-900" />
-                    ) : null}
-                    {link.password ? (
-                      <Pressable
-                        className="flex-1 flex-row items-center justify-center py-2 active:opacity-60"
-                        onPress={async () => {
-                          await Clipboard.setStringAsync(link.password!);
-                          tapLight();
-                          Alert.alert('Copied', 'Password copied.');
-                        }}
-                      >
-                        <Ionicons name="key-outline" size={12} color="#6A9E8A" />
-                        <Text className="text-xs font-semibold ml-1" style={{ color: '#6A9E8A' }}>Copy PW</Text>
-                      </Pressable>
-                    ) : null}
-                    <View className="w-px bg-parchment dark:bg-rally-900" />
-                    <Pressable
-                      className="px-3 items-center justify-center py-2 active:opacity-60"
-                      onPress={() => router.push({ pathname: '/profile/edit-link', params: { index: String(originalIndex) } })}
-                    >
-                      <Ionicons name="create-outline" size={14} color="#6A9E8A" />
-                    </Pressable>
-                  </View>
-                ) : (
-                  <Pressable
-                    className="py-2 items-center border-t border-parchment dark:border-rally-900 bg-amber-50 dark:bg-amber-900/20 active:opacity-70"
-                    onPress={() => router.push({ pathname: '/profile/edit-link', params: { index: String(originalIndex) } })}
-                  >
-                    <Text className="text-xs font-semibold" style={{ color: '#B8924A' }}>Add Login</Text>
-                  </Pressable>
-                )}
+              <View key={`${link.label}-${i}`} style={{ width: '47%' }}>
+                <AthleteCredentialCard
+                  label={link.label}
+                  url={link.url}
+                  username={link.username ?? null}
+                  password={link.password ?? null}
+                  icon={link.icon_name}
+                  onOpen={() => openDeepLink(link)}
+                  onEdit={() => router.push({ pathname: '/profile/edit-link', params: { index: String(originalIndex) } })}
+                />
               </View>
             );
           })}

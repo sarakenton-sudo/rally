@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 import ReferFriend from '@/components/ReferFriend';
 import { fetchMyUpcomingLessons, sessionKindStyle, isSupabaseConfigured as coachingConfigured, type ParentLesson } from '@/lib/coach';
+import AthleteCredentialCard from '@/components/AthleteCredentialCard';
 
 const AVATAR_COLORS = [
   '#3B82B0', '#7c3aed', '#6A9E8A', '#d97706', '#dc2626',
@@ -678,29 +679,20 @@ export default function HomeScreen() {
           />
 
           {credentialLinks.length > 0 ? (
-            <View className="flex-row flex-wrap gap-3">
+            <View className="flex-row flex-wrap" style={{ gap: 10 }}>
               {credentialLinks.map((link, i) => {
-                const hasCredentials = !!(link.username || link.password);
+                const index = String(externalLinks.indexOf(link));
                 return (
-                  <Pressable
-                    key={`${link.label}-${i}`}
-                    className="bg-warm-white dark:bg-bark-light rounded-xl p-3 items-center border border-parchment dark:border-rally-900 active:opacity-80"
-                    style={{ width: 100 }}
-                    onPress={() => {
-                      if (link.url) Linking.openURL(link.url);
-                      else router.push({ pathname: '/profile/edit-link', params: { index: String(externalLinks.indexOf(link)) } });
-                    }}
-                  >
-                    <View className="relative">
-                      <Ionicons name={(link.icon_name as keyof typeof Ionicons.glyphMap) || 'link'} size={24} color="#3B82B0" />
-                      {hasCredentials && (
-                        <View className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-green-500 border border-warm-white" />
-                      )}
-                    </View>
-                    <Text className="text-xs font-medium text-bark dark:text-cream mt-1.5 text-center" numberOfLines={1}>
-                      {link.label}
-                    </Text>
-                  </Pressable>
+                  <View key={`${link.label}-${i}`} style={{ width: '31%' }}>
+                    <AthleteCredentialCard
+                      label={link.label}
+                      url={link.url}
+                      username={link.username ?? null}
+                      password={link.password ?? null}
+                      icon={link.icon_name}
+                      onEdit={() => router.push({ pathname: '/profile/edit-link', params: { index } })}
+                    />
+                  </View>
                 );
               })}
             </View>
