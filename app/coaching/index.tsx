@@ -53,13 +53,14 @@ export default function MyCoachesScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const handleConnect = async () => {
-    if (!code.trim()) { notifyError(); return; }
+    if (!code.trim()) { showAlert('Enter a code', 'Type the code your coach sent you, then tap Connect.'); notifyError(); return; }
     setConnecting(true);
     try {
       const { data, error } = await connectToCoach(code.trim());
       if (error) { showAlert("Couldn't connect", error.message); notifyError(); return; }
       setCode('');
       notifySuccess();
+      showAlert('Connected', `You're connected to ${data?.display_name ?? 'your coach'}.`);
       await load();
       if (data?.coach_id) router.push({ pathname: '/coaching/[coachId]', params: { coachId: data.coach_id } });
     } finally {

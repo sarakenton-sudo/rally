@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { dateContext } from '../_shared/dates.ts';
 
 const CLAUDE_API_KEY = Deno.env.get('CLAUDE_API_KEY') ?? '';
 
@@ -111,7 +112,7 @@ serve(async (req: Request) => {
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 4096,
-        system: SYSTEM_PROMPT,
+        system: SYSTEM_PROMPT + '\n\n' + dateContext(),
         messages: [
           {
             role: 'user',

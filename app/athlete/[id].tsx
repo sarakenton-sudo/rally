@@ -111,7 +111,7 @@ export default function AthleteProfileScreen() {
   return (
     <View className="flex-1 bg-cream dark:bg-bark">
       {/* Header bar */}
-      <SafeAreaView edges={[]} style={{ backgroundColor: 'rgba(30,58,95,0.97)' }}>
+      <SafeAreaView edges={['top']} style={{ backgroundColor: 'rgba(30,58,95,0.97)' }}>
         <View className="flex-row items-center px-4 py-3">
           <Pressable onPress={() => router.back()} className="p-1 mr-3">
             <Ionicons name="arrow-back" size={22} color="#FEFEFE" />

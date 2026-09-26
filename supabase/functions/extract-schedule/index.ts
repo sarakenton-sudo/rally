@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { dateContext } from '../_shared/dates.ts';
 
 const CLAUDE_API_KEY = Deno.env.get('CLAUDE_API_KEY') ?? '';
 
@@ -16,8 +17,7 @@ For each tournament you find, extract:
 - notes: any extra details like check-in times, format, special instructions
 
 Important rules:
-- If you cannot determine the year, assume the current season (2025-2026 school year). Fall dates = 2025, spring dates = 2026.
-- If only a month and day are given, infer the year from context.
+- If only a month and day are given, use the DATE CONTEXT rules below to pick the year.
 - If a date range like "March 20-22" is given, start_date is March 20 and end_date is March 22.
 - Extract ALL tournaments found in the text.
 - If you cannot parse any tournaments, return an empty array.
@@ -74,7 +74,7 @@ serve(async (req: Request) => {
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 4096,
-        system: SYSTEM_PROMPT,
+        system: SYSTEM_PROMPT + '\n\n' + dateContext(),
         messages: [
           {
             role: 'user',

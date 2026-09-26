@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Keyboard, Platform } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -165,7 +165,18 @@ export default function PasteCombinedScreen() {
           <Text className="text-lg font-bold text-bark">
             Paste + AI
           </Text>
-          <View className="w-8" />
+          {/* Always-visible submit — the keyboard can cover the bottom button in a sheet */}
+          <Pressable
+            onPress={() => { Keyboard.dismiss(); handleExtract(); }}
+            disabled={isExtracting || !text.trim()}
+            className="px-1 py-1"
+          >
+            {isExtracting ? (
+              <ActivityIndicator size="small" color="#3B82B0" />
+            ) : (
+              <Text className={`text-base font-semibold ${text.trim() ? 'text-rally-600' : 'text-stone'}`}>Extract</Text>
+            )}
+          </Pressable>
         </View>
 
         <View className="flex-1 px-4 pt-4">

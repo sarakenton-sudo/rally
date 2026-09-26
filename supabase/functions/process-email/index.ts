@@ -104,6 +104,22 @@ serve(async (req: Request) => {
       console.log(`[process-email] Envelope from "${forwarderEmail}" did not match any auth user`);
     }
 
+    // Priority 1b: forwarder is one of a family's "My Email Addresses"
+    // (trusted_sender_emails) — e.g. a work address that isn't the login email.
+    for (const candidate of [email.envelopeFrom, extractAddress(email.from)]) {
+      const addr = candidate?.toLowerCase().trim();
+      if (!addr) continue;
+      const { data: trusted } = await supabase
+        .from('admin_config')
+        .select('id, user_id')
+        .contains('trusted_sender_emails', [addr])
+        .limit(1);
+      if (trusted?.length) {
+        console.log(`[process-email] Routed via trusted sender ${addr} to user ${trusted[0].user_id}`);
+        return await processForUser(supabase, trusted[0], email);
+      }
+    }
+
     // Priority 2: Single-user fallback (most Rally installs have one admin)
     const { data: allConfigs } = await supabase
       .from('admin_config')
@@ -510,30 +526,43 @@ function findNearestTournament(
   travelDate: string,
   tournamentName?: string,
 ): Record<string, unknown> | undefined {
-  // Try name match first
+  const DAY = 24 * 60 * 60 * 1000;
+  const when = travelDate ? new Date(travelDate).getTime() : NaN;
+  const hasDate = !Number.isNaN(when);
+  const distance = (t: Record<string, unknown>) => Math.min(
+    Math.abs(when - new Date(String(t.start_date)).getTime()),
+    Math.abs(when - new Date(String(t.end_date)).getTime()),
+  );
+
+  // Name match — but never across seasons. Club events repeat every year with
+  // the same name ("FAST WU"), so a name alone matched last season's event.
   if (tournamentName) {
     const nameLower = tournamentName.toLowerCase();
-    const nameMatch = tournaments.find((t) => {
+    const nameWords = nameLower.split(/\s+/).filter((w: string) => w.length > 3);
+    const nameMatches = (t: Record<string, unknown>) => {
       const tName = String(t.name ?? '').toLowerCase();
-      const nameWords = nameLower.split(/\s+/).filter((w: string) => w.length > 3);
       const matchingWords = nameWords.filter((w: string) => tName.includes(w));
       return matchingWords.length >= 2 || tName.includes(nameLower) || nameLower.includes(tName);
-    });
-    if (nameMatch) return nameMatch;
+    };
+    const plausible = (t: Record<string, unknown>) => hasDate
+      ? distance(t) <= 45 * DAY
+      : new Date(String(t.end_date)).getTime() >= Date.now() - 7 * DAY; // no date: upcoming/just-finished only
+    const byName = tournaments.filter((t) => nameMatches(t) && plausible(t));
+    if (byName.length) {
+      return byName.sort((a, b) => hasDate
+        ? distance(a) - distance(b)
+        : new Date(String(a.start_date)).getTime() - new Date(String(b.start_date)).getTime())[0];
+    }
   }
 
   // Fall back to nearest by date (within 5 days)
-  if (!travelDate) return undefined;
-  const fiveDays = 5 * 24 * 60 * 60 * 1000;
+  if (!hasDate) return undefined;
   let best: Record<string, unknown> | undefined;
   let bestDiff = Infinity;
-
   for (const t of tournaments) {
-    const diffStart = Math.abs(new Date(travelDate).getTime() - new Date(String(t.start_date)).getTime());
-    const diffEnd = Math.abs(new Date(travelDate).getTime() - new Date(String(t.end_date)).getTime());
-    const minDiff = Math.min(diffStart, diffEnd);
-    if (minDiff <= fiveDays && minDiff < bestDiff) {
-      bestDiff = minDiff;
+    const d = distance(t);
+    if (d <= 5 * DAY && d < bestDiff) {
+      bestDiff = d;
       best = t;
     }
   }

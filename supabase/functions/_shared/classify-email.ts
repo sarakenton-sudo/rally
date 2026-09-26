@@ -1,3 +1,4 @@
+import { dateContext } from './dates.ts';
 const CLASSIFICATION_PROMPT = `You are an email classifier for a youth volleyball team management app called Rally.
 This app helps families manage travel for youth volleyball tournaments.
 
@@ -132,7 +133,7 @@ export async function classifyEmail(
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
-      system: CLASSIFICATION_PROMPT,
+      system: CLASSIFICATION_PROMPT + '\n\n' + dateContext(),
       messages: [{
         role: 'user',
         content: `From: ${from}\nSubject: ${subject}\n\n${cleanBody.slice(0, 8000)}`,

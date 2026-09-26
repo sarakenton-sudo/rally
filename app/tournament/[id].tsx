@@ -18,6 +18,7 @@ import { MOCK_TEAM_EVENTS } from '@/lib/mock-data';
 import { formatDateRange, countdownText, daysUntil } from '@/lib/dates';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
+import { addAllDayEventToCalendar } from '@/lib/calendar';
 
 
 const STATUS_CONFIG = {
@@ -1126,35 +1127,12 @@ export default function TournamentDetailScreen() {
           {/* ADD TO CALENDAR */}
           <Pressable
             className="bg-rally-50 dark:bg-rally-900/20 rounded-xl py-4 items-center mt-6 active:opacity-80 flex-row justify-center"
-            onPress={() => {
-              const title = encodeURIComponent(tournament.name);
-              const location = encodeURIComponent(
-                confirmedVenue?.address || tournament.location_city || ''
-              );
-              const startDate = tournament.start_date.replace(/-/g, '') + 'T080000';
-              const endDate = tournament.end_date.replace(/-/g, '') + 'T200000';
-              if (Platform.OS === 'web') {
-                // Google Calendar link for web
-                const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&location=${location}`;
-                Linking.openURL(gcalUrl);
-              } else {
-                // .ics data URI for native
-                const icsContent = [
-                  'BEGIN:VCALENDAR',
-                  'VERSION:2.0',
-                  'PRODID:-//RALLY//Tournament//EN',
-                  'BEGIN:VEVENT',
-                  `DTSTART:${startDate}`,
-                  `DTEND:${endDate}`,
-                  `SUMMARY:${tournament.name}`,
-                  `LOCATION:${confirmedVenue?.address || tournament.location_city || ''}`,
-                  'END:VEVENT',
-                  'END:VCALENDAR',
-                ].join('\r\n');
-                const encoded = encodeURIComponent(icsContent);
-                Linking.openURL(`data:text/calendar;charset=utf-8,${encoded}`);
-              }
-            }}
+            onPress={() => addAllDayEventToCalendar({
+              title: tournament.name,
+              startDate: tournament.start_date,
+              endDate: tournament.end_date,
+              location: confirmedVenue?.address || tournament.location_city || '',
+            })}
           >
             <Ionicons name="calendar-outline" size={18} color="#3B82B0" />
             <Text className="text-sm font-semibold text-rally-600 dark:text-rally-300 ml-2">

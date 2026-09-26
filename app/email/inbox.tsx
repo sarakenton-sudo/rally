@@ -83,7 +83,7 @@ export default function EmailInboxScreen() {
               </Text>
 
               {/* Classification + action badges */}
-              <View className="flex-row items-center mt-2 gap-2">
+              <View className="flex-row flex-wrap items-center mt-2 gap-2">
                 <View className={`px-2 py-0.5 rounded-full ${cls.bg}`}>
                   <Text style={{ color: cls.color }} className="text-xs font-semibold">
                     {cls.label}
@@ -113,7 +113,7 @@ export default function EmailInboxScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['bottom']}>
+    <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['top', 'bottom']}>
       {/* Header */}
       <View className="flex-row items-center px-4 py-3 bg-warm-white dark:bg-bark border-b border-parchment dark:border-bark-light">
         <Pressable onPress={() => router.back()} className="p-1 mr-3">

@@ -13,6 +13,7 @@ import { tapLight } from '@/lib/haptics';
 import { daysUntil } from '@/lib/dates';
 import ReferFriend from '@/components/ReferFriend';
 import type { Tournament } from '@/types/database';
+import { addAllDayEventsToCalendar } from '@/lib/calendar';
 
 type ListItem = { type: 'tournament'; data: Tournament } | { type: 'divider'; label: string };
 
@@ -168,30 +169,12 @@ export default function SeasonScreen() {
                     .sort((a, b) => a.start_date.localeCompare(b.start_date));
                   const tourns = upcoming.length > 0 ? upcoming : seasonTournaments;
 
-                  if (Platform.OS === 'web') {
-                    // Open Google Calendar for first tournament, copy .ics for all
-                    const icsEvents = tourns.map((t) => {
-                      const start = t.start_date.replace(/-/g, '') + 'T080000';
-                      const end = t.end_date.replace(/-/g, '') + 'T200000';
-                      return `BEGIN:VEVENT\r\nDTSTART:${start}\r\nDTEND:${end}\r\nSUMMARY:${t.name}\r\nLOCATION:${t.location_city || ''}\r\nEND:VEVENT`;
-                    }).join('\r\n');
-                    const icsContent = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//RALLY//Season//EN\r\n${icsEvents}\r\nEND:VCALENDAR`;
-                    const blob = new Blob([icsContent], { type: 'text/calendar' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${teamName || 'rally'}-${seasonYear || 'season'}.ics`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  } else {
-                    const icsEvents = tourns.map((t) => {
-                      const start = t.start_date.replace(/-/g, '') + 'T080000';
-                      const end = t.end_date.replace(/-/g, '') + 'T200000';
-                      return `BEGIN:VEVENT\r\nDTSTART:${start}\r\nDTEND:${end}\r\nSUMMARY:${t.name}\r\nLOCATION:${t.location_city || ''}\r\nEND:VEVENT`;
-                    }).join('\r\n');
-                    const icsContent = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//RALLY//Season//EN\r\n${icsEvents}\r\nEND:VCALENDAR`;
-                    Linking.openURL(`data:text/calendar;charset=utf-8,${encodeURIComponent(icsContent)}`);
-                  }
+                  addAllDayEventsToCalendar(tourns.map((t) => ({
+                    title: t.name,
+                    startDate: t.start_date,
+                    endDate: t.end_date,
+                    location: t.location_city,
+                  })));
                   tapLight();
                 }}
               >

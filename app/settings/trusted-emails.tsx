@@ -8,7 +8,7 @@ import { useSeasonStore } from '@/stores/useSeasonStore';
 import { updateAdminConfig } from '@/hooks/useSupabaseData';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { useIconColors } from '@/lib/colors';
-import { tapLight, notifySuccess } from '@/lib/haptics';
+import { tapLight, notifySuccess, notifyError } from '@/lib/haptics';
 
 export default function TrustedEmailsScreen() {
   const ic = useIconColors();
@@ -36,19 +36,30 @@ export default function TrustedEmailsScreen() {
       return;
     }
 
-    setSaving(true);
-    const updated = [...trustedEmails, email];
-    const { error } = await updateAdminConfig(adminConfig!.id, { trusted_sender_emails: updated } as any);
-    setSaving(false);
+    if (!adminConfig) {
+      // Family settings not loaded (or this login has none) — used to throw
+      // after setSaving(true) and leave the button stuck on "Adding...".
+      Alert.alert("Couldn't add email", 'Your family settings haven\'t loaded yet. Pull down to refresh on Home, then try again.');
+      return;
+    }
 
-    if (error) {
-      Alert.alert('Error', error.message);
-    } else {
-      if (adminConfig) {
+    setSaving(true);
+    try {
+      const updated = [...trustedEmails, email];
+      const { error } = await updateAdminConfig(adminConfig.id, { trusted_sender_emails: updated } as any);
+      if (error) {
+        Alert.alert("Couldn't add email", error.message);
+        notifyError();
+      } else {
         setAdminConfig({ ...adminConfig, trusted_sender_emails: updated });
+        notifySuccess();
+        setNewEmail('');
       }
-      notifySuccess();
-      setNewEmail('');
+    } catch (err: any) {
+      Alert.alert("Couldn't add email", err?.message ?? 'Check your connection and try again.');
+      notifyError();
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -59,9 +70,11 @@ export default function TrustedEmailsScreen() {
         text: 'Remove',
         style: 'destructive',
         onPress: async () => {
+          if (!adminConfig) return;
           const updated = trustedEmails.filter((e) => e !== email);
-          const { error } = await updateAdminConfig(adminConfig!.id, { trusted_sender_emails: updated } as any);
-          if (!error && adminConfig) {
+          const { error } = await updateAdminConfig(adminConfig.id, { trusted_sender_emails: updated } as any);
+          if (error) Alert.alert("Couldn't remove email", error.message);
+          else {
             setAdminConfig({ ...adminConfig, trusted_sender_emails: updated });
             tapLight();
           }

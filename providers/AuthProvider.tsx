@@ -163,7 +163,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     setUserProfile(null);
-    await supabase.auth.signOut();
+    // 'local' clears this device's session without a network round-trip, so
+    // sign-out can't hang on a slow/failed request (it used to do nothing).
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (err) {
+      console.warn('[Auth] signOut error (clearing session anyway):', err);
+    }
+    setSession(null);
   };
 
   const resetPassword = async (email: string) => {
