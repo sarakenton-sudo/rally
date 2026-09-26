@@ -171,6 +171,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.warn('[Auth] signOut error (clearing session anyway):', err);
     }
     setSession(null);
+    // Sign Out lives in a modal (settings/account). On iOS the layout's
+    // replace('/auth') landed *inside* that modal, so sign-out looked like it
+    // did nothing. Close every modal first, then go to the login screen.
+    try {
+      if (router.canDismiss()) router.dismissAll();
+    } catch { /* nothing to dismiss */ }
+    router.replace('/auth');
   };
 
   const resetPassword = async (email: string) => {
