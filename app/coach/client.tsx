@@ -113,7 +113,7 @@ export default function CoachClientScreen() {
             {[
               { label: 'Lessons', value: String(client.lessons_booked), color: '#3B82B0' },
               { label: 'Pending', value: String(client.pending_requests), color: '#d97706' },
-              { label: 'Next', value: client.next_lesson_at ? new Date(client.next_lesson_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—', color: '#6A9E8A' },
+              { label: 'Next', value: client.next_lesson_at ? new Date(client.next_lesson_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—', color: '#1E3A5F' },
             ].map((s) => (
               <View key={s.label} className="flex-1 rounded-xl py-3 mx-1 items-center" style={{ backgroundColor: s.color + '12' }}>
                 <Text className="text-lg font-bold" style={{ color: s.color }}>{s.value}</Text>
@@ -207,7 +207,7 @@ export default function CoachClientScreen() {
                 disabled={!newGroup.trim() || busyGroup === 'new'}
                 onPress={addToNewGroup}
                 className="ml-2 rounded-lg px-3 py-2 active:opacity-80"
-                style={{ backgroundColor: newGroup.trim() ? '#ca8a04' : '#ca8a0450' }}
+                style={{ backgroundColor: newGroup.trim() ? '#0d9488' : '#0d948850' }}
               >
                 <Text className="text-sm font-semibold text-white">{busyGroup === 'new' ? '…' : 'Add'}</Text>
               </Pressable>

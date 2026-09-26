@@ -2,6 +2,7 @@ import { View, Text, Pressable, Linking, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Tournament, Athlete } from '@/types/database';
 import { formatDateRange, countdownText, daysUntil } from '@/lib/dates';
+import { TOURNAMENT_COLOR } from '@/lib/colors';
 
 const AVATAR_COLORS = [
   '#3B82B0', '#7c3aed', '#6A9E8A', '#d97706', '#dc2626',
@@ -64,7 +65,8 @@ export default function TournamentCard({ tournament, hotelCount = 0, flightCount
   return (
     <Pressable
       className="bg-warm-white dark:bg-bark-light rounded-2xl mb-3 overflow-hidden border border-parchment dark:border-rally-900 active:opacity-90"
-      style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
+      // Sage edge = "tournament" (lesson cards use their lesson-type color here)
+      style={{ borderLeftWidth: 4, borderLeftColor: TOURNAMENT_COLOR, shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
       onPress={onPress}
     >
       {/* Top accent bar — color-coded by booking readiness */}

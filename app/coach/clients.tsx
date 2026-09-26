@@ -53,7 +53,7 @@ export default function CoachClientsScreen() {
         </Pressable>
         <Text className="text-lg font-bold text-bark dark:text-cream">Clients</Text>
         <Pressable onPress={() => router.push('/coach/segments')} className="p-1" accessibilityLabel="Manage groups">
-          <Ionicons name="people-circle-outline" size={24} color="#ca8a04" />
+          <Ionicons name="people-circle-outline" size={24} color="#0d9488" />
         </Pressable>
       </View>
 

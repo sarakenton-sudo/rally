@@ -100,8 +100,8 @@ export default function CoachFacilitiesScreen() {
                   className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 mb-2 flex-row items-center"
                   style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
                 >
-                  <View className="w-9 h-9 rounded-full items-center justify-center mr-3" style={{ backgroundColor: '#6A9E8A15' }}>
-                    <Ionicons name="business" size={17} color="#6A9E8A" />
+                  <View className="w-9 h-9 rounded-full items-center justify-center mr-3" style={{ backgroundColor: '#0d948815' }}>
+                    <Ionicons name="business" size={17} color="#0d9488" />
                   </View>
                   <View className="flex-1">
                     <Text className="text-sm font-semibold text-bark dark:text-cream">{f.label}</Text>

@@ -8,16 +8,18 @@ export const isSupabaseConfigured = !!(
 );
 
 /**
- * One color per lesson kind, drawn from the parent app's palette
- * (rally blue / purple / teal / amber / sage — see Home "Add" menu).
- * Render as a colored icon on a `color + '15'` tint, or a left stripe.
+ * One color per lesson kind. Color rules (see lib/colors.ts):
+ *  - sage is reserved for tournaments (TOURNAMENT_COLOR)
+ *  - green / amber / red only ever mean status (done / needs attention / urgent)
+ * so lesson kinds use the remaining hues. Render as a colored icon on a
+ * `color + '15'` tint, or a left stripe.
  */
 export const SESSION_KIND_STYLE: Record<SessionKind, { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }> = {
   private_1:   { label: 'Private 1:1', color: '#3B82B0', icon: 'person-outline' },
   semi_2:      { label: 'Semi-private', color: '#7c3aed', icon: 'people-outline' },
-  small_group: { label: 'Small group', color: '#0d9488', icon: 'people-circle-outline' },
-  clinic:      { label: 'Clinic', color: '#d97706', icon: 'school-outline' },
-  camp:        { label: 'Camp', color: '#6A9E8A', icon: 'flag-outline' },
+  small_group: { label: 'Small group', color: '#0891b2', icon: 'people-circle-outline' },
+  clinic:      { label: 'Clinic', color: '#be185d', icon: 'school-outline' },
+  camp:        { label: 'Camp', color: '#4f46e5', icon: 'flag-outline' },
 };
 
 /** Neutral style for slots open to any type / unknown kind. */
@@ -341,8 +343,8 @@ export interface RosterClient {
 }
 
 // Group chips / client avatars cycle through the parent-app accent palette.
-export const GROUP_COLORS = ['#3B82B0', '#7c3aed', '#0d9488', '#d97706', '#6A9E8A', '#be185d', '#4f46e5', '#ca8a04'];
-export const AVATAR_COLORS = ['#3B82B0', '#7c3aed', '#6A9E8A', '#d97706', '#0d9488', '#be185d', '#4f46e5', '#0891b2'];
+export const GROUP_COLORS = ['#3B82B0', '#7c3aed', '#0d9488', '#be185d', '#4f46e5', '#0891b2', '#1E3A5F', '#9333ea'];
+export const AVATAR_COLORS = ['#3B82B0', '#7c3aed', '#0d9488', '#be185d', '#4f46e5', '#0891b2', '#1E3A5F', '#9333ea'];
 
 /** Stable avatar color per client, so it matches across list + detail and filtering. */
 export function avatarColor(id: string): string {

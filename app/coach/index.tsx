@@ -262,14 +262,14 @@ export default function CoachDashboardScreen() {
           />
           <DashRow
             icon="calendar-outline"
-            color="#6A9E8A"
+            color="#1E3A5F"
             title="Availability"
             subtitle="Publish your open hours per facility"
             onPress={() => router.push('/coach/availability')}
           />
           <DashRow
             icon="people-circle-outline"
-            color="#ca8a04"
+            color="#0d9488"
             title="Client groups"
             subtitle="Segments for targeted availability"
             onPress={() => router.push('/coach/segments')}

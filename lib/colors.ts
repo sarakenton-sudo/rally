@@ -24,3 +24,12 @@ export function useIconColors() {
     white: '#FEFEFE',
   };
 }
+
+/**
+ * App-wide color meaning — keep these distinct:
+ *  - TOURNAMENT_COLOR (sage): tournaments, everywhere. Nothing else uses it.
+ *  - STATUS colors: green = done/confirmed, amber = needs attention/requested,
+ *    red = urgent. Never used to mean a *type* of thing.
+ *  - Lesson kinds: SESSION_KIND_STYLE in lib/coach.ts (blue/purple/cyan/magenta/indigo).
+ */
+export const TOURNAMENT_COLOR = '#6A9E8A';
