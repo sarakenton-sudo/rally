@@ -384,17 +384,21 @@ export async function removeGroupMember(groupId: string, connectionId: string): 
 // ---- Parent side: connect, browse, book ----
 
 export async function connectToCoach(code: string): Promise<{ data: { coach_id: string; display_name: string } | null; error: Error | null }> {
+  // Timeout via Supabase's own abortSignal. A Promise.race([rpc, timeout])
+  // version threw "Promise constructor's argument is not a function" on iOS.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    // Never hang silently — a stuck request made "Connect" look like it did nothing.
-    const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('The connection timed out. Check your signal and try again.')), 15000));
-    const { data, error } = await Promise.race([
-      (supabase.rpc as any)('connect_to_coach', { p_code: code.trim() }),
-      timeout,
-    ]);
+    const { data, error } = await (supabase.rpc as any)('connect_to_coach', { p_code: code.trim() })
+      .abortSignal(controller.signal);
+    if (error && controller.signal.aborted) {
+      return { data: null, error: new Error('The connection timed out. Check your signal and try again.') };
+    }
     return { data: (data as { coach_id: string; display_name: string } | null) ?? null, error: error ?? null };
   } catch (err: any) {
     return { data: null, error: err instanceof Error ? err : new Error(String(err)) };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
