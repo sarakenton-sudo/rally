@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 import { useDataRefresh } from '@/providers/DataProvider';
+import { currentSeasonLabel } from '@/lib/seasons';
 
 export default function AddSeasonScreen() {
   const ic = useIconColors();
@@ -26,7 +27,7 @@ export default function AddSeasonScreen() {
 
   const [teamName, setTeamName] = useState('');
   const [clubName, setClubName] = useState('');
-  const [seasonYear, setSeasonYear] = useState('2026-2027');
+  const [seasonYear, setSeasonYear] = useState(currentSeasonLabel);
   const [teamCode, setTeamCode] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -107,7 +108,7 @@ export default function AddSeasonScreen() {
 
           <FormField label="Team Name" value={teamName} onChangeText={setTeamName} placeholder="e.g. AJV Travel 15u" />
           <FormField label="Club Name" value={clubName} onChangeText={setClubName} placeholder="e.g. Austin Juniors" />
-          <FormField label="Season Year" value={seasonYear} onChangeText={setSeasonYear} placeholder="e.g. 2026-2027" />
+          <FormField label="Season Year" value={seasonYear} onChangeText={setSeasonYear} placeholder="e.g. YYYY-YYYY" />
           <FormField label="Team Code (optional)" value={teamCode} onChangeText={setTeamCode} placeholder="For quick ticket access" />
 
           <Text className="text-xs text-stone mt-4 leading-5">

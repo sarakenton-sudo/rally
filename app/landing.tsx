@@ -2,6 +2,7 @@ import { View, Text, ScrollView, Pressable, useWindowDimensions } from 'react-na
 import { SafeAreaView } from '@/components/SafeAreaView';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { currentSeasonLabel } from '@/lib/seasons';
 
 const FEATURES = [
   {
@@ -131,7 +132,7 @@ export default function LandingScreen() {
             <Text className="text-base font-semibold text-cream">Create Your Account</Text>
           </Pressable>
           <Text className="text-xs text-stone mt-4 text-center">
-            Free for the 2025-2026 season
+            Free for the {currentSeasonLabel()} season
           </Text>
         </View>
       </ScrollView>

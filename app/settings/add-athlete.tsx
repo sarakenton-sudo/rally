@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 import { useDataRefresh } from '@/providers/DataProvider';
+import { currentSeasonLabel } from '@/lib/seasons';
 
 export default function AddAthleteScreen() {
   const ic = useIconColors();
@@ -24,7 +25,7 @@ export default function AddAthleteScreen() {
   const [lastName, setLastName] = useState('');
   const [teamName, setTeamName] = useState('');
   const [clubName, setClubName] = useState('');
-  const [seasonYear, setSeasonYear] = useState('2026-2027');
+  const [seasonYear, setSeasonYear] = useState(currentSeasonLabel);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

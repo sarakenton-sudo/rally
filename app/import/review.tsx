@@ -12,6 +12,10 @@ import { notifySuccess } from '@/lib/haptics';
 import DatePickerField from '@/components/DatePickerField';
 import type { Tournament } from '@/types/database';
 import { trackEvent } from '@/lib/track-event';
+import TeamPicker, { useTeamChoice, resolveTeamChoice } from '@/components/TeamPicker';
+import { useDataRefresh } from '@/providers/DataProvider';
+import { updateAdminConfig } from '@/hooks/useSupabaseData';
+import { currentSeasonLabel, seasonMatches } from '@/lib/seasons';
 
 interface ExtractedTournament {
   name: string;
@@ -40,8 +44,14 @@ export default function PasteReviewScreen() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const addTournament = useSeasonStore((s) => s.addTournament);
-  const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
+  const seasons = useSeasonStore((s) => s.seasons);
+  const adminConfig = useSeasonStore((s) => s.adminConfig);
+  const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
+  const setActiveSeasonId = useSeasonStore((s) => s.setActiveSeasonId);
+  const { refresh } = useDataRefresh();
   const { user } = useAuth();
+  // Which team these go to — guessed from the dates, never silently the active team.
+  const { choice: teamChoice, setChoice: setTeamChoice } = useTeamChoice(items.map((i) => i.start_date));
 
   // Track import attempt on mount
   useState(() => {
@@ -74,18 +84,28 @@ export default function PasteReviewScreen() {
       return;
     }
 
-    if (!activeSeasonId) {
-      showError('No active season. Please select a season before importing.');
-      return;
-    }
-
     setIsSaving(true);
 
     try {
+      const { seasonId, created, error: teamError } = await resolveTeamChoice(teamChoice);
+      if (!seasonId) {
+        showError(teamError ?? 'Choose a team for these tournaments.');
+        return;
+      }
+      // A brand-new team for the season we're in right now becomes the active team.
+      if (created && seasonMatches(created, currentSeasonLabel())) {
+        setActiveSeasonId(created.id);
+        if (adminConfig) {
+          setAdminConfig({ ...adminConfig, active_season_id: created.id });
+          await updateAdminConfig(adminConfig.id, { active_season_id: created.id });
+        }
+      }
+      const teamName = created?.team_name ?? seasons.find((s) => s.id === seasonId)?.team_name ?? 'your team';
+
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const tournamentData = {
-          season_id: activeSeasonId,
+          season_id: seasonId,
           name: item.name,
           start_date: item.start_date,
           end_date: item.end_date,
@@ -130,7 +150,8 @@ export default function PasteReviewScreen() {
 
       if (user?.id) trackEvent(user.id, 'import_completed', { type: 'tournament_paste', item_count: items.length });
       notifySuccess();
-      const msg = `${items.length} tournament${items.length !== 1 ? 's' : ''} added to your season.`;
+      await refresh();
+      const msg = `${items.length} tournament${items.length !== 1 ? 's' : ''} added to ${teamName}.`;
       if (Platform.OS === 'web') {
         setSuccessMsg(msg);
         setTimeout(() => {
@@ -193,6 +214,8 @@ export default function PasteReviewScreen() {
             {items.length} tournament{items.length !== 1 ? 's' : ''} extracted. Review and edit before saving.
           </Text>
         </View>
+
+        <TeamPicker dates={items.map((i) => i.start_date)} choice={teamChoice} onChange={setTeamChoice} />
 
         {items.map((item, index) => (
           <View

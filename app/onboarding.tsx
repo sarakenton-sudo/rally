@@ -26,6 +26,7 @@ import { useSeasonStore } from '@/stores/useSeasonStore';
 import { notifySuccess } from '@/lib/haptics';
 import type { AdminConfig, Tournament, Athlete, Season, ExternalLink } from '@/types/database';
 import { smartExtract as smartExtractOnboarding } from '@/lib/schedule-parser';
+import { currentSeasonLabel } from '@/lib/seasons';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -35,7 +36,12 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
-const SEASON_OPTIONS = ['2025-2026', '2026-2027'];
+// This season and next, from today's date (Aug-Jul seasons) — never hard-coded.
+const SEASON_OPTIONS = (() => {
+  const cur = currentSeasonLabel();
+  const start = Number(cur.slice(0, 4));
+  return [cur, `${start + 1}-${start + 2}`];
+})();
 const TOTAL_STEPS = 9; // Steps 0-8
 
 // Brand styles for credential tiles

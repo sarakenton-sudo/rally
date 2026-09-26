@@ -8,11 +8,13 @@ import DatePickerField from '@/components/DatePickerField';
 import DropdownField from '@/components/DropdownField';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useAuth } from '@/providers/AuthProvider';
-import { insertTournament } from '@/hooks/useSupabaseData';
+import { insertTournament, updateAdminConfig } from '@/hooks/useSupabaseData';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 import type { Tournament } from '@/types/database';
+import TeamPicker, { useTeamChoice, resolveTeamChoice } from '@/components/TeamPicker';
+import { currentSeasonLabel, seasonMatches } from '@/lib/seasons';
 
 export default function AddTournamentScreen() {
   const ic = useIconColors();
@@ -38,25 +40,12 @@ export default function AddTournamentScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Athlete/season selection
-  const hasMultipleAthletes = athletes.length > 1;
-  const [selectedAthleteId, setSelectedAthleteId] = useState(() => {
-    const activeSeason = seasons.find((s) => s.id === activeSeasonId);
-    return activeSeason?.athlete_id ?? athletes[0]?.id ?? '';
-  });
-
-  const athleteSeasons = useMemo(
-    () => seasons.filter((s) => s.athlete_id === selectedAthleteId),
-    [seasons, selectedAthleteId]
-  );
-  const selectedSeasonId = athleteSeasons.find((s) => s.id === activeSeasonId)?.id ?? athleteSeasons[0]?.id ?? '';
-
-  const handleAthleteChange = (displayName: string) => {
-    const a = athletes.find(
-      (ath) => `${ath.first_name}${ath.last_name ? ' ' + ath.last_name : ''}` === displayName
-    );
-    if (a) setSelectedAthleteId(a.id);
-  };
+  // Team — guessed from the start date; parent can pick another or create one.
+  const startYmd = startDate ? startDate.toISOString().split('T')[0] : '';
+  const { choice: teamChoice, setChoice: setTeamChoice } = useTeamChoice(startYmd ? [startYmd] : []);
+  const setActiveSeasonId = useSeasonStore((s) => s.setActiveSeasonId);
+  const adminConfig = useSeasonStore((s) => s.adminConfig);
+  const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
 
   const showError = (title: string, message: string) => {
     setSaveError(message);
@@ -68,12 +57,21 @@ export default function AddTournamentScreen() {
     if (!name.trim()) { showError('Missing field', 'Please enter a tournament name.'); return; }
     if (!startDate) { showError('Missing field', 'Please select a start date.'); return; }
 
+    setIsSaving(true);
+
+    const { seasonId: selectedSeasonId, created, error: teamError } = await resolveTeamChoice(teamChoice);
     if (!selectedSeasonId) {
-      showError('No season', 'No active season found. Please set up a season first.');
+      setIsSaving(false);
+      showError('Choose a team', teamError ?? 'Choose which team this tournament is for.');
       return;
     }
-
-    setIsSaving(true);
+    if (created && seasonMatches(created, currentSeasonLabel())) {
+      setActiveSeasonId(created.id);
+      if (adminConfig) {
+        setAdminConfig({ ...adminConfig, active_season_id: created.id });
+        await updateAdminConfig(adminConfig.id, { active_season_id: created.id });
+      }
+    }
 
     const start = startDate.toISOString().split('T')[0];
     const end = endDate ? endDate.toISOString().split('T')[0] : start;
@@ -161,18 +159,6 @@ export default function AddTournamentScreen() {
             </View>
           )}
 
-          {/* Athlete selector (multi-athlete only) */}
-          {hasMultipleAthletes && (
-            <DropdownField
-              label="Athlete"
-              value={athletes.find((a) => a.id === selectedAthleteId)
-                ? `${athletes.find((a) => a.id === selectedAthleteId)!.first_name}${athletes.find((a) => a.id === selectedAthleteId)!.last_name ? ' ' + athletes.find((a) => a.id === selectedAthleteId)!.last_name : ''}`
-                : ''}
-              options={athletes.map((a) => `${a.first_name}${a.last_name ? ' ' + a.last_name : ''}`)}
-              onChange={handleAthleteChange}
-            />
-          )}
-
           <FormField label="Tournament Name" value={name} onChangeText={setName} placeholder="e.g. AJV Premier #1" />
 
           <View className="flex-row gap-3">
@@ -183,6 +169,8 @@ export default function AddTournamentScreen() {
               <DatePickerField label="End Date" value={endDate} onChange={setEndDate} />
             </View>
           </View>
+
+          <TeamPicker dates={startYmd ? [startYmd] : []} choice={teamChoice} onChange={setTeamChoice} />
 
           <FormField label="City" value={locationCity} onChangeText={setLocationCity} placeholder="e.g. Austin, TX" />
           <FormField label="Venue Name" value={venueName} onChangeText={setVenueName} placeholder="e.g. Austin Convention Center" />
