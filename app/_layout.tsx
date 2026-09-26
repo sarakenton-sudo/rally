@@ -3,7 +3,7 @@ import { ThemeProvider, type Theme } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, router, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import 'react-native-reanimated';
 
@@ -109,6 +109,12 @@ function RootLayoutNav() {
 
   // Co-parent detection: admin with linked athletes but no own config
   const isCoParent = userProfile?.role === 'admin' && !adminConfig && adminAthletes.length > 0;
+  // Coach accounts live in the /coach section (the dashboard handles listing setup)
+  const isCoach = userProfile?.account_type === 'coach';
+
+  // Guard against re-issuing the same redirect before navigation settles (which
+  // races the heavy (tabs) screen mount and causes a "max update depth" loop).
+  const lastTargetRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isLoading || storeLoading) return;
@@ -117,26 +123,30 @@ function RootLayoutNav() {
     const inAuthFlow = segments[0] === 'auth' || segments[0] === 'landing';
     const inOnboarding = segments[0] === 'onboarding';
 
-    if (!session && !inAuthFlow) {
-      // No session — go to auth
-      router.replace('/auth');
-    } else if (session && isCoParent && (inAuthFlow || inOnboarding)) {
-      // Co-parent — skip onboarding, go straight to tabs
-      router.replace('/(tabs)');
-    } else if (session && userProfile?.role === 'admin' && !adminConfig && !isCoParent && !inOnboarding) {
-      // Primary admin with no config — go to onboarding
-      router.replace('/onboarding');
-    } else if (session && userProfile?.role === 'admin' && adminConfig && !activeSeasonId && !inOnboarding) {
-      // Admin with config but no active season — go to onboarding
-      router.replace('/onboarding');
-    } else if (session && userProfile?.role === 'athlete' && (inAuthFlow || inOnboarding)) {
-      // Athlete — go straight to tabs (scoped view)
-      router.replace('/(tabs)');
-    } else if (session && adminConfig && activeSeasonId && (inAuthFlow || inOnboarding)) {
-      // Fully configured admin — go to tabs
-      router.replace('/(tabs)');
+    let target: string | null = null;
+    if (!session) {
+      if (!inAuthFlow) target = '/auth';
+    } else if (isCoach) {
+      // Coach account — lives in /coach. Only pull them off the "wrong home"
+      // screens (auth/onboarding/tabs), never out of legit stack routes (settings).
+      if (inAuthFlow || inOnboarding || segments[0] === '(tabs)') target = '/coach';
+    } else if (isCoParent) {
+      if (inAuthFlow || inOnboarding) target = '/(tabs)';
+    } else if (userProfile?.role === 'admin' && !adminConfig && !isCoParent) {
+      if (!inOnboarding) target = '/onboarding';
+    } else if (userProfile?.role === 'admin' && adminConfig && !activeSeasonId) {
+      if (!inOnboarding) target = '/onboarding';
+    } else if (userProfile?.role === 'athlete') {
+      if (inAuthFlow || inOnboarding) target = '/(tabs)';
+    } else if (adminConfig && activeSeasonId) {
+      if (inAuthFlow || inOnboarding) target = '/(tabs)';
     }
-  }, [session, isLoading, segments, adminConfig, activeSeasonId, storeLoading, userProfile, adminAthletes]);
+
+    if (!target) { lastTargetRef.current = null; return; }
+    if (lastTargetRef.current === target) return; // already issued — don't loop
+    lastTargetRef.current = target;
+    router.replace(target as Parameters<typeof router.replace>[0]);
+  }, [session, isLoading, segments, adminConfig, activeSeasonId, storeLoading, userProfile, adminAthletes, isCoach, isCoParent]);
 
   const theme = colorScheme === 'dark' ? RallyDarkTheme : RallyLightTheme;
 
@@ -307,6 +317,66 @@ function RootLayoutNav() {
         />
         <Stack.Screen
           name="settings/edit-athlete"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="coach/index"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="coach/schedule"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="coach/onboarding"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="coach/listing-edit"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="coach/facilities"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="coach/session-types"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="coach/session-type-edit"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="coach/availability"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="coach/availability-add"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="coach/slot-edit"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="coach/segments"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="coach/requests"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="coaching/index"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="coaching/[coachId]"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="coaching/book"
           options={{ presentation: 'modal', headerShown: false }}
         />
       </Stack>

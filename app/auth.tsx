@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import FormField from '@/components/FormField';
 import { useAuth } from '@/providers/AuthProvider';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import type { AccountType } from '@/types/database';
 
 function getInitialSignUp(): boolean {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -17,6 +18,7 @@ function getInitialSignUp(): boolean {
 export default function AuthScreen() {
   const { signIn, signUp, signInWithGoogle, resetPassword, acceptInvite } = useAuth();
   const [isSignUp, setIsSignUp] = useState(getInitialSignUp);
+  const [accountType, setAccountType] = useState<AccountType>('parent');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [inviteCode, setInviteCode] = useState('');
@@ -36,7 +38,7 @@ export default function AuthScreen() {
     setLoading(true);
     try {
       if (isSignUp) {
-        const { error } = await signUp(email.trim(), password);
+        const { error } = await signUp(email.trim(), password, accountType);
         if (error === 'EARLY_ACCESS_REQUIRED') {
           setLoading(false);
           setMessage({ text: 'RALLY is currently in Early Access. Apply at rally-hub.com/early-access and we\'ll send you an invite!', type: 'info' });
@@ -190,6 +192,34 @@ export default function AuthScreen() {
               <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.12)' }} />
               <Text style={{ marginHorizontal: 16, fontSize: 12, color: 'rgba(255,255,255,0.35)', fontFamily: 'NunitoSans-Regular' }}>or</Text>
               <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.12)' }} />
+            </View>
+          )}
+
+          {/* Account type picker (sign-up only) */}
+          {isSignUp && (
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', fontFamily: 'NunitoSans-SemiBold', marginBottom: 8 }}>I am a...</Text>
+              <View style={{ flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: 4 }}>
+                {(['parent', 'coach'] as const).map((t) => {
+                  const on = accountType === t;
+                  return (
+                    <Pressable
+                      key={t}
+                      onPress={() => setAccountType(t)}
+                      style={{ flex: 1, paddingVertical: 11, borderRadius: 9, alignItems: 'center', backgroundColor: on ? '#3B82B0' : 'transparent' }}
+                    >
+                      <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: on ? '#FEFEFE' : 'rgba(255,255,255,0.6)' }}>
+                        {t === 'parent' ? 'Parent / Guardian' : 'Coach'}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              {accountType === 'coach' && (
+                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', fontFamily: 'NunitoSans-Regular', marginTop: 8 }}>
+                  Set up your private-lesson business — listing, availability, and bookings.
+                </Text>
+              )}
             </View>
           )}
 

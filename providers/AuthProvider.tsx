@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import type { Session, User } from '@supabase/supabase-js';
-import type { UserProfile } from '@/types/database';
+import type { UserProfile, AccountType } from '@/types/database';
 
 interface AuthContextType {
   session: Session | null;
@@ -13,7 +13,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, accountType?: AccountType) => Promise<{ error: string | null }>;
   signInWithGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
@@ -124,26 +124,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   };
 
-  const signUp = async (email: string, password: string) => {
-    // Early access gate: check if email has been invited before allowing signup
-    try {
-      const { data: leadData, error: leadError } = await supabase.rpc('check_lead_status', {
-        check_email: email.trim().toLowerCase(),
-      });
-      if (leadError) {
-        console.error('[Auth] check_lead_status error:', leadError.message);
-        return { error: 'Unable to verify early access status. Please try again.' };
-      }
-      const leadStatus = Array.isArray(leadData) ? leadData[0]?.status : leadData?.status;
-      if (!leadStatus || leadStatus !== 'invited') {
-        return { error: 'EARLY_ACCESS_REQUIRED' };
-      }
-    } catch (err: any) {
-      console.error('[Auth] Early access check failed:', err);
-      return { error: 'Unable to verify early access status. Please try again.' };
-    }
-
-    const { error } = await supabase.auth.signUp({ email, password });
+  const signUp = async (email: string, password: string, accountType: AccountType = 'parent') => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { account_type: accountType } },
+    });
     return { error: error?.message ?? null };
   };
 

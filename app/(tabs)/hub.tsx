@@ -60,6 +60,29 @@ export default function HubScreen() {
         />
 
         {/* ============================================================ */}
+        {/* COACHING */}
+        {/* ============================================================ */}
+        <View className="mt-6">
+          <HubSectionHeader icon="clipboard" title="Coaching" iconColor={ic.muted} />
+        </View>
+
+        <HubSettingsRow
+          icon="people"
+          iconColor="#3B82B0"
+          title="My Coaches"
+          subtitle="Book private lessons — connect with a code, request times"
+          onPress={() => router.push('/coaching')}
+        />
+
+        <HubSettingsRow
+          icon="megaphone"
+          iconColor="#6A9E8A"
+          title="Coach Mode"
+          subtitle="Run your private lessons — listing, availability & bookings"
+          onPress={() => router.push('/coach')}
+        />
+
+        {/* ============================================================ */}
         {/* TRAVEL IMPORT */}
         {/* ============================================================ */}
         <View className="mt-6">

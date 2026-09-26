@@ -157,7 +157,7 @@ type GuestEntry = { name: string; relation: string; phone: string };
 
 export default function OnboardingScreen() {
   const [step, setStep] = useState(0);
-  const { user, acceptInvite } = useAuth();
+  const { user, acceptInvite, signOut } = useAuth();
   const { refresh } = useDataRefresh();
 
   // Invite code (for athletes/co-parents joining via Google auth)
@@ -400,6 +400,7 @@ export default function OnboardingScreen() {
           id: result.athlete_id!, user_id: null,
           first_name: athleteFirstName.trim() || 'My Athlete', last_name: athleteLastName.trim() || null,
           avatar_color: avatarColor,
+          grad_year: null, positions: [], level: null, club_team: null, height_inches: null, goals: null,
           can_edit: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
         }]);
         store.setSeasons([{
@@ -501,7 +502,7 @@ export default function OnboardingScreen() {
         default_stream_url: null, travel_sync_emails: [], gmail_connected: false, gmail_email: null,
         external_links: [], active_season_id: mockSeasonId, created_at: new Date().toISOString(),
       });
-      store.setAthletes([{ id: mockAthleteId, user_id: null, first_name: athleteFirstName.trim() || 'My Athlete', last_name: athleteLastName.trim() || null, avatar_color: avatarColor, can_edit: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
+      store.setAthletes([{ id: mockAthleteId, user_id: null, first_name: athleteFirstName.trim() || 'My Athlete', last_name: athleteLastName.trim() || null, avatar_color: avatarColor, grad_year: null, positions: [], level: null, club_team: null, height_inches: null, goals: null, can_edit: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
       store.setSeasons([{ id: mockSeasonId, athlete_id: mockAthleteId, team_name: teamName.trim(), club_name: clubName.trim() || null, season_year: seasonYear, sport: 'volleyball', team_code: null, schedule_import_source: null, schedule_import_connected: false, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
       store.setActiveSeasonId(mockSeasonId);
       notifySuccess();
@@ -518,6 +519,14 @@ export default function OnboardingScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
         {/* Animated progress bar */}
         <ProgressBar step={step} />
+
+        {/* Always-available escape hatch — never trap a user in onboarding */}
+        <Pressable
+          onPress={signOut}
+          style={{ position: 'absolute', top: 6, right: 16, zIndex: 20, padding: 8 }}
+        >
+          <Text style={{ fontSize: 13, color: '#6B8BA8', fontFamily: 'NunitoSans-SemiBold' }}>Sign out</Text>
+        </Pressable>
 
         {/* ========== Step 0: Welcome ========== */}
         {step === 0 && (
