@@ -1,15 +1,28 @@
-import type { ComponentProps, ComponentType } from 'react';
-import { SafeAreaView as BaseSafeAreaView } from 'react-native-safe-area-context';
-import { styled } from 'nativewind';
+import { View, type ViewProps } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+type Edge = 'top' | 'bottom' | 'left' | 'right';
 
 /**
  * Always import SafeAreaView from here, not react-native-safe-area-context.
  *
- * NativeWind v5 (react-native-css) only wraps SafeAreaProvider on native — the
- * raw SafeAreaView silently ignores `className` on iOS/Android. Screens lost
- * `flex-1` + background, so their content collapsed to zero height (blank
- * modals in TestFlight) while web looked fine.
+ * On iOS (NativeWind v5 + SDK 55) the library's native SafeAreaView rendered
+ * screens blank — every stack/modal screen that used it (Add Hotel, Forward,
+ * Paste/AI, Add Athlete, tournament detail) showed nothing, while the tabs,
+ * which pad with useSafeAreaInsets, were fine. This is a plain core View —
+ * which NativeWind always styles — padded by the same insets.
  */
-export const SafeAreaView = styled(BaseSafeAreaView, { className: 'style' }) as ComponentType<
-  ComponentProps<typeof BaseSafeAreaView> & { className?: string }
->;
+export function SafeAreaView({
+  edges = ['top', 'bottom', 'left', 'right'],
+  style,
+  ...props
+}: ViewProps & { edges?: readonly Edge[]; className?: string }) {
+  const insets = useSafeAreaInsets();
+  const pad = {
+    paddingTop: edges.includes('top') ? insets.top : undefined,
+    paddingBottom: edges.includes('bottom') ? insets.bottom : undefined,
+    paddingLeft: edges.includes('left') ? insets.left : undefined,
+    paddingRight: edges.includes('right') ? insets.right : undefined,
+  };
+  return <View {...props} style={[style, pad]} />;
+}
