@@ -37,8 +37,7 @@ For each FLIGHT booking you find, extract:
 - notes: baggage info, connection details, etc.
 
 Important rules:
-- Dates come in MANY formats: "03/19/26", "March 19, 2026", "2026-03-19", "19MAR", "Thu, 19MAR", "3/19/2026". ALWAYS convert to YYYY-MM-DD.
-- Two-digit years: "26" = 2026, "25" = 2025.
+- Dates come in MANY formats: "03/19/YY", "March 19, YYYY", "YYYY-03-19", "19MAR", "Thu, 19MAR", "3/19/YYYY". ALWAYS convert to YYYY-MM-DD, choosing the year per the DATE CONTEXT rules.
 - "Arrival" / "Departure" for hotels = check_in / check_out.
 - Hotel block reservations (like THS, Team Hotel Store, etc.) are hotel bookings.
 - If you see both a hotel and flight in the same text, extract BOTH as separate bookings.

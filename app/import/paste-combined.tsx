@@ -28,16 +28,6 @@ export default function PasteCombinedScreen() {
     setErrorMsg(null);
 
     try {
-      // Try schedule parser FIRST — fast, handles simple tournament lists
-      const scheduleTournaments = smartExtract(trimmed);
-      if (scheduleTournaments.length > 0) {
-        router.push({
-          pathname: '/import/review',
-          params: { tournaments: JSON.stringify(scheduleTournaments) },
-        });
-        return;
-      }
-
       // Detect PlayMetrics-like content (day abbreviations + team names) even if no games found.
       // If it looks like a PlayMetrics schedule with no games, show a helpful message instead
       // of falling through to AI which will extract junk from embedded flyers/rules.
@@ -67,6 +57,16 @@ export default function PasteCombinedScreen() {
 
           if (resp.ok) {
             const data = await resp.json();
+            // AI goes first: the regex parser used to run first and, if it found
+            // anything, skipped AI entirely — mangling names/dates on real schedules.
+            const aiSchedule = data?.schedule?.tournaments;
+            if (Array.isArray(aiSchedule) && aiSchedule.length > 0) {
+              router.push({
+                pathname: '/import/review',
+                params: { tournaments: JSON.stringify(aiSchedule) },
+              });
+              return;
+            }
             const hasTravel = data?.travel?.bookings?.length > 0;
             const hasDetails = data?.tournament_details?.details &&
               Object.values(data.tournament_details.details).some((v: any) => v && v.length > 0);
@@ -102,7 +102,16 @@ export default function PasteCombinedScreen() {
         }
       }
 
-      // Local fallback — try both extractors
+      // Local fallback (AI unreachable / found nothing) — schedule list parser first
+      const scheduleTournaments = smartExtract(trimmed);
+      if (scheduleTournaments.length > 0) {
+        router.push({
+          pathname: '/import/review',
+          params: { tournaments: JSON.stringify(scheduleTournaments) },
+        });
+        return;
+      }
+
       const travelBookings = localExtractTravel(trimmed);
       const tournamentDetails = extractTournamentDetails(trimmed);
 

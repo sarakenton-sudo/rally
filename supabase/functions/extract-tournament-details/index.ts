@@ -8,7 +8,7 @@ const SYSTEM_PROMPT = `You are a tournament detail extraction assistant for a yo
 Your job is to extract detailed tournament information from unstructured text that a parent might paste — such as a tournament info email, a coach's message, a tournament director announcement, or an info packet.
 
 Extract these fields:
-- tournament_name: the tournament name (e.g. "Mizuno Northern Lights Qualifier", "Lonestar Classic"). Remove year prefixes like "2026" from the name.
+- tournament_name: the tournament name (e.g. "Mizuno Northern Lights Qualifier", "Lonestar Classic"). Remove leading year prefixes (e.g. "YYYY Lonestar Classic") from the name.
 - venue_name: the venue or facility name (e.g. "Minneapolis Convention Center", "Kay Bailey Hutchison Convention Center")
 - venue_address: full street address if available (e.g. "1301 2nd Ave South, Minneapolis, MN 55403")
 - location_city: city and state (e.g. "Minneapolis, MN", "Dallas, TX")
@@ -21,8 +21,7 @@ Extract these fields:
 - notes: any other useful details — start times, warm-up ball info, ticket pricing, parking info, credential requirements, bids available, minimum stay requirements, etc. Format as short lines separated by newlines.
 
 Important rules:
-- Dates come in MANY formats: "March 16, 2026", "3/16/26", "2026-03-16", "Mar 16". ALWAYS convert to YYYY-MM-DD when it's a specific date.
-- Two-digit years: "26" = 2026, "25" = 2025.
+- Dates come in MANY formats: "March 16, YYYY", "3/16/YY", "YYYY-03-16", "Mar 16". ALWAYS convert to YYYY-MM-DD when it's a specific date, choosing the year per the DATE CONTEXT rules.
 - For schedule_available_date, ONLY use YYYY-MM-DD format. If the text says something like "Wednesday night prior" or "the week before", put that in notes instead.
 - Look for schedule sites mentioned by name: VBSchedule.com, SportWrench.com, AESAthletics.com — construct the base URL if a full link isn't provided.
 - Look for ticket pricing info (adult pass, single day, children free) and include in notes.

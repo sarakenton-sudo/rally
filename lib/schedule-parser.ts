@@ -9,9 +9,16 @@ function parseMonth(s: string): string | null {
   return MONTH_MAP[s.toLowerCase()] || null;
 }
 
-function inferYear(month: string): string {
-  const m = parseInt(month);
-  return m >= 8 ? '2025' : '2026';
+/**
+ * Year for a date written without one: the next upcoming occurrence relative to
+ * today (schedules list future events). Last month still counts as this year so
+ * a just-finished event isn't pushed a year out. Never hard-code a season here.
+ */
+function inferYear(month: string, now = new Date()): string {
+  const m = parseInt(month, 10);           // 1-12
+  const current = now.getMonth() + 1;       // 1-12
+  const monthsBehind = current - m;         // >0 = earlier this calendar year
+  return String(monthsBehind >= 2 ? now.getFullYear() + 1 : now.getFullYear());
 }
 
 export interface ExtractedTournament {
