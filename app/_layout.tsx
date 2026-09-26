@@ -328,6 +328,14 @@ function RootLayoutNav() {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="coach/clients"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="coach/client"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="coach/onboarding"
           options={{ presentation: 'modal', headerShown: false }}
         />

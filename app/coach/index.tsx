@@ -240,6 +240,13 @@ export default function CoachDashboardScreen() {
             onPress={() => router.push('/coach/schedule')}
           />
           <DashRow
+            icon="person-circle-outline"
+            color="#be185d"
+            title="Clients"
+            subtitle="Athletes, parents & groups"
+            onPress={() => router.push('/coach/clients')}
+          />
+          <DashRow
             icon="business-outline"
             color="#0d9488"
             title="Facilities"
