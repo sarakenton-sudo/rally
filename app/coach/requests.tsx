@@ -8,6 +8,7 @@ import { useCoachStore } from '@/stores/useCoachStore';
 import { getRequestDetail, acceptRequest, declineRequest, isSupabaseConfigured, sessionKindStyle, type RequestDetail } from '@/lib/coach';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess, notifyError } from '@/lib/haptics';
+import HealthInfo from '@/components/coach/HealthInfo';
 
 interface Row {
   id: string;
@@ -103,6 +104,7 @@ export default function CoachRequestsScreen() {
                   </Text>
 
                   {!!a?.goals && <Text className="text-xs text-bark dark:text-parchment mt-2"><Text className="font-semibold">Goals: </Text>{a.goals}</Text>}
+                  <HealthInfo allergies={a?.allergies} medicalNotes={a?.medical_notes} ecName={a?.emergency_contact_name} ecPhone={a?.emergency_contact_phone} />
                   {!!r.detail?.notes && <Text className="text-xs text-bark dark:text-parchment mt-1"><Text className="font-semibold">Working on: </Text>{r.detail.notes}</Text>}
                   {(r.detail?.film_links ?? []).length > 0 && (
                     <View className="flex-row flex-wrap gap-2 mt-2">

@@ -7,11 +7,12 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   fetchSchedule, getCalendarToken, calendarFeedUrl, googleCalendarSubscribeUrl,
   fetchWeekSlots, fetchSessionTypes, weekSummary, blockRevenue, fmtMoney, setSlotFacilityStatus,
-  FACILITY_STATUS_STYLE, isSupabaseConfigured, sessionKindStyle, type ScheduleItem, type SlotWithRefs,
+  FACILITY_STATUS_STYLE, hasRealAllergies, isSupabaseConfigured, sessionKindStyle, type ScheduleItem, type SlotWithRefs,
 } from '@/lib/coach';
 import { useCoachStore } from '@/stores/useCoachStore';
 import WeekSummaryHeader from '@/components/coach/WeekSummaryHeader';
 import LessonActions from '@/components/coach/LessonActions';
+import HealthInfo from '@/components/coach/HealthInfo';
 import type { FacilityStatus, SessionType } from '@/types/database';
 import { useIconColors } from '@/lib/colors';
 import { tapLight, notifySuccess, notifyError } from '@/lib/haptics';
@@ -274,7 +275,15 @@ export default function CoachScheduleScreen() {
                           </Text>
                         </View>
                       </View>
-                      {gymChip}
+                      <View className="flex-row flex-wrap items-center">
+                        {gymChip}
+                        {item.attendees.some((a) => hasRealAllergies(a.athlete_profile?.allergies)) && (
+                          <View className="flex-row items-center rounded-full px-2 py-0.5 mt-1.5 ml-1.5" style={{ backgroundColor: '#dc26261f' }}>
+                            <Ionicons name="warning" size={11} color="#dc2626" />
+                            <Text className="text-[10px] font-bold ml-1" style={{ color: '#dc2626' }}>ALLERGY</Text>
+                          </View>
+                        )}
+                      </View>
 
                       {open && (
                         <View className="mt-3 pt-3 border-t border-parchment dark:border-rally-900">
@@ -298,6 +307,12 @@ export default function CoachScheduleScreen() {
                                 return facts.length ? <Text className="text-xs text-rally-700 dark:text-rally-200 mt-0.5">{facts.join(' · ')}</Text> : null;
                               })() : null}
                               {a.athlete_profile?.goals ? <Text className="text-xs text-stone dark:text-parchment mt-0.5">Goals: {a.athlete_profile.goals}</Text> : null}
+                              <HealthInfo
+                                allergies={a.athlete_profile?.allergies}
+                                medicalNotes={a.athlete_profile?.medical_notes}
+                                ecName={a.athlete_profile?.emergency_contact_name}
+                                ecPhone={a.athlete_profile?.emergency_contact_phone}
+                              />
                               {a.parent_name || a.parent_email ? (
                                 <Text className="text-xs text-stone dark:text-parchment">
                                   Parent: {a.parent_name ?? ''}{a.parent_email ? (

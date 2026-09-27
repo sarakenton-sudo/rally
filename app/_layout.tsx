@@ -332,6 +332,10 @@ function RootLayoutNav() {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="coach/policies"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="coach/client"
           options={{ headerShown: false }}
         />

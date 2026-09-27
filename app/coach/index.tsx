@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { tapLight } from '@/lib/haptics';
 import { useAuth } from '@/providers/AuthProvider';
 import { useCoachStore } from '@/stores/useCoachStore';
-import { fetchMyCoach, fetchFacilities, fetchPendingRequests, fetchSessionTypes, fetchUpcomingSlots, fetchSchedule, fetchWeekSlots, weekSummary, fmtMoney, isSupabaseConfigured, type WeekSummary } from '@/lib/coach';
+import { fetchMyCoach, fetchFacilities, fetchPendingRequests, fetchSessionTypes, fetchUpcomingSlots, fetchSchedule, fetchWeekSlots, weekSummary, fmtMoney, fetchCoachPolicies, isSupabaseConfigured, type WeekSummary, type CoachPolicies } from '@/lib/coach';
 import { useIconColors } from '@/lib/colors';
 
 export default function CoachDashboardScreen() {
@@ -21,6 +21,7 @@ export default function CoachDashboardScreen() {
   const [typeCount, setTypeCount] = useState<number | null>(null);
   const [slotCount, setSlotCount] = useState<number | null>(null);
   const [week, setWeek] = useState<WeekSummary | null>(null);
+  const [policies, setPolicies] = useState<CoachPolicies | null>(null);
 
   // Refresh on every visit so the count drops right after approving/declining.
   useFocusEffect(useCallback(() => {
@@ -29,6 +30,7 @@ export default function CoachDashboardScreen() {
       fetchPendingRequests(coachProfile.id).then(({ data }) => { if (active) setPendingCount(data.length); });
       fetchSessionTypes(coachProfile.id).then(({ data }) => { if (active) setTypeCount(data.filter((t) => t.is_active).length); });
       fetchUpcomingSlots(coachProfile.id).then(({ data }) => { if (active) setSlotCount(data.length); });
+      fetchCoachPolicies(coachProfile.id).then(({ data }) => { if (active) setPolicies(data); });
       // This week's money for the Schedule row (Mon–Sun).
       const now = new Date();
       const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
@@ -119,10 +121,11 @@ export default function CoachDashboardScreen() {
               { done: !!(coachProfile.photo_url && coachProfile.bio), label: 'Photo and bio', onPress: () => router.push('/coach/listing-edit') },
               { done: typeCount > 0, label: 'Session types and prices', onPress: () => router.push('/coach/session-types') },
               { done: slotCount > 0, label: 'Your first week of availability', onPress: () => router.push('/coach/availability-add') },
+              { done: !!(policies?.reviewed && policies?.platform_agreement_accepted_at), label: 'Terms, release & platform agreement', onPress: () => router.push('/coach/policies') },
               { done: false, soon: 'Coming soon', label: 'Get paid in the app (Stripe)', onPress: undefined },
               { done: false, soon: 'Coming next', label: 'Publish your booking page', onPress: undefined },
             ];
-            const core = steps.slice(0, 3);
+            const core = steps.slice(0, 4);
             if (core.every((x) => x.done)) return null;
             const doneCount = steps.filter((x) => x.done).length;
             return (
@@ -131,7 +134,7 @@ export default function CoachDashboardScreen() {
                   <Text className="text-base font-bold text-bark dark:text-cream">Get set up</Text>
                   <Text className="text-xs font-semibold text-stone">{doneCount} of {steps.length}</Text>
                 </View>
-                <Text className="text-xs text-stone dark:text-parchment mb-3">About 10 minutes. You can take requests as soon as the first three are done.</Text>
+                <Text className="text-xs text-stone dark:text-parchment mb-3">About 10 minutes. You can take requests as soon as the first four are done.</Text>
                 {steps.map((st) => (
                   <Pressable
                     key={st.label}
@@ -331,6 +334,13 @@ export default function CoachDashboardScreen() {
             subtitle={pendingCount ? `${pendingCount} waiting for your reply` : 'Review & accept lesson requests'}
             badge={pendingCount}
             onPress={() => router.push('/coach/requests')}
+          />
+          <DashRow
+            icon="document-text-outline"
+            color="#4f46e5"
+            title="Terms & release"
+            subtitle={policies && !policies.platform_agreement_accepted_at ? 'Action needed before families can book' : 'Your lesson terms and liability release'}
+            onPress={() => router.push('/coach/policies')}
           />
           <DashRow icon="cash-outline" color="#16a34a" title="Earnings" subtitle="Payouts & history" comingSoon />
         </ScrollView>

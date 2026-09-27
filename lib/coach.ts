@@ -554,6 +554,8 @@ export interface RequestDetail {
     first_name: string; last_name: string | null; grad_year: number | null;
     positions: string[]; level: string | null; club_team: string | null;
     height_inches: number | null; goals: string | null;
+    allergies?: string | null; medical_notes?: string | null;
+    emergency_contact_name?: string | null; emergency_contact_phone?: string | null;
   };
 }
 
@@ -588,6 +590,8 @@ export interface ScheduleAttendee {
   athlete_profile?: {
     grad_year: number | null; positions: string[] | null; level: string | null;
     club_team: string | null; height_inches: number | null; goals: string | null;
+    allergies?: string | null; medical_notes?: string | null;
+    emergency_contact_name?: string | null; emergency_contact_phone?: string | null;
   } | null;
   price_cents?: number | null;
   payment_status?: string | null;   // bookings: pending|authorized|captured|refunded|failed
@@ -735,6 +739,83 @@ function notifyParentOfChange(bookingId: string, change: 'cancelled' | 'reschedu
 export async function setSlotFacilityStatus(slotId: string, status: FacilityStatus): Promise<{ error: Error | null }> {
   const { error } = await (supabase.from('slots') as any).update({ facility_status: status }).eq('id', slotId);
   return { error: error ?? null };
+}
+
+// ---- Terms, release, platform agreement, athlete health (00069) ----
+
+export interface CoachPolicies {
+  coach_id: string;
+  terms: string;
+  release: string;
+  platform: string;              // fixed RallyHUB platform terms (not coach-editable)
+  terms_is_default: boolean;
+  release_is_default: boolean;
+  version: string;
+  reviewed: boolean;
+  platform_agreement_accepted_at: string | null;   // only returned to the coach themself
+}
+
+export async function fetchCoachPolicies(coachId: string): Promise<{ data: CoachPolicies | null; error: Error | null }> {
+  const { data, error } = await (supabase.rpc as any)('get_coach_policies', { p_coach_id: coachId });
+  return { data: (data as CoachPolicies | null) ?? null, error: error ?? null };
+}
+
+/** Pass null to use the RallyHUB default for that document. */
+export async function saveMyCoachPolicies(terms: string | null, release: string | null): Promise<{ data: CoachPolicies | null; error: Error | null }> {
+  const { data, error } = await (supabase.rpc as any)('set_my_coach_policies', { p_terms: terms, p_release: release });
+  return { data: (data as CoachPolicies | null) ?? null, error: error ?? null };
+}
+
+export async function fetchCoachPlatformAgreement(): Promise<string> {
+  const { data } = await (supabase.rpc as any)('coach_platform_agreement');
+  return (data as string) ?? '';
+}
+
+export async function acceptCoachPlatformAgreement(): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.rpc as any)('accept_coach_platform_agreement');
+  return { error: error ?? null };
+}
+
+export async function hasAcceptedCoachPolicies(coachId: string, athleteId: string): Promise<boolean> {
+  const { data } = await (supabase.rpc as any)('has_accepted_coach_policies', { p_coach_id: coachId, p_athlete_id: athleteId });
+  return !!data;
+}
+
+export async function acceptCoachPolicies(coachId: string, athleteId: string, signerName: string): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.rpc as any)('accept_coach_policies', { p_coach_id: coachId, p_athlete_id: athleteId, p_signer_name: signerName });
+  return { error: error ?? null };
+}
+
+export interface AthleteHealth {
+  allergies: string | null;
+  medical_notes: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+}
+
+export async function fetchAthleteHealth(athleteId: string): Promise<AthleteHealth | null> {
+  const { data } = await (supabase.from('athletes') as any)
+    .select('allergies, medical_notes, emergency_contact_name, emergency_contact_phone')
+    .eq('id', athleteId)
+    .maybeSingle();
+  return (data as AthleteHealth | null) ?? null;
+}
+
+export async function saveAthleteHealth(athleteId: string, h: AthleteHealth): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.rpc as any)('set_athlete_health', {
+    p_athlete_id: athleteId,
+    p_allergies: h.allergies ?? '',
+    p_medical_notes: h.medical_notes ?? '',
+    p_ec_name: h.emergency_contact_name ?? '',
+    p_ec_phone: h.emergency_contact_phone ?? '',
+  });
+  return { error: error ?? null };
+}
+
+/** True when the allergies answer is an actual allergy (not "none"). */
+export function hasRealAllergies(allergies?: string | null): boolean {
+  const a = (allergies ?? '').trim().toLowerCase();
+  return !!a && !['none', 'no', 'n/a', 'na', 'nka', 'nkda', 'no known allergies'].includes(a);
 }
 
 export async function getCalendarToken(regenerate = false): Promise<{ data: string | null; error: Error | null }> {
