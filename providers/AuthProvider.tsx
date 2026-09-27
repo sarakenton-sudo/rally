@@ -187,6 +187,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (result.type !== 'success') {
             return { error: 'Google sign-in was cancelled' };
           }
+          // The auth session hands the callback URL back here (no Linking event),
+          // so finish sign-in from it: PKCE ?code=… or implicit #access_token=….
+          const cb = new URL(result.url);
+          const hash = new URLSearchParams(cb.hash.replace(/^#/, ''));
+          const code = cb.searchParams.get('code');
+          const errDesc = cb.searchParams.get('error_description') ?? hash.get('error_description');
+          if (errDesc) return { error: errDesc };
+          if (code) {
+            const { error: exErr } = await supabase.auth.exchangeCodeForSession(code);
+            if (exErr) return { error: exErr.message };
+          } else if (hash.get('access_token') && hash.get('refresh_token')) {
+            const { error: setErr } = await supabase.auth.setSession({
+              access_token: hash.get('access_token')!,
+              refresh_token: hash.get('refresh_token')!,
+            });
+            if (setErr) return { error: setErr.message };
+          } else {
+            return { error: 'Google sign-in did not return to the app. Please try again.' };
+          }
         }
       }
       return { error: null };
