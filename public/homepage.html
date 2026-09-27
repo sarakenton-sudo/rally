@@ -319,6 +319,22 @@ footer{padding:30px 20px;}
 .btn-primary{padding:12px 24px;font-size:14px;}
 .eyebrow-text{font-size:10px;}
 }
+/* Private lessons + coaches (Sep 2026) */
+.phone-badge-3{right:-110px;top:40px;animation:float 3.2s 0.6s ease-in-out infinite;}
+.hero-secondary{color:rgba(255,255,255,0.75);font-weight:700;font-size:14px;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.3);padding-bottom:2px;}
+.hero-secondary:hover{color:white;border-color:white;}
+.coach-eyebrow{color:#7DBDD9;}
+.coach-pains{margin:18px 0 20px;padding:0;list-style:none;}
+.coach-pains li{font-size:15px;line-height:1.6;color:rgba(255,255,255,0.8);padding:8px 0 8px 18px;border-left:2px solid rgba(59,130,176,0.5);margin-bottom:8px;}
+.coach-pains-label{font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:#7DBDD9;margin-top:22px;}
+.coach-unique{font-size:15px;line-height:1.7;color:white;background:rgba(59,130,176,0.15);border:1px solid rgba(59,130,176,0.35);border-radius:12px;padding:14px 16px;margin:18px 0 22px;}
+.coach-unique strong{color:#7DBDD9;}
+.doors{display:grid;grid-template-columns:1fr 1fr;gap:16px;position:relative;z-index:1;max-width:760px;margin:0 auto;text-align:left;}
+.door{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);border-radius:16px;padding:22px;}
+.door-who{font-family:'Nunito',sans-serif;font-weight:800;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#7DBDD9;margin-bottom:6px;}
+.door-copy{font-size:15px;line-height:1.6;color:rgba(255,255,255,0.8);margin-bottom:18px;min-height:48px;}
+.door .btn-large{display:inline-block;padding:13px 26px;font-size:15px;}
+@media(max-width:768px){.doors{grid-template-columns:1fr;}.hero-actions{flex-direction:column;}}
 </style>
 </head>
 <body>
@@ -331,6 +347,8 @@ footer{padding:30px 20px;}
   <div class="nav-links">
     <a href="#pain">The Problem</a>
     <a href="#features">Features</a>
+    <a href="#lessons">Private Lessons</a>
+    <a href="#coaches">For Coaches</a>
     <a href="/about.html">About</a>
     <a href="/auth" class="nav-login">Log In</a>
     <a href="/auth?signup=true" class="nav-cta">Sign Up Free</a>
@@ -346,22 +364,23 @@ footer{padding:30px 20px;}
     <div class="hero-top-mobile">
       <div class="hero-eyebrow" style="justify-content:center;">
         <div class="eyebrow-dot"></div>
-        <div class="eyebrow-text">Built for Club Volleyball Families</div>
+        <div class="eyebrow-text">Built for club volleyball families — and the coaches who train them</div>
       </div>
       <h1 class="hero-headline">The chaos of club volleyball season <span class="accent">ends here.</span></h1>
     </div>
     <div class="hero-left">
       <div class="hero-eyebrow hero-desktop-only">
         <div class="eyebrow-dot"></div>
-        <div class="eyebrow-text">Built for Club Volleyball Families</div>
+        <div class="eyebrow-text">Built for club volleyball families — and the coaches who train them</div>
       </div>
       <h1 class="hero-headline hero-desktop-only">The chaos of club volleyball season <span class="accent">ends here.</span></h1>
-      <p class="hero-sub">Schedules, hotels, tickets, family updates, streaming links, team codes — all of it, in one place. Built by volleyball parents who got tired of managing a season across six platforms and finally did something about it.</p>
+      <p class="hero-sub">Tournaments, hotels, tickets, streaming links, team codes — and now private lessons — all in one place. Built by volleyball parents who got tired of managing a season across six platforms and finally did something about it.</p>
       <div class="hero-built-by">
         <div class="hero-built-text">The first app built by club parents, for club parents.</div>
       </div>
       <div class="hero-actions">
         <a href="/auth?signup=true" class="btn-primary">Sign up free &rarr;</a>
+        <a href="/auth?signup=true&amp;role=coach" class="hero-secondary">Coach private lessons? Get your booking page &rarr;</a>
       </div>
     </div>
     <div class="hero-right">
@@ -375,6 +394,11 @@ footer{padding:30px 20px;}
           <div class="pb-icon">&#128117;&#127869;</div>
           <div class="pb-label">Grandma's all set</div>
           <div class="pb-sub">Stream link + ticket sent &#10003;</div>
+        </div>
+        <div class="phone-badge phone-badge-3">
+          <div class="pb-icon">&#127952;</div>
+          <div class="pb-label">Lesson booked &middot; Coach Maya</div>
+          <div class="pb-sub">Tue 6:00pm &middot; Paid &#10003;</div>
         </div>
         <div class="phone">
           <div class="phone-notch"><div class="phone-pill"></div></div>
@@ -408,6 +432,11 @@ footer{padding:30px 20px;}
               <div class="action-card" style="background:#FEF3C7;">
                 <div class="ac-icon" style="background:rgba(217,119,6,0.15);"><span style="color:#d97706;font-size:10px;">&#127976;</span></div>
                 <div class="ac-text"><div class="ac-title">Book Hotel for Lone Star Classic</div><div class="ac-sub">30 days away</div></div>
+                <div class="ac-chev">&#8250;</div>
+              </div>
+              <div class="action-card" style="background:#DBEAFE;">
+                <div class="ac-icon" style="background:rgba(59,130,176,0.15);"><span style="color:#3B82B0;font-size:10px;">&#128198;</span></div>
+                <div class="ac-text"><div class="ac-title">Serving lesson Tuesday &middot; Coach Maya</div><div class="ac-sub">6:00pm &middot; reminder sent to Drue</div></div>
                 <div class="ac-chev">&#8250;</div>
               </div>
               <div class="action-card" style="background:#E8F5EE;">
@@ -498,11 +527,19 @@ footer{padding:30px 20px;}
         </div>
       </div>
 
+      <div class="pain-card reveal rd1">
+        <div class="pain-emoji">&#128198;</div>
+        <div class="pain-content">
+          <div class="pain-q">"Wait — is her lesson Tuesday or Thursday?"</div>
+          <div class="pain-a">The coach texted Sunday night. Or was it GroupMe? You Venmo'd. You <em>think</em> you Venmo'd. Your athlete says she "has it in her notes." She does not have it in her notes.</div>
+        </div>
+      </div>
+
       <div class="pain-card wide reveal rd2">
         <div class="pain-emoji">&#129327;</div>
         <div class="pain-content">
           <div class="pain-q">"How many platforms does one sport need?"</div>
-          <div class="pain-a">LeagueApps. AES. GroupMe. USA Volleyball. Sports Recruits. University Athlete. TeamSnap. SportsEngine. Sprocket. And whatever new one the club just switched to. These platforms are built for tournament directors, or clubs. Not for parents.</div>
+          <div class="pain-a">LeagueApps. AES. GroupMe. USA Volleyball. Sports Recruits. University Athlete. TeamSnap. SportsEngine. Sprocket. And whatever new one the club just switched to. Plus the coach's Venmo, the coach's text thread, and the coach's Google Calendar invite that never made it to your calendar. These platforms are built for tournament directors, or clubs. Not for parents.</div>
           <div class="pain-tag"><div class="pain-tag-check">&#10003;</div>RallyHUB is the only one built with the parent point of view.</div>
         </div>
       </div>
@@ -527,7 +564,7 @@ footer{padding:30px 20px;}
       <div class="feat-icon">&#128197;</div>
       <div class="feat-title">Your Season, All in One Place</div>
       <div class="feat-subtitle">"You shouldn't need a spreadsheet to be a sports parent."</div>
-      <div class="feat-body">Every game, tournament, and travel day for every athlete, every season — color-coded, synced to your calendar, and updated automatically when things change. Two kids, two clubs, two schedules? One hub. Done. You already have a job.</div>
+      <div class="feat-body">Every game, tournament, travel day, and private lesson for every athlete, every season — color-coded, and synced to your calendar. Two kids, two clubs, a hitting coach, and a defense clinic? One hub. Done. You already have a job.</div>
     </div>
     <div class="feat-right">
       <div class="feat-right-label">Your season at a glance</div>
@@ -555,6 +592,15 @@ footer{padding:30px 20px;}
           <div class="sched-date">Apr 3-5</div>
         </div>
         <div class="sched-event">
+          <div class="sched-bar" style="background:var(--steel);"></div>
+          <div>
+            <div class="sched-name">Private Lesson &middot; Coach Maya</div>
+            <div class="sched-detail">Drue &middot; Tue 6:00pm</div>
+            <div class="sched-badge" style="background:rgba(106,158,138,0.15);color:var(--teal);">&#10003; PAID</div>
+          </div>
+          <div class="sched-date">Apr 8</div>
+        </div>
+        <div class="sched-event">
           <div class="sched-bar" style="background:var(--mist);"></div>
           <div>
             <div class="sched-name">Show Me Qualifier</div>
@@ -568,6 +614,51 @@ footer{padding:30px 20px;}
   </div>
 </div>
 
+<!-- FEATURE: Private Lessons (Teal) -->
+<div class="feature-section" id="lessons">
+  <div class="feature-card teal-bg reveal">
+    <div class="feat-left">
+      <div class="feat-icon">&#127952;</div>
+      <div class="feat-title">Private Lessons, Same Hub</div>
+      <div class="feat-subtitle">"Her lessons shouldn't live in a different universe than her tournaments."</div>
+      <div class="feat-body">Book your athlete's private lessons right inside RallyHUB. See your coach's real availability, pick a time, pay in the app — no Venmo archaeology, no "did we pay for last week?" Lessons land on the same calendar as tournaments, so you'll never book a serving session on the Saturday you're in Kansas City.</div>
+      <div class="feat-body2">Reminders go to everyone who needs them — you, your athlete, and the coach — before anyone has to ask. Your athlete's profile goes with every request, so the coach already knows her position, her age group, and her club.</div>
+      <div class="feat-tag">Your coach isn't on RallyHUB yet? Send them an invite. They'll thank you. Probably with a free extra rep.</div>
+    </div>
+    <div class="feat-right">
+      <div class="feat-right-label">This week</div>
+
+      <div class="alert-notif teal-alert">
+        <div class="an-icon" style="background:rgba(255,255,255,0.15);">&#127952;</div>
+        <div>
+          <div class="an-app">Tue 6:00pm &middot; Private Lesson</div>
+          <div class="an-title">Coach Maya</div>
+          <div class="an-body">Paid &#10003; &middot; Reminder sent</div>
+        </div>
+      </div>
+
+      <div class="alert-notif teal-alert">
+        <div class="an-icon" style="background:rgba(255,255,255,0.15);">&#127952;</div>
+        <div>
+          <div class="an-app">Thu 7:00pm &middot; Semi-Private</div>
+          <div class="an-title">Coach Maya &middot; Drue + Ava</div>
+          <div class="an-body">Paid &#10003;</div>
+        </div>
+      </div>
+
+      <div class="alert-notif warn-alert">
+        <div class="an-icon" style="background:rgba(251,146,60,0.15);">&#127942;</div>
+        <div>
+          <div class="an-app">Sat&ndash;Sun &middot; Tournament</div>
+          <div class="an-title">Show Me Qualifier &middot; Kansas City</div>
+          <div class="an-body">&#9888; Hotel needed</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <!-- FEATURE 2: Hotel & Travel (Navy) -->
 <div class="feature-section">
   <div class="feature-card navy-bg reveal">
@@ -575,7 +666,7 @@ footer{padding:30px 20px;}
       <div class="feat-icon">&#127976;</div>
       <div class="feat-title">Your Itinerary, Built Like Magic 🪄</div>
       <div class="feat-subtitle">"Your tournament itinerary shouldn't live in seventeen different places."</div>
-      <div class="feat-body">Forward any confirmation email or tournament info to plans@rallyhub.com and like magic, it lands right where it belongs — cancellation date, address, check-in time, all of it parsed and added to the right tournament automatically. Got a hotel confirmation buried in a group text? Paste it in. RallyHUB figures out the rest.</div>
+      <div class="feat-body">Forward any confirmation email or tournament info to plans@rally-hub.com and like magic, it lands right where it belongs — cancellation date, address, check-in time, all of it parsed and added to the right tournament automatically. Got a hotel confirmation buried in a group text? Paste it in. RallyHUB figures out the rest.</div>
       <div class="feat-body2">Booked two hotels "just in case"? Mark one as a backup and we'll keep it front and center so you don't accidentally eat a non-refundable charge on a room you never needed. One-tap directions from the app to your hotel, the venue, or that team dinner restaurant everyone's trying to find at 7pm in an unfamiliar city. Or add details manually — however you work, RallyHUB works with you.</div>
       <div class="feat-tag">Every tournament. Every detail. One place.</div>
     </div>
@@ -703,7 +794,7 @@ footer{padding:30px 20px;}
       <div class="feat-icon">&#128226;</div>
       <div class="feat-title">Nothing Slips Through</div>
       <div class="feat-subtitle">"You didn't miss the cancellation deadline because you forgot. You missed it because no one told you."</div>
-      <div class="feat-body">RallyHUB pushes the alerts that actually matter — cancellation deadlines, stay and play windows, schedule changes, coach announcements — the moment they matter. Not buried in your inbox. Not in a group text you muted. Right there, when you need it.</div>
+      <div class="feat-body">RallyHUB pushes the alerts that actually matter — cancellation deadlines, stay and play windows, schedule changes, lesson reminders, coach announcements — the moment they matter. Not buried in your inbox. Not in a group text you muted. Right there, when you need it.</div>
     </div>
     <div class="feat-right">
       <div class="feat-right-label">Alerts that actually matter</div>
@@ -738,6 +829,43 @@ footer{padding:30px 20px;}
         </div>
       </div>
 
+      <div class="alert-notif teal-alert">
+        <div class="an-icon" style="background:rgba(255,255,255,0.15);">&#128198;</div>
+        <div>
+          <div class="an-app">RallyHUB &middot; Lesson Reminder</div>
+          <div class="an-title">Drue has a lesson with Coach Maya tomorrow at 6pm.</div>
+          <div class="an-body">Court 3 &middot; Bring knee pads &middot; Paid &#10003;</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- FOR COACHES (Navy) -->
+<div class="feature-section" id="coaches" style="padding-top:24px;">
+  <div class="feature-card navy-bg reveal">
+    <div class="feat-left">
+      <div class="eyebrow coach-eyebrow">For coaches who offer private lessons</div>
+      <div class="feat-title">You coach. You shouldn't also have to be the scheduler, the bill collector, and the reminder service.</div>
+      <div class="feat-body" style="color:rgba(255,255,255,0.75);">You got into this to make athletes better. Somehow you also became a part-time admin running your business out of texts, Venmo requests, and a notes app. RallyHUB gives you one place to run it — and puts you right where your families already manage their season.</div>
+      <div class="coach-pains-label">Sound familiar?</div>
+      <ul class="coach-pains">
+        <li>The 10:47pm "can we move Thursday?" text.</li>
+        <li>Three families who "definitely sent the Venmo."</li>
+        <li>The no-show who swears nobody told her. (Somebody told her. Nobody told her mom.)</li>
+      </ul>
+      <div class="coach-unique"><strong>The part nobody else can give you:</strong> your families already open RallyHUB every tournament weekend. Your lessons sit right next to their schedule, their hotels, and their streaming links — not in an app they forgot they downloaded.</div>
+      <a href="/auth?signup=true&amp;role=coach" class="btn-large">Set up your coach page &rarr;</a>
+    </div>
+    <div class="feat-right">
+      <div class="feat-right-label">What you get</div>
+      <div class="vault-item"><div class="vi-icon" style="background:rgba(59,130,176,0.15);">&#128279;</div><div><div class="vi-name">Your own booking page</div><div class="vi-desc">A clean, shareable link for your lessons. Put it in your bio, text it to families, done.</div></div></div>
+      <div class="vault-item"><div class="vi-icon" style="background:rgba(59,130,176,0.15);">&#128197;</div><div><div class="vi-name">Availability and calendar</div><div class="vi-desc">Post your open times. Families request or book. No back-and-forth.</div></div></div>
+      <div class="vault-item"><div class="vi-icon" style="background:rgba(59,130,176,0.15);">&#127952;</div><div><div class="vi-name">Your sessions, your pricing</div><div class="vi-desc">Private 1:1, semi-private, small group, clinics, camps — set it up however you actually coach.</div></div></div>
+      <div class="vault-item"><div class="vi-icon" style="background:rgba(59,130,176,0.15);">&#128179;</div><div><div class="vi-name">Get paid in the app</div><div class="vi-desc">Card, Apple Pay, Google Pay, or bank transfer. Money lands in your account. No chasing.</div></div></div>
+      <div class="vault-item"><div class="vi-icon" style="background:rgba(59,130,176,0.15);">&#128276;</div><div><div class="vi-name">Reminders that go to everyone</div><div class="vi-desc">The athlete, the parent, and you — automatically, before every session.</div></div></div>
+      <div class="vault-item"><div class="vi-icon" style="background:rgba(59,130,176,0.15);">&#128203;</div><div><div class="vi-name">Know who's walking in</div><div class="vi-desc">Every request comes with the athlete's profile: age group, position, club.</div></div></div>
     </div>
   </div>
 </div>
@@ -747,11 +875,18 @@ footer{padding:30px 20px;}
   <div class="cta-card reveal">
     <img class="cta-cap" src="/rallyhub_lockup_white.png" alt="RallyHUB">
     <div class="cta-built">Built by club parents, for club parents.</div>
-    <h2 class="cta-headline">Get your season <span class="accent">organized.</span></h2>
-    <p class="cta-sub">Free to start — no credit card, no headaches.</p>
-    <div class="cta-actions">
-      <a href="/auth?signup=true" class="btn-large">Create your free account</a>
-      <a href="#pain" class="btn-outline">Sound familiar? &rarr;</a>
+    <h2 class="cta-headline">Your season, sorted. <span class="accent">Your lessons, too.</span></h2>
+    <div class="doors">
+      <div class="door">
+        <div class="door-who">Parents</div>
+        <div class="door-copy">Sign up free — no credit card, no headaches.</div>
+        <a href="/auth?signup=true" class="btn-large">Sign up free &rarr;</a>
+      </div>
+      <div class="door">
+        <div class="door-who">Coaches</div>
+        <div class="door-copy">Run your lessons where your families already are.</div>
+        <a href="/auth?signup=true&amp;role=coach" class="btn-large">Set up your coach page &rarr;</a>
+      </div>
     </div>
   </div>
 </section>
@@ -765,7 +900,7 @@ footer{padding:30px 20px;}
       </div>
       <div class="f-tag">Built by club parents, for club parents.</div>
     </div>
-    <div class="footer-right">&copy; 2026 Quiet Standard Consulting LLC &middot; All rights reserved<br><a href="/terms">Terms of Use</a> &middot; <a href="/privacy">Privacy Policy</a><br>hello@rally-hub.com</div>
+    <div class="footer-right">&copy; 2026 Quiet Standard Consulting LLC &middot; All rights reserved<br><a href="/about.html">About</a> &middot; <a href="#coaches">For Coaches</a> &middot; <a href="/terms">Terms of Use</a> &middot; <a href="/privacy">Privacy Policy</a><br>hello@rally-hub.com</div>
   </div>
 </footer>
 

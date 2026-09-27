@@ -15,10 +15,18 @@ function getInitialSignUp(): boolean {
   return false;
 }
 
+/** Homepage "Set up your coach page" links here with ?signup=true&role=coach. */
+function getInitialAccountType(): AccountType {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    return new URLSearchParams(window.location.search).get('role') === 'coach' ? 'coach' : 'parent';
+  }
+  return 'parent';
+}
+
 export default function AuthScreen() {
   const { signIn, signUp, signInWithGoogle, resetPassword, acceptInvite } = useAuth();
   const [isSignUp, setIsSignUp] = useState(getInitialSignUp);
-  const [accountType, setAccountType] = useState<AccountType>('parent');
+  const [accountType, setAccountType] = useState<AccountType>(getInitialAccountType);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [inviteCode, setInviteCode] = useState('');
