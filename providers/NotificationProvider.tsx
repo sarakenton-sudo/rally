@@ -145,6 +145,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           else handledResponses.current.delete(key); // retry once signed in
         } else if (data?.type === 'booking_confirmed') {
           router.push('/coach/schedule');
+        } else if (data?.type === 'lesson_changed') {
+          router.push('/coaching');
         } else if (data?.tournamentId) {
           router.push(`/tournament/${data.tournamentId}`);
         }
