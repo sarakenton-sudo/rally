@@ -6,6 +6,10 @@
   "trailingSlash": false,
   "rewrites": [
     {
+      "source": "/book/:slug",
+      "destination": "/book/[slug]"
+    },
+    {
       "source": "/auth-callback",
       "destination": "/app.html"
     },

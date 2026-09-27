@@ -12,6 +12,7 @@ import {
   type SlotWithRefs, type CoachPolicies,
 } from '@/lib/coach';
 import { useIconColors } from '@/lib/colors';
+import { createLessonAthlete } from '@/lib/bookingPage';
 import {
   getPaymentMethod, addPaymentMethod, confirmPaymentMethod, describePaymentMethod, getPlatformFeeBps,
   type SavedPaymentMethod,
@@ -47,6 +48,23 @@ export default function BookScreen() {
   const [agreeRelease, setAgreeRelease] = useState(false);
   const [signer, setSigner] = useState('');
   const [openDoc, setOpenDoc] = useState<string | null>(null);
+  const [newAthlete, setNewAthlete] = useState({ firstName: '', lastName: '', gradYear: '', position: '', club: '' });
+  const [addingAthlete, setAddingAthlete] = useState(false);
+
+  const addAthlete = async () => {
+    if (!newAthlete.firstName.trim()) { showAlert('Athlete', "Enter your athlete's first name."); notifyError(); return; }
+    setAddingAthlete(true);
+    const { athleteId: id, error } = await createLessonAthlete(newAthlete);
+    setAddingAthlete(false);
+    if (error || !id) { showAlert("Couldn't add athlete", error?.message ?? 'Try again.'); notifyError(); return; }
+    const created = {
+      id, first_name: newAthlete.firstName.trim(), last_name: newAthlete.lastName.trim() || null,
+      user_id: null, can_edit: false, created_at: new Date().toISOString(),
+    } as any;
+    useSeasonStore.getState().setAthletes([...athletes, created]);
+    setAthleteId(id);
+    notifySuccess();
+  };
   // Payment (only when the coach takes payments in RallyHUB)
   const [coachPay, setCoachPay] = useState<{ enabled: boolean; feeHandling: string; timing: string; hoursBefore: number } | null>(null);
   const [pm, setPm] = useState<SavedPaymentMethod | null>(null);
@@ -198,9 +216,22 @@ export default function BookScreen() {
 
             {/* Athlete */}
             {athletes.length === 0 ? (
-              <View className="bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2 mb-4 flex-row items-start">
-                <Ionicons name="alert-circle" size={15} color="#B8924A" style={{ marginTop: 1 }} />
-                <Text className="text-xs text-amber-700 dark:text-amber-300 ml-1.5 flex-1">Add an athlete first (Athletes tab) — a lesson is booked for a specific athlete.</Text>
+              // Lessons-first parents (e.g. from a coach's booking page) add their athlete here.
+              <View className="bg-cream dark:bg-bark-light rounded-xl p-3 mb-4 border border-parchment dark:border-rally-900">
+                <Text className="text-sm font-bold text-bark dark:text-cream mb-1">Who's the lesson for?</Text>
+                <Text className="text-xs text-stone dark:text-parchment mb-2">Your coach sees this so they know who's walking in.</Text>
+                <View className="flex-row gap-3">
+                  <View className="flex-1"><FormField label="First name" value={newAthlete.firstName} onChangeText={(v) => setNewAthlete((a) => ({ ...a, firstName: v }))} placeholder="Drue" /></View>
+                  <View className="flex-1"><FormField label="Last name" value={newAthlete.lastName} onChangeText={(v) => setNewAthlete((a) => ({ ...a, lastName: v }))} placeholder="Kenton" /></View>
+                </View>
+                <View className="flex-row gap-3">
+                  <View className="flex-1"><FormField label="Grad year" value={newAthlete.gradYear} onChangeText={(v) => setNewAthlete((a) => ({ ...a, gradYear: v.replace(/\D/g, '').slice(0, 4) }))} placeholder="YYYY" keyboardType="number-pad" /></View>
+                  <View className="flex-1"><FormField label="Position" value={newAthlete.position} onChangeText={(v) => setNewAthlete((a) => ({ ...a, position: v }))} placeholder="e.g. Setter" /></View>
+                </View>
+                <FormField label="Club (optional)" value={newAthlete.club} onChangeText={(v) => setNewAthlete((a) => ({ ...a, club: v }))} placeholder="e.g. AJV" />
+                <Pressable disabled={addingAthlete} onPress={addAthlete} className="bg-rally-600 rounded-lg py-2.5 items-center active:opacity-80">
+                  <Text className="text-sm font-semibold text-cream">{addingAthlete ? 'Adding…' : 'Add athlete'}</Text>
+                </Pressable>
               </View>
             ) : athletes.length === 1 ? (
               <View className="mb-4">

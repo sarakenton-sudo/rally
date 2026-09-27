@@ -123,7 +123,7 @@ export default function CoachDashboardScreen() {
               { done: slotCount > 0, label: 'Your first week of availability', onPress: () => router.push('/coach/availability-add') },
               { done: !!(policies?.reviewed && policies?.platform_agreement_accepted_at), label: 'Terms, release & platform agreement', onPress: () => router.push('/coach/policies') },
               { done: !!(coachProfile as any).stripe_charges_enabled, label: 'Get paid in the app (Stripe)', onPress: () => router.push('/coach/payments') },
-              { done: false, soon: 'Coming next', label: 'Publish your booking page', onPress: undefined },
+              { done: !!(coachProfile as any).booking_page_published, label: 'Publish your booking page', onPress: () => router.push('/coach/booking-page') },
             ];
             const core = steps.slice(0, 4);
             if (core.every((x) => x.done)) return null;
@@ -144,9 +144,7 @@ export default function CoachDashboardScreen() {
                   >
                     <Ionicons name={st.done ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={st.done ? '#16a34a' : '#8FA8BF'} />
                     <Text className={`text-sm ml-2.5 flex-1 ${st.done ? 'text-stone line-through' : 'text-bark dark:text-cream font-semibold'}`}>{st.label}</Text>
-                    {'soon' in st && st.soon ? (
-                      <Text className="text-[10px] font-bold text-stone">{st.soon.toUpperCase()}</Text>
-                    ) : !st.done ? (
+                    {!st.done ? (
                       <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
                     ) : null}
                   </Pressable>
@@ -291,6 +289,13 @@ export default function CoachDashboardScreen() {
             title="Schedule"
             subtitle={week ? `This week: ${fmtMoney(week.booked)} booked · ${fmtMoney(week.open)} open${week.outstanding ? ` · ${fmtMoney(week.outstanding)} unpaid` : ''}` : "This week's lessons and revenue"}
             onPress={() => router.push('/coach/schedule')}
+          />
+          <DashRow
+            icon="globe-outline"
+            color="#0891b2"
+            title="Booking page"
+            subtitle={(coachProfile as any).booking_page_published ? `Live · rally-hub.com/book/${coachProfile.slug}` : 'Share a link, QR code, or embed on your site'}
+            onPress={() => router.push('/coach/booking-page')}
           />
           <DashRow
             icon="person-circle-outline"

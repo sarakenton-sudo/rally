@@ -12,6 +12,7 @@ import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { DataProvider } from '@/providers/DataProvider';
 import { NotificationProvider } from '@/providers/NotificationProvider';
 import { useSeasonStore } from '@/stores/useSeasonStore';
+import { takeNextPath } from '@/lib/bookingPage';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -122,10 +123,19 @@ function RootLayoutNav() {
 
     const inAuthFlow = segments[0] === 'auth' || segments[0] === 'landing';
     const inOnboarding = segments[0] === 'onboarding';
+    // Public coach booking pages work logged out.
+    const inPublic = segments[0] === 'book';
+    // Lesson-first parents (arrived via a coach's page) can book without the
+    // team/season onboarding.
+    const inLessonFlow = inPublic || segments[0] === 'coaching' || segments[0] === 'documents';
 
     let target: string | null = null;
-    if (!session) {
-      if (!inAuthFlow) target = '/auth';
+    // Just signed in/up from a booking page → back to it.
+    const next = session && inAuthFlow ? takeNextPath() : null;
+    if (next) {
+      target = next;
+    } else if (!session) {
+      if (!inAuthFlow && !inPublic) target = '/auth';
     } else if (isCoach) {
       // Coach account — lives in /coach. Only pull them off the "wrong home"
       // screens (auth/onboarding/tabs), never out of legit stack routes (settings).
@@ -133,9 +143,9 @@ function RootLayoutNav() {
     } else if (isCoParent) {
       if (inAuthFlow || inOnboarding) target = '/(tabs)';
     } else if (userProfile?.role === 'admin' && !adminConfig && !isCoParent) {
-      if (!inOnboarding) target = '/onboarding';
+      if (!inOnboarding && !inLessonFlow) target = '/onboarding';
     } else if (userProfile?.role === 'admin' && adminConfig && !activeSeasonId) {
-      if (!inOnboarding) target = '/onboarding';
+      if (!inOnboarding && !inLessonFlow) target = '/onboarding';
     } else if (userProfile?.role === 'athlete') {
       if (inAuthFlow || inOnboarding) target = '/(tabs)';
     } else if (adminConfig && activeSeasonId) {
@@ -337,6 +347,14 @@ function RootLayoutNav() {
         />
         <Stack.Screen
           name="coach/payments"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="book/[slug]"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="coach/booking-page"
           options={{ headerShown: false }}
         />
         <Stack.Screen
