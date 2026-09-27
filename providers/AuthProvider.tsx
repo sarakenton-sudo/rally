@@ -196,21 +196,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // Close modals BEFORE clearing the session. Sign Out lives in the Account
+    // sheet; if the session clears first, the layout's redirect to /auth runs
+    // while the sheet is still open and login renders as a card over the app.
+    try { if (router.canDismiss()) router.dismissAll(); } catch { /* nothing open */ }
     setUserProfile(null);
-    // 'local' clears this device's session without a network round-trip, so
-    // sign-out can't hang on a slow/failed request (it used to do nothing).
+    // 'local' clears this device's session without a network round-trip.
     try {
       await supabase.auth.signOut({ scope: 'local' });
     } catch (err) {
       console.warn('[Auth] signOut error (clearing session anyway):', err);
     }
     setSession(null);
-    // Sign Out lives in a modal (settings/account). On iOS the layout's
-    // replace('/auth') landed *inside* that modal, so sign-out looked like it
-    // did nothing. Close every modal first, then go to the login screen.
-    try {
-      if (router.canDismiss()) router.dismissAll();
-    } catch { /* nothing to dismiss */ }
     router.replace('/auth');
   };
 

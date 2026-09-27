@@ -155,6 +155,10 @@ function RootLayoutNav() {
     if (!target) { lastTargetRef.current = null; return; }
     if (lastTargetRef.current === target) return; // already issued — don't loop
     lastTargetRef.current = target;
+    // Close any open modal first: otherwise iOS replaces *inside* it and the
+    // new screen (e.g. login after Sign Out in the Account sheet) appears as a
+    // card on top of the app.
+    try { if (router.canDismiss()) router.dismissAll(); } catch { /* nothing open */ }
     router.replace(target as Parameters<typeof router.replace>[0]);
   }, [session, isLoading, segments, adminConfig, activeSeasonId, storeLoading, userProfile, adminAthletes, isCoach, isCoParent]);
 
@@ -174,7 +178,7 @@ function RootLayoutNav() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="landing" options={{ headerShown: false }} />
-        <Stack.Screen name="auth" options={{ headerShown: false }} />
+        <Stack.Screen name="auth" options={{ headerShown: false, presentation: 'card', gestureEnabled: false, animation: 'fade' }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         <Stack.Screen
