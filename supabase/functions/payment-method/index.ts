@@ -2,6 +2,8 @@
 //   POST { action: 'setup', return_url }      → { url }  Stripe Checkout in setup mode
 //   POST { action: 'confirm', session_id }    → { payment_method }  save after returning from Checkout
 //   POST { action: 'get' }                    → { payment_method | null }
+//   POST { action: 'remove' }                 → detach + forget the saved method
+//   POST { action: 'receipt', booking_id }    → { url }  Stripe-hosted receipt
 // JWT required. Charges happen later (charge-due-bookings), off-session.
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { stripe, supabaseAdmin, getUserId, json, handleOptions, ensureCustomer, savePaymentMethod } from '../_shared/stripe.ts';
@@ -50,6 +52,35 @@ serve(async (req: Request) => {
       if (si?.status !== 'succeeded' || !si.payment_method) return json({ payment_method: await summary(userId) });
       await savePaymentMethod(userId, session.customer as string, si.payment_method as string);
       return json({ payment_method: await summary(userId) });
+    }
+
+    if (body.action === 'remove') {
+      const { data: row } = await supabaseAdmin.from('stripe_customers').select('payment_method_id').eq('user_id', userId).maybeSingle();
+      const pmId = (row as any)?.payment_method_id;
+      if (pmId) {
+        try { await stripe.paymentMethods.detach(pmId); } catch (e) { console.warn('[payment-method] detach', e); }
+      }
+      await supabaseAdmin.from('stripe_customers')
+        .update({ payment_method_id: null, pm_type: null, pm_brand: null, pm_last4: null, updated_at: new Date().toISOString() })
+        .eq('user_id', userId);
+      return json({ payment_method: null });
+    }
+
+    if (body.action === 'receipt') {
+      // Stripe-hosted receipt for one of the caller's charged lessons.
+      const { data: b } = await supabaseAdmin.from('bookings')
+        .select('parent_user_id, stripe_charge_id, stripe_payment_intent_id')
+        .eq('id', body.booking_id).maybeSingle();
+      const bk = b as any;
+      if (!bk || bk.parent_user_id !== userId) return json({ error: 'not found' }, 404);
+      let chargeId = bk.stripe_charge_id;
+      if (!chargeId && bk.stripe_payment_intent_id) {
+        const pi = await stripe.paymentIntents.retrieve(bk.stripe_payment_intent_id);
+        chargeId = pi.latest_charge as string | null;
+      }
+      if (!chargeId) return json({ error: 'No receipt yet — this lesson hasn\'t been charged in RallyHUB.' }, 404);
+      const charge = await stripe.charges.retrieve(chargeId);
+      return json({ url: charge.receipt_url });
     }
 
     return json({ payment_method: await summary(userId) });

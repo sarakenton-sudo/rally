@@ -306,6 +306,10 @@ function RootLayoutNav() {
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
+          name="settings/payments"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
           name="settings/change-password"
           options={{ presentation: 'modal', headerShown: false }}
         />

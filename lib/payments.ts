@@ -63,6 +63,42 @@ export async function confirmPaymentMethod(sessionId: string): Promise<{ data: S
   return { data: data?.payment_method ?? null, error };
 }
 
+export async function removePaymentMethod() {
+  return invoke<{ payment_method: null }>('payment-method', { action: 'remove' });
+}
+
+export async function openReceipt(bookingId: string): Promise<{ error: Error | null }> {
+  const { data, error } = await invoke<{ url: string }>('payment-method', { action: 'receipt', booking_id: bookingId });
+  if (error || !data?.url) return { error: error ?? new Error('Receipt unavailable') };
+  if (Platform.OS === 'web') window.open(data.url, '_blank'); else await WebBrowser.openBrowserAsync(data.url);
+  return { error: null };
+}
+
+export interface ParentCharge {
+  id: string;
+  status: string;
+  payment_status: string;
+  payment_method: string | null;
+  price_cents: number;
+  amount_charged_cents: number | null;
+  refunded_cents: number;
+  paid_at: string | null;
+  charge_due_at: string | null;
+  last_charge_error: string | null;
+  coaches: { display_name: string } | null;
+  athletes: { first_name: string } | null;
+  slots: { starts_at: string } | null;
+}
+
+/** The parent's lessons with payment state, newest lesson first. */
+export async function fetchMyCharges(): Promise<ParentCharge[]> {
+  const { data } = await (supabase.from('bookings') as any)
+    .select('id, status, payment_status, payment_method, price_cents, amount_charged_cents, refunded_cents, paid_at, charge_due_at, last_charge_error, coaches(display_name), athletes(first_name), slots(starts_at)')
+    .order('created_at', { ascending: false })
+    .limit(100);
+  return ((data as ParentCharge[]) ?? []).sort((a, b) => (b.slots?.starts_at ?? '').localeCompare(a.slots?.starts_at ?? ''));
+}
+
 // ---- Coaches ----
 
 export interface ConnectStatus {

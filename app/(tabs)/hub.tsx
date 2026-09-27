@@ -60,6 +60,14 @@ export default function HubScreen() {
           onPress={() => router.push('/settings/account')}
         />
 
+        <HubSettingsRow
+          icon="card"
+          iconColor="#16a34a"
+          title="Payments"
+          subtitle="Bank account or card for lessons, and payment history"
+          onPress={() => router.push('/settings/payments')}
+        />
+
         {/* ============================================================ */}
         {/* COACHING */}
         {/* ============================================================ */}
