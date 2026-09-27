@@ -39,11 +39,6 @@ export default function AuthScreen() {
     try {
       if (isSignUp) {
         const { error } = await signUp(email.trim(), password, accountType);
-        if (error === 'EARLY_ACCESS_REQUIRED') {
-          setLoading(false);
-          setMessage({ text: 'RALLY is currently in Early Access. Apply at rally-hub.com/early-access and we\'ll send you an invite!', type: 'info' });
-          return;
-        }
         if (error) { setLoading(false); setMessage({ text: `Sign up error: ${error}`, type: 'error' }); return; }
         if (hasInviteCode && inviteCode.trim()) {
           const { error: inviteError } = await acceptInvite(inviteCode.trim());
@@ -124,28 +119,6 @@ export default function AuthScreen() {
               }}>
                 {message.text}
               </Text>
-              {message.type === 'info' && (
-                <Pressable
-                  style={{ marginTop: 10, alignItems: 'center' }}
-                  onPress={() => {
-                    const url = 'https://rally-hub.com/early-access';
-                    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-                      window.open(url, '_blank');
-                    } else {
-                      Linking.openURL(url);
-                    }
-                  }}
-                >
-                  <Text style={{
-                    fontSize: 13,
-                    fontFamily: 'NunitoSans-Bold',
-                    color: '#3B82B0',
-                    textDecorationLine: 'underline',
-                  }}>
-                    Apply for Early Access
-                  </Text>
-                </Pressable>
-              )}
             </View>
           )}
 
