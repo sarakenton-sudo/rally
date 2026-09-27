@@ -69,15 +69,6 @@ export default function TournamentCard({ tournament, hotelCount = 0, flightCount
       style={{ borderLeftWidth: 4, borderLeftColor: TOURNAMENT_COLOR, shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
       onPress={onPress}
     >
-      {/* Top accent bar — color-coded by booking readiness */}
-      <View
-        className={`h-1.5 ${
-          displayStatus === 'booked' || displayStatus === 'complete' ? 'bg-green-500' :
-          displayStatus === 'partial' ? 'bg-amber-400' :
-          displayStatus === 'travel_needed' ? 'bg-red-400' :
-          'bg-stone'
-        }`}
-      />
 
       <View className="p-4">
         {/* Header row: avatar + name + status badge */}
