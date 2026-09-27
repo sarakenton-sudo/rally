@@ -109,6 +109,7 @@ export async function fetchFacilities(coachId: string): Promise<{ data: Facility
     .from('facilities')
     .select('*')
     .eq('coach_id', coachId)
+    .eq('is_active', true) // hidden facilities stay on existing blocks only
     .order('sort_order', { ascending: true });
   return { data: (data as Facility[]) ?? [], error: error ?? null };
 }
@@ -134,9 +135,10 @@ export async function updateFacility(
   return { error: error ?? null };
 }
 
-export async function deleteFacility(id: string): Promise<{ error: Error | null }> {
+/** Fails with inUse=true when availability still points at it (00070: ON DELETE RESTRICT). */
+export async function deleteFacility(id: string): Promise<{ error: Error | null; inUse?: boolean }> {
   const { error } = await supabase.from('facilities').delete().eq('id', id);
-  return { error: error ?? null };
+  return { error: error ?? null, inUse: (error as any)?.code === '23503' };
 }
 
 // ---- Session types (what a coach offers + price) ----

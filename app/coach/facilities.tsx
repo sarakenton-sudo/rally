@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import FormField from '@/components/FormField';
 import { useCoachStore } from '@/stores/useCoachStore';
-import { fetchFacilities, createFacility, deleteFacility, isSupabaseConfigured } from '@/lib/coach';
+import { fetchFacilities, createFacility, deleteFacility, updateFacility, isSupabaseConfigured } from '@/lib/coach';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess, notifyError } from '@/lib/haptics';
 import type { Facility } from '@/types/database';
@@ -59,16 +59,29 @@ export default function CoachFacilitiesScreen() {
   };
 
   const handleDelete = (facility: Facility) => {
+    const hide = async () => {
+      const { error } = await updateFacility(facility.id, { is_active: false });
+      if (error) { showAlert('Could not hide', error.message); return; }
+      setFacilities((f) => f.filter((x) => x.id !== facility.id));
+      notifySuccess();
+    };
     const doDelete = async () => {
-      const { error } = await deleteFacility(facility.id);
+      const { error, inUse } = await deleteFacility(facility.id);
+      if (inUse) {
+        // Blocks still point here — hide it instead so they keep their location.
+        const msg = `"${facility.label}" is used by availability blocks, so it can't be deleted. Hide it from your list instead? Existing blocks keep it.`;
+        if (Platform.OS === 'web') { if (window.confirm(msg)) hide(); }
+        else Alert.alert('Facility in use', msg, [{ text: 'Cancel', style: 'cancel' }, { text: 'Hide', onPress: hide }]);
+        return;
+      }
       if (error) { showAlert('Could not delete', error.message); return; }
       setFacilities((f) => f.filter((x) => x.id !== facility.id));
       notifySuccess();
     };
     if (Platform.OS === 'web') {
-      if (window.confirm(`Delete "${facility.label}"? Its availability and slots will be removed too.`)) doDelete();
+      if (window.confirm(`Delete "${facility.label}"?`)) doDelete();
     } else {
-      Alert.alert('Delete facility', `Delete "${facility.label}"? Its availability and slots will be removed too.`, [
+      Alert.alert('Delete facility', `Delete "${facility.label}"?`, [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete', style: 'destructive', onPress: doDelete },
       ]);

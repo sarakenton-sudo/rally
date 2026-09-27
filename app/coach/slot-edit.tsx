@@ -100,6 +100,7 @@ export default function SlotEditScreen() {
     setEligibleTypeIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
   const handleSave = async () => {
+    if (!facilityId) { showAlert('Pick a facility', 'Every block needs a facility.'); notifyError(); return; }
     if (!slot) return;
     if (!anyType && eligibleTypeIds.length === 0) { showAlert('Pick a type', 'Choose what this slot can be booked as, or turn on "any type".'); notifyError(); return; }
     if (!date) { showAlert('Pick a date', 'Choose a date.'); notifyError(); return; }
@@ -182,7 +183,7 @@ export default function SlotEditScreen() {
 
             {facilities.length > 0 && (
               <DropdownField
-                label="Facility"
+                label="Facility (required)"
                 value={facilities.find((f) => f.id === facilityId)?.label ?? ''}
                 options={facilities.map((f) => f.label)}
                 onChange={(label) => setFacilityId(facilities.find((f) => f.label === label)?.id ?? null)}

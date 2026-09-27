@@ -130,7 +130,9 @@ export default function AvailabilityScreen() {
                       )}
                       {(() => {
                         const openCents = remaining * slotDefaultPrice(slot, types);
-                        const fs = FACILITY_STATUS_STYLE[slot.facility_status ?? 'not_booked'];
+                        const fs = slot.facility_id
+                          ? FACILITY_STATUS_STYLE[slot.facility_status ?? 'not_booked']
+                          : { label: 'Needs a facility — tap to add', color: '#dc2626', icon: 'alert-circle' as const };
                         return (
                           <View className="flex-row items-center mt-1">
                             {openCents > 0 && (

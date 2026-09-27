@@ -141,7 +141,7 @@ export default function AvailabilityAddScreen() {
 
   const handleSave = async () => {
     if (!anyType && eligibleTypeIds.length === 0) { showAlert('Pick a type', 'Choose what this slot can be booked as, or turn on "any type".'); notifyError(); return; }
-    if (facilities.length > 0 && !facilityId) { showAlert('Pick a facility', 'Choose where these lessons are.'); notifyError(); return; }
+    if (!facilityId) { showAlert('Pick a facility', facilities.length ? 'Choose where these lessons are.' : 'Add a facility first, so families know where to go.'); notifyError(); return; }
     if (mode === 'oneoff' && !date) { showAlert('Pick a date', 'Choose a date for this slot.'); notifyError(); return; }
     if (mode === 'recurring' && weekdays.length === 0) { showAlert('Pick days', 'Choose at least one weekday.'); notifyError(); return; }
 
@@ -194,9 +194,20 @@ export default function AvailabilityAddScreen() {
             </View>
           ) : (
             <>
+              {facilities.length === 0 && (
+                <Pressable
+                  onPress={() => router.push('/coach/facilities')}
+                  className="flex-row items-center rounded-xl p-3 mb-4 active:opacity-80"
+                  style={{ backgroundColor: '#dc26261a' }}
+                >
+                  <Ionicons name="business-outline" size={18} color="#dc2626" />
+                  <Text className="text-sm font-semibold ml-2 flex-1" style={{ color: '#dc2626' }}>Add a facility first — every block needs a location.</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#dc2626" />
+                </Pressable>
+              )}
               {facilities.length > 0 && (
                 <DropdownField
-                  label="Facility"
+                  label="Facility (required)"
                   value={facilities.find((f) => f.id === facilityId)?.label ?? ''}
                   options={facilities.map((f) => f.label)}
                   onChange={(label) => setFacilityId(facilities.find((f) => f.label === label)?.id ?? null)}
