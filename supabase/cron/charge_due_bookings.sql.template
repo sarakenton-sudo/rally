@@ -1,0 +1,19 @@
+-- Schedule the lesson-charging job (runs every 5 minutes).
+-- Not a migration: contains a secret. Replace __CRON_SECRET__ with the value of
+-- the CRON_SECRET Supabase function secret, then run in the SQL editor.
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
+SELECT cron.unschedule(jobid) FROM cron.job WHERE jobname = 'charge-due-bookings';
+
+SELECT cron.schedule(
+  'charge-due-bookings',
+  '*/5 * * * *',
+  $cron$
+  SELECT net.http_post(
+    url := 'https://dtoolzolnxfjlivwyblv.supabase.co/functions/v1/charge-due-bookings',
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-cron-secret', '__CRON_SECRET__'),
+    body := '{}'::jsonb
+  );
+  $cron$
+);

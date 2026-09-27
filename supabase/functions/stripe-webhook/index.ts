@@ -1,13 +1,19 @@
-// stripe-webhook: the reconciler. Signature-verified, idempotent. The only writer
-// of terminal payment state. See docs/coaching-payments-tech.md §3.6 / §5
+// stripe-webhook: Stripe → RallyHUB reconciler. Signature-verified, idempotent
+// (payment_events.stripe_event_id is UNIQUE). Deploy with --no-verify-jwt.
+// Subscribe the endpoint to: payment_intent.succeeded, payment_intent.processing,
+// payment_intent.payment_failed, charge.refunded, checkout.session.completed,
+// account.updated (Connect: "events on connected accounts" too).
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { stripe, cryptoProvider, supabaseAdmin, json, corsHeaders } from '../_shared/stripe.ts';
+import { stripe, cryptoProvider, supabaseAdmin, json, savePaymentMethod } from '../_shared/stripe.ts';
 
 const WEBHOOK_SECRET = Deno.env.get('STRIPE_WEBHOOK_SECRET') ?? '';
 
-serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+async function updateByPI(piId: string, patch: Record<string, unknown>) {
+  const { data } = await supabaseAdmin.from('bookings').update(patch).eq('stripe_payment_intent_id', piId).select('id, request_id');
+  return (data ?? [])[0] as { id: string; request_id: string } | undefined;
+}
 
+serve(async (req: Request) => {
   const sig = req.headers.get('Stripe-Signature');
   const body = await req.text(); // raw body required for signature verification
 
@@ -19,86 +25,78 @@ serve(async (req: Request) => {
     return json({ error: 'invalid signature' }, 400);
   }
 
-  // Idempotency: record the event id first. A duplicate delivery hits the UNIQUE
-  // constraint and we short-circuit without reprocessing.
   const { error: dupeErr } = await supabaseAdmin
     .from('payment_events')
     .insert({ type: `webhook:${event.type}`, stripe_event_id: event.id, raw: event as unknown as Record<string, unknown> });
-  if (dupeErr) {
-    if (dupeErr.code === '23505') {
-      console.log('[stripe-webhook] duplicate event', event.id, '— skipping');
-      return json({ received: true, duplicate: true });
-    }
-    console.error('[stripe-webhook] failed to record event:', dupeErr.message);
-  }
+  if (dupeErr?.code === '23505') return json({ received: true, duplicate: true });
 
   try {
     switch (event.type) {
       case 'payment_intent.succeeded': {
-        const pi = event.data.object as { id: string; latest_charge?: string };
-        await updateBookingByPI(pi.id, { payment_status: 'captured', status: 'confirmed', stripe_charge_id: pi.latest_charge ?? null });
+        const pi = event.data.object as any;
+        await updateByPI(pi.id, {
+          payment_status: 'captured',
+          stripe_charge_id: pi.latest_charge ?? null,
+          paid_at: new Date().toISOString(),
+          paid_amount_cents: pi.amount_received ?? pi.amount,
+          last_charge_error: null,
+        });
+        break;
+      }
+      case 'payment_intent.processing': {
+        await updateByPI((event.data.object as any).id, { payment_status: 'processing' });
         break;
       }
       case 'payment_intent.payment_failed': {
-        // Includes ACH returns that fail after a confirmed booking (§6 recovery).
-        const pi = event.data.object as { id: string };
-        await updateBookingByPI(pi.id, { payment_status: 'failed' });
+        const pi = event.data.object as any;
+        // ACH can fail days later; retry tomorrow via charge-due-bookings.
+        await updateByPI(pi.id, {
+          payment_status: 'failed',
+          stripe_charge_id: null,
+          last_charge_error: pi.last_payment_error?.message ?? 'Payment failed',
+          charge_due_at: new Date(Date.now() + 24 * 3_600_000).toISOString(),
+        });
         break;
       }
       case 'charge.refunded': {
-        const charge = event.data.object as { payment_intent: string };
-        await updateBookingByPI(charge.payment_intent, { payment_status: 'refunded' });
+        const ch = event.data.object as any;
+        if (ch.payment_intent) {
+          await updateByPI(ch.payment_intent, {
+            refunded_cents: ch.amount_refunded,
+            payment_status: ch.amount_refunded >= ch.amount ? 'refunded' : 'captured',
+          });
+        }
         break;
       }
-      case 'charge.dispute.created': {
-        const dispute = event.data.object as { payment_intent: string };
-        await updateBookingByPI(dispute.payment_intent, {}, 'dispute');
-        console.warn('[stripe-webhook] DISPUTE opened for PI', dispute.payment_intent);
+      case 'checkout.session.completed': {
+        // Parent saved a payment method (setup mode). The app also confirms on
+        // return; this covers them closing the tab first.
+        const s = event.data.object as any;
+        if (s.mode === 'setup' && s.metadata?.user_id && s.setup_intent) {
+          const si = await stripe.setupIntents.retrieve(s.setup_intent);
+          if (si.status === 'succeeded' && si.payment_method) {
+            await savePaymentMethod(s.metadata.user_id, s.customer, si.payment_method as string);
+          }
+        }
         break;
       }
       case 'account.updated': {
-        const acct = event.data.object as { id: string; charges_enabled: boolean; payouts_enabled: boolean };
-        await supabaseAdmin
-          .from('coaches')
-          .update({ identity_verified: acct.charges_enabled && acct.payouts_enabled })
-          .eq('stripe_account_id', acct.id);
+        const acct = event.data.object as any;
+        await supabaseAdmin.from('coaches').update({
+          stripe_charges_enabled: !!acct.charges_enabled,
+          stripe_payouts_enabled: !!acct.payouts_enabled,
+          stripe_details_submitted: !!acct.details_submitted,
+          identity_verified: !!acct.charges_enabled,
+        }).eq('stripe_account_id', acct.id);
         break;
       }
       default:
-        console.log('[stripe-webhook] unhandled event', event.type);
+        break;
     }
   } catch (err) {
-    console.error('[stripe-webhook] handler error for', event.type, (err as Error).message);
-    // Return 200 anyway: the event is recorded; Stripe retries help nothing here.
+    console.error('[stripe-webhook] handler error:', event.type, err);
+    return json({ error: 'handler error' }, 500); // Stripe retries
   }
 
   return json({ received: true });
 });
-
-/** Find the booking via its request's PaymentIntent and patch it. */
-async function updateBookingByPI(
-  paymentIntentId: string,
-  patch: Record<string, unknown>,
-  eventType?: string,
-): Promise<void> {
-  const { data: reqRow } = await supabaseAdmin
-    .from('booking_requests')
-    .select('id')
-    .eq('payment_intent_id', paymentIntentId)
-    .maybeSingle();
-  if (!reqRow) return;
-
-  const { data: bk } = await supabaseAdmin
-    .from('bookings')
-    .select('id')
-    .eq('request_id', reqRow.id)
-    .maybeSingle();
-  if (!bk) return;
-
-  if (Object.keys(patch).length > 0) {
-    await supabaseAdmin.from('bookings').update(patch).eq('id', bk.id);
-  }
-  if (eventType) {
-    await supabaseAdmin.from('payment_events').insert({ booking_id: bk.id, request_id: reqRow.id, type: eventType });
-  }
-}

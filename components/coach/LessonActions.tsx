@@ -72,7 +72,7 @@ export default function LessonActions({ attendee, slotId, startsAt, coachId, onC
             {badge === 'paid' && attendee.payment_method ? ` · ${attendee.payment_method.toUpperCase()}` : ''}
           </Text>
         </View>
-        {badge === 'paid' ? (
+        {badge === 'processing' || badge === 'refunded' ? null : badge === 'paid' ? (
           offline ? (
             <Pressable disabled={busy} onPress={() => run(() => markBookingUnpaid(attendee.id), "Couldn't undo")} className="mb-1">
               <Text className="text-xs text-stone underline">Undo</Text>

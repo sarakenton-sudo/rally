@@ -46,35 +46,81 @@ export async function getUserId(req: Request): Promise<string | null> {
   return data.user.id;
 }
 
-// Platform take-rate in basis points (10000 = 100%). Default 10%.
-export const PLATFORM_FEE_BPS = Number(Deno.env.get('PLATFORM_FEE_BPS') ?? '1000');
+/** Take rate in basis points (1000 = 10%) — admin setting in platform_settings. */
+export async function getPlatformFeeBps(): Promise<number> {
+  const { data } = await supabaseAdmin.from('platform_settings').select('platform_fee_bps').maybeSingle();
+  return (data as any)?.platform_fee_bps ?? 1000;
+}
 
-/** Estimate the processing fee (cents) used when a coach passes fees through. */
-export function estimateProcessingFee(amountCents: number, method: 'card' | 'us_bank_account'): number {
-  if (method === 'us_bank_account') {
-    return Math.min(Math.round(amountCents * 0.008), 500); // ACH ~0.8%, capped $5
+export type PmType = 'card' | 'us_bank_account';
+
+/** Stripe's processing fee estimate (cents). Card ~2.9% + 30¢; ACH 0.8% capped at $5. */
+export function estimateStripeFee(amountCents: number, pm: PmType): number {
+  return pm === 'us_bank_account'
+    ? Math.min(Math.round(amountCents * 0.008), 500)
+    : Math.round(amountCents * 0.029) + 30;
+}
+
+export interface ChargeBreakdown {
+  price_cents: number;          // the coach's listed price
+  service_fee_cents: number;    // added for the parent when the coach passes fees through
+  total_cents: number;          // what the parent is charged
+  platform_fee_cents: number;   // RallyHUB take rate
+  application_fee_cents: number;// kept by the platform (take rate + Stripe fee, which the platform pays on destination charges)
+  coach_net_cents: number;      // what lands in the coach's Stripe balance
+}
+
+/**
+ * Destination charges: the platform account pays Stripe's fee, so the
+ * application fee must cover it. 'absorb' → coach bears the fee;
+ * 'surcharge' → parent pays it as a service fee (grossed up so the fee on the
+ * total is covered).
+ */
+export function computeCharge(priceCents: number, feeHandling: 'absorb' | 'surcharge', pm: PmType, feeBps: number): ChargeBreakdown {
+  const platform = Math.round((priceCents * feeBps) / 10000);
+  if (feeHandling === 'surcharge') {
+    const total = pm === 'us_bank_account'
+      ? priceCents + Math.min(Math.ceil(priceCents * 0.008 / (1 - 0.008)), 500)
+      : Math.ceil((priceCents + 30) / (1 - 0.029));
+    const service = total - priceCents;
+    return {
+      price_cents: priceCents, service_fee_cents: service, total_cents: total,
+      platform_fee_cents: platform,
+      application_fee_cents: platform + service,
+      coach_net_cents: priceCents - platform,
+    };
   }
-  return Math.round(amountCents * 0.029) + 30; // card ~2.9% + 30¢
-}
-
-export interface FeeBreakdown {
-  price_cents: number;
-  service_fee_cents: number;   // surcharge line shown to the parent
-  platform_fee_cents: number;  // application_fee_amount (RallyHUB take-rate)
-  total_cents: number;         // what the parent pays
-}
-
-export function computeFees(
-  priceCents: number,
-  feeHandling: 'absorb' | 'surcharge',
-  method: 'card' | 'us_bank_account',
-): FeeBreakdown {
-  const platform_fee_cents = Math.round((priceCents * PLATFORM_FEE_BPS) / 10000);
-  const service_fee_cents = feeHandling === 'surcharge' ? estimateProcessingFee(priceCents, method) : 0;
+  const stripeFee = estimateStripeFee(priceCents, pm);
   return {
-    price_cents: priceCents,
-    service_fee_cents,
-    platform_fee_cents,
-    total_cents: priceCents + service_fee_cents,
+    price_cents: priceCents, service_fee_cents: 0, total_cents: priceCents,
+    platform_fee_cents: platform,
+    application_fee_cents: Math.min(platform + stripeFee, priceCents),
+    coach_net_cents: Math.max(priceCents - platform - stripeFee, 0),
   };
+}
+
+/** Ensure the parent has a Stripe Customer; returns its id. */
+export async function ensureCustomer(userId: string): Promise<string> {
+  const { data: row } = await supabaseAdmin.from('stripe_customers').select('stripe_customer_id').eq('user_id', userId).maybeSingle();
+  if ((row as any)?.stripe_customer_id) return (row as any).stripe_customer_id;
+  const { data: u } = await supabaseAdmin.auth.admin.getUserById(userId);
+  const customer = await stripe.customers.create({ email: u?.user?.email ?? undefined, metadata: { user_id: userId } });
+  await supabaseAdmin.from('stripe_customers').upsert({ user_id: userId, stripe_customer_id: customer.id });
+  return customer.id;
+}
+
+/** Save a payment method as the parent's default (summary shown in the app). */
+export async function savePaymentMethod(userId: string, customerId: string, paymentMethodId: string) {
+  const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+  await stripe.customers.update(customerId, { invoice_settings: { default_payment_method: paymentMethodId } });
+  const isBank = pm.type === 'us_bank_account';
+  await supabaseAdmin.from('stripe_customers').upsert({
+    user_id: userId,
+    stripe_customer_id: customerId,
+    payment_method_id: paymentMethodId,
+    pm_type: pm.type,
+    pm_brand: isBank ? (pm.us_bank_account?.bank_name ?? 'Bank') : (pm.card?.wallet?.type ?? pm.card?.brand ?? 'card'),
+    pm_last4: isBank ? pm.us_bank_account?.last4 : pm.card?.last4,
+    updated_at: new Date().toISOString(),
+  });
 }

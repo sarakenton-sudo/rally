@@ -8,10 +8,14 @@ import DropdownField from '@/components/DropdownField';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import {
   fetchSlot, fetchSessionTypes, requestBooking, notifyCoachOfRequest, isSupabaseConfigured,
-  fetchCoachPolicies, hasAcceptedCoachPolicies, acceptCoachPolicies, fetchAthleteHealth, saveAthleteHealth,
+  fetchCoachPolicies, hasAcceptedCoachPolicies, acceptCoachPolicies, fetchAthleteHealth, saveAthleteHealth, fetchCoachById, fmtMoney,
   type SlotWithRefs, type CoachPolicies,
 } from '@/lib/coach';
 import { useIconColors } from '@/lib/colors';
+import {
+  getPaymentMethod, addPaymentMethod, confirmPaymentMethod, describePaymentMethod, getPlatformFeeBps,
+  type SavedPaymentMethod,
+} from '@/lib/payments';
 import { notifySuccess, notifyError } from '@/lib/haptics';
 import type { SessionType } from '@/types/database';
 
@@ -20,7 +24,7 @@ const athleteName = (a: { first_name: string; last_name: string | null }) =>
 
 export default function BookScreen() {
   const ic = useIconColors();
-  const { slotId, coachId } = useLocalSearchParams<{ slotId: string; coachId: string }>();
+  const { slotId, coachId, pm_setup, session_id } = useLocalSearchParams<{ slotId: string; coachId: string; pm_setup?: string; session_id?: string }>();
   const athletes = useSeasonStore((s) => s.athletes);
 
   const [slot, setSlot] = useState<SlotWithRefs | null>(null);
@@ -43,6 +47,11 @@ export default function BookScreen() {
   const [agreeRelease, setAgreeRelease] = useState(false);
   const [signer, setSigner] = useState('');
   const [openDoc, setOpenDoc] = useState<string | null>(null);
+  // Payment (only when the coach takes payments in RallyHUB)
+  const [coachPay, setCoachPay] = useState<{ enabled: boolean; feeHandling: string; timing: string; hoursBefore: number } | null>(null);
+  const [pm, setPm] = useState<SavedPaymentMethod | null>(null);
+  const [pmBusy, setPmBusy] = useState(false);
+  const [feeBps, setFeeBps] = useState(1000);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -61,7 +70,25 @@ export default function BookScreen() {
 
   useEffect(() => {
     if (coachId && isSupabaseConfigured) fetchCoachPolicies(coachId).then(({ data }) => setPolicies(data));
+    if (coachId && isSupabaseConfigured) {
+      fetchCoachById(coachId).then(({ data }) => {
+        const c = data as any;
+        setCoachPay(c ? { enabled: !!c.stripe_charges_enabled, feeHandling: c.fee_handling, timing: c.payment_timing ?? 'on_accept', hoursBefore: c.payment_hours_before ?? 24 } : null);
+      });
+      getPlatformFeeBps().then(setFeeBps);
+      // Back from Stripe Checkout on web → save the new method; otherwise load the saved one.
+      if (pm_setup === 'success' && session_id) confirmPaymentMethod(session_id).then(({ data }) => setPm(data));
+      else getPaymentMethod().then(({ data }) => setPm(data?.payment_method ?? null));
+    }
   }, [coachId]);
+
+  const addOrChangePm = async () => {
+    setPmBusy(true);
+    const { data, error } = await addPaymentMethod(`/coaching/book?slotId=${slotId}&coachId=${coachId}`);
+    setPmBusy(false);
+    if (error) { showAlert('Payment method', error.message); notifyError(); return; }
+    if (data) { setPm(data); notifySuccess(); }
+  };
 
   useEffect(() => {
     if (!athleteId || !coachId || !isSupabaseConfigured) return;
@@ -87,6 +114,7 @@ export default function BookScreen() {
     if (!sessionTypeId) { showAlert('Pick a session type', 'Choose what to book.'); notifyError(); return; }
     if (!allergies.trim()) { showAlert('Allergies', 'List any allergies, or type "None".'); notifyError(); return; }
     if (!ecName.trim() || !ecPhone.trim()) { showAlert('Emergency contact', 'Add an emergency contact name and phone.'); notifyError(); return; }
+    if (coachPay?.enabled && !pm) { showAlert('Payment method', 'Add a card or bank account. You won\'t be charged until the coach confirms.'); notifyError(); return; }
     if (!accepted) {
       if (!agreeTerms || !agreeRelease) { showAlert('Terms & release', 'Please accept the lesson terms and the release to continue.'); notifyError(); return; }
       if (signer.trim().length < 2) { showAlert('Signature', 'Type your full name to sign.'); notifyError(); return; }
@@ -209,6 +237,32 @@ export default function BookScreen() {
               autoCapitalize="none"
               style={{ minHeight: 50, textAlignVertical: 'top' }}
             />
+
+            {/* Payment */}
+            {coachPay && selectedType ? (
+              <View className="bg-cream dark:bg-bark-light rounded-xl p-3 mb-4 border border-parchment dark:border-rally-900">
+                <Text className="text-sm font-bold text-bark dark:text-cream mb-1">Payment</Text>
+                {coachPay.enabled ? (() => {
+                  const price = selectedType.price_cents;
+                  const total = coachPay.feeHandling === 'surcharge' ? Math.ceil((price + 30) / (1 - 0.029)) : price;
+                  return (
+                    <>
+                      <Text className="text-xs text-stone dark:text-parchment mb-2">
+                        {fmtMoney(price)}{total > price ? ` + ${fmtMoney(total - price)} service fee (card; less by bank)` : ''} · charged {coachPay.timing === 'hours_before' ? `${coachPay.hoursBefore} hours before the lesson` : coachPay.timing === 'after_lesson' ? 'after the lesson' : 'when the coach confirms'}.
+                      </Text>
+                      <Pressable disabled={pmBusy} onPress={addOrChangePm} className="flex-row items-center rounded-lg px-3 py-2.5 bg-warm-white dark:bg-bark border border-parchment dark:border-rally-900 active:opacity-70">
+                        <Ionicons name={pm ? (pm.pm_type === 'us_bank_account' ? 'business' : 'card') : 'add-circle-outline'} size={18} color="#3B82B0" />
+                        <Text className="text-sm font-semibold text-bark dark:text-cream ml-2 flex-1">{pmBusy ? 'Opening secure checkout…' : pm ? describePaymentMethod(pm) : 'Add card, Apple Pay, or bank'}</Text>
+                        <Text className="text-xs font-semibold text-rally-600">{pm ? 'Change' : 'Add'}</Text>
+                      </Pressable>
+                      <Text className="text-[11px] text-stone mt-1.5">Secured by Stripe. Saved for future lessons.</Text>
+                    </>
+                  );
+                })() : (
+                  <Text className="text-xs text-stone dark:text-parchment">This coach isn't taking payments in RallyHUB yet — pay them directly for now.</Text>
+                )}
+              </View>
+            ) : null}
 
             {/* Health & safety */}
             <View className="flex-row items-center mt-2 mb-2">

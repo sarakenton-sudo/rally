@@ -642,17 +642,23 @@ export async function fetchWeekSlots(coachId: string, from: Date, to: Date): Pro
   return { data: (data as SlotWithRefs[]) ?? [], error: error ?? null };
 }
 
-export type PaymentBadge = 'paid' | 'overdue' | 'unpaid' | 'pending';
+export type PaymentBadge = 'paid' | 'overdue' | 'unpaid' | 'pending' | 'processing' | 'failed' | 'refunded';
 
 /** Payment state of one attendee for display. Requests aren't billable yet. */
 export function paymentBadge(a: ScheduleAttendee, startsAt: string): PaymentBadge {
   if (a.kind === 'request') return 'pending';
   if (a.payment_status === 'captured') return 'paid';
+  if (a.payment_status === 'processing') return 'processing';
+  if (a.payment_status === 'refunded') return 'refunded';
+  if (a.payment_status === 'failed') return 'failed';
   return new Date(startsAt).getTime() < Date.now() ? 'overdue' : 'unpaid';
 }
 
 export const PAYMENT_BADGE_STYLE: Record<PaymentBadge, { label: string; bg: string; fg: string }> = {
   paid:    { label: 'PAID', bg: '#16a34a1a', fg: '#16a34a' },
+  processing: { label: 'PROCESSING', bg: '#3B82B01a', fg: '#3B82B0' },
+  failed:  { label: 'PAYMENT FAILED', bg: '#dc26261a', fg: '#dc2626' },
+  refunded: { label: 'REFUNDED', bg: '#8FA8BF26', fg: '#6B8BA8' },
   unpaid:  { label: 'UNPAID', bg: '#d977061a', fg: '#b45309' },
   overdue: { label: 'OVERDUE', bg: '#dc26261a', fg: '#dc2626' },
   pending: { label: 'REQUESTED', bg: '#d977061a', fg: '#b45309' },
@@ -722,7 +728,12 @@ export async function markBookingUnpaid(bookingId: string): Promise<{ error: Err
 
 export async function coachCancelBooking(bookingId: string, reason: string): Promise<{ error: Error | null }> {
   const { error } = await (supabase.rpc as any)('coach_cancel_booking', { p_booking_id: bookingId, p_reason: reason });
-  if (!error) notifyParentOfChange(bookingId, 'cancelled');
+  if (!error) {
+    notifyParentOfChange(bookingId, 'cancelled');
+    // Coach cancelled → full refund of anything charged in RallyHUB (no-op otherwise).
+    supabase.functions.invoke('refund-booking', { body: { booking_id: bookingId } })
+      .then(({ error: e }) => { if (e) console.warn('[coach] refund failed:', e.message); });
+  }
   return { error: error ?? null };
 }
 

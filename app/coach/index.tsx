@@ -122,7 +122,7 @@ export default function CoachDashboardScreen() {
               { done: typeCount > 0, label: 'Session types and prices', onPress: () => router.push('/coach/session-types') },
               { done: slotCount > 0, label: 'Your first week of availability', onPress: () => router.push('/coach/availability-add') },
               { done: !!(policies?.reviewed && policies?.platform_agreement_accepted_at), label: 'Terms, release & platform agreement', onPress: () => router.push('/coach/policies') },
-              { done: false, soon: 'Coming soon', label: 'Get paid in the app (Stripe)', onPress: undefined },
+              { done: !!(coachProfile as any).stripe_charges_enabled, label: 'Get paid in the app (Stripe)', onPress: () => router.push('/coach/payments') },
               { done: false, soon: 'Coming next', label: 'Publish your booking page', onPress: undefined },
             ];
             const core = steps.slice(0, 4);
@@ -342,7 +342,13 @@ export default function CoachDashboardScreen() {
             subtitle={policies && !policies.platform_agreement_accepted_at ? 'Action needed before families can book' : 'Your lesson terms and liability release'}
             onPress={() => router.push('/coach/policies')}
           />
-          <DashRow icon="cash-outline" color="#16a34a" title="Earnings" subtitle="Payouts & history" comingSoon />
+          <DashRow
+            icon="cash-outline"
+            color="#16a34a"
+            title="Payments & earnings"
+            subtitle={(coachProfile as any).stripe_charges_enabled ? 'Earnings, payouts, and payment settings' : 'Set up Stripe to get paid in the app'}
+            onPress={() => router.push('/coach/payments')}
+          />
         </ScrollView>
       )}
     </SafeAreaView>
