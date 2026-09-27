@@ -15,7 +15,7 @@
     },
     {
       "source": "/admin/:path*",
-      "destination": "/admin/index.html"
+      "destination": "/admin"
     }
   ],
   "redirects": [
