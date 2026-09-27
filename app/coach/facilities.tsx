@@ -21,6 +21,7 @@ export default function CoachFacilitiesScreen() {
   const [label, setLabel] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
+  const [contact, setContact] = useState('');
 
   const showAlert = (t: string, m: string) => {
     if (Platform.OS === 'web') window.alert(`${t}: ${m}`);
@@ -43,7 +44,7 @@ export default function CoachFacilitiesScreen() {
     try {
       const { data, error } = await createFacility(
         coachProfile.id,
-        { label: label.trim(), address: address.trim() || null, city: city.trim() || null, notes: null },
+        { label: label.trim(), address: address.trim() || null, city: city.trim() || null, notes: null, contact: contact.trim() || null },
         facilities.length,
       );
       if (error) { showAlert('Could not add', error.message); return; }
@@ -130,6 +131,7 @@ export default function CoachFacilitiesScreen() {
                 <FormField label="Name" value={label} onChangeText={setLabel} placeholder="e.g. Westside Volleyball Club" />
                 <FormField label="Address" value={address} onChangeText={setAddress} placeholder="e.g. 1200 Court St" />
                 <FormField label="City" value={city} onChangeText={setCity} placeholder="e.g. Austin, TX" />
+                <FormField label="Booking contact (optional)" value={contact} onChangeText={setContact} placeholder="e.g. Jen, front desk · 512-555-0100" />
                 <Pressable
                   onPress={handleAdd}
                   disabled={adding}

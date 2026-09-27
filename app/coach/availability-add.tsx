@@ -13,7 +13,8 @@ import {
 } from '@/lib/coach';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess, notifyError } from '@/lib/haptics';
-import type { Facility, SessionType, SlotVisibility, CoachClient, ClientGroup } from '@/types/database';
+import type { Facility, FacilityStatus, SessionType, SlotVisibility, CoachClient, ClientGroup } from '@/types/database';
+import FacilityStatusField from '@/components/coach/FacilityStatusField';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const WEEK_OPTIONS = ['1 week', '2 weeks', '3 weeks', '4 weeks', '6 weeks', '8 weeks', '12 weeks'];
@@ -45,6 +46,7 @@ export default function AvailabilityAddScreen() {
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [groupId, setGroupId] = useState<string | null>(null);
   const [facilityId, setFacilityId] = useState<string | null>(null);
+  const [facilityStatus, setFacilityStatus] = useState<FacilityStatus>('not_booked');
   const [anyType, setAnyType] = useState(false);
   const [eligibleTypeIds, setEligibleTypeIds] = useState<string[]>([]);
   const [durationMin, setDurationMin] = useState(60);
@@ -109,6 +111,7 @@ export default function AvailabilityAddScreen() {
       rows.push({
         coachId: coachProfile.id,
         facilityId,
+        facilityStatus,
         eligibleTypeIds: eligible,
         startsAt: new Date(d),
         endsAt: new Date(d.getTime() + durationMs),
@@ -199,6 +202,7 @@ export default function AvailabilityAddScreen() {
                   onChange={(label) => setFacilityId(facilities.find((f) => f.label === label)?.id ?? null)}
                 />
               )}
+              <FacilityStatusField value={facilityStatus} onChange={setFacilityStatus} />
 
               <SlotTargetingField
                 clients={clients}

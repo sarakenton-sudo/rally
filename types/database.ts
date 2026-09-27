@@ -41,6 +41,7 @@ export interface Facility {
   lat: number | null;
   lng: number | null;
   notes: string | null;
+  contact?: string | null;
   is_active: boolean;
   sort_order: number;
   created_at: string;
@@ -345,6 +346,8 @@ export interface Coach {
   instant_book_default: boolean;
   cancellation_policy_version: string;
   slug: string | null;
+  phone?: string | null;
+  primary_city?: string | null;
   stripe_account_id: string | null;
   onboarding_complete: boolean;
   created_at: string;
@@ -402,12 +405,15 @@ export interface AvailabilityRule {
   updated_at: string;
 }
 
+export type FacilityStatus = 'reserved' | 'requested' | 'not_booked';
+
 export interface Slot {
   id: string;
   coach_id: string;
   facility_id: string | null;
   session_type_id: string | null;
   eligible_session_type_ids: string[];
+  facility_status?: FacilityStatus;
   starts_at: string;
   ends_at: string;
   status: SlotStatus;

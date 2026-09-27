@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { tapLight } from '@/lib/haptics';
 import { useAuth } from '@/providers/AuthProvider';
 import { useCoachStore } from '@/stores/useCoachStore';
-import { fetchMyCoach, fetchFacilities, fetchPendingRequests, isSupabaseConfigured } from '@/lib/coach';
+import { fetchMyCoach, fetchFacilities, fetchPendingRequests, fetchSessionTypes, fetchUpcomingSlots, fetchSchedule, fetchWeekSlots, weekSummary, fmtMoney, isSupabaseConfigured, type WeekSummary } from '@/lib/coach';
 import { useIconColors } from '@/lib/colors';
 
 export default function CoachDashboardScreen() {
@@ -18,12 +18,23 @@ export default function CoachDashboardScreen() {
   const [loading, setLoading] = useState(!coachProfile);
   const [facilityCount, setFacilityCount] = useState<number | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
+  const [typeCount, setTypeCount] = useState<number | null>(null);
+  const [slotCount, setSlotCount] = useState<number | null>(null);
+  const [week, setWeek] = useState<WeekSummary | null>(null);
 
   // Refresh on every visit so the count drops right after approving/declining.
   useFocusEffect(useCallback(() => {
     let active = true;
     if (coachProfile && isSupabaseConfigured) {
       fetchPendingRequests(coachProfile.id).then(({ data }) => { if (active) setPendingCount(data.length); });
+      fetchSessionTypes(coachProfile.id).then(({ data }) => { if (active) setTypeCount(data.filter((t) => t.is_active).length); });
+      fetchUpcomingSlots(coachProfile.id).then(({ data }) => { if (active) setSlotCount(data.length); });
+      // This week's money for the Schedule row (Mon–Sun).
+      const now = new Date();
+      const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+      const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 7);
+      Promise.all([fetchSchedule(mon, sun), fetchWeekSlots(coachProfile.id, mon, sun), fetchSessionTypes(coachProfile.id)])
+        .then(([sc, sl, st]) => { if (active) setWeek(weekSummary(sl.data, sc.data, st.data)); });
     }
     return () => { active = false; };
   }, [coachProfile]));
@@ -102,6 +113,45 @@ export default function CoachDashboardScreen() {
       ) : (
         // ---- Coach dashboard ----
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+          {/* Setup checklist — until the coach can take bookings */}
+          {typeCount !== null && slotCount !== null && (() => {
+            const steps = [
+              { done: !!(coachProfile.photo_url && coachProfile.bio), label: 'Photo and bio', onPress: () => router.push('/coach/listing-edit') },
+              { done: typeCount > 0, label: 'Session types and prices', onPress: () => router.push('/coach/session-types') },
+              { done: slotCount > 0, label: 'Your first week of availability', onPress: () => router.push('/coach/availability-add') },
+              { done: false, soon: 'Coming soon', label: 'Get paid in the app (Stripe)', onPress: undefined },
+              { done: false, soon: 'Coming next', label: 'Publish your booking page', onPress: undefined },
+            ];
+            const core = steps.slice(0, 3);
+            if (core.every((x) => x.done)) return null;
+            const doneCount = steps.filter((x) => x.done).length;
+            return (
+              <View className="bg-warm-white dark:bg-bark-light rounded-2xl p-4 border border-parchment dark:border-rally-900 mb-4">
+                <View className="flex-row items-center justify-between mb-1">
+                  <Text className="text-base font-bold text-bark dark:text-cream">Get set up</Text>
+                  <Text className="text-xs font-semibold text-stone">{doneCount} of {steps.length}</Text>
+                </View>
+                <Text className="text-xs text-stone dark:text-parchment mb-3">About 10 minutes. You can take requests as soon as the first three are done.</Text>
+                {steps.map((st) => (
+                  <Pressable
+                    key={st.label}
+                    disabled={!st.onPress || st.done}
+                    onPress={() => { tapLight(); st.onPress?.(); }}
+                    className="flex-row items-center py-2 active:opacity-70"
+                  >
+                    <Ionicons name={st.done ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={st.done ? '#16a34a' : '#8FA8BF'} />
+                    <Text className={`text-sm ml-2.5 flex-1 ${st.done ? 'text-stone line-through' : 'text-bark dark:text-cream font-semibold'}`}>{st.label}</Text>
+                    {'soon' in st && st.soon ? (
+                      <Text className="text-[10px] font-bold text-stone">{st.soon.toUpperCase()}</Text>
+                    ) : !st.done ? (
+                      <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
+                    ) : null}
+                  </Pressable>
+                ))}
+              </View>
+            );
+          })()}
+
           {/* Pending requests alert */}
           {pendingCount > 0 && (
             <Pressable
@@ -236,7 +286,7 @@ export default function CoachDashboardScreen() {
             icon="today-outline"
             color="#3B82B0"
             title="Schedule"
-            subtitle="This week's lessons · sync to Google Calendar"
+            subtitle={week ? `This week: ${fmtMoney(week.booked)} booked · ${fmtMoney(week.open)} open${week.outstanding ? ` · ${fmtMoney(week.outstanding)} unpaid` : ''}` : "This week's lessons and revenue"}
             onPress={() => router.push('/coach/schedule')}
           />
           <DashRow

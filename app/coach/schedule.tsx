@@ -6,8 +6,13 @@ import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
   fetchSchedule, getCalendarToken, calendarFeedUrl, googleCalendarSubscribeUrl,
-  isSupabaseConfigured, sessionKindStyle, type ScheduleItem,
+  fetchWeekSlots, fetchSessionTypes, weekSummary, blockRevenue, fmtMoney, setSlotFacilityStatus,
+  FACILITY_STATUS_STYLE, isSupabaseConfigured, sessionKindStyle, type ScheduleItem, type SlotWithRefs,
 } from '@/lib/coach';
+import { useCoachStore } from '@/stores/useCoachStore';
+import WeekSummaryHeader from '@/components/coach/WeekSummaryHeader';
+import LessonActions from '@/components/coach/LessonActions';
+import type { FacilityStatus, SessionType } from '@/types/database';
 import { useIconColors } from '@/lib/colors';
 import { tapLight, notifySuccess, notifyError } from '@/lib/haptics';
 
@@ -39,7 +44,10 @@ function summary(item: ScheduleItem): string {
 export default function CoachScheduleScreen() {
   const ic = useIconColors();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
+  const coachProfile = useCoachStore((st) => st.coachProfile);
   const [items, setItems] = useState<ScheduleItem[]>([]);
+  const [slots, setSlots] = useState<SlotWithRefs[]>([]);
+  const [types, setTypes] = useState<SessionType[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [syncBusy, setSyncBusy] = useState(false);
@@ -50,26 +58,44 @@ export default function CoachScheduleScreen() {
   };
 
   const load = useCallback(async () => {
-    if (!isSupabaseConfigured) { setLoading(false); return; }
-    setLoading(true);
-    const { data, error } = await fetchSchedule(weekStart, addDays(weekStart, 7));
-    if (error) showAlert("Couldn't load schedule", error.message);
-    setItems(data);
+    if (!isSupabaseConfigured || !coachProfile) { setLoading(false); return; }
+    const end = addDays(weekStart, 7);
+    const [sched, sl, st] = await Promise.all([
+      fetchSchedule(weekStart, end),
+      fetchWeekSlots(coachProfile.id, weekStart, end),
+      fetchSessionTypes(coachProfile.id),
+    ]);
+    if (sched.error) showAlert("Couldn't load schedule", sched.error.message);
+    setItems(sched.data);
+    setSlots(sl.data);
+    setTypes(st.data);
     setLoading(false);
-  }, [weekStart]);
+  }, [weekStart, coachProfile]);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => { setLoading(true); load(); }, [load]));
+
+  const itemBySlot = useMemo(() => new Map(items.map((i) => [i.slot_id, i])), [items]);
+  const summaryNums = useMemo(() => weekSummary(slots, items, types), [slots, items, types]);
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => {
     const day = addDays(weekStart, i);
-    return { day, items: items.filter((it) => sameDay(new Date(it.starts_at), day)) };
-  }), [weekStart, items]);
+    return { day, slots: slots.filter((sl) => sl.status !== 'blocked' && sameDay(new Date(sl.starts_at), day)) };
+  }), [weekStart, slots]);
 
   const isThisWeek = sameDay(weekStart, startOfWeek(new Date()));
   const weekEnd = addDays(weekStart, 6);
-  const bookedCount = items.filter((i) => i.status === 'booked').length;
-  const pendingCount = items.length - bookedCount;
   const weekKinds = [...new Set(items.flatMap(itemKinds))];
+  const unreserved = slots.filter((sl) => sl.seats_taken > 0 && (sl.facility_status ?? 'not_booked') !== 'reserved').length;
+
+  // Tap the gym chip to cycle Not booked → Requested → Reserved.
+  const cycleFacility = async (slot: SlotWithRefs) => {
+    const order: FacilityStatus[] = ['not_booked', 'requested', 'reserved'];
+    const next = order[(order.indexOf(slot.facility_status ?? 'not_booked') + 1) % order.length];
+    tapLight();
+    setSlots((all) => all.map((x) => (x.id === slot.id ? { ...x, facility_status: next } : x)));
+    const { error } = await setSlotFacilityStatus(slot.id, next);
+    if (error) { showAlert("Couldn't update gym status", error.message); load(); }
+  };
 
   const withToken = async (regenerate: boolean, fn: (token: string) => Promise<void> | void) => {
     setSyncBusy(true);
@@ -129,7 +155,7 @@ export default function CoachScheduleScreen() {
           </Text>
           <Text className="text-xs text-stone dark:text-parchment mt-0.5">
             {isThisWeek ? 'This week' : 'Tap for this week'}
-            {!loading && ` · ${bookedCount} booked${pendingCount ? ` · ${pendingCount} pending` : ''}`}
+            {!loading && ` · ${summaryNums.lessons} lesson${summaryNums.lessons === 1 ? '' : 's'}`}
           </Text>
         </Pressable>
         <Pressable onPress={() => setWeekStart(addDays(weekStart, 7))} className="p-2 active:opacity-60">
@@ -138,6 +164,17 @@ export default function CoachScheduleScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 4, paddingBottom: 40 }}>
+        {!loading && <WeekSummaryHeader s={summaryNums} />}
+
+        {unreserved > 0 && (
+          <View className="flex-row items-center rounded-xl px-3 py-2.5 mb-3" style={{ backgroundColor: '#dc26261a' }}>
+            <Ionicons name="alert-circle" size={16} color="#dc2626" />
+            <Text className="text-xs font-semibold ml-2 flex-1" style={{ color: '#dc2626' }}>
+              {unreserved} booked block{unreserved === 1 ? '' : 's'} this week without a reserved gym. Tap the gym chip to update.
+            </Text>
+          </View>
+        )}
+
         {/* Legend — lesson types this week */}
         {weekKinds.length > 0 && (
           <View className="flex-row flex-wrap mb-3">
@@ -152,28 +189,70 @@ export default function CoachScheduleScreen() {
             })}
           </View>
         )}
+
         {loading ? (
           <ActivityIndicator color="#3B82B0" className="mt-6" />
         ) : (
-          days.map(({ day, items: dayItems }) => {
+          days.map(({ day, slots: daySlots }) => {
             const today = sameDay(day, new Date());
             return (
               <View key={day.toISOString()} className="mb-3">
                 <Text className={`text-xs font-semibold uppercase tracking-wider mb-1.5 ml-1 ${today ? 'text-rally-600' : 'text-stone'}`}>
                   {day.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}{today ? ' · Today' : ''}
                 </Text>
-                {dayItems.length === 0 ? (
-                  <Text className="text-xs text-stone/70 dark:text-parchment/60 ml-1 mb-1">No lessons</Text>
-                ) : dayItems.map((item) => {
-                  const open = expanded === item.slot_id;
+                {daySlots.length === 0 ? (
+                  <Text className="text-xs text-stone/70 dark:text-parchment/60 ml-1 mb-1">Nothing scheduled</Text>
+                ) : daySlots.map((slot) => {
+                  const item = itemBySlot.get(slot.id);
+                  const rev = blockRevenue(slot, types, item);
+                  const fs = FACILITY_STATUS_STYLE[slot.facility_status ?? 'not_booked'];
+                  const gymFlag = slot.seats_taken > 0 && (slot.facility_status ?? 'not_booked') !== 'reserved';
+                  const gymChip = (
+                    <Pressable
+                      onPress={() => cycleFacility(slot)}
+                      className="flex-row items-center rounded-full px-2 py-0.5 mt-1.5 self-start"
+                      style={{ backgroundColor: fs.color + (gymFlag ? '22' : '14') }}
+                    >
+                      <Ionicons name={fs.icon} size={11} color={fs.color} />
+                      <Text className="text-[10px] font-bold ml-1" style={{ color: fs.color }}>
+                        {slot.facilities?.label ? `${slot.facilities.label} · ` : ''}{fs.label}
+                      </Text>
+                    </Pressable>
+                  );
+
+                  // ---- Open block (nobody booked or requested) ----
+                  if (!item) {
+                    const left = slot.seats_total - slot.seats_taken;
+                    return (
+                      <View
+                        key={slot.id}
+                        className="rounded-xl p-3 mb-2 border border-dashed border-parchment dark:border-rally-900"
+                      >
+                        <View className="flex-row items-center">
+                          <View className="flex-1">
+                            <Text className="text-sm font-semibold text-stone dark:text-parchment">
+                              {fmtTime(slot.starts_at)} – {fmtTime(slot.ends_at)} · Open
+                            </Text>
+                            <Text className="text-xs text-stone dark:text-parchment mt-0.5">
+                              {left} spot{left === 1 ? '' : 's'}{rev.open ? ` · ${fmtMoney(rev.open)} open` : ''}
+                            </Text>
+                          </View>
+                        </View>
+                        {gymChip}
+                      </View>
+                    );
+                  }
+
+                  // ---- Booked / pending block ----
+                  const open = expanded === slot.id;
                   const pending = item.status === 'pending';
-                  const types = [...new Set(item.attendees.map((a) => a.session_type).filter(Boolean))].join(' / ');
+                  const typesLabel = [...new Set(item.attendees.map((a) => a.session_type).filter(Boolean))].join(' / ');
                   const kinds = itemKinds(item);
                   const kindStyle = sessionKindStyle(kinds.length === 1 ? kinds[0] : null);
                   return (
                     <Pressable
-                      key={item.slot_id}
-                      onPress={() => { tapLight(); setExpanded(open ? null : item.slot_id); }}
+                      key={slot.id}
+                      onPress={() => { tapLight(); setExpanded(open ? null : slot.id); }}
                       className="bg-warm-white dark:bg-bark-light rounded-xl p-3.5 border border-parchment dark:border-rally-900 mb-2 active:opacity-90"
                       style={{ borderLeftWidth: 4, borderLeftColor: kindStyle.color, shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
                     >
@@ -186,7 +265,7 @@ export default function CoachScheduleScreen() {
                             {fmtTime(item.starts_at)} – {fmtTime(item.ends_at)} · {summary(item)}
                           </Text>
                           <Text className="text-xs text-stone dark:text-parchment mt-0.5">
-                            {[types, item.facility_label].filter(Boolean).join(' · ')}
+                            {[typesLabel, rev.booked ? fmtMoney(rev.booked) : null, rev.open ? `${fmtMoney(rev.open)} still open` : null].filter(Boolean).join(' · ')}
                           </Text>
                         </View>
                         <View className={`px-2 py-1 rounded-md ${pending ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-green-100 dark:bg-green-900/30'}`}>
@@ -195,6 +274,7 @@ export default function CoachScheduleScreen() {
                           </Text>
                         </View>
                       </View>
+                      {gymChip}
 
                       {open && (
                         <View className="mt-3 pt-3 border-t border-parchment dark:border-rally-900">
@@ -202,18 +282,38 @@ export default function CoachScheduleScreen() {
                             <Text className="text-xs text-stone dark:text-parchment mb-2">{item.facility_address}</Text>
                           ) : null}
                           {item.attendees.map((a) => (
-                            <View key={a.id} className="mb-2.5">
+                            <View key={a.id} className="mb-3">
                               <Text className="text-sm font-semibold text-bark dark:text-cream">
                                 {a.athlete_name}
                                 {a.kind === 'request' ? <Text className="text-xs font-normal text-amber-700"> · awaiting your reply</Text> : null}
                               </Text>
-                              {a.parent_name ? <Text className="text-xs text-stone dark:text-parchment">Parent: {a.parent_name}</Text> : null}
+                              {a.athlete_profile ? (() => {
+                                const pr = a.athlete_profile;
+                                const facts = [
+                                  pr.grad_year ? `Class of ${pr.grad_year}` : null,
+                                  pr.positions?.length ? pr.positions.join('/') : null,
+                                  pr.height_inches ? `${Math.floor(pr.height_inches / 12)}'${pr.height_inches % 12}"` : null,
+                                  pr.level, pr.club_team,
+                                ].filter(Boolean);
+                                return facts.length ? <Text className="text-xs text-rally-700 dark:text-rally-200 mt-0.5">{facts.join(' · ')}</Text> : null;
+                              })() : null}
+                              {a.athlete_profile?.goals ? <Text className="text-xs text-stone dark:text-parchment mt-0.5">Goals: {a.athlete_profile.goals}</Text> : null}
+                              {a.parent_name || a.parent_email ? (
+                                <Text className="text-xs text-stone dark:text-parchment">
+                                  Parent: {a.parent_name ?? ''}{a.parent_email ? (
+                                    <Text className="text-rally-600" onPress={() => Linking.openURL(`mailto:${a.parent_email}`)}>{a.parent_name ? ' · ' : ''}{a.parent_email}</Text>
+                                  ) : null}
+                                </Text>
+                              ) : null}
                               {a.notes ? <Text className="text-xs text-bark dark:text-cream mt-0.5">Work on: {a.notes}</Text> : null}
                               {(a.film_links ?? []).map((url) => (
                                 <Pressable key={url} onPress={() => Linking.openURL(url)}>
                                   <Text className="text-xs text-rally-600 underline mt-0.5" numberOfLines={1}>{url}</Text>
                                 </Pressable>
                               ))}
+                              {a.kind === 'booking' && coachProfile ? (
+                                <LessonActions attendee={a} slotId={slot.id} startsAt={item.starts_at} coachId={coachProfile.id} onChanged={load} />
+                              ) : null}
                             </View>
                           ))}
                           {pending && (

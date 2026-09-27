@@ -1,7 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
 import type { Ionicons } from '@expo/vector-icons';
-import type { Coach, Facility, SessionType, SessionKind, Slot, SlotVisibility, ClientGroup, CoachClient, BookingRequest, Booking } from '@/types/database';
+import type { Coach, Facility, FacilityStatus, SessionType, SessionKind, Slot, SlotVisibility, ClientGroup, CoachClient, BookingRequest, Booking } from '@/types/database';
 
 export const isSupabaseConfigured = !!(
   process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
@@ -34,6 +34,7 @@ export type CoachListingValues = Pick<
   Coach,
   | 'display_name' | 'bio' | 'specialties' | 'sport'
   | 'visibility' | 'cost_tier' | 'fee_handling' | 'photo_url'
+  | 'phone' | 'primary_city'
 >;
 
 /** kebab-case slug + short random suffix for a unique public profile URL. */
@@ -101,7 +102,7 @@ export async function updateCoach(
 
 // ---- Facilities (1:many per coach) ----
 
-export type FacilityValues = Pick<Facility, 'label' | 'address' | 'city' | 'notes'>;
+export type FacilityValues = Pick<Facility, 'label' | 'address' | 'city' | 'notes' | 'contact'>;
 
 export async function fetchFacilities(coachId: string): Promise<{ data: Facility[]; error: Error | null }> {
   const { data, error } = await supabase
@@ -203,12 +204,14 @@ export interface NewSlotInput extends SlotTargeting {
   startsAt: Date;
   endsAt: Date;
   seatsTotal: number;          // spots (1 = exclusive/private; N = clinic/camp)
+  facilityStatus?: FacilityStatus;
 }
 
 export function toSlotRow(s: NewSlotInput) {
   return {
     coach_id: s.coachId,
     facility_id: s.facilityId,
+    facility_status: s.facilityStatus ?? 'not_booked',
     session_type_id: s.eligibleTypeIds[0] ?? null, // primary, for convenience
     eligible_session_type_ids: s.eligibleTypeIds,
     starts_at: s.startsAt.toISOString(),
@@ -252,6 +255,7 @@ export async function fetchSlot(id: string): Promise<{ data: SlotWithRefs | null
 
 export interface SlotUpdate {
   facility_id?: string | null;
+  facility_status?: FacilityStatus;
   eligible_session_type_ids?: string[];
   starts_at?: string;
   ends_at?: string;
@@ -580,6 +584,15 @@ export interface ScheduleAttendee {
   session_kind: SessionKind | null;
   notes: string | null;
   film_links: string[] | null;
+  parent_email?: string | null;
+  athlete_profile?: {
+    grad_year: number | null; positions: string[] | null; level: string | null;
+    club_team: string | null; height_inches: number | null; goals: string | null;
+  } | null;
+  price_cents?: number | null;
+  payment_status?: string | null;   // bookings: pending|authorized|captured|refunded|failed
+  payment_method?: string | null;   // card|apple_pay|google_pay|ach|cash|venmo|zelle|other
+  paid_at?: string | null;
 }
 
 export interface ScheduleItem {
@@ -589,6 +602,7 @@ export interface ScheduleItem {
   seats_total: number;
   facility_label: string | null;
   facility_address: string | null;
+  facility_status?: FacilityStatus;
   status: 'booked' | 'pending';
   attendees: ScheduleAttendee[];
 }
@@ -600,6 +614,127 @@ export async function fetchSchedule(from: Date, to: Date): Promise<{ data: Sched
     p_to: to.toISOString(),
   });
   return { data: (data as ScheduleItem[]) ?? [], error: error ?? null };
+}
+
+// ---- Phase A: week revenue, payments, cancel / reschedule (00067) ----
+
+export const FACILITY_STATUS_STYLE: Record<FacilityStatus, { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }> = {
+  reserved:   { label: 'Gym reserved', color: '#16a34a', icon: 'checkmark-circle' },
+  requested:  { label: 'Gym requested', color: '#d97706', icon: 'time-outline' },
+  not_booked: { label: 'Gym not reserved', color: '#dc2626', icon: 'alert-circle-outline' },
+};
+
+/** Every slot (open or booked) the coach has in [from, to). */
+export async function fetchWeekSlots(coachId: string, from: Date, to: Date): Promise<{ data: SlotWithRefs[]; error: Error | null }> {
+  const { data, error } = await supabase
+    .from('slots')
+    .select('*, facilities(label)')
+    .eq('coach_id', coachId)
+    .gte('starts_at', from.toISOString())
+    .lt('starts_at', to.toISOString())
+    .order('starts_at', { ascending: true });
+  return { data: (data as SlotWithRefs[]) ?? [], error: error ?? null };
+}
+
+export type PaymentBadge = 'paid' | 'overdue' | 'unpaid' | 'pending';
+
+/** Payment state of one attendee for display. Requests aren't billable yet. */
+export function paymentBadge(a: ScheduleAttendee, startsAt: string): PaymentBadge {
+  if (a.kind === 'request') return 'pending';
+  if (a.payment_status === 'captured') return 'paid';
+  return new Date(startsAt).getTime() < Date.now() ? 'overdue' : 'unpaid';
+}
+
+export const PAYMENT_BADGE_STYLE: Record<PaymentBadge, { label: string; bg: string; fg: string }> = {
+  paid:    { label: 'PAID', bg: '#16a34a1a', fg: '#16a34a' },
+  unpaid:  { label: 'UNPAID', bg: '#d977061a', fg: '#b45309' },
+  overdue: { label: 'OVERDUE', bg: '#dc26261a', fg: '#dc2626' },
+  pending: { label: 'REQUESTED', bg: '#d977061a', fg: '#b45309' },
+};
+
+/** Default price of a block: cheapest bookable type (per athlete for group formats). */
+export function slotDefaultPrice(slot: Slot, types: SessionType[]): number {
+  const active = types.filter((t) => t.is_active);
+  const ids = slot.eligible_session_type_ids ?? [];
+  const pool = ids.length ? active.filter((t) => ids.includes(t.id)) : active;
+  return pool.length ? Math.min(...pool.map((t) => t.price_cents)) : 0;
+}
+
+export interface BlockRevenue { booked: number; pending: number; open: number; fullBook: number; }
+
+/** Booked / open / full-book revenue for one availability block. */
+export function blockRevenue(slot: Slot, types: SessionType[], item?: ScheduleItem): BlockRevenue {
+  const live = (item?.attendees ?? []).filter((a) => a.kind === 'booking');
+  const reqs = (item?.attendees ?? []).filter((a) => a.kind === 'request');
+  const booked = live.reduce((n, a) => n + (a.price_cents ?? 0), 0);
+  const pending = reqs.reduce((n, a) => n + (a.price_cents ?? 0), 0);
+  const openSeats = slot.status === 'blocked' ? 0 : Math.max(slot.seats_total - slot.seats_taken - reqs.length, 0);
+  const open = openSeats * slotDefaultPrice(slot, types);
+  return { booked, pending, open, fullBook: booked + pending + open };
+}
+
+export interface WeekSummary {
+  booked: number; pending: number; collected: number; outstanding: number;
+  open: number; fullBook: number;
+  availableHours: number; bookedHours: number; utilization: number | null;
+  lessons: number;
+}
+
+export function weekSummary(slots: Slot[], items: ScheduleItem[], types: SessionType[]): WeekSummary {
+  const byId = new Map(items.map((i) => [i.slot_id, i]));
+  const s: WeekSummary = { booked: 0, pending: 0, collected: 0, outstanding: 0, open: 0, fullBook: 0, availableHours: 0, bookedHours: 0, utilization: null, lessons: 0 };
+  for (const slot of slots) {
+    if (slot.status === 'blocked') continue;
+    const item = byId.get(slot.id);
+    const r = blockRevenue(slot, types, item);
+    s.booked += r.booked; s.pending += r.pending; s.open += r.open; s.fullBook += r.fullBook;
+    const hours = (new Date(slot.ends_at).getTime() - new Date(slot.starts_at).getTime()) / 3_600_000;
+    s.availableHours += hours;
+    if (slot.seats_taken > 0) s.bookedHours += hours;
+    for (const a of item?.attendees ?? []) {
+      if (a.kind !== 'booking') continue;
+      s.lessons += 1;
+      if (a.payment_status === 'captured') s.collected += a.price_cents ?? 0;
+      else s.outstanding += a.price_cents ?? 0;
+    }
+  }
+  s.utilization = s.availableHours > 0 ? Math.round((s.bookedHours / s.availableHours) * 100) : null;
+  return s;
+}
+
+export const fmtMoney = (cents: number) => `$${Math.round(cents / 100).toLocaleString()}`;
+
+export async function markBookingPaid(bookingId: string, method: 'cash' | 'venmo' | 'zelle' | 'other'): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.rpc as any)('mark_booking_paid', { p_booking_id: bookingId, p_method: method });
+  return { error: error ?? null };
+}
+
+export async function markBookingUnpaid(bookingId: string): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.rpc as any)('mark_booking_unpaid', { p_booking_id: bookingId });
+  return { error: error ?? null };
+}
+
+export async function coachCancelBooking(bookingId: string, reason: string): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.rpc as any)('coach_cancel_booking', { p_booking_id: bookingId, p_reason: reason });
+  if (!error) notifyParentOfChange(bookingId, 'cancelled');
+  return { error: error ?? null };
+}
+
+export async function coachRescheduleBooking(bookingId: string, newSlotId: string, reason: string): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.rpc as any)('coach_reschedule_booking', { p_booking_id: bookingId, p_new_slot_id: newSlotId, p_reason: reason });
+  if (!error) notifyParentOfChange(bookingId, 'rescheduled');
+  return { error: error ?? null };
+}
+
+/** Push + email the parent about a coach cancel/reschedule (notify-booking-change). Fire-and-forget. */
+function notifyParentOfChange(bookingId: string, change: 'cancelled' | 'rescheduled') {
+  supabase.functions.invoke('notify-booking-change', { body: { booking_id: bookingId, change } })
+    .then(({ error }) => { if (error) console.warn('[coach] parent notify failed:', error.message); });
+}
+
+export async function setSlotFacilityStatus(slotId: string, status: FacilityStatus): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.from('slots') as any).update({ facility_status: status }).eq('id', slotId);
+  return { error: error ?? null };
 }
 
 export async function getCalendarToken(regenerate = false): Promise<{ data: string | null; error: Error | null }> {

@@ -4,7 +4,8 @@ import { SafeAreaView } from '@/components/SafeAreaView';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useCoachStore } from '@/stores/useCoachStore';
-import { fetchUpcomingSlots, fetchSessionTypes, deleteSlot, isSupabaseConfigured, sessionKindStyle, type SlotWithRefs } from '@/lib/coach';
+import { fetchUpcomingSlots, fetchSessionTypes, deleteSlot, isSupabaseConfigured, sessionKindStyle, slotDefaultPrice, fmtMoney, FACILITY_STATUS_STYLE, type SlotWithRefs } from '@/lib/coach';
+import type { SessionType } from '@/types/database';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 
@@ -21,6 +22,7 @@ export default function AvailabilityScreen() {
   const [slots, setSlots] = useState<SlotWithRefs[]>([]);
   const [typeNames, setTypeNames] = useState<Record<string, string>>({});
   const [typeKinds, setTypeKinds] = useState<Record<string, string>>({});
+  const [types, setTypes] = useState<SessionType[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -29,6 +31,7 @@ export default function AvailabilityScreen() {
     setSlots(s.data);
     setTypeNames(Object.fromEntries(t.data.map((x) => [x.id, x.name])));
     setTypeKinds(Object.fromEntries(t.data.map((x) => [x.id, x.kind])));
+    setTypes(t.data);
     setLoading(false);
   }, [coachProfile]);
 
@@ -125,6 +128,19 @@ export default function AvailabilityScreen() {
                           {full ? 'Full' : `${remaining} of ${slot.seats_total} spots left`}
                         </Text>
                       )}
+                      {(() => {
+                        const openCents = remaining * slotDefaultPrice(slot, types);
+                        const fs = FACILITY_STATUS_STYLE[slot.facility_status ?? 'not_booked'];
+                        return (
+                          <View className="flex-row items-center mt-1">
+                            {openCents > 0 && (
+                              <Text className="text-[11px] font-semibold text-rally-600 mr-2">{fmtMoney(openCents)} open</Text>
+                            )}
+                            <Ionicons name={fs.icon} size={11} color={fs.color} />
+                            <Text className="text-[11px] font-semibold ml-0.5" style={{ color: fs.color }}>{fs.label}</Text>
+                          </View>
+                        );
+                      })()}
                     </View>
                     {full ? (
                       <View className="bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-md">

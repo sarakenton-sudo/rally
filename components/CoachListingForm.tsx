@@ -53,6 +53,9 @@ export default function CoachListingForm({ title, submitLabel, existing, onSubmi
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [displayName, setDisplayName] = useState(existing?.display_name ?? '');
   const [bio, setBio] = useState(existing?.bio ?? '');
+  const [phone, setPhone] = useState(existing?.phone ?? '');
+  const [sport, setSport] = useState(existing?.sport ?? 'volleyball');
+  const [primaryCity, setPrimaryCity] = useState(existing?.primary_city ?? '');
   const [specialties, setSpecialties] = useState((existing?.specialties ?? []).join(', '));
   const [visibility, setVisibility] = useState<CoachVisibility>(existing?.visibility ?? 'private');
   const [costTier, setCostTier] = useState<CostTier | null>(existing?.cost_tier ?? null);
@@ -90,7 +93,9 @@ export default function CoachListingForm({ title, submitLabel, existing, onSubmi
         photo_url: photoUrl,
         bio: bio.trim() || null,
         specialties: specialties.split(',').map((s) => s.trim()).filter(Boolean),
-        sport: existing?.sport ?? 'volleyball',
+        sport: sport.trim().toLowerCase() || 'volleyball',
+        phone: phone.trim() || null,
+        primary_city: primaryCity.trim() || null,
         visibility,
         cost_tier: costTier,
         fee_handling: feeHandling,
@@ -140,6 +145,9 @@ export default function CoachListingForm({ title, submitLabel, existing, onSubmi
           </View>
 
           <FormField label="Your Name" value={displayName} onChangeText={setDisplayName} placeholder="e.g. Coach Alex Rivera" />
+          <FormField label="Mobile" value={phone} onChangeText={setPhone} placeholder="For lesson requests and reminders" keyboardType="phone-pad" />
+          <FormField label="Primary city" value={primaryCity} onChangeText={setPrimaryCity} placeholder="e.g. Austin, TX" />
+          <FormField label="Sport" value={sport} onChangeText={setSport} placeholder="e.g. volleyball" autoCapitalize="none" />
           <FormField
             label="Bio"
             value={bio}

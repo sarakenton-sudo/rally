@@ -14,7 +14,8 @@ import {
 } from '@/lib/coach';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess, notifyError } from '@/lib/haptics';
-import type { Facility, SessionType, SlotVisibility, CoachClient, ClientGroup } from '@/types/database';
+import type { Facility, FacilityStatus, SessionType, SlotVisibility, CoachClient, ClientGroup } from '@/types/database';
+import FacilityStatusField from '@/components/coach/FacilityStatusField';
 
 const DURATION_OPTIONS = ['30 min', '45 min', '60 min', '75 min', '90 min', '120 min'];
 const DURATION_TO_MIN: Record<string, number> = { '30 min': 30, '45 min': 45, '60 min': 60, '75 min': 75, '90 min': 90, '120 min': 120 };
@@ -47,6 +48,7 @@ export default function SlotEditScreen() {
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [groupId, setGroupId] = useState<string | null>(null);
   const [facilityId, setFacilityId] = useState<string | null>(null);
+  const [facilityStatus, setFacilityStatus] = useState<FacilityStatus>('not_booked');
   const [anyType, setAnyType] = useState(false);
   const [eligibleTypeIds, setEligibleTypeIds] = useState<string[]>([]);
   const [date, setDate] = useState<Date | null>(null);
@@ -70,6 +72,7 @@ export default function SlotEditScreen() {
         const s = sl.data;
         setSlot(s);
         setFacilityId(s.facility_id);
+        setFacilityStatus(s.facility_status ?? 'not_booked');
         setVisibility(s.visibility);
         setConnectionId(s.shared_with_connection_id);
         setGroupId(s.shared_with_group_id);
@@ -113,7 +116,7 @@ export default function SlotEditScreen() {
       shared_with_connection_id: visibility === 'individual' ? connectionId : null,
       shared_with_group_id: visibility === 'group' ? groupId : null,
     };
-    const base = { facility_id: facilityId, eligible_session_type_ids: anyType ? [] : eligibleTypeIds, seats_total: seatsNum, ...targeting };
+    const base = { facility_id: facilityId, facility_status: facilityStatus, eligible_session_type_ids: anyType ? [] : eligibleTypeIds, seats_total: seatsNum, ...targeting };
     const values = booked
       ? base
       : { ...base, starts_at: start.toISOString(), ends_at: end.toISOString() };
@@ -185,6 +188,7 @@ export default function SlotEditScreen() {
                 onChange={(label) => setFacilityId(facilities.find((f) => f.label === label)?.id ?? null)}
               />
             )}
+            <FacilityStatusField value={facilityStatus} onChange={setFacilityStatus} />
 
             <SlotTargetingField
               clients={clients}
