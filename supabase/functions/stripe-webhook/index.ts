@@ -6,7 +6,9 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { stripe, cryptoProvider, supabaseAdmin, json, savePaymentMethod } from '../_shared/stripe.ts';
 
-const WEBHOOK_SECRET = Deno.env.get('STRIPE_WEBHOOK_SECRET') ?? '';
+// Comma-separated: the platform endpoint and the Connect (connected accounts)
+// endpoint each have their own signing secret.
+const WEBHOOK_SECRETS = (Deno.env.get('STRIPE_WEBHOOK_SECRET') ?? '').split(',').map((x) => x.trim()).filter(Boolean);
 
 async function updateByPI(piId: string, patch: Record<string, unknown>) {
   const { data } = await supabaseAdmin.from('bookings').update(patch).eq('stripe_payment_intent_id', piId).select('id, request_id');
@@ -17,11 +19,15 @@ serve(async (req: Request) => {
   const sig = req.headers.get('Stripe-Signature');
   const body = await req.text(); // raw body required for signature verification
 
-  let event;
-  try {
-    event = await stripe.webhooks.constructEventAsync(body, sig!, WEBHOOK_SECRET, undefined, cryptoProvider);
-  } catch (err) {
-    console.error('[stripe-webhook] signature verification failed:', (err as Error).message);
+  let event: any = null;
+  for (const secret of WEBHOOK_SECRETS) {
+    try {
+      event = await stripe.webhooks.constructEventAsync(body, sig!, secret, undefined, cryptoProvider);
+      break;
+    } catch { /* try the next endpoint's secret */ }
+  }
+  if (!event) {
+    console.error('[stripe-webhook] signature verification failed');
     return json({ error: 'invalid signature' }, 400);
   }
 
