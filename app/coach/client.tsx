@@ -7,9 +7,11 @@ import { useCoachStore } from '@/stores/useCoachStore';
 import {
   fetchClientRoster, fetchClientGroups, createClientGroup, addGroupMember, removeGroupMember,
   clientDisplayName, avatarColor, initials, GROUP_COLORS, isSupabaseConfigured, type RosterClient,
+  fetchAcceptances, latestAcceptances, type PolicyAcceptance,
 } from '@/lib/coach';
 import type { ClientGroup } from '@/types/database';
 import { useIconColors } from '@/lib/colors';
+import SignedDocumentsList from '@/components/SignedDocumentsList';
 import { tapLight, notifySuccess, notifyError } from '@/lib/haptics';
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
@@ -24,6 +26,7 @@ export default function CoachClientScreen() {
   const [loading, setLoading] = useState(true);
   const [busyGroup, setBusyGroup] = useState<string | null>(null);
   const [newGroup, setNewGroup] = useState('');
+  const [signedDocs, setSignedDocs] = useState<PolicyAcceptance[]>([]);
 
   const showAlert = (t: string, m: string) => {
     if (Platform.OS === 'web') window.alert(`${t}: ${m}`);
@@ -33,7 +36,12 @@ export default function CoachClientScreen() {
   const load = useCallback(async () => {
     if (!coachProfile || !isSupabaseConfigured) { setLoading(false); return; }
     const [r, g] = await Promise.all([fetchClientRoster(), fetchClientGroups(coachProfile.id)]);
-    setClient(r.data.find((c) => c.connection_id === connectionId) ?? null);
+    const found = r.data.find((c) => c.connection_id === connectionId) ?? null;
+    setClient(found);
+    if (found && coachProfile) {
+      const docs = await fetchAcceptances({ coachId: coachProfile.id, athleteIds: found.athletes.map((a) => a.id) });
+      setSignedDocs(latestAcceptances(docs.data));
+    }
     setGroups(g.data);
     setLoading(false);
   }, [coachProfile, connectionId]);
@@ -168,6 +176,16 @@ export default function CoachClientScreen() {
               </View>
             );
           })}
+
+          {/* Signed documents */}
+          <Text className="text-xs font-semibold uppercase tracking-wider text-stone mb-2 ml-1 mt-2">Signed documents</Text>
+          <View className="bg-warm-white dark:bg-bark-light rounded-xl px-4 py-2 border border-parchment dark:border-rally-900 mb-4">
+            <SignedDocumentsList
+              rows={signedDocs}
+              label={(r) => r.athletes ? `${r.athletes.first_name}${r.athletes.last_name ? ' ' + r.athletes.last_name : ''}` : 'Athlete'}
+              emptyText="This family hasn't signed your terms and release yet. They'll sign before their first lesson."
+            />
+          </View>
 
           {/* Groups */}
           <Text className="text-xs font-semibold uppercase tracking-wider text-stone mb-2 ml-1 mt-2">Groups</Text>

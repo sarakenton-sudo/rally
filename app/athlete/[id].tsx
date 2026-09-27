@@ -1,9 +1,13 @@
+import { useState, useEffect } from 'react';
 import { View, Text, ScrollView, RefreshControl, Pressable, Alert, Platform } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from '@/components/SafeAreaView';
 import { Ionicons } from '@expo/vector-icons';
 import HubSectionHeader from '@/components/HubSectionHeader';
 import AthleteCredentialCard from '@/components/AthleteCredentialCard';
+import AthleteHealthCard from '@/components/AthleteHealthCard';
+import SignedDocumentsList from '@/components/SignedDocumentsList';
+import { fetchAcceptances, latestAcceptances, type PolicyAcceptance } from '@/lib/coach';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { updateAdminConfig, deleteSeason as deleteSeasonDB } from '@/hooks/useSupabaseData';
@@ -29,6 +33,10 @@ export default function AthleteProfileScreen() {
   const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
   const athlete = athletes.find((a) => a.id === id);
+  const [signedDocs, setSignedDocs] = useState<PolicyAcceptance[]>([]);
+  useEffect(() => {
+    if (id) fetchAcceptances({ athleteId: id }).then(({ data }) => setSignedDocs(latestAcceptances(data)));
+  }, [id]);
   const athleteSeasons = seasons
     .filter((s) => s.athlete_id === id)
     .sort((a, b) => {
@@ -237,6 +245,25 @@ export default function AthleteProfileScreen() {
               />
             </View>
           ))}
+        </View>
+
+        {/* ============================================================ */}
+        {/* HEALTH & SAFETY + SIGNED DOCUMENTS (coach lessons) */}
+        {/* ============================================================ */}
+        <View className="mt-6">
+          <HubSectionHeader icon="medkit" title="Health & Safety" iconColor="#dc2626" />
+        </View>
+        <AthleteHealthCard athleteId={athlete.id} />
+
+        <View className="mt-6">
+          <HubSectionHeader icon="document-text" title="Signed Documents" iconColor="#16a34a" />
+        </View>
+        <View className="bg-warm-white dark:bg-bark-light rounded-xl px-4 py-2 border border-parchment dark:border-rally-900 mb-8">
+          <SignedDocumentsList
+            rows={signedDocs}
+            label={(r) => r.coaches?.display_name ?? 'Coach'}
+            emptyText="Lesson terms and releases you sign when booking a coach will be kept here."
+          />
         </View>
       </ScrollView>
     </View>

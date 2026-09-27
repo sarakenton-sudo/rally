@@ -812,6 +812,61 @@ export async function saveAthleteHealth(athleteId: string, h: AthleteHealth): Pr
   return { error: error ?? null };
 }
 
+export interface PolicyAcceptance {
+  id: string;
+  coach_id: string;
+  athlete_id: string;
+  parent_user_id: string;
+  signer_name: string;
+  terms_text: string;
+  release_text: string;
+  platform_text: string;
+  policies_version: string;
+  accepted_at: string;
+  coaches?: { display_name: string; policies_updated_at?: string } | null;
+  athletes?: { first_name: string; last_name: string | null } | null;
+}
+
+/**
+ * Signed terms/releases the caller can see (RLS: the signing parent, or the coach).
+ * Newest first. Filter by athlete (parent view) or coach + athletes (coach view).
+ */
+export async function fetchAcceptances(filter: { athleteId?: string; coachId?: string; athleteIds?: string[] }): Promise<{ data: PolicyAcceptance[]; error: Error | null }> {
+  let q = (supabase.from('policy_acceptances') as any)
+    .select('*, coaches(display_name, policies_updated_at), athletes(first_name, last_name)')
+    .order('accepted_at', { ascending: false });
+  if (filter.athleteId) q = q.eq('athlete_id', filter.athleteId);
+  if (filter.coachId) q = q.eq('coach_id', filter.coachId);
+  if (filter.athleteIds) q = q.in('athlete_id', filter.athleteIds.length ? filter.athleteIds : ['00000000-0000-0000-0000-000000000000']);
+  const { data, error } = await q;
+  return { data: (data as PolicyAcceptance[]) ?? [], error: error ?? null };
+}
+
+export async function fetchAcceptance(id: string): Promise<PolicyAcceptance | null> {
+  const { data } = await (supabase.from('policy_acceptances') as any)
+    .select('*, coaches(display_name, policies_updated_at), athletes(first_name, last_name)')
+    .eq('id', id)
+    .maybeSingle();
+  return (data as PolicyAcceptance | null) ?? null;
+}
+
+/** Only the newest signature per coach + athlete (older ones stay on file). */
+export function latestAcceptances(rows: PolicyAcceptance[]): PolicyAcceptance[] {
+  const seen = new Set<string>();
+  return rows.filter((r) => {
+    const k = `${r.coach_id}:${r.athlete_id}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+/** Signed an older version than the coach's current terms → will re-sign at next booking. */
+export function acceptanceOutdated(r: PolicyAcceptance): boolean {
+  const current = r.coaches?.policies_updated_at;
+  return !!current && new Date(r.policies_version).getTime() < new Date(current).getTime();
+}
+
 /** True when the allergies answer is an actual allergy (not "none"). */
 export function hasRealAllergies(allergies?: string | null): boolean {
   const a = (allergies ?? '').trim().toLowerCase();
