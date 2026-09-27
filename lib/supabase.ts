@@ -38,6 +38,11 @@ function createSupabaseStub(): SupabaseClient<Database> {
     get: (_target, prop) => {
       // auth.onAuthStateChange needs to return a subscription
       if (prop === 'onAuthStateChange') return () => noopSub;
+      // Not thenable: otherwise `await supabase.rpc(...)` makes the Promise
+      // polyfill call `then.bind(...)`, which this proxy turns into an object →
+      // "Promise constructor's argument is not a function" (seen in TestFlight
+      // builds that shipped without EXPO_PUBLIC_SUPABASE_ANON_KEY).
+      if (prop === 'then') return undefined;
       // auth.getSession, auth.signIn, etc. return promises
       if (prop === 'getSession' || prop === 'signInWithPassword' || prop === 'signUp' || prop === 'signOut')
         return () => Promise.resolve(noop);
