@@ -14,7 +14,7 @@ interface AuthContextType {
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, accountType?: AccountType) => Promise<{ error: string | null }>;
-  signInWithGoogle: () => Promise<{ error: string | null }>;
+  signInWithGoogle: (accountType?: AccountType) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
@@ -39,6 +39,31 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
+// Google OAuth can't carry the Coach/Parent choice (no user metadata), and on web
+// the page reloads mid-flow. Remember the choice here and apply it after sign-in.
+const PENDING_TYPE_KEY = 'rally.pendingAccountType';
+let pendingTypeMemory: { type: AccountType; at: number } | null = null;
+
+function savePendingAccountType(type: AccountType) {
+  const v = { type, at: Date.now() };
+  pendingTypeMemory = v;
+  if (Platform.OS === 'web') { try { localStorage.setItem(PENDING_TYPE_KEY, JSON.stringify(v)); } catch {} }
+}
+
+function takePendingAccountType(): AccountType | null {
+  let v = pendingTypeMemory;
+  if (Platform.OS === 'web') {
+    try { const raw = localStorage.getItem(PENDING_TYPE_KEY); if (raw) v = JSON.parse(raw); } catch {}
+  }
+  if (!v || Date.now() - v.at > 30 * 60 * 1000) return null; // 30 min to finish Google sign-in
+  return v.type;
+}
+
+function clearPendingAccountType() {
+  pendingTypeMemory = null;
+  if (Platform.OS === 'web') { try { localStorage.removeItem(PENDING_TYPE_KEY); } catch {} }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -51,11 +76,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .select('*')
       .eq('id', userId)
       .single();
-    if (!error && data) {
-      setUserProfile(data as UserProfile);
-    } else {
+    if (error || !data) {
       setUserProfile(null);
+      return;
     }
+    let profile = data as UserProfile;
+    // Coach chosen before a Google sign-up → claim the coach account now.
+    if (takePendingAccountType() === 'coach' && profile.account_type !== 'coach') {
+      const { data: claimed } = await (supabase.rpc as any)('claim_coach_account');
+      if (claimed) profile = { ...profile, account_type: 'coach' };
+    }
+    clearPendingAccountType();
+    setUserProfile(profile);
   };
 
   useEffect(() => {
@@ -133,7 +165,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (accountType?: AccountType) => {
+    if (accountType === 'coach') savePendingAccountType('coach');
+    else clearPendingAccountType();
     try {
       const redirectUrl = Platform.OS === 'web'
         ? `${window.location.origin}/auth`

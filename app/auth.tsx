@@ -70,7 +70,8 @@ export default function AuthScreen() {
   const handleGoogleSignIn = async () => {
     setMessage(null);
     setGoogleLoading(true);
-    const { error } = await signInWithGoogle();
+    // Google can't carry the Coach choice itself — pass it so it's applied after sign-in.
+    const { error } = await signInWithGoogle(isSignUp ? accountType : undefined);
     setGoogleLoading(false);
     if (error) setMessage({ text: error, type: 'error' });
   };
