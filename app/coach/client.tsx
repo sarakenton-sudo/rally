@@ -13,6 +13,7 @@ import type { ClientGroup } from '@/types/database';
 import { useIconColors } from '@/lib/colors';
 import SignedDocumentsList from '@/components/SignedDocumentsList';
 import { tapLight, notifySuccess, notifyError } from '@/lib/haptics';
+import Avatar from '@/components/Avatar';
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 const fmtHeight = (inches: number) => `${Math.floor(inches / 12)}'${inches % 12}"`;
@@ -109,8 +110,8 @@ export default function CoachClientScreen() {
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
           {/* Header */}
           <View className="items-center mb-4">
-            <View className="w-16 h-16 rounded-full items-center justify-center mb-2" style={{ backgroundColor: avatarColor(client.connection_id) }}>
-              <Text className="text-xl font-bold text-white">{initials(name)}</Text>
+            <View className="mb-2">
+              <Avatar uri={client.athletes.find((x) => x.photo_url)?.photo_url} name={name} size={64} colorKey={client.connection_id} />
             </View>
             <Text className="text-xl font-bold text-bark dark:text-cream text-center">{name}</Text>
             <Text className="text-xs text-stone dark:text-parchment mt-0.5">Client since {fmtDate(client.connected_at)}</Text>

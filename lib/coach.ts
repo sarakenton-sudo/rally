@@ -325,6 +325,7 @@ export async function addGroupMember(groupId: string, connectionId: string): Pro
 export interface ClientAthlete {
   id: string;
   first_name: string;
+  photo_url?: string | null;
   last_name: string | null;
   grad_year: number | null;
   positions: string[] | null;
@@ -436,7 +437,9 @@ export async function fetchBookableSlots(coachId: string): Promise<{ data: SlotW
 
 export interface ParentLesson {
   id: string;                       // booking_request id
-  status: 'requested' | 'accepted';
+  // 'cancelled' covers coach/parent cancellations; 'declined' = coach said no.
+  status: 'requested' | 'accepted' | 'cancelled' | 'declined';
+  change_reason?: string | null;    // coach's note on a cancellation
   athlete_id: string;
   coach_name: string;
   session_type: string | null;
@@ -452,16 +455,17 @@ export async function fetchMyUpcomingLessons(days = 30): Promise<{ data: ParentL
   const until = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
   const { data, error } = await supabase
     .from('booking_requests')
-    .select('id, status, athlete_id, coaches(display_name), session_types(name, kind), slots!inner(starts_at, ends_at, facilities(label)), bookings(status)')
-    .in('status', ['requested', 'accepted'])
+    .select('id, status, athlete_id, coaches(display_name), session_types(name, kind), slots!inner(starts_at, ends_at, facilities(label)), bookings(status, change_reason)')
+    // Keep cancelled/declined lessons visible (marked) so a parent who missed
+    // the push still sees it on Home.
+    .in('status', ['requested', 'accepted', 'cancelled', 'declined'])
     .gte('slots.starts_at', now.toISOString())
     .lte('slots.starts_at', until.toISOString());
   const rows = ((data as any[]) ?? [])
-    // an accepted request whose booking was later cancelled isn't a lesson any more
-    .filter((r) => !(r.bookings ?? []).some((b: any) => b.status === 'cancelled'))
     .map((r): ParentLesson => ({
       id: r.id,
-      status: r.status,
+      status: (r.bookings ?? []).some((b: any) => b.status === 'cancelled') ? 'cancelled' : r.status,
+      change_reason: (r.bookings ?? []).find((b: any) => b.change_reason)?.change_reason ?? null,
       athlete_id: r.athlete_id,
       coach_name: r.coaches?.display_name ?? 'Coach',
       session_type: r.session_types?.name ?? null,
@@ -919,6 +923,19 @@ function base64ToBytes(b64: string): Uint8Array {
  * Prompt the user to pick a square image and upload it to coach-photos/<userId>/.
  * Returns the public URL, or null if cancelled. Throws on permission/upload error.
  */
+/** Same upload for every profile photo (coach, parent, athlete): <uid>/<ts>.jpg in the public bucket. */
+export const pickAndUploadPhoto = (userId: string) => pickAndUploadCoachPhoto(userId);
+
+export async function saveMyAvatar(url: string | null): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.rpc as any)('set_my_avatar', { p_url: url ?? '' });
+  return { error: error ?? null };
+}
+
+export async function saveAthletePhoto(athleteId: string, url: string | null): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.rpc as any)('set_athlete_photo', { p_athlete_id: athleteId, p_url: url ?? '' });
+  return { error: error ?? null };
+}
+
 export async function pickAndUploadCoachPhoto(userId: string): Promise<string | null> {
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!perm.granted) throw new Error('Photo library permission denied');

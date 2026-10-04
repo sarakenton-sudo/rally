@@ -11,6 +11,7 @@ import {
 import type { ClientGroup } from '@/types/database';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
+import Avatar from '@/components/Avatar';
 
 const fmtShort = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
@@ -121,8 +122,8 @@ export default function CoachClientsScreen() {
                 style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
               >
                 <View className="flex-row items-center">
-                  <View className="w-11 h-11 rounded-full items-center justify-center mr-3" style={{ backgroundColor: color }}>
-                    <Text className="text-sm font-bold text-white">{initials(name)}</Text>
+                  <View className="mr-3">
+                    <Avatar uri={c.athletes.find((x) => x.photo_url)?.photo_url} name={name} size={44} colorKey={c.connection_id} />
                   </View>
                   <View className="flex-1">
                     <Text className="text-sm font-semibold text-bark dark:text-cream" numberOfLines={1}>{name}</Text>

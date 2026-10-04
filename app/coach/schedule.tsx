@@ -251,13 +251,14 @@ export default function CoachScheduleScreen() {
                   const kinds = itemKinds(item);
                   const kindStyle = sessionKindStyle(kinds.length === 1 ? kinds[0] : null);
                   return (
-                    <Pressable
+                    // Card is a View: only the header toggles. When the whole card was a
+                    // Pressable, tapping the note box (cancel/reschedule) collapsed it.
+                    <View
                       key={slot.id}
-                      onPress={() => { tapLight(); setExpanded(open ? null : slot.id); }}
-                      className="bg-warm-white dark:bg-bark-light rounded-xl p-3.5 border border-parchment dark:border-rally-900 mb-2 active:opacity-90"
+                      className="bg-warm-white dark:bg-bark-light rounded-xl p-3.5 border border-parchment dark:border-rally-900 mb-2"
                       style={{ borderLeftWidth: 4, borderLeftColor: kindStyle.color, shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
                     >
-                      <View className="flex-row items-center">
+                      <Pressable onPress={() => { tapLight(); setExpanded(open ? null : slot.id); }} className="flex-row items-center active:opacity-80">
                         <View className="w-9 h-9 rounded-full items-center justify-center mr-3" style={{ backgroundColor: kindStyle.color + '15' }}>
                           <Ionicons name={kindStyle.icon} size={18} color={kindStyle.color} />
                         </View>
@@ -274,7 +275,7 @@ export default function CoachScheduleScreen() {
                             {pending ? 'PENDING' : item.seats_total > 1 ? `${item.attendees.filter((a) => a.kind === 'booking').length}/${item.seats_total}` : 'BOOKED'}
                           </Text>
                         </View>
-                      </View>
+                      </Pressable>
                       <View className="flex-row flex-wrap items-center">
                         {gymChip}
                         {item.attendees.some((a) => hasRealAllergies(a.athlete_profile?.allergies)) && (
@@ -339,7 +340,7 @@ export default function CoachScheduleScreen() {
                           )}
                         </View>
                       )}
-                    </Pressable>
+                    </View>
                   );
                 })}
               </View>

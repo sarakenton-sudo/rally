@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { Tournament, Athlete } from '@/types/database';
 import { formatDateRange, countdownText, daysUntil } from '@/lib/dates';
 import { TOURNAMENT_COLOR } from '@/lib/colors';
+import Avatar from '@/components/Avatar';
 
 const AVATAR_COLORS = [
   '#3B82B0', '#7c3aed', '#6A9E8A', '#d97706', '#dc2626',
@@ -83,13 +84,19 @@ export default function TournamentCard({ tournament, hotelCount = 0, flightCount
         {/* Header row: avatar + name + status badge */}
         <View className="flex-row items-start justify-between mb-2">
           {athlete && (
-            <View
-              className="w-9 h-9 rounded-full items-center justify-center mr-3 mt-0.5"
-              style={{ backgroundColor: athlete.avatar_color || AVATAR_COLORS[athlete.first_name.charCodeAt(0) % AVATAR_COLORS.length] }}
-            >
-              <Text style={{ fontSize: 15, fontWeight: '700', color: '#FEFEFE' }}>
-                {athlete.first_name.charAt(0).toUpperCase()}
-              </Text>
+            <View className="mr-3 mt-0.5">
+              {athlete.photo_url ? (
+                <Avatar uri={athlete.photo_url} name={athlete.first_name} size={36} />
+              ) : (
+                <View
+                  className="w-9 h-9 rounded-full items-center justify-center"
+                  style={{ backgroundColor: athlete.avatar_color || AVATAR_COLORS[athlete.first_name.charCodeAt(0) % AVATAR_COLORS.length] }}
+                >
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#FEFEFE' }}>
+                    {athlete.first_name.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
             </View>
           )}
           <View className="flex-1 mr-3">

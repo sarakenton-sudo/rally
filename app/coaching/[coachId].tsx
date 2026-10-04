@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { fetchCoachById, fetchBookableSlots, fetchSessionTypes, isSupabaseConfigured, type SlotWithRefs } from '@/lib/coach';
 import { useIconColors } from '@/lib/colors';
 import type { Coach, SessionType } from '@/types/database';
+import Avatar from '@/components/Avatar';
 
 function fmtDateKey(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
@@ -71,12 +72,8 @@ export default function CoachDetailScreen() {
           {/* Coach header */}
           {coach && (
             <View className="flex-row items-center mb-5">
-              <View className="w-16 h-16 rounded-full bg-warm-white dark:bg-bark-light border border-parchment dark:border-rally-900 items-center justify-center overflow-hidden mr-3">
-                {coach.photo_url ? (
-                  <Image source={{ uri: coach.photo_url }} className="w-16 h-16" resizeMode="cover" />
-                ) : (
-                  <Ionicons name="person" size={28} color={ic.placeholder} />
-                )}
+              <View className="mr-3">
+                <Avatar uri={coach.photo_url} name={coach.display_name} size={64} colorKey={coach.id} />
               </View>
               <View className="flex-1">
                 {coach.cost_tier && <Text className="text-xs font-semibold text-rally-600">{coach.cost_tier}</Text>}

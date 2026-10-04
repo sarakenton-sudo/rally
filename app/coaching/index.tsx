@@ -9,6 +9,7 @@ import { connectToCoach, fetchMyCoaches, isSupabaseConfigured } from '@/lib/coac
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess, notifyError } from '@/lib/haptics';
 import type { Coach } from '@/types/database';
+import Avatar from '@/components/Avatar';
 
 const STATUS_STYLE: Record<string, { bg: string; fg: string; label: string }> = {
   requested: { bg: 'bg-amber-100 dark:bg-amber-900/30', fg: 'text-amber-700 dark:text-amber-300', label: 'Pending' },
@@ -111,8 +112,8 @@ export default function MyCoachesScreen() {
                     onPress={() => router.push({ pathname: '/coaching/[coachId]', params: { coachId: c.id } })}
                     className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 mb-2 flex-row items-center active:opacity-80"
                   >
-                    <View className="w-11 h-11 rounded-full bg-cream dark:bg-bark border border-parchment dark:border-rally-900 items-center justify-center overflow-hidden mr-3">
-                      <Ionicons name="person" size={20} color={ic.placeholder} />
+                    <View className="mr-3">
+                      <Avatar uri={c.photo_url} name={c.display_name} size={44} colorKey={c.id} />
                     </View>
                     <View className="flex-1">
                       <Text className="text-sm font-semibold text-bark dark:text-cream">{c.display_name}</Text>

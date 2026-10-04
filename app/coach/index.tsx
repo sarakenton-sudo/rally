@@ -9,6 +9,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useCoachStore } from '@/stores/useCoachStore';
 import { fetchMyCoach, fetchFacilities, fetchPendingRequests, fetchSessionTypes, fetchUpcomingSlots, fetchSchedule, fetchWeekSlots, weekSummary, fmtMoney, fetchCoachPolicies, isSupabaseConfigured, type WeekSummary, type CoachPolicies } from '@/lib/coach';
 import { useIconColors } from '@/lib/colors';
+import Avatar from '@/components/Avatar';
 
 export default function CoachDashboardScreen() {
   const { user, signOut } = useAuth();
@@ -179,12 +180,8 @@ export default function CoachDashboardScreen() {
             style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
           >
             <View className="flex-row items-center mb-2">
-              <View className="w-12 h-12 rounded-full bg-cream dark:bg-bark border border-parchment dark:border-rally-900 items-center justify-center overflow-hidden mr-3">
-                {coachProfile.photo_url ? (
-                  <Image source={{ uri: coachProfile.photo_url }} className="w-12 h-12" resizeMode="cover" />
-                ) : (
-                  <Ionicons name="person" size={22} color={ic.placeholder} />
-                )}
+              <View className="mr-3">
+                <Avatar uri={coachProfile.photo_url} name={coachProfile.display_name} size={48} colorKey={coachProfile.id} />
               </View>
               <Text className="text-lg font-bold text-bark dark:text-cream flex-1 mr-2">
                 {coachProfile.display_name}

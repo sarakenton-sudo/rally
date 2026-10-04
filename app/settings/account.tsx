@@ -8,6 +8,8 @@ import { useIconColors } from '@/lib/colors';
 import { supabase } from '@/lib/supabase';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import type { AdminAthlete, AthleteInvite, Athlete } from '@/types/database';
+import PhotoEditor from '@/components/PhotoEditor';
+import { saveMyAvatar } from '@/lib/coach';
 
 export default function AccountScreen() {
   const ic = useIconColors();
@@ -100,6 +102,16 @@ export default function AccountScreen() {
       </View>
 
       <ScrollView className="flex-1 px-4 pt-6" contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* Profile photo */}
+        <View className="items-center mb-5">
+          <PhotoEditor
+            uri={userProfile?.avatar_url}
+            name={userProfile?.display_name || user?.email || 'You'}
+            colorKey={user?.id}
+            onSaved={saveMyAvatar}
+          />
+        </View>
+
         {/* Email */}
         <View className="bg-cream dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900 mb-3">
           <Text className="text-xs text-stone uppercase tracking-wider mb-1">Email</Text>

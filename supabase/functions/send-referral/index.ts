@@ -99,6 +99,7 @@ serve(async (req: Request) => {
         const vars: Record<string, string> = {
           referrer_name: escapeHtml(referrerName),
           invite_code: inviteCode ? escapeHtml(inviteCode) : '',
+          signup_url: inviteCode ? `https://rally-hub.com/auth?signup=true&amp;invite=${encodeURIComponent(inviteCode)}` : 'https://rally-hub.com/auth?signup=true',
         };
         html = tpl.html_body;
         for (const [key, val] of Object.entries(vars)) {
@@ -118,6 +119,13 @@ serve(async (req: Request) => {
         }
       }
 
+      // Point the email's "Sign up" button at sign-up with the code pre-filled,
+      // whichever template (admin-edited or built-in) was used.
+      if (inviteCode) {
+        const signup = `https://rally-hub.com/auth?signup=true&amp;invite=${encodeURIComponent(inviteCode)}`;
+        html = html.replace(/href="https:\/\/rally-hub\.com\/?(auth\?signup=true)?"(?=[^>]*display:inline-block)/g, `href="${signup}"`);
+      }
+
       const emailResult = await sendSendGridEmail(referredEmail, subject, html);
       results.push({ channel: 'email', status: emailResult.ok ? 'sent' : 'failed', error: emailResult.error });
     }
@@ -126,9 +134,9 @@ serve(async (req: Request) => {
     if (referredPhone && TWILIO_ACCOUNT_SID) {
       let smsBody: string;
       if (inviteType === 'athlete' && inviteCode) {
-        smsBody = `${referrerName} added you to RALLY! Use code ${inviteCode} to see your schedule and team info. Sign up at rally-hub.com`;
+        smsBody = `${referrerName} added you to RALLY! Tap to join (your code is filled in): https://rally-hub.com/auth?signup=true&invite=${encodeURIComponent(inviteCode ?? '')}`;
       } else if (inviteType === 'coparent' && inviteCode) {
-        smsBody = `${referrerName} invited you to RALLY — the volleyball family hub. Your invite code: ${inviteCode}. Sign up at rally-hub.com`;
+        smsBody = `${referrerName} invited you to RALLY — the volleyball family hub. Tap to join (your code ${inviteCode} is filled in): https://rally-hub.com/auth?signup=true&invite=${encodeURIComponent(inviteCode ?? '')}`;
       } else {
         smsBody = `${referrerName} invited you to RALLY — the volleyball family hub. Download at rally-hub.com`;
       }

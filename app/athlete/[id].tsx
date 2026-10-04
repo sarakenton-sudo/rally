@@ -7,13 +7,14 @@ import HubSectionHeader from '@/components/HubSectionHeader';
 import AthleteCredentialCard from '@/components/AthleteCredentialCard';
 import AthleteHealthCard from '@/components/AthleteHealthCard';
 import SignedDocumentsList from '@/components/SignedDocumentsList';
-import { fetchAcceptances, latestAcceptances, type PolicyAcceptance } from '@/lib/coach';
+import { fetchAcceptances, latestAcceptances, saveAthletePhoto, type PolicyAcceptance } from '@/lib/coach';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { updateAdminConfig, deleteSeason as deleteSeasonDB } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/providers/AuthProvider';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
+import PhotoEditor from '@/components/PhotoEditor';
 
 const ATHLETE_SERVICES = ['SportsRecruits', 'Hudl', 'University Athlete', 'Instagram', 'USA Volleyball'];
 
@@ -32,6 +33,7 @@ export default function AthleteProfileScreen() {
   const { user } = useAuth();
   const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
+  const setAthletes = useSeasonStore((s) => s.setAthletes);
   const athlete = athletes.find((a) => a.id === id);
   const [signedDocs, setSignedDocs] = useState<PolicyAcceptance[]>([]);
   useEffect(() => {
@@ -141,6 +143,20 @@ export default function AthleteProfileScreen() {
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor="#3B82B0" />}
       >
+        {/* Athlete photo */}
+        <View className="items-center mb-4">
+          <PhotoEditor
+            uri={athlete.photo_url}
+            name={`${athlete.first_name} ${athlete.last_name ?? ''}`}
+            colorKey={athlete.id}
+            onSaved={async (url) => {
+              const r = await saveAthletePhoto(athlete.id, url);
+              if (!r.error) setAthletes(athletes.map((x) => (x.id === athlete.id ? { ...x, photo_url: url } : x)));
+              return r;
+            }}
+          />
+        </View>
+
         {/* ============================================================ */}
         {/* SEASONS — at top, current/most recent first */}
         {/* ============================================================ */}

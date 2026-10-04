@@ -15,6 +15,13 @@ function getInitialSignUp(): boolean {
   return false;
 }
 
+function getInitialInvite(): string {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    return new URLSearchParams(window.location.search).get('invite')?.trim() ?? '';
+  }
+  return '';
+}
+
 /** Homepage "Set up your coach page" links here with ?signup=true&role=coach. */
 function getInitialAccountType(): AccountType {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -29,8 +36,10 @@ export default function AuthScreen() {
   const [accountType, setAccountType] = useState<AccountType>(getInitialAccountType);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
-  const [hasInviteCode, setHasInviteCode] = useState(false);
+  // Invite emails link to /auth?signup=true&invite=CODE so the code is pre-filled.
+  const [inviteCode, setInviteCode] = useState(getInitialInvite);
+  const [hasInviteCode, setHasInviteCode] = useState(() => !!getInitialInvite());
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' | 'info' } | null>(null);
@@ -222,10 +231,23 @@ export default function AuthScreen() {
             value={password}
             onChangeText={setPassword}
             placeholder="••••••••"
-            secureTextEntry
+            secureTextEntry={!showPassword}
             autoComplete={isSignUp ? 'new-password' : 'current-password'}
+            autoCapitalize="none"
+            autoCorrect={false}
             darkBg
           />
+          <Pressable onPress={() => setShowPassword(!showPassword)} className="flex-row items-center -mt-2 mb-3 self-start active:opacity-70">
+            <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={15} color="#7DBDD9" />
+            <Text style={{ fontSize: 12, color: '#7DBDD9', fontFamily: 'NunitoSans-SemiBold', marginLeft: 5 }}>
+              {showPassword ? 'Hide password' : 'Show password'}
+            </Text>
+          </Pressable>
+          {isSignUp && Platform.OS === 'web' && (
+            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', fontFamily: 'NunitoSans-Regular', marginTop: -6, marginBottom: 12 }}>
+              On iPhone, if Safari fills a "Strong Password" you can't change, tap "Other Options" → "Choose My Own Password".
+            </Text>
+          )}
 
           {/* Invite code toggle */}
           <Pressable className="mb-3 active:opacity-70" onPress={() => setHasInviteCode(!hasInviteCode)}>

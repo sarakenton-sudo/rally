@@ -83,6 +83,7 @@ export interface UserProfile {
   role: UserRole;
   account_type: AccountType;
   display_name: string | null;
+  avatar_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -94,6 +95,7 @@ export interface Athlete {
   last_name: string | null;
   can_edit: boolean;
   avatar_color: string | null;
+  photo_url?: string | null;
   // Athlete profile (00054) — conveyed to a coach with each booking request
   grad_year: number | null;
   positions: string[];
