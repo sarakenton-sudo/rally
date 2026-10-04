@@ -583,9 +583,12 @@ export default function OnboardingScreen() {
                 placeholder="Enter invite code"
                 placeholderTextColor="#8FA8BF"
                 value={inviteCode}
-                onChangeText={(t) => { setInviteCode(t); setInviteError(''); }}
+                onChangeText={(t) => { setInviteCode(t.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()); setInviteError(''); }}
                 autoCapitalize="none"
                 autoCorrect={false}
+                spellCheck={false}
+                autoComplete="off"
+                keyboardType="ascii-capable"
               />
               {inviteError ? (
                 <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-SemiBold', color: '#dc2626', textAlign: 'center', marginBottom: 8 }}>

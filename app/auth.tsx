@@ -259,10 +259,13 @@ export default function AuthScreen() {
             <FormField
               label="Invite Code"
               value={inviteCode}
-              onChangeText={setInviteCode}
+              onChangeText={(t) => setInviteCode(t.replace(/[^a-zA-Z0-9]/g, '').toLowerCase())}
               placeholder="e.g. a1b2c3d4e5f6"
               autoCapitalize="none"
               autoCorrect={false}
+              spellCheck={false}
+              autoComplete="off"
+              keyboardType="ascii-capable"
               darkBg
             />
           )}
