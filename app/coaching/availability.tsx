@@ -10,6 +10,7 @@ import {
 import type { Coach, SessionKind } from '@/types/database';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
+import Avatar from '@/components/Avatar';
 
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 const dayKey = (iso: string) => new Date(iso).toDateString();
@@ -117,9 +118,20 @@ export default function CoachAvailabilityScreen() {
           {coaches.length > 1 && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3">
               <Chip active={coachId === 'all'} label="All coaches" color="#4f46e5" onPress={() => setCoachId('all')} />
-              {coaches.map((c) => (
-                <Chip key={c.id} active={coachId === c.id} label={c.display_name} color="#4f46e5" onPress={() => setCoachId(c.id)} />
-              ))}
+              {coaches.map((c) => {
+                const on = coachId === c.id;
+                return (
+                  <Pressable
+                    key={c.id}
+                    onPress={() => { tapLight(); setCoachId(c.id); }}
+                    className="flex-row items-center rounded-full pl-1 pr-3 py-1 mr-2 border"
+                    style={{ backgroundColor: on ? '#4f46e5' : '#4f46e512', borderColor: on ? '#4f46e5' : '#4f46e535' }}
+                  >
+                    <Avatar uri={c.photo_url} name={c.display_name} size={22} colorKey={c.id} />
+                    <Text className="text-xs font-semibold ml-1.5" style={{ color: on ? '#fff' : '#4f46e5' }}>{c.display_name}</Text>
+                  </Pressable>
+                );
+              })}
             </ScrollView>
           )}
 
@@ -146,6 +158,9 @@ export default function CoachAvailabilityScreen() {
                     className="bg-warm-white dark:bg-bark-light rounded-xl p-3.5 border border-parchment dark:border-rally-900 mb-2 flex-row items-center active:opacity-80"
                     style={{ borderLeftWidth: 4, borderLeftColor: stripe, shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
                   >
+                    <View className="mr-3">
+                      <Avatar uri={o.coach_photo_url} name={o.coach_name} size={40} colorKey={o.coach_id} />
+                    </View>
                     <View className="flex-1">
                       <Text className="text-base font-bold text-bark dark:text-cream">
                         {fmtTime(o.starts_at)} – {fmtTime(o.ends_at)}

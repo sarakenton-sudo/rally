@@ -480,6 +480,7 @@ export async function fetchMyUpcomingLessons(days = 30): Promise<{ data: ParentL
 
 export interface CoachOpening extends SlotWithRefs {
   coach_name: string;
+  coach_photo_url: string | null;
   eligible_types: SessionType[];    // resolved; all active types when the slot is open to any
 }
 
@@ -495,6 +496,7 @@ export async function fetchAllCoachAvailability(): Promise<{ data: CoachOpening[
       return {
         ...slot,
         coach_name: c.display_name,
+        coach_photo_url: c.photo_url ?? null,
         eligible_types: ids.length ? active.filter((x) => ids.includes(x.id)) : active,
       };
     });
