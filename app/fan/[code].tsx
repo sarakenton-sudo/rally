@@ -51,14 +51,13 @@ export default function FanInvite() {
               {info.guest_name ? `${info.guest_name}, follow ` : 'Follow '}{athlete}'s volleyball season
             </Text>
             <Text className="text-base mt-3 leading-6" style={{ color: 'rgba(255,255,255,0.8)' }}>
-              Tournament dates and locations, live streams and tickets, all in one place — with a heads-up on game day. Free.
+              Tournament dates and locations, live streams and tickets, all in one place. Free.
             </Text>
             {[
               ['calendar', 'Every upcoming tournament, by month'],
               ['navigate', 'Directions to each venue'],
               ['videocam', 'Live stream and ticket links'],
-              ['notifications', 'Game-day alerts in the app'],
-            ].map(([icon, label]) => (
+                          ].map(([icon, label]) => (
               <View key={label} className="flex-row items-center mt-3">
                 <Ionicons name={icon as any} size={18} color="#7DBDD9" />
                 <Text className="text-sm text-white ml-3">{label}</Text>

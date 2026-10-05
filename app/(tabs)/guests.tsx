@@ -61,7 +61,7 @@ export default function GuestsScreen() {
               <Text className="text-sm text-rally-700 dark:text-rally-300 ml-2 flex-1 leading-5">
                 Guests lets you easily share and automate key information — upcoming tournaments, locations,
                 streaming links and ticket info — with grandparents, family and other fans.
-                {'\n\n'}Invite guests to the free RallyHUB app — they'll get game-day alerts and every detail without texts.
+                {'\n\n'}Invite guests to the free RallyHUB app — they'll have every tournament, location and stream link in one place, without group texts.
               </Text>
             </View>
           </View>

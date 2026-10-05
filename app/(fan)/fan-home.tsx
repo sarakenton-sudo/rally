@@ -88,7 +88,7 @@ export default function FanHome() {
             <Ionicons name="calendar-outline" size={40} color="#8FA8BF" />
             <Text className="text-base font-bold text-bark dark:text-cream mt-3">No upcoming tournaments yet</Text>
             <Text className="text-sm text-stone dark:text-parchment text-center mt-1">
-              {athletes.length ? "When the family adds tournaments, they'll show up here and you'll get a heads-up on game day." : 'Enter the fan code from your invite below to follow an athlete.'}
+              {athletes.length ? "When the family adds tournaments, they'll show up here." : 'Enter the fan code from your invite below to follow an athlete.'}
             </Text>
           </View>
         ) : months.map((m) => (

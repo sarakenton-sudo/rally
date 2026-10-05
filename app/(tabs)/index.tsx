@@ -22,6 +22,8 @@ import AthleteCredentialCard from '@/components/AthleteCredentialCard';
 import { getPref, setPref } from '@/lib/prefs';
 import NextUpCard from '@/components/home/NextUpCard';
 import LessonCard from '@/components/LessonCard';
+import GameCard from '@/components/GameCard';
+import { fetchUpcomingGames, type ScheduleGame } from '@/lib/teamEvents';
 
 const INVITE_DISMISS_KEY = 'rally.coachInvitePromptDismissedAt';
 const HORIZON_DAYS = 90;
@@ -76,7 +78,9 @@ export default function HomeScreen() {
 
   // Lessons/clinics booked with coaches, merged into "Coming up" (next 90 days).
   const [lessons, setLessons] = useState<ParentLesson[]>([]);
+  const [games, setGames] = useState<ScheduleGame[]>([]);
   const loadLessons = useCallback(() => {
+    fetchUpcomingGames().then(setGames); // games/team events from the schedule import
     if (!coachingConfigured) return;
     fetchMyUpcomingLessons(HORIZON_DAYS).then(({ data }) => setLessons(data));
   }, []);
@@ -360,6 +364,8 @@ export default function HomeScreen() {
     return list;
   }, [athletes, lessons]);
   const hasMultipleAthletes = filterAthletes.length > 1;
+  // All Athletes view: every card says whose it is.
+  const nameCards = hasMultipleAthletes && athleteFilter === 'all';
   const athleteName = (id: string | null | undefined) => filterAthletes.find((a) => a.id === id)?.first_name;
 
   const upcomingTournaments = useMemo(() => {
@@ -381,17 +387,27 @@ export default function HomeScreen() {
     [lessons, athleteFilter],
   );
 
-  // One chronological timeline (tournaments + lessons) grouped by month.
+  // Games within the horizon, respecting the athlete filter (game → team → athlete).
+  const filteredGames = useMemo(() => {
+    const until = new Date(Date.now() + HORIZON_DAYS * 864e5).toISOString().slice(0, 10);
+    const inRange = games.filter((g) => g.date <= until);
+    if (athleteFilter === 'all') return inRange;
+    const ids = new Set(seasons.filter((x) => x.athlete_id === athleteFilter).map((x) => x.id));
+    return inRange.filter((g) => ids.has(g.season_id));
+  }, [games, athleteFilter, seasons]);
+
+  // One chronological timeline (tournaments + games + lessons) grouped by month.
   const monthSections = useMemo(() => {
-    const items: ({ kind: 'tournament'; date: string; t: typeof tournaments[0] } | { kind: 'lesson'; date: string; l: ParentLesson })[] = [
+    const items: ({ kind: 'tournament'; date: string; t: typeof tournaments[0] } | { kind: 'lesson'; date: string; l: ParentLesson } | { kind: 'game'; date: string; g: ScheduleGame })[] = [
       ...filteredTournaments.map((t) => ({ kind: 'tournament' as const, date: t.start_date, t })),
       ...filteredLessons.map((l) => ({ kind: 'lesson' as const, date: l.starts_at.slice(0, 10), l })),
+      ...filteredGames.map((g) => ({ kind: 'game' as const, date: g.date, g })),
     ];
     // A tournament already under way sorts as today, not its (past) start date.
     const today = new Date().toISOString().slice(0, 10);
     const sorted = items.map((i) => ({ ...i, date: i.date < today ? today : i.date })).sort((a, b) => a.date.localeCompare(b.date));
     return groupByMonth(sorted);
-  }, [filteredTournaments, filteredLessons]);
+  }, [filteredTournaments, filteredLessons, filteredGames]);
 
   const hasFlightConflict = (tournamentId: string) => {
     const seen = new Set<string>();
@@ -550,7 +566,14 @@ export default function HomeScreen() {
                   <LessonCard
                     key={`l-${item.l.id}`}
                     lesson={item.l}
-                    athleteName={hasMultipleAthletes ? athleteName(item.l.athlete_id) : undefined}
+                    athleteName={nameCards ? athleteName(item.l.athlete_id) : undefined}
+                  />
+                ) : item.kind === 'game' ? (
+                  <GameCard
+                    key={`g-${item.g.id}`}
+                    game={item.g}
+                    athleteName={nameCards ? athleteName(seasons.find((x) => x.id === item.g.season_id)?.athlete_id) : undefined}
+                    teamName={nameCards ? seasons.find((x) => x.id === item.g.season_id)?.team_name : undefined}
                   />
                 ) : (
                   <TournamentCard
@@ -561,6 +584,7 @@ export default function HomeScreen() {
                     backupHotelCount={hotelBookings.filter((h) => h.tournament_id === item.t.id && h.is_backup).length}
                     hasFlightConflict={hasFlightConflict(item.t.id)}
                     athlete={getAthleteForTournament(item.t)}
+                    showAthleteName={nameCards}
                     onPress={() => router.push(`/tournament/${item.t.id}`)}
                   />
                 ))}

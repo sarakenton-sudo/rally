@@ -17,6 +17,8 @@ interface TournamentCardProps {
   backupHotelCount?: number;
   hasFlightConflict?: boolean;
   athlete?: Athlete | null;
+  /** Families with more than one athlete: name the athlete on the card. */
+  showAthleteName?: boolean;
   onPress?: () => void;
 }
 
@@ -38,7 +40,7 @@ function openDirections(address: string) {
   if (url) Linking.openURL(url);
 }
 
-export default function TournamentCard({ tournament, hotelCount = 0, flightCount = 0, backupHotelCount = 0, hasFlightConflict = false, athlete, onPress }: TournamentCardProps) {
+export default function TournamentCard({ tournament, hotelCount = 0, flightCount = 0, backupHotelCount = 0, hasFlightConflict = false, athlete, showAthleteName = false, onPress }: TournamentCardProps) {
   const hasHotel = hotelCount > 0;
   const hasFlight = flightCount > 0;
   const hasMultipleBookings = backupHotelCount > 0 || hotelCount > 1 || hasFlightConflict;
@@ -105,6 +107,7 @@ export default function TournamentCard({ tournament, hotelCount = 0, flightCount
             </Text>
             <Text className="text-sm text-stone dark:text-parchment mt-0.5">
               {formatDateRange(tournament.start_date, tournament.end_date)}
+              {showAthleteName && athlete ? <Text className="font-bold text-bark dark:text-cream">{`  ·  ${athlete.first_name}`}</Text> : null}
             </Text>
           </View>
 

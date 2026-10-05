@@ -253,7 +253,7 @@ export default function PublicBookingPage() {
           style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: accent }}
           accessibilityLabel="Get the free RallyHUB app"
         >
-          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700', flex: 1 }}>Get the free RallyHUB app for lesson reminders and game-day alerts</Text>
+          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700', flex: 1 }}>Get the free RallyHUB app for lesson reminders</Text>
           <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>Get it ›</Text>
         </Pressable>
       )}

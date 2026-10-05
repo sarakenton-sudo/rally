@@ -13,7 +13,7 @@
       "backgroundColor": "#F4F6F8"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.rallyhub.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,

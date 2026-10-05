@@ -1,4 +1,4 @@
-import { View, Text, FlatList, ActivityIndicator, Pressable, Alert, Platform, Linking, Share } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, Pressable, Alert, Platform, Linking, Share, ScrollView } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,9 +16,16 @@ import ReferFriend from '@/components/ReferFriend';
 import type { Tournament } from '@/types/database';
 import { addAllDayEventsToCalendar } from '@/lib/calendar';
 import LessonCard from '@/components/LessonCard';
+import { groupByMonth } from '@/lib/nextUp';
+import GameCard from '@/components/GameCard';
+import { fetchUpcomingGames, type ScheduleGame } from '@/lib/teamEvents';
 import { fetchMyUpcomingLessons, isSupabaseConfigured as coachingConfigured, type ParentLesson } from '@/lib/coach';
 
-type ListItem = { type: 'tournament'; data: Tournament } | { type: 'divider'; label: string };
+type ListItem =
+  | { type: 'tournament'; data: Tournament }
+  | { type: 'lesson'; data: ParentLesson }
+  | { type: 'game'; data: ScheduleGame }
+  | { type: 'divider'; label: string };
 
 export default function SeasonScreen() {
   const tournaments = useSeasonStore((s) => s.tournaments);
@@ -35,8 +42,10 @@ export default function SeasonScreen() {
   const teamCode = activeSeason?.team_code;
 
   const [lessons, setLessons] = useState<ParentLesson[]>([]);
+  const [games, setGames] = useState<ScheduleGame[]>([]);
   useFocusEffect(useCallback(() => {
-    if (coachingConfigured) fetchMyUpcomingLessons(60).then(({ data }) => setLessons(data));
+    if (coachingConfigured) fetchMyUpcomingLessons(365).then(({ data }) => setLessons(data));
+    fetchUpcomingGames().then(setGames);
   }, []));
 
   // Lookup athlete for active season
@@ -80,26 +89,73 @@ export default function SeasonScreen() {
     }
   };
 
-  const listItems = useMemo(() => {
-    const upcoming = seasonTournaments
-      .filter((t) => daysUntil(t.end_date) >= 0)
-      .sort((a, b) => a.start_date.localeCompare(b.start_date));
-    const past = seasonTournaments
-      .filter((t) => daysUntil(t.end_date) < 0)
-      .sort((a, b) => a.start_date.localeCompare(b.start_date));
+  // Athlete filter: All, or one athlete (their tournaments across every team, and their lessons).
+  const [athleteFilter, setAthleteFilter] = useState<string>('all');
+  const setActiveSeasonId = useSeasonStore((s) => s.setActiveSeasonId);
+  const chooseAthlete = (id: string) => {
+    tapLight();
+    setAthleteFilter(id);
+    // Keep the team header in step with the athlete shown.
+    if (id !== 'all' && activeSeason?.athlete_id !== id) {
+      const theirs = seasons.filter((x) => x.athlete_id === id).sort((x, y) => y.season_year.localeCompare(x.season_year));
+      const pick = theirs.find((x) => x.is_active) ?? theirs[0];
+      if (pick) setActiveSeasonId(pick.id);
+    }
+  };
+  const chipAthletes = useMemo(() => {
+    const list = athletes.map((a) => ({ id: a.id, name: a.first_name }));
+    for (const l of lessons) {
+      if (l.athlete_id && !list.some((x) => x.id === l.athlete_id)) list.push({ id: l.athlete_id, name: l.athlete_first_name ?? 'Athlete' });
+    }
+    return list;
+  }, [athletes, lessons]);
 
-    const items: ListItem[] = upcoming.map((t) => ({ type: 'tournament' as const, data: t }));
+  const listItems = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const seasonIds = athleteFilter === 'all' ? null : new Set(seasons.filter((x) => x.athlete_id === athleteFilter).map((x) => x.id));
+    const tours = seasonIds ? tournaments.filter((t) => seasonIds.has(t.season_id)) : tournaments;
+    const less = athleteFilter === 'all' ? lessons : lessons.filter((l) => l.athlete_id === athleteFilter);
+    const gms = seasonIds ? games.filter((g) => seasonIds.has(g.season_id)) : games;
+
+    // Upcoming: tournaments (in progress ones under today) and lessons, by date, grouped by month.
+    const upcoming = [
+      ...tours.filter((t) => daysUntil(t.end_date) >= 0).map((t) => ({ date: t.start_date < today ? today : t.start_date, item: { type: 'tournament' as const, data: t } })),
+      ...less.map((l) => ({ date: l.starts_at.slice(0, 10), item: { type: 'lesson' as const, data: l } })),
+      ...gms.map((g) => ({ date: g.date, item: { type: 'game' as const, data: g } })),
+    ].sort((x, y) => x.date.localeCompare(y.date) || (x.item.type === 'tournament' ? -1 : y.item.type === 'tournament' ? 1 : 0));
+
+    const items: ListItem[] = [];
+    for (const g of groupByMonth(upcoming)) {
+      items.push({ type: 'divider', label: g.label });
+      g.items.forEach((x) => items.push(x.item));
+    }
+    const past = tours.filter((t) => daysUntil(t.end_date) < 0).sort((x, y) => y.start_date.localeCompare(x.start_date));
     if (past.length > 0) {
-      items.push({ type: 'divider' as const, label: 'COMPLETED' });
-      past.forEach((t) => items.push({ type: 'tournament' as const, data: t }));
+      items.push({ type: 'divider', label: 'COMPLETED' });
+      past.forEach((t) => items.push({ type: 'tournament', data: t }));
     }
     return items;
-  }, [seasonTournaments]);
+  }, [tournaments, lessons, games, seasons, athleteFilter]);
+
+  const athleteName = (id: string | null | undefined) => chipAthletes.find((a) => a.id === id)?.name;
+  // All Athletes view (more than one athlete): every card says whose it is.
+  const nameCards = chipAthletes.length > 1 && athleteFilter === 'all';
+  const athleteForTournament = (t: Tournament) => {
+    const season = seasons.find((x) => x.id === t.season_id);
+    return athletes.find((a) => a.id === season?.athlete_id) ?? null;
+  };
 
   const teamName = activeSeason?.team_name ?? '';
   const seasonYear = activeSeason?.season_year ?? '';
 
   const renderItem = ({ item }: { item: ListItem }) => {
+    if (item.type === 'lesson') {
+      return <LessonCard lesson={item.data} athleteName={nameCards ? athleteName(item.data.athlete_id) : undefined} />;
+    }
+    if (item.type === 'game') {
+      const season = seasons.find((x) => x.id === item.data.season_id);
+      return <GameCard game={item.data} athleteName={nameCards ? athleteName(season?.athlete_id) : undefined} teamName={nameCards ? season?.team_name : undefined} />;
+    }
     if (item.type === 'divider') {
       return (
         <View className="py-3 mt-2">
@@ -127,7 +183,8 @@ export default function SeasonScreen() {
           }
           return false;
         })()}
-        athlete={activeAthlete}
+        athlete={athleteForTournament(item.data)}
+        showAthleteName={nameCards}
         onPress={() => router.push(`/tournament/${item.data.id}`)}
       />
     );
@@ -147,7 +204,7 @@ export default function SeasonScreen() {
       <FlatList
         data={listItems}
         renderItem={renderItem}
-        keyExtractor={(item, index) => item.type === 'tournament' ? item.data.id : `divider-${index}`}
+        keyExtractor={(item, index) => item.type === 'divider' ? `divider-${index}` : `${item.type}-${item.data.id}`}
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         onRefresh={refresh}
         refreshing={isRefreshing}
@@ -248,23 +305,31 @@ export default function SeasonScreen() {
               </Pressable>
             )}
 
-            {/* Lessons (next 60 days) — lessons are events on the schedule too */}
-            <View className="mt-5">
-              <View className="flex-row items-center mb-2">
-                <Text className="text-xs font-semibold text-stone uppercase tracking-wider flex-1">Lessons</Text>
-                <Pressable onPress={() => { tapLight(); router.push('/lessons'); }} className="flex-row items-center rounded-full px-3 py-1.5 active:opacity-80" style={{ backgroundColor: '#3B82B0' }} accessibilityLabel="Book a lesson">
-                  <Ionicons name="add" size={14} color="#fff" />
-                  <Text className="text-xs font-bold text-white ml-0.5">Book a lesson</Text>
-                </Pressable>
-              </View>
-              {lessons.length ? lessons.map((l) => (
-                <LessonCard key={l.id} lesson={l} athleteName={athletes.length > 1 ? athletes.find((a) => a.id === l.athlete_id)?.first_name : undefined} />
-              )) : (
-                <Text className="text-xs text-stone dark:text-parchment mb-1">No lessons booked in the next 60 days.</Text>
-              )}
+            {/* Filter by athlete + book — the list below is tournaments and lessons by month */}
+            <View className="flex-row items-center mt-5">
+              {chipAthletes.length > 1 ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-1 mr-2" contentContainerStyle={{ gap: 8 }}>
+                  {[{ id: 'all', name: 'All Athletes' }, ...chipAthletes].map((a) => {
+                    const on = athleteFilter === a.id;
+                    return (
+                      <Pressable
+                        key={a.id}
+                        onPress={() => chooseAthlete(a.id)}
+                        className={`px-3 py-1.5 rounded-full border ${on ? 'bg-rally-600 border-rally-600' : 'bg-warm-white dark:bg-bark-light border-parchment dark:border-rally-900'}`}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: on }}
+                      >
+                        <Text className={`text-xs font-semibold ${on ? 'text-cream' : 'text-bark dark:text-parchment'}`}>{a.name}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              ) : <View className="flex-1" />}
+              <Pressable onPress={() => { tapLight(); router.push('/lessons'); }} className="flex-row items-center rounded-full px-3 py-1.5 active:opacity-80" style={{ backgroundColor: '#3B82B0' }} accessibilityLabel="Book a lesson">
+                <Ionicons name="add" size={14} color="#fff" />
+                <Text className="text-xs font-bold text-white ml-0.5">Book a lesson</Text>
+              </Pressable>
             </View>
-
-            <Text className="text-xs font-semibold text-stone uppercase tracking-wider mt-5">Tournaments</Text>
           </View>
         }
         ListFooterComponent={

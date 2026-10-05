@@ -60,6 +60,7 @@ export default function AuthScreen() {
   const handleAppleSignIn = async () => {
     setMessage(null);
     if (isSignUp) savePendingMarketing(marketing, 'signup_apple');
+    rememberTypedFanCode();
     const { error } = await signInWithApple(isSignUp ? accountType : undefined);
     if (error) setMessage({ text: error, type: 'error' });
   };
@@ -71,6 +72,10 @@ export default function AuthScreen() {
   const [inviteCode, setInviteCode] = useState(getInitialInvite);
   const [marketing, setMarketing] = useState(true);
   const [hasInviteCode, setHasInviteCode] = useState(() => !!getInitialInvite());
+  const [hasFanCode, setHasFanCode] = useState(false);
+  const [fanCode, setFanCode] = useState('');
+  // Accepted after sign-up (AuthProvider), which routes the new account to the fan view.
+  const rememberTypedFanCode = () => { if (isSignUp && hasFanCode && fanCode.trim()) rememberFanCode(fanCode.trim()); };
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -88,6 +93,7 @@ export default function AuthScreen() {
     try {
       if (isSignUp) {
         savePendingMarketing(marketing, 'signup_email'); // recorded once the new profile loads
+        rememberTypedFanCode();
         const { error } = await signUp(email.trim(), password, accountType);
         if (error) { setLoading(false); setMessage({ text: `Sign up error: ${error}`, type: 'error' }); return; }
         if (hasInviteCode && inviteCode.trim()) {
@@ -114,6 +120,7 @@ export default function AuthScreen() {
     setGoogleLoading(true);
     // Google can't carry the Coach choice itself — pass it so it's applied after sign-in.
     if (isSignUp) savePendingMarketing(marketing, 'signup_google');
+    rememberTypedFanCode();
     const { error } = await signInWithGoogle(isSignUp ? accountType : undefined);
     setGoogleLoading(false);
     if (error) setMessage({ text: error, type: 'error' });
@@ -331,6 +338,31 @@ export default function AuthScreen() {
               keyboardType="ascii-capable"
               darkBg
             />
+          )}
+
+          {/* Fan code (sign-up): grandparents/fans who installed the app before opening their link */}
+          {isSignUp && (
+            <>
+              <Pressable className="mb-3 active:opacity-70" onPress={() => setHasFanCode(!hasFanCode)} accessibilityLabel="Have a fan code?">
+                <Text style={{ fontSize: 13, color: '#7DBDD9', fontFamily: 'NunitoSans-SemiBold' }}>
+                  {hasFanCode ? 'Remove fan code' : 'Following a family? Enter your fan code'}
+                </Text>
+              </Pressable>
+              {hasFanCode && (
+                <FormField
+                  label="Fan Code"
+                  value={fanCode}
+                  onChangeText={(t) => setFanCode(t.replace(/[^a-zA-Z0-9]/g, '').toUpperCase())}
+                  placeholder="e.g. 6C2DR3TA"
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  spellCheck={false}
+                  autoComplete="off"
+                  keyboardType="ascii-capable"
+                  darkBg
+                />
+              )}
+            </>
           )}
 
           {/* Forgot password (sign-in only) */}
