@@ -6,6 +6,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import type { Session, User } from '@supabase/supabase-js';
 import type { UserProfile, AccountType } from '@/types/database';
+import { resetStores } from '@/lib/resetStores';
 
 interface AuthContextType {
   session: Session | null;
@@ -69,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const validatedRef = useRef(false);
+  const userIdRef = useRef<string | null>(null); // account whose data the stores hold
 
   const fetchUserProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -109,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } else {
             console.log('[Auth] Valid session for user:', user.email);
             setSession(cached);
+            userIdRef.current = cached.user?.id ?? null;
             await fetchUserProfile(user.id);
 
           }
@@ -134,6 +137,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // But ignore events until initial validation is done
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (validatedRef.current) {
+        // A different account (or none): drop the previous account's data.
+        const nextId = newSession?.user?.id ?? null;
+        if (nextId !== userIdRef.current) resetStores();
+        userIdRef.current = nextId;
         setSession(newSession);
         if (newSession?.user) {
           fetchUserProfile(newSession.user.id);
@@ -227,6 +234,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.warn('[Auth] signOut error (clearing session anyway):', err);
     }
     setSession(null);
+    resetStores();
+    userIdRef.current = null;
     router.replace('/auth');
   };
 
