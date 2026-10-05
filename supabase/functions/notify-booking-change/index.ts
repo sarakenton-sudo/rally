@@ -111,6 +111,7 @@ serve(async (req: Request) => {
   }
 
   let emailed = false;
+  let emailStatus: number | string = SENDGRID_API_KEY ? 'no address' : 'no key';
   const { data: recipient } = await supabaseAdmin.auth.admin.getUserById(recipientId);
   const email = recipient?.user?.email;
   if (email && SENDGRID_API_KEY) {
@@ -130,8 +131,14 @@ serve(async (req: Request) => {
       }),
     });
     emailed = res.ok;
-    if (!res.ok) console.error('[notify-booking-change] sendgrid', res.status, await res.text());
+    emailStatus = res.status;
+    if (!res.ok) {
+      const detail = await res.text();
+      console.error('[notify-booking-change] sendgrid', res.status, detail);
+      // SendGrid's reason (no secrets) so the caller can see why email failed.
+      try { emailStatus = `${res.status}: ${JSON.parse(detail).errors?.[0]?.message ?? ''}`; } catch { /* keep status */ }
+    }
   }
 
-  return json({ pushed, emailed });
+  return json({ pushed, emailed, email_status: emailStatus });
 });
