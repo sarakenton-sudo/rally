@@ -29,13 +29,15 @@ serve(async (req) => {
   const { data: code, error: codeErr } = await asCaller.rpc('create_fan_invite', { p_guest_id: guest_id });
   if (codeErr || !code) return json({ error: 'guest not found' }, 404);
 
-  const { data: g } = await admin.from('guests').select('name, email, athletes(first_name)').eq('id', guest_id).single();
+  const { data: g } = await admin.from('guests').select('name, email').eq('id', guest_id).single();
+  // Family-level guests follow all the family's athletes (00087): "Avery & Drue".
+  const { data: invite } = await admin.rpc('get_fan_invite', { p_code: code });
   const guest = g as any;
   if (!guest?.email) return json({ code, emailed: false, email_status: 'no email on file' });
 
   const { data: prof } = await admin.from('user_profiles').select('display_name').eq('id', auth.user.id).maybeSingle();
   const from = (prof?.display_name ?? '').trim().split(' ')[0] || 'A RallyHUB family';
-  const athlete = guest.athletes?.first_name ?? 'our athlete';
+  const athlete = (invite as any)?.athlete_first_name || 'our athlete';
   const first = String(guest.name ?? '').trim().split(' ')[0];
   const link = `https://rally-hub.com/fan/${code}`;
   const subject = `Follow ${athlete}'s volleyball season on RallyHUB`;
