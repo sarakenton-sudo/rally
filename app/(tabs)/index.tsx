@@ -13,11 +13,15 @@ import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
-import ReferFriend from '@/components/ReferFriend';
-import { fetchMyUpcomingLessons, sessionKindStyle, isSupabaseConfigured as coachingConfigured, type ParentLesson } from '@/lib/coach';
-import AthleteCredentialCard from '@/components/AthleteCredentialCard';
-import Avatar from '@/components/Avatar';
-import QuickAddSheet from '@/components/QuickAddSheet';
+import { fetchMyUpcomingLessons, fetchMyCoaches, sessionKindStyle, isSupabaseConfigured as coachingConfigured, type ParentLesson } from '@/lib/coach';
+import { fetchMyCharges, type ParentCharge } from '@/lib/payments';
+import { fetchMyCoachInvites } from '@/lib/coachInvites';
+import { pickNextUp, showCoachInvitePrompt } from '@/lib/nextUp';
+import { getPref, setPref } from '@/lib/prefs';
+import NextUpCard from '@/components/home/NextUpCard';
+import LessonCard from '@/components/LessonCard';
+
+const INVITE_DISMISS_KEY = 'rally.coachInvitePromptDismissedAt';
 
 const AVATAR_COLORS = [
   '#3B82B0', '#7c3aed', '#6A9E8A', '#d97706', '#dc2626',
@@ -48,45 +52,6 @@ function SectionHeader({ icon, iconColor, title, subtitle, right }: {
   );
 }
 
-function LessonCard({ lesson, athleteName }: { lesson: ParentLesson; athleteName?: string }) {
-  const st = sessionKindStyle(lesson.session_kind);
-  const start = new Date(lesson.starts_at);
-  const confirmed = lesson.status === 'accepted';
-  const off = lesson.status === 'cancelled' || lesson.status === 'declined';
-  const tag = off
-    ? { label: lesson.status === 'cancelled' ? 'CANCELLED' : 'DECLINED', cls: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300' }
-    : confirmed
-      ? { label: 'CONFIRMED', cls: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300' }
-      : { label: 'REQUESTED', cls: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-700 dark:text-amber-300' };
-  return (
-    <Pressable
-      onPress={() => router.push('/coaching')}
-      className="bg-warm-white dark:bg-bark-light rounded-2xl p-4 mb-3 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
-      style={{ borderLeftWidth: 4, borderLeftColor: off ? '#dc2626' : st.color, opacity: off ? 0.85 : 1, shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
-    >
-      <View className="w-11 h-11 rounded-xl items-center justify-center mr-3" style={{ backgroundColor: st.color + '15' }}>
-        <Text className="text-[10px] font-bold uppercase" style={{ color: st.color }}>
-          {start.toLocaleDateString(undefined, { month: 'short' })}
-        </Text>
-        <Text className="text-base font-bold -mt-0.5" style={{ color: st.color }}>{start.getDate()}</Text>
-      </View>
-      <View className="flex-1">
-        <Text className={`text-sm font-bold text-bark dark:text-cream ${off ? 'line-through' : ''}`} numberOfLines={1}>
-          {lesson.session_type ?? st.label}{athleteName ? ` · ${athleteName}` : ''}
-        </Text>
-        <Text className="text-xs text-stone dark:text-parchment mt-0.5" numberOfLines={1}>
-          {start.toLocaleDateString(undefined, { weekday: 'short' })} {start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })} · {lesson.coach_name}{lesson.facility ? ` · ${lesson.facility}` : ''}
-        </Text>
-        {off && lesson.change_reason ? (
-          <Text className="text-xs text-red-700 dark:text-red-300 mt-0.5" numberOfLines={2}>"{lesson.change_reason}"</Text>
-        ) : null}
-      </View>
-      <View className={`px-2 py-1 rounded-md ml-2 ${tag.cls}`}>
-        <Text className={`text-[10px] font-bold ${tag.text}`}>{tag.label}</Text>
-      </View>
-    </Pressable>
-  );
-}
 
 export default function HomeScreen() {
   const tournaments = useSeasonStore((s) => s.tournaments);
@@ -98,7 +63,6 @@ export default function HomeScreen() {
   const seasons = useSeasonStore((s) => s.seasons);
   const athletes = useSeasonStore((s) => s.athletes);
   const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
-  const guests = useGuestStore((s) => s.guests);
   const ic = useIconColors();
   const { user } = useAuth();
   const { refresh, isRefreshing } = useDataRefresh();
@@ -110,24 +74,32 @@ export default function HomeScreen() {
     fetchMyUpcomingLessons(30).then(({ data }) => setLessons(data));
   }, []);
 
+  const [athleteFilter, setAthleteFilter] = useState<string>('all');
+
+  const externalLinks = adminConfig?.external_links ?? [];
+  const familyLogins = externalLinks.filter((l) => l.scope !== 'athlete' && (l.username || l.password || l.url));
+
+  // Growth prompts + lesson payments for "Needs you".
+  const [hasCoaches, setHasCoaches] = useState(true);
+  const [lastInviteAt, setLastInviteAt] = useState<string | null>(null);
+  const [inviteDismissedAt, setInviteDismissedAt] = useState<string | null>(null);
+  const [failedCharges, setFailedCharges] = useState<ParentCharge[]>([]);
+  const loadFamilyExtras = useCallback(() => {
+    if (!coachingConfigured) return;
+    fetchMyCoaches().then(({ data }) => setHasCoaches(data.some((c) => c.user_id !== user?.id)));
+    fetchMyCoachInvites().then((inv) => setLastInviteAt(inv[0]?.last_sent_at ?? null));
+    fetchMyCharges().then((rows) => setFailedCharges(rows.filter((r) => r.payment_status === 'failed' && r.status !== 'cancelled')));
+    getPref(INVITE_DISMISS_KEY).then(setInviteDismissedAt);
+  }, [user?.id]);
+
   // Refresh data when Home tab gains focus (keeps co-admins in sync)
   useFocusEffect(
     useCallback(() => {
       refresh();
       loadLessons();
-    }, [refresh, loadLessons])
+      loadFamilyExtras();
+    }, [refresh, loadLessons, loadFamilyExtras])
   );
-
-  const [showAddMenu, setShowAddMenu] = useState(false);
-  const [athleteFilter, setAthleteFilter] = useState<string>('all');
-  const [featureRequest, setFeatureRequest] = useState('');
-  const [featureSubmitted, setFeatureSubmitted] = useState(false);
-
-  const externalLinks = adminConfig?.external_links ?? [];
-  const credentialLinks = externalLinks.filter((l) => l.scope !== 'athlete' && (l.username || l.password || l.url));
-
-  // "Add Manually" opens the same quick-add sheet as the floating "+".
-  const handlePlusPress = () => setShowAddMenu(true);
 
   // Active season tournaments (for action items)
   const seasonTournaments = useMemo(() =>
@@ -146,7 +118,7 @@ export default function HomeScreen() {
 
   // ─── SECTION 2: Actions ───
   const actionCards = useMemo(() => {
-    const cards: { priority: number; text: string; subtitle: string; icon: keyof typeof Ionicons.glyphMap; color: string; bgColor: string; onPress: () => void }[] = [];
+    const cards: { priority: number; text: string; subtitle: string; icon: keyof typeof Ionicons.glyphMap; color: string; bgColor: string; onPress: () => void; onDismiss?: () => void }[] = [];
 
     // Priority 1: Emails to review
     if (emailsToReview.length > 0) {
@@ -322,21 +294,37 @@ export default function HomeScreen() {
       });
     }
 
-    // Priority 7: Inbox up to date (only if NO other cards)
-    if (cards.length === 0) {
+
+    // A coach lesson payment that failed — the family needs to update their card.
+    for (const c of failedCharges) {
       cards.push({
-        priority: 6,
-        text: 'Inbox Up to Date',
-        subtitle: 'Nothing to do right now — nice!',
-        icon: 'checkmark-circle',
-        color: '#6A9E8A',
-        bgColor: '#DCFCE7',
-        onPress: () => {},
+        priority: 1,
+        text: `Lesson payment didn't go through`,
+        subtitle: `${c.athletes?.first_name ?? 'Lesson'} with ${c.coaches?.display_name ?? 'your coach'} — update your card`,
+        icon: 'card',
+        color: '#dc2626',
+        bgColor: '#FEE2E2',
+        onPress: () => router.push('/settings/payments'),
+      });
+    }
+
+    // Growth: families with no coach on RallyHUB yet (at most monthly).
+    if (showCoachInvitePrompt({ hasCoaches, lastInviteAt, dismissedAt: inviteDismissedAt })) {
+      const who = athletes.length === 1 ? athletes[0].first_name : 'your athlete';
+      cards.push({
+        priority: 7,
+        text: `Does ${who} take lessons? Invite the coach`,
+        subtitle: 'Book and pay for lessons right here — free for coaches',
+        icon: 'person-add',
+        color: '#3B82B0',
+        bgColor: '#DBEAFE',
+        onPress: () => router.push('/lessons'),
+        onDismiss: () => { const now = new Date().toISOString(); setInviteDismissedAt(now); setPref(INVITE_DISMISS_KEY, now); },
       });
     }
 
     return cards.sort((a, b) => a.priority - b.priority);
-  }, [emailsToReview, seasonTournaments, hotelBookings, flightBookings, tournamentTickets]);
+  }, [emailsToReview, seasonTournaments, hotelBookings, flightBookings, tournamentTickets, failedCharges, hasCoaches, lastInviteAt, inviteDismissedAt, athletes]);
 
   // ─── SECTION 3: Next 30 Days ───
   const hasMultipleAthletes = athletes.length > 1;
@@ -369,136 +357,113 @@ export default function HomeScreen() {
     return items.sort((a, b) => a.date.localeCompare(b.date));
   }, [filteredNext30, filteredLessons]);
 
+  const hasFlightConflict = (tournamentId: string) => {
+    const seen = new Set<string>();
+    for (const f of flightBookings.filter((x) => x.tournament_id === tournamentId)) {
+      for (const name of f.traveler_names) {
+        const key = `${name.toLowerCase().trim()}|${f.departure_date}`;
+        if (seen.has(key)) return true;
+        seen.add(key);
+      }
+    }
+    return false;
+  };
+
   const getAthleteForTournament = (t: typeof tournaments[0]) => {
     const season = seasons.find((s) => s.id === t.season_id);
     return season ? athletes.find((a) => a.id === season.athlete_id) ?? null : null;
   };
 
-  const handleFeatureSubmit = async () => {
-    if (!featureRequest.trim()) return;
-    try {
-      await (supabase.from('feature_events') as any).insert({
-        user_id: user?.id,
-        event_type: 'feature_request',
-        metadata: { message: featureRequest.trim() },
-      });
-      tapLight();
-      setFeatureRequest('');
-      setFeatureSubmitted(true);
-      setTimeout(() => setFeatureSubmitted(false), 3000);
-    } catch {
-      Alert.alert('Error', 'Could not submit. Please try again.');
-    }
-  };
+
+  // ─── Next up ───
+  const next = useMemo(() => pickNextUp(tournaments, lessons), [tournaments, lessons]);
+  const nextTournament = next?.kind === 'tournament' ? tournaments.find((t) => t.id === next.id) : undefined;
+  const nextLesson = next?.kind === 'lesson' ? lessons.find((l) => l.id === next.id) : undefined;
+  const nextSeason = nextTournament ? seasons.find((s) => s.id === nextTournament.season_id) : undefined;
+  const nextAthleteName = hasMultipleAthletes
+    ? (nextTournament ? getAthleteForTournament(nextTournament)?.first_name : athletes.find((a) => a.id === nextLesson?.athlete_id)?.first_name)
+    : undefined;
 
   return (
     <View className="flex-1 bg-warm-white dark:bg-bark">
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: 60 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor="#3B82B0" />}
       >
-
-        {/* ============================================================ */}
-        {/* SECTION 1: Add to Tourney Itineraries                       */}
-        {/* ============================================================ */}
-        <View className="bg-warm-white dark:bg-bark px-4 pt-4 pb-5">
-          <SectionHeader
-            icon="add-circle"
-            iconColor="#3B82B0"
-            title="Add to Tourney Itineraries"
-            subtitle="Tournaments, travel, hotels, events — if it's part of your weekend, add it here."
+        {/* 1. Next up — the one thing to look at */}
+        <View className="px-4 pt-4 pb-2">
+          <NextUpCard
+            next={next}
+            tournament={nextTournament}
+            lesson={nextLesson}
+            hotels={nextTournament ? hotelBookings.filter((h) => h.tournament_id === nextTournament.id) : []}
+            teamCode={nextSeason?.team_code}
+            familyLogins={familyLogins}
+            athleteName={nextAthleteName}
           />
-          <View className="flex-row gap-2">
-            <Pressable
-              className="flex-1 bg-rally-600 rounded-xl py-3.5 items-center justify-center active:opacity-80"
-              style={{ shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3 }}
-              onPress={() => router.push('/import/paste-combined')}
-            >
-              <Ionicons name="sparkles" size={20} color="#FEFEFE" />
-              <Text className="text-xs font-semibold text-cream mt-1">Paste</Text>
-            </Pressable>
-            <Pressable
-              className="flex-1 bg-warm-white dark:bg-bark-light rounded-xl py-3.5 items-center justify-center active:opacity-80 border border-parchment dark:border-rally-900"
-              onPress={() => router.push('/settings/email-forward')}
-            >
-              <Ionicons name="mail-open" size={20} color="#3B82B0" />
-              <Text className="text-xs font-semibold text-bark dark:text-cream mt-1">Forward</Text>
-            </Pressable>
-            <Pressable
-              className="flex-1 bg-warm-white dark:bg-bark-light rounded-xl py-3.5 items-center justify-center active:opacity-80 border border-parchment dark:border-rally-900"
-              onPress={handlePlusPress}
-            >
-              <Ionicons name="create-outline" size={20} color="#6A9E8A" />
-              <Text className="text-xs font-semibold text-bark dark:text-cream mt-1">Add Manually</Text>
-            </Pressable>
-          </View>
         </View>
 
-        {/* ============================================================ */}
-        {/* SECTION 2: Actions                                           */}
-        {/* ============================================================ */}
-        <View className="bg-cream dark:bg-bark-light px-4 py-5">
-          <SectionHeader
-            icon="flash"
-            iconColor="#d97706"
-            title="Actions"
-            subtitle="Your to-do list, built for you."
-          />
-          {actionCards.map((card, i) => (
+        {/* 2. Needs you — hidden when there's nothing to do */}
+        <View className="px-4 pt-4 pb-1">
+          <SectionHeader icon="flash" iconColor="#d97706" title="Needs you" />
+          {actionCards.length === 0 ? (
+            <View className="flex-row items-center mb-2 px-1">
+              <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
+              <Text className="text-sm text-stone dark:text-parchment ml-2">You're all caught up.</Text>
+            </View>
+          ) : actionCards.map((card, i) => (
             <Pressable
               key={`${card.priority}-${card.text}-${i}`}
               className="rounded-xl p-4 mb-2 flex-row items-center active:opacity-80"
               style={{ backgroundColor: card.bgColor }}
               onPress={card.onPress}
-              disabled={card.priority === 6}
             >
-              <View
-                className="w-10 h-10 rounded-full items-center justify-center mr-3"
-                style={{ backgroundColor: card.color + '20' }}
-              >
+              <View className="w-10 h-10 rounded-full items-center justify-center mr-3" style={{ backgroundColor: card.color + '20' }}>
                 <Ionicons name={card.icon} size={20} color={card.color} />
               </View>
               <View className="flex-1">
                 <Text className="text-sm font-semibold text-bark">{card.text}</Text>
                 <Text className="text-xs text-stone mt-0.5">{card.subtitle}</Text>
               </View>
-              {card.priority < 6 && (
+              {card.onDismiss ? (
+                <Pressable onPress={card.onDismiss} hitSlop={10} className="p-1" accessibilityLabel="Not now">
+                  <Ionicons name="close" size={16} color="#8FA8BF" />
+                </Pressable>
+              ) : (
                 <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
               )}
             </Pressable>
           ))}
         </View>
 
-        {/* ============================================================ */}
-        {/* SECTION 3: Next 30 Days                                      */}
-        {/* ============================================================ */}
-        <View className="bg-warm-white dark:bg-bark px-4 py-5">
+        {/* 3. Coming up — tournaments, lessons, team events */}
+        <View className="px-4 pt-4">
           <SectionHeader
             icon="calendar"
             iconColor="#7c3aed"
-            title="Next 30 Days"
-            subtitle="Everything coming up, all in one place."
-            right={hasMultipleAthletes ? (
-              <Ionicons name="filter" size={16} color={ic.muted} style={{ marginTop: 4 }} />
-            ) : undefined}
+            title="Coming up"
+            subtitle="Next 30 days"
+            right={
+              <Pressable
+                onPress={() => { tapLight(); router.push('/lessons'); }}
+                className="flex-row items-center rounded-full px-3 py-1.5 active:opacity-80"
+                style={{ backgroundColor: '#3B82B0' }}
+                accessibilityLabel="Book a lesson"
+              >
+                <Ionicons name="add" size={14} color="#fff" />
+                <Text className="text-xs font-bold text-white ml-0.5">Book a lesson</Text>
+              </Pressable>
+            }
           />
 
           {hasMultipleAthletes && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3" contentContainerStyle={{ gap: 8 }}>
               <Pressable
-                className={`px-3 py-1.5 rounded-full border ${
-                  athleteFilter === 'all'
-                    ? 'bg-rally-600 border-rally-600'
-                    : 'bg-warm-white dark:bg-bark-light border-parchment dark:border-rally-900'
-                }`}
+                className={`px-3 py-1.5 rounded-full border ${athleteFilter === 'all' ? 'bg-rally-600 border-rally-600' : 'bg-warm-white dark:bg-bark-light border-parchment dark:border-rally-900'}`}
                 onPress={() => setAthleteFilter('all')}
               >
-                <Text className={`text-xs font-semibold ${
-                  athleteFilter === 'all' ? 'text-cream' : 'text-bark dark:text-parchment'
-                }`}>
-                  All Athletes
-                </Text>
+                <Text className={`text-xs font-semibold ${athleteFilter === 'all' ? 'text-cream' : 'text-bark dark:text-parchment'}`}>All Athletes</Text>
               </Pressable>
               {athletes.map((a) => {
                 const avatarColor = a.avatar_color || AVATAR_COLORS[a.first_name.charCodeAt(0) % AVATAR_COLORS.length];
@@ -510,30 +475,12 @@ export default function HomeScreen() {
                     className={isSelected ? undefined : 'px-3 py-1.5 rounded-full border bg-warm-white border-parchment'}
                     onPress={() => setAthleteFilter(a.id)}
                   >
-                    <Text className={`text-xs font-semibold ${isSelected ? 'text-cream' : 'text-bark'}`}>
-                      {a.first_name}
-                    </Text>
+                    <Text className={`text-xs font-semibold ${isSelected ? 'text-cream' : 'text-bark'}`}>{a.first_name}</Text>
                   </Pressable>
                 );
               })}
             </ScrollView>
           )}
-
-          {/* Book a private — callout */}
-          <Pressable
-            onPress={() => { tapLight(); router.push({ pathname: '/coaching/availability', params: { kind: 'private_1' } }); }}
-            className="rounded-2xl p-4 mb-3 flex-row items-center active:opacity-80"
-            style={{ backgroundColor: '#3B82B0', shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 3 }}
-          >
-            <View className="w-10 h-10 rounded-full items-center justify-center mr-3" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
-              <Ionicons name="person" size={20} color="#fff" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-base font-bold text-white">Book a private lesson</Text>
-              <Text className="text-xs text-white/90 mt-0.5">See every open time from your coaches</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#fff" />
-          </Pressable>
 
           {next30Timeline.length > 0 ? (
             next30Timeline.map((item) => item.kind === 'lesson' ? (
@@ -542,239 +489,26 @@ export default function HomeScreen() {
                 lesson={item.l}
                 athleteName={hasMultipleAthletes ? athletes.find((a) => a.id === item.l.athlete_id)?.first_name : undefined}
               />
-            ) : (() => {
-              const t = item.t;
-              return (
-                <TournamentCard
-                  key={`t-${t.id}`}
-                  tournament={t}
-                  hotelCount={hotelBookings.filter((h) => h.tournament_id === t.id).length}
-                  flightCount={flightBookings.filter((f) => f.tournament_id === t.id).length}
-                  backupHotelCount={hotelBookings.filter((h) => h.tournament_id === t.id && h.is_backup).length}
-                  hasFlightConflict={(() => {
-                    const tf = flightBookings.filter((f) => f.tournament_id === t.id);
-                    const seen = new Set<string>();
-                    for (const f of tf) {
-                      for (const name of f.traveler_names) {
-                        const key = `${name.toLowerCase().trim()}|${f.departure_date}`;
-                        if (seen.has(key)) return true;
-                        seen.add(key);
-                      }
-                    }
-                    return false;
-                  })()}
-                  athlete={getAthleteForTournament(t)}
-                  onPress={() => router.push(`/tournament/${t.id}`)}
-                />
-              );
-            })())
-          ) : (
-            <View
-              className="bg-warm-white dark:bg-bark-light rounded-2xl p-5 border border-parchment dark:border-rally-900"
-              style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
-            >
-              <View className="items-center py-4">
-                <Ionicons name="calendar-outline" size={32} color={ic.placeholder} />
-                <Text className="text-sm text-stone dark:text-parchment mt-2">
-                  No tournaments or lessons in the next 30 days
-                </Text>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* ============================================================ */}
-        {/* SECTION 4: Athletes                                          */}
-        {/* ============================================================ */}
-        {athletes.length > 0 && (
-            <View className="bg-cream dark:bg-bark-light px-4 py-5">
-              <SectionHeader
-                icon="people-circle"
-                iconColor="#0d9488"
-                title="Athletes"
-                subtitle="Everyone on your roster, right at your fingertips."
+            ) : (
+              <TournamentCard
+                key={`t-${item.t.id}`}
+                tournament={item.t}
+                hotelCount={hotelBookings.filter((h) => h.tournament_id === item.t.id).length}
+                flightCount={flightBookings.filter((f) => f.tournament_id === item.t.id).length}
+                backupHotelCount={hotelBookings.filter((h) => h.tournament_id === item.t.id && h.is_backup).length}
+                hasFlightConflict={hasFlightConflict(item.t.id)}
+                athlete={getAthleteForTournament(item.t)}
+                onPress={() => router.push(`/tournament/${item.t.id}`)}
               />
-              {athletes.map((a) => {
-                const avatarColor = a.avatar_color || AVATAR_COLORS[a.first_name.charCodeAt(0) % AVATAR_COLORS.length];
-                const athleteSeasons = seasons.filter((s) => s.athlete_id === a.id);
-                const tournamentCount = tournaments.filter((t) => athleteSeasons.some((s) => s.id === t.season_id)).length;
-                return (
-                  <Pressable
-                    key={a.id}
-                    className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 flex-row items-center border border-parchment dark:border-rally-900 active:opacity-80"
-                    onPress={() => router.push(`/athlete/${a.id}`)}
-                  >
-                    <View className="mr-3">
-                      {a.photo_url ? (
-                        <Avatar uri={a.photo_url} name={a.first_name} size={40} />
-                      ) : (
-                        <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: avatarColor }}>
-                          <Text className="text-base font-bold text-cream">{a.first_name.charAt(0)}</Text>
-                        </View>
-                      )}
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-sm font-semibold text-bark dark:text-cream">
-                        {a.first_name} {a.last_name || ''}
-                      </Text>
-                      <Text className="text-xs text-stone dark:text-parchment mt-0.5">
-                        {tournamentCount} tournament{tournamentCount !== 1 ? 's' : ''} this season
-                      </Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
-                  </Pressable>
-                );
-              })}
-            </View>
-        )}
-
-        {/* ============================================================ */}
-        {/* SECTION 5: Guests                                            */}
-        {/* ============================================================ */}
-        <View className="bg-warm-white dark:bg-bark px-4 py-5">
-          <SectionHeader
-            icon="people"
-            iconColor="#7c3aed"
-            title="Guests"
-          />
-          <Pressable
-            className="bg-warm-white dark:bg-bark-light rounded-xl p-4 flex-row items-center border border-parchment dark:border-rally-900 active:opacity-80"
-            onPress={() => router.push('/(tabs)/guests')}
-          >
-            <View className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 items-center justify-center mr-3">
-              <Ionicons name="people" size={20} color="#7c3aed" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-sm font-semibold text-bark dark:text-cream">Manage Guests</Text>
-              <Text className="text-xs text-stone dark:text-parchment mt-0.5">
-                {guests.length > 0
-                  ? `${guests.length} guest${guests.length !== 1 ? 's' : ''} on your list`
-                  : 'Add grandparents, family & friends'}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
-          </Pressable>
-        </View>
-
-        {/* ============================================================ */}
-        {/* SECTION 6: Credential Vault                                  */}
-        {/* ============================================================ */}
-        <View className="bg-cream dark:bg-bark-light px-4 py-5">
-          <SectionHeader
-            icon="key"
-            iconColor="#ca8a04"
-            title="Credential Vault"
-            subtitle="All your logins, one tap away."
-            right={
-              <Pressable onPress={() => router.push('/profile/edit-link')} className="active:opacity-70 mt-0.5">
-                <Text className="text-xs font-semibold text-rally-600">+ Add</Text>
-              </Pressable>
-            }
-          />
-
-          {credentialLinks.length > 0 ? (
-            <View className="flex-row flex-wrap" style={{ gap: 10 }}>
-              {credentialLinks.map((link, i) => {
-                const index = String(externalLinks.indexOf(link));
-                return (
-                  <View key={`${link.label}-${i}`} style={{ width: '31%' }}>
-                    <AthleteCredentialCard
-                      label={link.label}
-                      url={link.url}
-                      username={link.username ?? null}
-                      password={link.password ?? null}
-                      icon={link.icon_name}
-                      onEdit={() => router.push({ pathname: '/profile/edit-link', params: { index } })}
-                    />
-                  </View>
-                );
-              })}
-            </View>
+            ))
           ) : (
-            <Pressable
-              className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900 items-center active:opacity-80"
-              onPress={() => router.push('/profile/edit-link')}
-            >
-              <Ionicons name="key-outline" size={24} color={ic.placeholder} />
-              <Text className="text-xs text-stone dark:text-parchment mt-2">
-                Save your AES, LeagueApps, and hotel logins
-              </Text>
-            </Pressable>
+            <View className="bg-warm-white dark:bg-bark-light rounded-2xl p-5 border border-parchment dark:border-rally-900 items-center">
+              <Ionicons name="calendar-outline" size={32} color={ic.placeholder} />
+              <Text className="text-sm text-stone dark:text-parchment mt-2">Nothing in the next 30 days</Text>
+            </View>
           )}
         </View>
-
-        {/* ============================================================ */}
-        {/* SECTION 7: Feature Request                                   */}
-        {/* ============================================================ */}
-        <View className="bg-warm-white dark:bg-bark px-4 py-5">
-          <SectionHeader
-            icon="bulb"
-            iconColor="#6A9E8A"
-            title="New Feature Request"
-          />
-          <View className="bg-warm-white dark:bg-bark-light rounded-xl p-4 border border-parchment dark:border-rally-900">
-            <TextInput
-              className="text-sm text-bark dark:text-cream min-h-[60px]"
-              placeholder="What would make Rally even better?"
-              placeholderTextColor="#8FA8BF"
-              multiline
-              value={featureRequest}
-              onChangeText={setFeatureRequest}
-              textAlignVertical="top"
-            />
-            <View className="flex-row justify-end mt-2">
-              {featureSubmitted ? (
-                <View className="flex-row items-center">
-                  <Ionicons name="checkmark-circle" size={16} color="#6A9E8A" />
-                  <Text className="text-xs text-green-600 ml-1">Sent!</Text>
-                </View>
-              ) : (
-                <Pressable
-                  className={`px-4 py-2 rounded-lg ${featureRequest.trim() ? 'bg-rally-600 active:opacity-80' : 'bg-parchment'}`}
-                  onPress={handleFeatureSubmit}
-                  disabled={!featureRequest.trim()}
-                >
-                  <Text className={`text-xs font-semibold ${featureRequest.trim() ? 'text-cream' : 'text-stone'}`}>
-                    Submit
-                  </Text>
-                </Pressable>
-              )}
-            </View>
-          </View>
-        </View>
-
-        {/* ============================================================ */}
-        {/* SECTION 8: Need Help?                                        */}
-        {/* ============================================================ */}
-        <View className="bg-cream dark:bg-bark-light px-4 py-5">
-          <SectionHeader
-            icon="help-circle"
-            iconColor="#3B82B0"
-            title="Need Help?"
-          />
-          <Pressable
-            className="bg-warm-white dark:bg-bark-light rounded-xl p-4 flex-row items-center border border-parchment dark:border-rally-900 active:opacity-80"
-            onPress={() => Linking.openURL('mailto:hello@rally-hub.com')}
-          >
-            <View className="w-10 h-10 rounded-full bg-rally-50 dark:bg-rally-900/30 items-center justify-center mr-3">
-              <Ionicons name="help-circle" size={20} color="#3B82B0" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-sm font-semibold text-bark dark:text-cream">Need Help?</Text>
-              <Text className="text-xs text-stone dark:text-parchment mt-0.5">
-                Reach out to hello@rally-hub.com
-              </Text>
-            </View>
-            <Ionicons name="mail-outline" size={18} color="#3B82B0" />
-          </Pressable>
-        </View>
-
-        <ReferFriend />
-
-        <View className="h-6" />
       </ScrollView>
-
-      <QuickAddSheet visible={showAddMenu} onClose={() => setShowAddMenu(false)} />
     </View>
   );
 }

@@ -1,0 +1,20 @@
+-- Schedule lesson reminders + coach summaries (runs every 15 minutes).
+-- Not a migration: contains a secret. Replace __CRON_SECRET__ with the value of
+-- the CRON_SECRET Supabase function secret (same one charge-due-bookings uses),
+-- then run in the SQL editor. Run 00079_lesson_reminders.sql first.
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
+SELECT cron.unschedule(jobid) FROM cron.job WHERE jobname = 'lesson-reminders';
+
+SELECT cron.schedule(
+  'lesson-reminders',
+  '*/15 * * * *',
+  $cron$
+  SELECT net.http_post(
+    url := 'https://dtoolzolnxfjlivwyblv.supabase.co/functions/v1/lesson-reminders',
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-cron-secret', '__CRON_SECRET__'),
+    body := '{}'::jsonb
+  );
+  $cron$
+);

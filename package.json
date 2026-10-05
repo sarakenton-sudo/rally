@@ -11,7 +11,7 @@
     "test": "jest",
     "test:web": "playwright test",
     "test:api": "node scripts/qa/backend-smoke.mjs",
-    "test:ios": "bash -c \"set -a; . ./.env.qa; set +a; maestro test $(env | grep ^QA_ | sed s/^/-e\\ /) .maestro\"",
+    "test:ios": "bash scripts/qa/ios.sh",
     "qa": "bash scripts/qa/run-all.sh",
     "qa:audit": "node scripts/qa/audit-web-alerts.mjs"
   },

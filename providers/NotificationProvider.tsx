@@ -147,6 +147,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           router.push('/coach/schedule');
         } else if (data?.type === 'lesson_changed') {
           router.push('/coaching');
+        } else if (data?.type === 'lesson_reminder') {
+          router.push('/(tabs)');
+        } else if (data?.type === 'coach_lesson_reminder' || data?.type === 'coach_daily_summary') {
+          router.push('/today');
+        } else if (data?.type === 'unpaid_lessons') {
+          router.push('/coach/unpaid');
         } else if (data?.type === 'coach_announcement' && data?.coachId) {
           router.push({ pathname: '/coaching/[coachId]', params: { coachId: String(data.coachId) } });
         } else if (data?.tournamentId) {

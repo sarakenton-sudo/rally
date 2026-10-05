@@ -11,8 +11,7 @@ run "Web confirm dialogs"   node scripts/qa/audit-web-alerts.mjs
 run "Backend smoke"         node scripts/qa/backend-smoke.mjs
 run "Website (Playwright)"  npx playwright test
 if [[ "$1" == "--ios" ]]; then
-  env_args=(); for v in $(compgen -v | grep '^QA_'); do env_args+=(-e "$v=${!v}"); done
-  run "iPhone app (Maestro)" maestro test "${env_args[@]}" .maestro
+  run "iPhone app (Maestro)" bash scripts/qa/ios.sh
 fi
 
 echo -e "\n\033[1mSummary\033[0m"; printf '  %s\n' "${results[@]}"

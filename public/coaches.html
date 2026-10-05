@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RallyHUB for Coaches — Run your private lessons from your phone</title>
+<meta name="description" content="Booking page, payments, waivers, reminders and calendar sync for private lesson coaches. Free to start.">
+<meta property="og:title" content="RallyHUB for Coaches">
+<meta property="og:description" content="Run your private lessons from your phone. Free to start.">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,600;0,700;0,800;0,900;1,700&family=Nunito+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#1E3A5F;--steel:#3B82B0;--sky:#7DBDD9;--teal:#6A9E8A;--mist:#8FA8BF;--frost:#D8E2EC;--ice:#F4F6F8;--body:#3a5a7a;}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Nunito Sans',system-ui,-apple-system,sans-serif;color:var(--navy);background:var(--ice);overflow-x:hidden;}
+h1,h2,h3{font-family:'Nunito',system-ui,sans-serif;text-wrap:balance;}
+a{color:inherit;}
+:focus-visible{outline:2px solid var(--sky);outline-offset:3px;border-radius:6px;}
+[hidden]{display:none!important;}
+
+/* NAV (same as homepage) */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(30,58,95,0.97);backdrop-filter:blur(12px);padding:0 48px;height:68px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.07);}
+.nav-logo{display:flex;align-items:center;text-decoration:none;}
+.nav-logo img{height:64px;object-fit:contain;}
+.nav-links{display:flex;align-items:center;gap:32px;}
+.nav-links a{font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);text-decoration:none;transition:color 0.2s;}
+.nav-links a:hover{color:white;}
+.nav-login{color:white!important;padding:9px 18px;border-radius:9px;font-weight:700!important;border:1.5px solid rgba(255,255,255,0.25);}
+.nav-cta{background:var(--steel);color:white!important;padding:9px 22px;border-radius:9px;font-weight:800!important;}
+.nav-cta:hover{background:#2d6a96;}
+
+/* HERO */
+.hero{background:var(--navy);position:relative;overflow:hidden;padding:136px 48px 88px;}
+.hero::before{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,0.05) 1px,transparent 1px);background-size:36px 36px;pointer-events:none;}
+.hero::after{content:'';position:absolute;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(59,130,176,0.22) 0%,transparent 70%);top:-220px;right:-140px;pointer-events:none;}
+.hero-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1.1fr 0.9fr;gap:64px;align-items:center;position:relative;z-index:1;}
+.invite-banner{display:flex;gap:12px;align-items:flex-start;background:rgba(106,158,138,0.18);border:1px solid rgba(106,158,138,0.5);border-radius:14px;padding:14px 16px;margin-bottom:24px;color:white;font-size:15px;line-height:1.5;}
+.invite-banner b{color:#bfe3d4;}
+.invite-banner .dot{width:28px;height:28px;border-radius:50%;background:var(--teal);color:white;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Nunito',sans-serif;}
+.eyebrow{font-size:11px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:var(--sky);margin-bottom:14px;}
+.hero h1{font-weight:900;font-size:clamp(38px,5vw,62px);line-height:1.02;letter-spacing:-0.03em;color:white;margin-bottom:20px;}
+.hero h1 span{color:var(--sky);}
+.hero-sub{font-size:18px;line-height:1.65;color:rgba(255,255,255,0.75);max-width:520px;margin-bottom:30px;}
+.actions{display:flex;flex-wrap:wrap;align-items:center;gap:14px 20px;}
+.btn{background:var(--steel);color:white;font-family:'Nunito',sans-serif;font-weight:800;font-size:16px;padding:16px 34px;border-radius:14px;text-decoration:none;display:inline-block;transition:background 0.2s,transform 0.15s;}
+.btn:hover{background:#2d6a96;transform:translateY(-2px);}
+.signin{font-size:14px;color:rgba(255,255,255,0.6);}
+.signin a{color:white;font-weight:700;}
+.fine{margin-top:14px;font-size:13px;color:rgba(255,255,255,0.45);}
+
+/* Phone mock: a coach's Today screen */
+.phone{background:#F4F6F8;border-radius:34px;border:8px solid #0f2238;box-shadow:0 30px 80px rgba(0,0,0,0.35);max-width:330px;margin:0 auto;overflow:hidden;font-size:12px;}
+.ph-top{background:var(--navy);color:white;padding:16px 16px 14px;}
+.ph-top .t{font-family:'Nunito',sans-serif;font-weight:900;font-size:20px;}
+.ph-top .d{color:rgba(255,255,255,0.6);font-size:11px;}
+.money{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:12px 12px 4px;}
+.money div{background:white;border:1px solid var(--frost);border-radius:10px;padding:8px;}
+.money b{display:block;font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;font-variant-numeric:tabular-nums;}
+.money span{font-size:9.5px;color:var(--mist);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;}
+.ph-label{font-size:9.5px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:var(--mist);padding:10px 14px 6px;}
+.req{margin:0 12px;background:white;border:1.5px solid #f3c77a;border-radius:12px;padding:10px;}
+.req .n{font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;}
+.req .m{color:var(--body);font-size:11px;margin-top:2px;}
+.req .tag{display:inline-block;background:#fee2e2;color:#b91c1c;font-weight:800;font-size:9px;padding:2px 6px;border-radius:5px;margin-top:6px;}
+.req .row{display:flex;gap:6px;margin-top:8px;}
+.req .row span{flex:1;text-align:center;border-radius:8px;padding:6px;font-weight:800;font-size:11px;}
+.ok{background:#16a34a;color:white;}
+.no{background:var(--ice);color:var(--body);border:1px solid var(--frost);}
+.lesson{margin:0 12px 6px;background:white;border-radius:10px;padding:9px 10px;display:flex;gap:9px;align-items:center;border:1px solid var(--frost);}
+.lesson i{width:4px;align-self:stretch;border-radius:4px;}
+.lesson .n{font-weight:800;font-family:'Nunito',sans-serif;font-size:12px;}
+.lesson .m{color:var(--mist);font-size:10.5px;}
+.lesson .p{margin-left:auto;font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:5px;}
+.paid{background:#dcfce7;color:#15803d;}
+.unpaid{background:#fef3c7;color:#b45309;}
+.ph-pad{height:14px;}
+
+/* Sections */
+section{padding:88px 48px;}
+.wrap{max-width:1100px;margin:0 auto;}
+.s-head{max-width:640px;margin-bottom:44px;}
+.s-head .eyebrow{color:var(--steel);}
+.s-head h2{font-weight:900;font-size:clamp(28px,3.5vw,44px);letter-spacing:-0.03em;line-height:1.08;margin-bottom:12px;}
+.s-head p{font-size:16.5px;line-height:1.7;color:var(--body);}
+
+/* Pains */
+.pains{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;}
+.pain{background:white;border:1.5px solid var(--frost);border-radius:18px;padding:22px;}
+.pain q{display:block;font-family:'Nunito',sans-serif;font-weight:800;font-size:16px;line-height:1.35;quotes:none;margin-bottom:8px;}
+.pain p{font-size:14.5px;line-height:1.6;color:var(--body);}
+
+/* Features */
+.features{background:white;border-top:1.5px solid var(--frost);border-bottom:1.5px solid var(--frost);}
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px 36px;}
+.feat h3{font-weight:800;font-size:17px;margin-bottom:6px;display:flex;align-items:center;gap:10px;}
+.feat h3 .ic{width:34px;height:34px;border-radius:10px;background:rgba(59,130,176,0.12);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.feat p{font-size:14.5px;line-height:1.65;color:var(--body);}
+.revenue{margin-top:48px;background:var(--navy);color:white;border-radius:22px;padding:34px 36px;display:grid;grid-template-columns:0.8fr 1.2fr;gap:28px;align-items:center;}
+.revenue h3{font-weight:900;font-size:clamp(22px,2.6vw,30px);letter-spacing:-0.02em;line-height:1.15;}
+.revenue h3 span{color:var(--sky);}
+.revenue ul{list-style:none;display:grid;gap:12px;}
+.revenue li{font-size:15px;line-height:1.55;color:rgba(255,255,255,0.8);padding-left:18px;border-left:2px solid rgba(125,189,217,0.5);}
+.revenue li b{color:white;}
+
+/* Steps */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.step{background:white;border:1.5px solid var(--frost);border-radius:18px;padding:26px;}
+.step .num{font-family:'Nunito',sans-serif;font-weight:900;font-size:13px;color:white;background:var(--steel);width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+.step h3{font-weight:800;font-size:19px;margin-bottom:6px;}
+.step p{font-size:14.5px;line-height:1.6;color:var(--body);}
+
+/* Pricing */
+.price{background:white;border:1.5px solid var(--frost);border-radius:22px;padding:34px;display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center;}
+.price .big{font-family:'Nunito',sans-serif;font-weight:900;font-size:56px;letter-spacing:-0.03em;line-height:1;color:var(--teal);}
+.price .big small{display:block;font-size:14px;letter-spacing:0;color:var(--mist);font-weight:800;margin-top:6px;text-transform:uppercase;}
+.price ul{list-style:none;display:grid;gap:10px;}
+.price li{font-size:15.5px;line-height:1.55;color:var(--body);padding-left:26px;position:relative;}
+.price li::before{content:'✓';position:absolute;left:0;top:0;color:var(--teal);font-weight:900;}
+
+/* FAQ */
+.faq{display:grid;gap:10px;max-width:780px;}
+details{background:white;border:1.5px solid var(--frost);border-radius:14px;padding:0 20px;}
+summary{cursor:pointer;list-style:none;font-family:'Nunito',sans-serif;font-weight:800;font-size:16px;padding:18px 28px 18px 0;position:relative;}
+summary::-webkit-details-marker{display:none;}
+summary::after{content:'+';position:absolute;right:0;top:14px;font-size:22px;color:var(--steel);}
+details[open] summary::after{content:'–';}
+details p{font-size:15px;line-height:1.7;color:var(--body);padding:0 0 18px;}
+
+/* CTA + footer */
+.cta{background:var(--navy);border-radius:28px;padding:64px 40px;text-align:center;position:relative;overflow:hidden;}
+.cta::before{content:'';position:absolute;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(59,130,176,0.22) 0%,transparent 70%);top:-220px;right:-120px;pointer-events:none;}
+.cta h2{color:white;font-weight:900;font-size:clamp(28px,4vw,46px);letter-spacing:-0.03em;line-height:1.06;margin-bottom:12px;position:relative;}
+.cta p{color:rgba(255,255,255,0.6);font-size:16px;line-height:1.6;max-width:520px;margin:0 auto 28px;position:relative;}
+.cta .actions{justify-content:center;position:relative;}
+footer{background:var(--navy);border-top:1px solid rgba(255,255,255,0.07);padding:40px 48px;}
+.foot{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+.foot img{height:64px;object-fit:contain;}
+.foot div{font-size:13px;color:rgba(255,255,255,0.45);line-height:1.8;text-align:right;}
+.foot a{color:rgba(255,255,255,0.6);text-decoration:none;}
+.foot a:hover{color:white;}
+
+@media(max-width:900px){
+  .hero-inner{grid-template-columns:1fr;gap:44px;}
+  .feat-grid{grid-template-columns:1fr 1fr;}
+  .steps{grid-template-columns:1fr;}
+  .revenue{grid-template-columns:1fr;}
+}
+@media(max-width:640px){
+  nav{padding:0 12px;height:56px;}
+  .nav-logo img{height:48px;}
+  .nav-links{gap:8px;}
+  .nav-links a:not(.nav-cta):not(.nav-login){display:none;}
+  .nav-login,.nav-cta{padding:6px 10px;font-size:11px;white-space:nowrap;}
+  .hero{padding:96px 20px 56px;}
+  section{padding:60px 20px;}
+  .feat-grid{grid-template-columns:1fr;}
+  .price{grid-template-columns:1fr;padding:26px;}
+  .revenue{padding:26px;}
+  .cta{padding:44px 22px;border-radius:22px;}
+  footer{padding:32px 20px;}
+  .foot div{text-align:left;}
+  .btn{width:100%;text-align:center;}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important;}}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo"><img src="/rallyhub_lockup_white.png" alt="RallyHUB home"></a>
+  <div class="nav-links">
+    <a href="/">For Parents</a>
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+    <a href="/auth" class="nav-login">Log In</a>
+    <a href="/auth?signup=true&amp;role=coach" class="nav-cta js-signup">Set up my coach page</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="invite-banner" id="invite" hidden>
+        <div class="dot" id="inviteInitial">R</div>
+        <div id="inviteText"></div>
+      </div>
+      <div class="eyebrow">RallyHUB for private lesson coaches</div>
+      <h1>Run your private lessons <span>from your phone.</span></h1>
+      <p class="hero-sub">Booking, payments, waivers, reminders and your calendar in one place. Families book from your link, you approve with one tap, and everyone shows up on time.</p>
+      <div class="actions">
+        <a href="/auth?signup=true&amp;role=coach" class="btn js-signup">Set up my coach page &rarr;</a>
+        <span class="signin">Already have an account? <a href="/auth">Sign in</a></span>
+      </div>
+      <div class="fine">Free to start. Set up in about 5 minutes.</div>
+    </div>
+
+    <div class="phone" aria-label="Example of the coach Today screen">
+      <div class="ph-top"><div class="t">Today</div><div class="d">Tuesday &middot; 3 lessons</div></div>
+      <div class="money">
+        <div><b>$480</b><span>Booked</span></div>
+        <div><b>2</b><span>Still open</span></div>
+        <div><b>$80</b><span>Unpaid</span></div>
+      </div>
+      <div class="ph-label">Needs you</div>
+      <div class="req">
+        <div class="n">Avery &middot; Private &middot; Thu 5:00pm</div>
+        <div class="m">2030 &middot; Setter &middot; AJV 14 Black</div>
+        <span class="tag">ALLERGY: PEANUTS</span>
+        <div class="row"><span class="ok">Approve</span><span class="no">Decline</span></div>
+      </div>
+      <div class="ph-label">Today</div>
+      <div class="lesson"><i style="background:#3B82B0"></i><div><div class="n">Drue &middot; Private</div><div class="m">4:00pm &middot; Court 3</div></div><span class="p paid">PAID</span></div>
+      <div class="lesson"><i style="background:#0891b2"></i><div><div class="n">Serve receive group (4)</div><div class="m">5:30pm &middot; Court 1</div></div><span class="p paid">PAID</span></div>
+      <div class="lesson"><i style="background:#3B82B0"></i><div><div class="n">Miles &middot; Private</div><div class="m">7:00pm &middot; Court 3</div></div><span class="p unpaid">UNPAID</span></div>
+      <div class="ph-pad"></div>
+    </div>
+  </div>
+</header>
+
+<section id="pains">
+  <div class="wrap">
+    <div class="s-head">
+      <div class="eyebrow">Sound familiar?</div>
+      <h2>You coach. You shouldn't also be the scheduler, the bill collector and the reminder service.</h2>
+    </div>
+    <div class="pains">
+      <div class="pain"><q>"I definitely sent the Venmo."</q><p>Chasing payments across three apps and a notes file, and still not sure who owes you for last Thursday.</p></div>
+      <div class="pain"><q>"Can we move Thursday?"</q><p>Texting back and forth at 10:47pm to find a time, then doing it again next week.</p></div>
+      <div class="pain"><q>"Nobody told us."</q><p>No-shows and forgotten lessons. Someone told the athlete. Nobody told her mom.</p></div>
+      <div class="pain"><q>"Wait, is she allergic?"</q><p>No signed waiver, no emergency contact and no allergy info when an athlete walks into your gym.</p></div>
+      <div class="pain"><q>"Who has Court 3?"</q><p>Double-booked gyms because your lessons, your facility and your own calendar don't talk to each other.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="features" id="features">
+  <div class="wrap">
+    <div class="s-head">
+      <div class="eyebrow">What you get</div>
+      <h2>Everything a lesson business needs, nothing it doesn't.</h2>
+      <p>Built for private, semi-private, small group, clinic and camp coaches. Set it up the way you actually coach.</p>
+    </div>
+    <div class="feat-grid">
+      <div class="feat"><h3><span class="ic">&#128279;</span>Your own booking page</h3><p>Your open times, lesson types and prices on one link. Text it, put it in your bio, embed it on your website, or post the QR code and story card.</p></div>
+      <div class="feat"><h3><span class="ic">&#9989;</span>Approve in one tap</h3><p>Requests arrive as a notification with the athlete's age group, position, club and allergies. Approve or decline right from your lock screen.</p></div>
+      <div class="feat"><h3><span class="ic">&#128179;</span>Get paid your way</h3><p>Families pay by card in the app and it goes to your bank through Stripe. Or collect cash, Venmo or Zelle and mark it paid in two taps.</p></div>
+      <div class="feat"><h3><span class="ic">&#128221;</span>Terms, waivers and allergies on file</h3><p>Families sign your lesson terms and release once, with allergy and emergency contact info. You see it on every lesson.</p></div>
+      <div class="feat"><h3><span class="ic">&#128197;</span>Calendar sync</h3><p>Your lessons show up in Google Calendar (or any calendar app) automatically. Each open time is tied to a facility so you know where you're booked.</p></div>
+      <div class="feat"><h3><span class="ic">&#128276;</span>Reminders for everyone</h3><p>Push reminders go to families and athletes 24 hours and 2 hours before each lesson, and you get a morning summary of your day, so everyone is on time.</p></div>
+      <div class="feat"><h3><span class="ic">&#128227;</span>Announce open times</h3><p>Had a cancellation? Send your open times to all your families or one group in seconds, by push and email.</p></div>
+      <div class="feat"><h3><span class="ic">&#128101;</span>Clients and groups</h3><p>Every family and athlete in one list, with lesson history, signed documents and groups like "14U setters" or "Tuesday crew".</p></div>
+      <div class="feat"><h3><span class="ic">&#128200;</span>Earnings and export</h3><p>Booked, collected and outstanding for the week, month or year. Export to CSV for your accountant.</p></div>
+    </div>
+
+    <div class="revenue">
+      <h3>Fewer no-shows. <span>Fewer empty slots.</span> No forgotten payments.</h3>
+      <ul>
+        <li><b>Reminders cut no-shows.</b> Families get a nudge the day before and two hours before, so lessons actually happen.</li>
+        <li><b>Unpaid lessons don't slip.</b> Today shows what's still owed, and recording a payment takes two taps.</li>
+        <li><b>Empty slots get filled.</b> Announce a last-minute opening and families can book it from their phone.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="s-head">
+      <div class="eyebrow">How it works</div>
+      <h2>Three steps. You're done before practice.</h2>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="num">1</div><h3>Set up in 5 minutes</h3><p>Add your lesson types and prices, the gyms you use and your open times. Agree to your terms and release, or use ours.</p></div>
+      <div class="step"><div class="num">2</div><h3>Share your link</h3><p>Text it to your families, post the QR code at the gym or put it in your Instagram bio. RallyHUB writes the message for you.</p></div>
+      <div class="step"><div class="num">3</div><h3>Families book and pay</h3><p>They pick a time, sign once and pay. You approve with a tap, and reminders take care of the rest.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing" style="padding-top:0;">
+  <div class="wrap">
+    <div class="s-head">
+      <div class="eyebrow">Pricing</div>
+      <h2>Free to start. Plainly.</h2>
+    </div>
+    <div class="price">
+      <div class="big">$0<small>to set up and use</small></div>
+      <ul>
+        <li>Booking page, scheduling, reminders, calendar sync, clients and announcements are free to use.</li>
+        <li>Cash, Venmo and Zelle lessons are always free. Just mark them paid.</li>
+        <li>If you take card payments in RallyHUB, Stripe's card processing fee applies, and you choose whether you or the family covers it.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="faq" style="padding-top:0;">
+  <div class="wrap">
+    <div class="s-head">
+      <div class="eyebrow">Questions coaches ask</div>
+      <h2>FAQ</h2>
+    </div>
+    <div class="faq">
+      <details><summary>Do my families need the app?</summary><p>No. They can book from your link in any browser. The RallyHUB app is free for them too, and it also runs their tournament season: schedules, hotels, team codes and streaming links, so your lessons sit right next to everything else they check every weekend.</p></details>
+      <details><summary>How do I get paid?</summary><p>Card payments go straight to your bank account through Stripe. You choose when families are charged: when you accept, before the lesson or after it. If you'd rather collect cash, Venmo or Zelle, mark the lesson paid and it counts in your earnings.</p></details>
+      <details><summary>What if they pay cash?</summary><p>That's fine. Open the lesson, tap Mark paid and pick cash, Venmo, Zelle or other. Today and your earnings show what's been collected and what's still outstanding.</p></details>
+      <details><summary>Can I keep using my own calendar?</summary><p>Yes. Add your RallyHUB lessons to Google Calendar (or Apple or Outlook) with one link, and they stay in sync as lessons are booked, moved or cancelled.</p></details>
+      <details><summary>What do families sign?</summary><p>Your lesson terms and a liability release, plus allergies and an emergency contact. Use the RallyHUB default or customize it. Families sign once on their phone, it stays in their file, and they're asked again only if you change your terms.</p></details>
+      <details><summary>Can I run groups, clinics and camps too?</summary><p>Yes. Set up private, semi-private, small group, clinic and camp sessions with their own price, length and number of spots.</p></details>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0;">
+  <div class="wrap">
+    <div class="cta">
+      <h2>Spend your time coaching.</h2>
+      <p>Set up your coach page in about 5 minutes and send your families one link.</p>
+      <div class="actions">
+        <a href="/auth?signup=true&amp;role=coach" class="btn js-signup">Set up my coach page &rarr;</a>
+        <span class="signin">Already have an account? <a href="/auth">Sign in</a></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="foot">
+    <img src="/rallyhub_lockup_white.png" alt="RallyHUB">
+    <div>&copy; 2026 Quiet Standard Consulting LLC &middot; All rights reserved<br><a href="/">For Parents</a> &middot; <a href="/about.html">About</a> &middot; <a href="/terms">Terms of Use</a> &middot; <a href="/privacy">Privacy Policy</a><br>hello@rally-hub.com</div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // Coach invite codes (?i=<code>): carry into sign-up and show who invited them.
+  var code = (new URLSearchParams(location.search).get('i') || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 40);
+  if (!code) return;
+  document.querySelectorAll('.js-signup').forEach(function (a) {
+    a.href = '/auth?signup=true&role=coach&i=' + encodeURIComponent(code);
+  });
+  var SUPABASE_URL = 'https://dtoolzolnxfjlivwyblv.supabase.co';
+  var ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0b29sem9sbnhmamxpdnd5Ymx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDUzMDAsImV4cCI6MjA4ODU4MTMwMH0.RETMf8NonNVZSKcguAxKQ1cXK8ZHv8glzJ9nHnfwfAg';
+  fetch(SUPABASE_URL + '/rest/v1/rpc/get_coach_invite', {
+    method: 'POST',
+    headers: { apikey: ANON, Authorization: 'Bearer ' + ANON, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_code: code })
+  }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+    if (!d || !d.inviter_first_name) return;
+    var who = d.inviter_first_name + (d.athlete_first_name ? ' (' + d.athlete_first_name + '’s parent)' : '');
+    var text = document.getElementById('inviteText');
+    var b = document.createElement('b'); b.textContent = who;
+    text.appendChild(b);
+    text.appendChild(document.createTextNode(' invited you to RallyHUB. ' + (d.athlete_first_name
+      ? 'Sign up and ' + d.athlete_first_name + '’s family is already connected as your first client.'
+      : 'Sign up and their family is already connected as your first client.')));
+    document.getElementById('inviteInitial').textContent = d.inviter_first_name.charAt(0).toUpperCase();
+    document.getElementById('invite').hidden = false;
+  }).catch(function () {});
+})();
+</script>
+</body>
+</html>

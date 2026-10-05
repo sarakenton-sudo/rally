@@ -13,7 +13,7 @@ import {
 } from '@/lib/coach';
 import { connectViaBookingPage } from '@/lib/bookingPage';
 import { findLessonPattern, type RebookSuggestion } from '@/lib/plusSheet';
-import { COACH_INVITE_URL } from '@/lib/config';
+import { createCoachInvite, coachInviteMessage } from '@/lib/coachInvites';
 import { trackEvent } from '@/lib/track-event';
 import { useIconColors } from '@/lib/colors';
 import { tapLight, notifyError, notifySuccess } from '@/lib/haptics';
@@ -53,10 +53,11 @@ export default function LessonsEntryScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const athleteFirst = athletes.length === 1 ? athletes[0].first_name : athletes.length > 1 ? athletes.map((a) => a.first_name).join(' and ') : 'our athlete';
-  const inviteMessage = `Hey Coach — we use RallyHUB to manage ${athleteFirst}'s season. You can take lesson bookings and payments there. Here's the link: ${COACH_INVITE_URL}`;
-
   const inviteCoach = async () => {
     tapLight();
+    // A personal code: the coach page greets them by name and connects this family on sign-up.
+    const code = await createCoachInvite(athletes.length === 1 ? athletes[0].id : null);
+    const inviteMessage = coachInviteMessage(athleteFirst, code);
     if (Platform.OS === 'web') {
       await Clipboard.setStringAsync(inviteMessage);
       showToast('Invite copied — paste it into a text to your coach');

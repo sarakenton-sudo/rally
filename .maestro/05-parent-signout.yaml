@@ -4,14 +4,14 @@ tags: [parent]
 env: { EMAIL: "${QA_PARENT_EMAIL}", PASSWORD: "${QA_PARENT_PASSWORD}" }
 ---
 - runFlow: _signin.yaml
-- extendedWaitUntil: { visible: "Next 30 Days", timeout: 30000 }
+- extendedWaitUntil: { visible: "Coming up", timeout: 30000 }
 - tapOn: "Settings"
 - tapOn: "Account & Co-Parent"
 - scrollUntilVisible: { element: "Sign Out" }
 - tapOn: "Sign Out"
 - tapOn: { text: "Sign Out", index: 1 }      # confirm in the alert
 - extendedWaitUntil: { visible: "Continue with Google", timeout: 15000 }
-- assertNotVisible: "Next 30 Days"
+- assertNotVisible: "Coming up"
 - stopApp
 - launchApp
 - extendedWaitUntil: { visible: "Continue with Google", timeout: 20000 }

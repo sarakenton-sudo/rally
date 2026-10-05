@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import HubSectionHeader from '@/components/HubSectionHeader';
 import HubSettingsRow from '@/components/HubSettingsRow';
+import FeatureRequest from '@/components/FeatureRequest';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { useIconColors } from '@/lib/colors';
@@ -255,69 +256,32 @@ export default function HubScreen() {
           onPress={() => router.push('/(tabs)/guests')}
         />
 
+        {/* Logins moved to the Family tab (family) and athlete pages (1:1). */}
+        <View className="mt-6">
+          <HubSectionHeader icon="key" title="Logins & codes" iconColor={ic.muted} />
+        </View>
+        <HubSettingsRow
+          icon="key"
+          iconColor="#ca8a04"
+          title="Family logins"
+          subtitle={`${configuredAdminLinks.length} saved · GroupMe, LeagueApps, AES and more`}
+          onPress={() => router.push('/family')}
+        />
+
         {/* ============================================================ */}
-        {/* QUICK LINKS (admin-scoped) */}
+        {/* HELP & FEEDBACK */}
         {/* ============================================================ */}
         <View className="mt-6">
-          <HubSectionHeader
-            icon="link"
-            title="Quick Links & Credential Vault"
-            iconColor={ic.muted}
-            subtitle="GroupMe, LeagueApps, SportsEngine, and other team tools"
-            action={{ label: 'Add', onPress: () => router.push('/profile/edit-link') }}
-          />
+          <HubSectionHeader icon="bulb" title="Help & feedback" iconColor={ic.muted} />
         </View>
-
-        <View className="flex-row flex-wrap gap-3 mb-4">
-          {configuredAdminLinks.map((link, i) => {
-            const originalIndex = externalLinks.indexOf(link);
-            return (
-              <View key={`${link.label}-${i}`} style={{ width: '47%' }}>
-                <AthleteCredentialCard
-                  label={link.label}
-                  url={link.url}
-                  username={link.username ?? null}
-                  password={link.password ?? null}
-                  icon={link.icon_name}
-                  onOpen={() => openDeepLink(link)}
-                  onEdit={() => router.push({ pathname: '/profile/edit-link', params: { index: String(originalIndex) } })}
-                />
-              </View>
-            );
-          })}
-        </View>
-
-        {/* Unconfigured admin links */}
-        {unconfiguredAdminLinks.length > 0 && (
-          <>
-            <Text className="text-xs text-stone uppercase tracking-wider mb-2 ml-1">
-              Not configured
-            </Text>
-            <View className="flex-row flex-wrap gap-3 mb-6">
-              {unconfiguredAdminLinks.map((link, i) => {
-                const originalIndex = externalLinks.indexOf(link);
-                return (
-                  <Pressable
-                    key={`${link.label}-${i}`}
-                    className="bg-cream dark:bg-bark-light/50 rounded-xl p-4 items-center justify-center border border-dashed border-parchment dark:border-rally-900 active:opacity-70"
-                    style={{ width: '47%' }}
-                    onPress={() => router.push({ pathname: '/profile/edit-link', params: { index: String(originalIndex) } })}
-                  >
-                    <Ionicons
-                      name={link.icon_name as keyof typeof Ionicons.glyphMap}
-                      size={28}
-                      color={ic.placeholder}
-                    />
-                    <Text className="text-sm font-medium text-stone mt-2 text-center">
-                      {link.label}
-                    </Text>
-                    <Text className="text-xs text-parchment mt-0.5">Tap to set up</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </>
-        )}
+        <FeatureRequest />
+        <HubSettingsRow
+          icon="help-circle"
+          iconColor="#3B82B0"
+          title="Need help?"
+          subtitle="Email hello@rally-hub.com"
+          onPress={() => Linking.openURL('mailto:hello@rally-hub.com')}
+        />
 
         {/* ============================================================ */}
         {/* LEGAL */}

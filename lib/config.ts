@@ -6,4 +6,4 @@
 export const PLANS_INBOX_EMAIL = 'plans@rally-hub.com';
 export const SITE_URL = 'https://rally-hub.com';
 /** Coach sign-up link used in "Invite your coach" messages. */
-export const COACH_INVITE_URL = `${SITE_URL}/auth?signup=true&role=coach`;
+export const COACH_INVITE_URL = `${SITE_URL}/coaches`;

@@ -4,10 +4,12 @@ import { ready, openPlus, watchErrors, writesOn, aiOn } from './helpers';
 // Parent A on the website. Read-only unless QA_WRITES=1.
 test.beforeEach(() => test.skip(!ready('parent'), 'Set QA_PARENT_EMAIL / QA_PARENT_PASSWORD in .env.qa'));
 
-test('Home shows Next 30 Days and the app is connected (P-01, A-09)', async ({ page }) => {
+test('Home shows Next up, Needs you and Coming up (P-01, A-09)', async ({ page }) => {
   const done = watchErrors(page);
   await page.goto('/(tabs)');
-  await expect(page.getByText('Next 30 Days').first()).toBeVisible();
+  await expect(page.getByText('Needs you').first()).toBeVisible();
+  await expect(page.getByText('Coming up').first()).toBeVisible();
+  await expect(page.getByLabel('Book a lesson').first()).toBeVisible();
   await expect(page.getByText(/Supabase not configured/i)).toHaveCount(0);
   done();
 });
@@ -16,7 +18,7 @@ test('every tab opens without errors (P-20)', async ({ page }) => {
   const done = watchErrors(page);
   for (const [path, text] of [
     ['/season', /Tournaments|Season/], ['/travel', /Travel|Hotel/], ['/athlete', /Athlete/],
-    ['/guests', /Guests|Invite/], ['/hub', /Settings|Account/],
+    ['/guests', /Guests|Invite/], ['/hub', /Settings|Account/], ['/family', /Co-parents & guests/],
   ] as const) {
     await page.goto(path);
     await expect(page.getByText(text).locator('visible=true').first(), path).toBeVisible();
@@ -62,6 +64,27 @@ test('Save a login or code opens the form (P-11)', async ({ page }) => {
   await expect(page.getByText('Whose is it?')).toBeVisible();
 });
 
+test('tab bar is Home · Schedule · + · Travel · Family', async ({ page }) => {
+  await page.goto('/(tabs)');
+  for (const t of ['Home', 'Schedule', 'Travel', 'Family']) await expect(page.getByRole('tab', { name: t }).or(page.getByText(t, { exact: true })).first(), t).toBeVisible();
+  await page.getByLabel('Settings').first().click();
+  await expect(page).toHaveURL(/\/hub/);
+});
+
+test('Family tab: athletes, coaches, people, family logins', async ({ page }) => {
+  const done = watchErrors(page);
+  await page.goto('/family');
+  for (const t of ['Athletes', 'Coaches', 'Co-parents & guests', 'Family logins']) await expect(page.getByText(t, { exact: true }).first(), t).toBeVisible();
+  await expect(page.getByLabel(/Invite (your|another) coach/).first()).toBeVisible();
+  done();
+});
+
+test('Schedule shows lessons with a Book button', async ({ page }) => {
+  await page.goto('/season');
+  await expect(page.getByText('Lessons', { exact: true }).first()).toBeVisible();
+  await expect(page.getByLabel('Book a lesson').first()).toBeVisible();
+});
+
 test('lessons entry points (L-03, L-04)', async ({ page }) => {
   const done = watchErrors(page);
   await page.goto('/lessons');
@@ -87,7 +110,7 @@ test('connect via the booking-page link (L-02)', async ({ page }) => {
   await page.goto('/lessons');
   await page.getByPlaceholder('rally-hub.com/book/… or code').fill(`rally-hub.com/book/${slug}`);
   await page.keyboard.press('Enter');
-  await expect(page.getByText(/open times|Book a Lesson|Connected/i).first()).toBeVisible();
+  await expect(page.getByText(/open times|Book a Lesson|Connected/i).locator('visible=true').first()).toBeVisible();
 });
 
 test('payments settings page (L-12)', async ({ page }) => {

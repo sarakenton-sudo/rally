@@ -6,6 +6,7 @@ import FormField from '@/components/FormField';
 import { useAuth } from '@/providers/AuthProvider';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import type { AccountType } from '@/types/database';
+import { rememberCoachInvite } from '@/lib/coachInvites';
 
 function getInitialSignUp(): boolean {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -21,6 +22,16 @@ function getInitialInvite(): string {
   }
   return '';
 }
+
+/** rally-hub.com/coaches?i=CODE → sign-up carries &i=CODE: remember it so the
+ *  inviting family is connected once the coach profile exists. */
+function captureCoachInvite() {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const code = new URLSearchParams(window.location.search).get('i');
+    if (code) rememberCoachInvite(code);
+  }
+}
+captureCoachInvite();
 
 /** Homepage "Set up your coach page" links here with ?signup=true&role=coach. */
 function getInitialAccountType(): AccountType {

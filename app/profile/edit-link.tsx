@@ -13,34 +13,20 @@ import { useIconColors } from '@/lib/colors';
 import { tapLight, notifySuccess } from '@/lib/haptics';
 import { showToast } from '@/components/Toast';
 import { trackEvent } from '@/lib/track-event';
+import {
+  PLATFORMS, FAMILY_LABEL, platformFor, platformSpec, ownerKind, allowedOwners, defaultOwner, type PlatformKey, type Owner,
+} from '@/lib/loginPlatforms';
 
 /**
  * "Save a login or code" (was "Add Link" / "Save a credential").
- * Quick-pick platform chips decide which fields show; "whose is it" is a field
- * (Mine · each athlete). Team code saves to the chosen team (seasons.team_code).
+ * Quick-pick platform chips decide which fields show and who the login belongs
+ * to (lib/loginPlatforms): family logins (GroupMe, LeagueApps…) default to
+ * "Family (all athletes)"; athlete logins (Sports Recruits, USAV…) must be
+ * one athlete. Team code saves to the chosen team (seasons.team_code).
  *
  * NOTE: passwords are still stored as plain text in admin_config.external_links —
  * encryption is a planned follow-up (see memory: credential-encryption-todo).
  */
-
-type PlatformKey = 'usav' | 'aes' | 'leagueapps' | 'sportsrecruits' | 'ua' | 'groupme' | 'team_code' | 'other';
-type Fields = { url: boolean; username: string | null; password: boolean };
-
-const PLATFORMS: { key: PlatformKey; label: string; match: string[]; url?: string; icon: string; fields: Fields }[] = [
-  { key: 'usav', label: 'USA Volleyball', match: ['usa volleyball', 'usav'], icon: 'shield-checkmark', fields: { url: false, username: 'Member ID', password: false } },
-  { key: 'aes', label: 'AES / SportsEngine', match: ['aes', 'sportsengine', 'advanced event'], url: 'https://www.advancedeventsystems.com', icon: 'globe-outline', fields: { url: true, username: 'Email or username', password: true } },
-  { key: 'leagueapps', label: 'LeagueApps', match: ['leagueapps'], url: 'https://leagueapps.com', icon: 'trophy-outline', fields: { url: true, username: 'Email or username', password: true } },
-  { key: 'sportsrecruits', label: 'Sports Recruits', match: ['sportsrecruits', 'sports recruits'], url: 'https://my.sportsrecruits.com/login', icon: 'school-outline', fields: { url: true, username: 'Email or username', password: true } },
-  { key: 'ua', label: 'University Athlete', match: ['university athlete'], url: 'https://universityathlete.com', icon: 'trophy-outline', fields: { url: true, username: 'Email or username', password: true } },
-  { key: 'groupme', label: 'GroupMe', match: ['groupme'], url: 'https://web.groupme.com', icon: 'chatbubbles-outline', fields: { url: true, username: null, password: false } },
-  { key: 'team_code', label: 'Team code', match: [], icon: 'key-outline', fields: { url: false, username: null, password: false } },
-  { key: 'other', label: 'Other', match: [], icon: 'globe-outline', fields: { url: true, username: 'Email or username', password: true } },
-];
-
-function platformFor(label: string): PlatformKey {
-  const lower = label.toLowerCase();
-  return PLATFORMS.find((p) => p.match.some((m) => lower.includes(m)))?.key ?? 'other';
-}
 
 export default function EditLinkScreen() {
   const { index: indexStr, newLabel, athleteId, raw } = useLocalSearchParams<{ index?: string; newLabel?: string; athleteId?: string; raw?: string }>();
@@ -60,20 +46,32 @@ export default function EditLinkScreen() {
   const [url, setUrl] = useState(existingLink?.url ?? '');
   const [username, setUsername] = useState(existingLink?.username ?? '');
   const [password, setPassword] = useState(existingLink?.password ?? '');
-  // Whose is it: 'me' (parent) or an athlete id. Default to the parent (spec §3.4).
-  const [owner, setOwner] = useState<string>(existingLink?.scope === 'athlete' && existingLink.athlete_id ? existingLink.athlete_id : athleteId ?? 'me');
+  // Whose is it: 'family' or an athlete id. An existing login keeps its owner;
+  // a new one gets the platform's default until the parent picks.
+  const [owner, setOwner] = useState<Owner>(() => existingLink
+    ? (existingLink.scope === 'athlete' && existingLink.athlete_id ? existingLink.athlete_id : 'family')
+    : defaultOwner({ platformKey: platform, athletes, athleteIdParam: athleteId }));
+  const [ownerPicked, setOwnerPicked] = useState(!!existingLink);
+  const [error, setError] = useState<string | null>(null);
   // Team code: which team (season) it belongs to.
   const [seasonId, setSeasonId] = useState<string>(activeSeasonId ?? seasons[0]?.id ?? '');
   const [teamCode, setTeamCode] = useState(seasons.find((s) => s.id === (activeSeasonId ?? seasons[0]?.id))?.team_code ?? '');
   const [showRaw, setShowRaw] = useState(true);
 
-  const spec = PLATFORMS.find((p) => p.key === platform)!;
+  const spec = platformSpec(platform);
   const isEdit = editIndex >= 0;
+  const athleteOnly = ownerKind(platform) === 'athlete';
+  const ownerOk = owner !== null && allowedOwners(platform, athletes).includes(owner);
+  const pickOwner = (o: Owner) => { tapLight(); setOwner(o); setOwnerPicked(true); setError(null); };
 
   const choosePlatform = (key: PlatformKey) => {
     tapLight();
     setPlatform(key);
-    const p = PLATFORMS.find((x) => x.key === key)!;
+    setError(null);
+    // Apply the platform's default owner unless the parent already chose one
+    // (and that choice still fits, e.g. not Family on an athlete-only login).
+    setOwner((cur) => defaultOwner({ platformKey: key, athletes, athleteIdParam: athleteId, current: ownerPicked ? cur : null }));
+    const p = platformSpec(key);
     if (key !== 'other' && key !== 'team_code') setLabel(p.label);
     else if (key === 'other' && PLATFORMS.some((x) => x.label === label)) setLabel('');
     if (p.url && !url) setUrl(p.url);
@@ -87,17 +85,17 @@ export default function EditLinkScreen() {
 
   const done = (viewPath: string | null) => {
     notifySuccess();
-    if (user) trackEvent(user.id, 'credential_saved', { owner: owner === 'me' ? 'parent' : 'athlete', platform });
+    if (user) trackEvent(user.id, 'credential_saved', { owner: owner === 'family' ? 'family' : 'athlete', platform });
     router.back();
     showToast('Saved', viewPath ? { actionLabel: 'View', onAction: () => router.push(viewPath as any) } : {});
   };
 
   const saveTeamCode = async () => {
-    if (!seasonId) { Alert.alert('Pick a team', 'Choose which team this code is for.'); return; }
+    if (!seasonId) { setError('Choose which team this code is for.'); return; }
     const code = teamCode.trim() || null;
     if (isSupabaseConfigured && user) {
       const { error } = await (supabase.from('seasons') as any).update({ team_code: code }).eq('id', seasonId);
-      if (error) { Alert.alert('Save failed', error.message); return; }
+      if (error) { setError(`Save failed: ${error.message}`); return; }
     }
     setSeasons(seasons.map((s) => (s.id === seasonId ? { ...s, team_code: code } : s)));
     done('/(tabs)/season');
@@ -106,10 +104,14 @@ export default function EditLinkScreen() {
   const handleSave = async () => {
     if (platform === 'team_code') return saveTeamCode();
     const trimmedLabel = label.trim();
-    if (!trimmedLabel) { Alert.alert('Missing name', 'What is this login for? (e.g. LeagueApps)'); return; }
+    if (!trimmedLabel) { setError('What is this login for? (e.g. LeagueApps)'); return; }
+    if (!ownerOk) {
+      setError(athleteOnly ? `${spec.label} belongs to one athlete. Choose whose it is.` : 'Choose whose login this is.');
+      return;
+    }
     if (!adminConfig) return;
 
-    const toAthlete = owner !== 'me';
+    const toAthlete = owner !== 'family';
     const linkData = {
       label: trimmedLabel,
       url: spec.fields.url ? url.trim() : '',
@@ -125,7 +127,7 @@ export default function EditLinkScreen() {
 
     if (isSupabaseConfigured && user) {
       const { error } = await updateAdminConfig(adminConfig.id, updates);
-      if (error) { Alert.alert('Save failed', error.message); return; }
+      if (error) { setError(`Save failed: ${error.message}`); return; }
     }
     setAdminConfig({ ...adminConfig, ...updates });
     done(toAthlete ? `/athlete/${owner}` : '/(tabs)');
@@ -133,18 +135,17 @@ export default function EditLinkScreen() {
 
   const handleDelete = () => {
     if (!isEdit || !adminConfig) return;
+    const remove = async () => {
+      const updates = { external_links: adminConfig.external_links.filter((_, i) => i !== editIndex) };
+      if (isSupabaseConfigured && user) await updateAdminConfig(adminConfig.id, updates);
+      setAdminConfig({ ...adminConfig, ...updates });
+      router.back();
+    };
+    // Alert.alert is a no-op on web, so confirm with the browser dialog there.
+    if (Platform.OS === 'web') { if (window.confirm(`Remove "${existingLink?.label}"?`)) remove(); return; }
     Alert.alert('Remove', `Remove "${existingLink?.label}"?`, [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: async () => {
-          const updates = { external_links: adminConfig.external_links.filter((_, i) => i !== editIndex) };
-          if (isSupabaseConfigured && user) await updateAdminConfig(adminConfig.id, updates);
-          setAdminConfig({ ...adminConfig, ...updates });
-          router.back();
-        },
-      },
+      { text: 'Remove', style: 'destructive', onPress: remove },
     ]);
   };
 
@@ -168,6 +169,12 @@ export default function EditLinkScreen() {
         </View>
 
         <ScrollView className="flex-1 px-4 pt-4" keyboardShouldPersistTaps="handled">
+          {error ? (
+            <View className="flex-row items-start rounded-xl p-3 mb-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800" accessibilityRole="alert">
+              <Ionicons name="alert-circle" size={16} color="#dc2626" style={{ marginTop: 1 }} />
+              <Text className="text-xs font-semibold text-red-700 dark:text-red-300 ml-1.5 flex-1">{error}</Text>
+            </View>
+          ) : null}
           {/* Raw text from an unclassified paste */}
           {raw ? (
             <View className="bg-cream dark:bg-bark-light rounded-xl p-3 mb-4 border border-parchment dark:border-rally-900">
@@ -207,10 +214,18 @@ export default function EditLinkScreen() {
             <>
               {/* Whose is it? */}
               <Text className="text-sm font-medium text-bark dark:text-parchment mb-1.5">Whose is it?</Text>
-              <View className="flex-row flex-wrap mb-3">
-                <Chip on={owner === 'me'} label="Mine" onPress={() => setOwner('me')} />
-                {athletes.map((a) => <Chip key={a.id} on={owner === a.id} label={a.first_name} onPress={() => setOwner(a.id)} />)}
+              <View className="flex-row flex-wrap mb-1">
+                {!athleteOnly && <Chip on={owner === 'family'} label={FAMILY_LABEL} onPress={() => pickOwner('family')} />}
+                {athletes.map((a) => <Chip key={a.id} on={owner === a.id} label={a.first_name} onPress={() => pickOwner(a.id)} />)}
               </View>
+              <Text className={`text-xs mb-3 ${athleteOnly && !ownerOk ? 'text-amber-700 dark:text-amber-400 font-semibold' : 'text-stone'}`}>
+                {athleteOnly
+                  ? (ownerOk ? `${spec.label} belongs to one athlete.`
+                    : isEdit && owner === 'family' ? `${spec.label} belongs to one athlete. Choose whose it is to save.`
+                    : `${spec.label} belongs to one athlete. Choose whose it is.`)
+                  : owner === 'family' ? 'One login for the whole family. Co-parents see it too.'
+                  : 'Saved on this athlete\'s page.'}
+              </Text>
 
               {platform === 'other' && (
                 <FormField label="Name" value={label} onChangeText={setLabel} placeholder="e.g. Hudl, club website" />

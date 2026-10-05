@@ -27,12 +27,12 @@ const fmtDay = (iso: string) => {
 export default function CoachAvailabilityScreen() {
   const ic = useIconColors();
   // Home's "Book a private" opens with kind=private_1 preselected.
-  const { kind: initialKind } = useLocalSearchParams<{ kind?: string }>();
+  const { kind: initialKind, coachId: initialCoach } = useLocalSearchParams<{ kind?: string; coachId?: string }>();
   const [openings, setOpenings] = useState<CoachOpening[]>([]);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [loading, setLoading] = useState(true);
   const [kind, setKind] = useState<SessionKind | 'all'>((initialKind as SessionKind) || 'all');
-  const [coachId, setCoachId] = useState<string | 'all'>('all');
+  const [coachId, setCoachId] = useState<string | 'all'>(initialCoach || 'all');
 
   const load = useCallback(async () => {
     if (!isSupabaseConfigured) { setLoading(false); return; }

@@ -1,6 +1,6 @@
 import { View, Text, FlatList, ActivityIndicator, Pressable, Alert, Platform, Linking } from 'react-native';
-import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import TournamentCard from '@/components/TournamentCard';
@@ -14,6 +14,8 @@ import { daysUntil } from '@/lib/dates';
 import ReferFriend from '@/components/ReferFriend';
 import type { Tournament } from '@/types/database';
 import { addAllDayEventsToCalendar } from '@/lib/calendar';
+import LessonCard from '@/components/LessonCard';
+import { fetchMyUpcomingLessons, isSupabaseConfigured as coachingConfigured, type ParentLesson } from '@/lib/coach';
 
 type ListItem = { type: 'tournament'; data: Tournament } | { type: 'divider'; label: string };
 
@@ -30,6 +32,11 @@ export default function SeasonScreen() {
   const hotelBookings = useSeasonStore((s) => s.hotelBookings);
   const flightBookings = useSeasonStore((s) => s.flightBookings);
   const teamCode = activeSeason?.team_code;
+
+  const [lessons, setLessons] = useState<ParentLesson[]>([]);
+  useFocusEffect(useCallback(() => {
+    if (coachingConfigured) fetchMyUpcomingLessons(60).then(({ data }) => setLessons(data));
+  }, []));
 
   // Lookup athlete for active season
   const activeAthlete = athletes.find((a) => activeSeason && a.id === activeSeason.athlete_id) ?? null;
@@ -182,6 +189,24 @@ export default function SeasonScreen() {
                 <Text className="text-sm font-semibold text-rally-600 ml-2">Add All to Calendar</Text>
               </Pressable>
             )}
+
+            {/* Lessons (next 60 days) — lessons are events on the schedule too */}
+            <View className="mt-5">
+              <View className="flex-row items-center mb-2">
+                <Text className="text-xs font-semibold text-stone uppercase tracking-wider flex-1">Lessons</Text>
+                <Pressable onPress={() => { tapLight(); router.push('/lessons'); }} className="flex-row items-center rounded-full px-3 py-1.5 active:opacity-80" style={{ backgroundColor: '#3B82B0' }} accessibilityLabel="Book a lesson">
+                  <Ionicons name="add" size={14} color="#fff" />
+                  <Text className="text-xs font-bold text-white ml-0.5">Book a lesson</Text>
+                </Pressable>
+              </View>
+              {lessons.length ? lessons.map((l) => (
+                <LessonCard key={l.id} lesson={l} athleteName={athletes.length > 1 ? athletes.find((a) => a.id === l.athlete_id)?.first_name : undefined} />
+              )) : (
+                <Text className="text-xs text-stone dark:text-parchment mb-1">No lessons booked in the next 60 days.</Text>
+              )}
+            </View>
+
+            <Text className="text-xs font-semibold text-stone uppercase tracking-wider mt-5">Tournaments</Text>
           </View>
         }
         ListFooterComponent={

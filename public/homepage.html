@@ -351,7 +351,7 @@ footer{padding:30px 20px;}
     <a href="#pain">The Problem</a>
     <a href="#features">Features</a>
     <a href="#lessons">Private Lessons</a>
-    <a href="#coaches">For Coaches</a>
+    <a href="/coaches">For Coaches</a>
     <a href="/about.html">About</a>
     <a href="/auth" class="nav-login">Log In</a>
     <a href="/auth?signup=true" class="nav-cta">Sign Up Free</a>
@@ -381,7 +381,7 @@ footer{padding:30px 20px;}
       </div>
       <div class="hero-actions">
         <a href="/auth?signup=true" class="btn-primary">Sign up free &rarr;</a>
-        <a href="/auth?signup=true&amp;role=coach" class="hero-secondary">Coach private lessons? Get your booking page &rarr;</a>
+        <a href="/coaches" class="hero-secondary">Coach private lessons? Get your booking page &rarr;</a>
       </div>
     </div>
     <div class="hero-right">
@@ -854,7 +854,7 @@ footer{padding:30px 20px;}
         <li>The no-show who swears nobody told her. (Somebody told her. Nobody told her mom.)</li>
       </ul>
       <div class="coach-unique"><strong>The part nobody else can give you:</strong> your families already open RallyHUB every tournament weekend. Your lessons sit right next to their schedule, their hotels, and their streaming links — not in an app they forgot they downloaded.</div>
-      <a href="/auth?signup=true&amp;role=coach" class="btn-large">Set up your coach page &rarr;</a>
+      <a href="/coaches" class="btn-large">See how it works for coaches &rarr;</a>
     </div>
     <div class="feat-right">
       <div class="feat-right-label">What you get</div>
@@ -883,7 +883,7 @@ footer{padding:30px 20px;}
       <div class="door">
         <div class="door-who">Coaches</div>
         <div class="door-copy">Run your lessons where your families already are.</div>
-        <a href="/auth?signup=true&amp;role=coach" class="btn-large">Set up your coach page &rarr;</a>
+        <a href="/coaches" class="btn-large">Set up your coach page &rarr;</a>
       </div>
     </div>
   </div>
@@ -898,13 +898,13 @@ footer{padding:30px 20px;}
       </div>
       <div class="f-tag">Built by club parents, for club parents.</div>
     </div>
-    <div class="footer-right">&copy; 2026 Quiet Standard Consulting LLC &middot; All rights reserved<br><a href="/about.html">About</a> &middot; <a href="#coaches">For Coaches</a> &middot; <a href="/terms">Terms of Use</a> &middot; <a href="/privacy">Privacy Policy</a><br>hello@rally-hub.com</div>
+    <div class="footer-right">&copy; 2026 Quiet Standard Consulting LLC &middot; All rights reserved<br><a href="/about.html">About</a> &middot; <a href="/coaches">For Coaches</a> &middot; <a href="/terms">Terms of Use</a> &middot; <a href="/privacy">Privacy Policy</a><br>hello@rally-hub.com</div>
   </div>
 </footer>
 
 <script>
 // "Invite your coach": copy a ready-to-send text with the coach sign-up link.
-const COACH_INVITE_TEXT = "Hi Coach! We use RallyHUB to keep track of our volleyball season. You can post your private lesson times there, and families can book right in the app, next to our tournament schedule. Set up your free coach page here: https://rally-hub.com/auth?signup=true&role=coach";
+const COACH_INVITE_TEXT = "Hi Coach! We use RallyHUB to keep track of our volleyball season. You can post your private lesson times there, and families can book right in the app, next to our tournament schedule. See how it works and set up your free coach page here: https://rally-hub.com/coaches";
 function copyCoachInvite(btn) {
   const note = btn.nextElementSibling;
   const done = () => { note.textContent = '\u2713 Invite copied \u2014 paste it into a text to your coach.'; btn.innerHTML = '\u2713 Copied!'; setTimeout(() => { btn.innerHTML = '\uD83D\uDCCB Invite your coach'; }, 2500); };

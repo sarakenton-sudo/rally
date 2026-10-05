@@ -17,5 +17,18 @@ describe('booking page links (C-08, B-04)', () => {
 
 describe('config', () => {
   it('forwards to the rally-hub.com inbox', () => expect(PLANS_INBOX_EMAIL).toBe('plans@rally-hub.com'));
-  it('coach invite opens sign-up as a coach', () => expect(COACH_INVITE_URL).toBe('https://rally-hub.com/auth?signup=true&role=coach'));
+  it('coach invite opens the coach page', () => expect(COACH_INVITE_URL).toBe('https://rally-hub.com/coaches'));
+});
+
+import { coachInviteUrl, coachInviteMessage } from '@/lib/coachInvites';
+describe('coach invites', () => {
+  it('links to the coach page with the personal code', () => {
+    expect(coachInviteUrl('AB23CD45')).toBe('https://rally-hub.com/coaches?i=AB23CD45');
+    expect(coachInviteUrl(null)).toBe('https://rally-hub.com/coaches');
+  });
+  it('names the athlete and ends with the link', () => {
+    const m = coachInviteMessage('Drue', 'AB23CD45');
+    expect(m).toContain("Drue's season");
+    expect(m.endsWith('https://rally-hub.com/coaches?i=AB23CD45')).toBe(true);
+  });
 });

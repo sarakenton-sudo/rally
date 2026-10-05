@@ -9,6 +9,7 @@ import { useSeasonStore } from '@/stores/useSeasonStore';
 import Avatar from '@/components/Avatar';
 import SetupChecklist from '@/components/coach/SetupChecklist';
 import { showToast } from '@/components/Toast';
+import { claimPendingCoachInvite } from '@/lib/coachInvites';
 import {
   fetchMyCoach, fetchSchedule, fetchWeekSlots, fetchSessionTypes, fetchUpcomingSlots, fetchPendingRequests,
   fetchCoachPolicies, fetchUnpaidLessons, getRequestDetail, acceptRequest, declineRequest, weekSummary,
@@ -86,7 +87,16 @@ export default function CoachTodayScreen() {
     setLoading(false);
   }, [user, coach?.id]);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => {
+    // Signed up from a parent's invite link: connect that family first.
+    (async () => {
+      if (coach) {
+        const name = await claimPendingCoachInvite();
+        if (name !== null) showToast(name ? `${name}'s family is connected — they can book with you now` : 'The family who invited you is connected');
+      }
+      load();
+    })();
+  }, [load, coach?.id]));
 
   const respond = async (id: string, kind: 'accept' | 'decline') => {
     setBusy(id);
