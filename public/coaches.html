@@ -347,15 +347,18 @@ footer{background:var(--navy);border-top:1px solid rgba(255,255,255,0.07);paddin
     headers: { apikey: ANON, Authorization: 'Bearer ' + ANON, 'Content-Type': 'application/json' },
     body: JSON.stringify({ p_code: code })
   }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
-    if (!d || !d.inviter_first_name) return;
-    var who = d.inviter_first_name + (d.athlete_first_name ? ' (' + d.athlete_first_name + '’s parent)' : '');
+    if (!d || (!d.inviter_first_name && !d.athlete_first_name)) return;
+    // Parents without a display name: "Avery’s family" still tells the coach who it is.
+    var who = d.inviter_first_name
+      ? d.inviter_first_name + (d.athlete_first_name ? ' (' + d.athlete_first_name + '’s parent)' : '')
+      : d.athlete_first_name + '’s family';
     var text = document.getElementById('inviteText');
     var b = document.createElement('b'); b.textContent = who;
     text.appendChild(b);
     text.appendChild(document.createTextNode(' invited you to RallyHUB. ' + (d.athlete_first_name
       ? 'Sign up and ' + d.athlete_first_name + '’s family is already connected as your first client.'
       : 'Sign up and their family is already connected as your first client.')));
-    document.getElementById('inviteInitial').textContent = d.inviter_first_name.charAt(0).toUpperCase();
+    document.getElementById('inviteInitial').textContent = who.charAt(0).toUpperCase();
     document.getElementById('invite').hidden = false;
   }).catch(function () {});
 })();
