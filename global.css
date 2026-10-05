@@ -26,6 +26,13 @@
   --color-cream: #F4F6F8;
   --color-warm-white: #FEFEFE;
   --color-sage: #6A9E8A;
+  /* Brand accents (Sunset Coral palette) — actions & highlights, never status or type */
+  --color-coral-50: #FFF1EC;
+  --color-coral-100: #FFDCCF;
+  --color-coral: #FF7A59;
+  --color-coral-600: #E85F3D;
+  --color-gold: #FFC94D;
+  --color-gold-50: #FFF8E5;
   --color-teal: #6A9E8A;
   --color-stone: #4A6E8A;
   --color-mist: #4A6E8A;

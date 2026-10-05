@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Modal, TextInput, Platform, Share } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { CORAL } from '@/lib/colors';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/providers/AuthProvider';
@@ -271,7 +272,7 @@ export default function QuickAddSheet({ visible, onClose }: { visible: boolean; 
           <Pressable
             onPress={inviteCoach}
             className="mx-4 mt-3 flex-row items-center rounded-2xl p-3.5 active:opacity-80"
-            style={{ backgroundColor: '#3B82B0' }}
+            style={{ backgroundColor: CORAL }}
             accessibilityRole="button"
             accessibilityLabel="Invite a coach"
           >

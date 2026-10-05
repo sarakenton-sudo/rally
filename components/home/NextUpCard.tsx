@@ -5,7 +5,7 @@ import * as Clipboard from 'expo-clipboard';
 import { showToast } from '@/components/Toast';
 import { tapLight } from '@/lib/haptics';
 import { formatDateRange } from '@/lib/dates';
-import { TOURNAMENT_COLOR } from '@/lib/colors';
+import { TOURNAMENT_COLOR, GOLD } from '@/lib/colors';
 import { sessionKindStyle, type ParentLesson } from '@/lib/coach';
 import { countdownLabel, type NextUp } from '@/lib/nextUp';
 import { platformFor } from '@/lib/loginPlatforms';
@@ -95,9 +95,15 @@ export default function NextUpCard({ next, tournament, lesson, hotels, teamCode,
   return (
     <View className="rounded-2xl p-5" style={{ backgroundColor: TOURNAMENT_COLOR }}>
       <Pressable onPress={() => router.push(`/tournament/${t.id}`)} accessibilityLabel={`Next up: ${t.name}`}>
-        <Text className="text-[11px] font-bold uppercase tracking-wider text-white/85">
-          {next.live ? 'Game day' : next.gameDay ? `Game day · ${countdownLabel(next.daysAway)}` : `Next up · ${countdownLabel(next.daysAway)}`}
-        </Text>
+        {next.gameDay ? (
+          <View className="self-start rounded-full px-2.5 py-0.5" style={{ backgroundColor: GOLD }}>
+            <Text className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: '#1E3A5F' }}>
+              {next.live ? 'Game day' : `Game day · ${countdownLabel(next.daysAway)}`}
+            </Text>
+          </View>
+        ) : (
+          <Text className="text-[11px] font-bold uppercase tracking-wider text-white/85">{`Next up · ${countdownLabel(next.daysAway)}`}</Text>
+        )}
         <Text className="text-xl font-extrabold text-white mt-1" numberOfLines={2}>{t.name}</Text>
         <Text className="text-sm text-white/90 mt-1">
           {formatDateRange(t.start_date, t.end_date)} · {venue?.label || t.location_city}{athleteName ? ` · ${athleteName}` : ''}

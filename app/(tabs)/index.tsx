@@ -9,7 +9,7 @@ import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useGuestStore } from '@/stores/useGuestStore';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { daysUntil } from '@/lib/dates';
-import { useIconColors } from '@/lib/colors';
+import { useIconColors, CORAL } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
@@ -524,7 +524,7 @@ export default function HomeScreen() {
               <Pressable
                 onPress={() => { tapLight(); router.push('/lessons'); }}
                 className="flex-row items-center rounded-full px-3 py-1.5 active:opacity-80"
-                style={{ backgroundColor: '#3B82B0' }}
+                style={{ backgroundColor: CORAL }}
                 accessibilityLabel="Book a lesson"
               >
                 <Ionicons name="add" size={14} color="#fff" />

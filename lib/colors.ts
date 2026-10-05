@@ -33,3 +33,16 @@ export function useIconColors() {
  *  - Lesson kinds: SESSION_KIND_STYLE in lib/coach.ts (blue/purple/cyan/magenta/indigo).
  */
 export const TOURNAMENT_COLOR = '#6A9E8A';
+
+/**
+ * Brand accents (Sunset Coral palette). Never use these for status or for
+ * lesson/event types — those colors carry meaning.
+ *  - CORAL: the main call to action on a screen (the + button, Book a lesson,
+ *    Invite). One coral action per screen region.
+ *  - GOLD: small highlights (game day, "new", celebratory moments).
+ */
+export const CORAL = '#FF7A59';
+export const CORAL_DARK = '#E85F3D';   // pressed / text on light coral
+export const CORAL_TINT = '#FFF1EC';
+export const GOLD = '#FFC94D';
+export const GOLD_TINT = '#FFF8E5';

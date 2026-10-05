@@ -8,7 +8,7 @@ import HubSectionHeader from '@/components/HubSectionHeader';
 import HubSettingsRow from '@/components/HubSettingsRow';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
-import { useIconColors } from '@/lib/colors';
+import { useIconColors, CORAL } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
 import { daysUntil, formatDateRange } from '@/lib/dates';
 import { showToast } from '@/components/Toast';
@@ -325,7 +325,7 @@ export default function SeasonScreen() {
                   })}
                 </ScrollView>
               ) : <View className="flex-1" />}
-              <Pressable onPress={() => { tapLight(); router.push('/lessons'); }} className="flex-row items-center rounded-full px-3 py-1.5 active:opacity-80" style={{ backgroundColor: '#3B82B0' }} accessibilityLabel="Book a lesson">
+              <Pressable onPress={() => { tapLight(); router.push('/lessons'); }} className="flex-row items-center rounded-full px-3 py-1.5 active:opacity-80" style={{ backgroundColor: CORAL }} accessibilityLabel="Book a lesson">
                 <Ionicons name="add" size={14} color="#fff" />
                 <Text className="text-xs font-bold text-white ml-0.5">Book a lesson</Text>
               </Pressable>

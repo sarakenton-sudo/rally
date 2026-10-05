@@ -7,7 +7,7 @@ import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useGuestStore } from '@/stores/useGuestStore';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { useAuth } from '@/providers/AuthProvider';
-import { useIconColors } from '@/lib/colors';
+import { useIconColors, CORAL } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
 import { trackEvent } from '@/lib/track-event';
 import { showToast } from '@/components/Toast';
@@ -165,7 +165,7 @@ export default function FamilyScreen() {
                 <Pressable
                   onPress={() => router.push({ pathname: '/coaching/availability', params: { coachId: c.id } })}
                   className="rounded-full px-3 py-1.5 active:opacity-80"
-                  style={{ backgroundColor: '#3B82B0' }}
+                  style={{ backgroundColor: CORAL }}
                   accessibilityLabel={`Book with ${c.display_name}`}
                 >
                   <Text className="text-xs font-bold text-white">Book</Text>
