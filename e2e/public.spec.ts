@@ -7,10 +7,20 @@ test('homepage loads with sign-up links (AD-03)', async ({ page, request }) => {
   const res = await page.goto('/');
   expect(res?.status()).toBe(200);
   await expect(page.locator('a[href="/auth?signup=true"]').first()).toBeVisible();
-  await expect(page.locator('a[href="/auth?signup=true&role=coach"]').first()).toBeAttached();
+  await expect(page.locator('a[href="/coaches"]').first()).toBeAttached();
   for (const path of ['/privacy', '/terms', '/about.html']) {
     expect((await request.get(path)).status(), path).toBe(200);
   }
+});
+
+test('coach landing page: pitch, pricing, FAQ, sign-up keeps the invite code', async ({ page }) => {
+  const done = watchErrors(page);
+  await page.goto('/coaches?i=TESTCODE');
+  await expect(page.getByText('Run your private lessons from your phone').first()).toBeVisible();
+  await expect(page.getByText(/Do my families need the app/i).first()).toBeVisible();
+  const cta = page.getByRole('link', { name: /Set up my coach page/i }).first();
+  await expect(cta).toHaveAttribute('href', /\/auth\?signup=true&role=coach&i=TESTCODE/);
+  done();
 });
 
 test('early access is gone and redirects to sign-up (AD-03)', async ({ page }) => {
