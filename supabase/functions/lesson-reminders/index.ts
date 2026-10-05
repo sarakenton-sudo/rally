@@ -1,7 +1,11 @@
 // lesson-reminders: called every 15 min by pg_cron (header x-cron-secret = CRON_SECRET).
 //   Parents  — 24h (push + email) and 2h (push) before each confirmed lesson.
+//   Players  — day-before confirmation to the athlete's own login (00089).
 //   Coaches  — morning summary (7–11am local), 1h heads-up per lesson,
-//              evening nudge (8–10pm local) about lessons that ended unpaid.
+//              evening nudge (8–10pm local) about lessons that ended unpaid,
+//              nightly 7pm tomorrow's schedule, Sunday 7pm week ahead (00089).
+// Coaches turn any of these off for themselves or their families in
+// coach_notification_settings (missing key = on).
 // Each send is claimed with a conditional UPDATE first, so overlapping or
 // retried runs never double-send. Opt-out: coaching_notification_prefs
 // (lesson_reminders=false or push_enabled=false).
@@ -10,6 +14,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import {
   parentReminderAction, coachHeadsUpDue, morningSummaryDue, eveningNudgeDue, needsUnpaidNudge, localParts,
   parentReminderText, coachHeadsUpText, morningSummaryText, unpaidNudgeText, fmtTime, dayWord,
+  settingOn, athleteReminderAction, athleteDayBeforeText, weekAheadDue, tomorrowScheduleDue, tomorrowYmd,
+  tomorrowScheduleText, weekAheadText, scheduleLine, type SlotSummary,
 } from '../_shared/reminders.ts';
 import { renderNotification, emailHtml, sendEmail, type Fallback, type Vars } from '../_shared/templates.ts';
 
@@ -73,16 +79,25 @@ async function notify(
 }
 
 /** Claim a boolean flag on a booking; true only for the run that flipped it. */
-async function claim(bookingId: string, column: 'reminder_sent_24h' | 'reminder_sent_2h' | 'coach_reminder_sent') {
+async function claim(bookingId: string, column: 'reminder_sent_24h' | 'reminder_sent_2h' | 'coach_reminder_sent' | 'athlete_reminder_sent') {
   const { data } = await db.from('bookings').update({ [column]: true }).eq('id', bookingId).eq(column, false).select('id');
   return (data ?? []).length > 0;
 }
 
 /** Claim a once-per-day coach send for local date `ymd`. */
-async function claimCoachDay(coachId: string, column: 'last_summary_date' | 'last_unpaid_nudge_date', ymd: string) {
+async function claimCoachDay(coachId: string, column: 'last_summary_date' | 'last_unpaid_nudge_date' | 'last_week_ahead_date' | 'last_tomorrow_date', ymd: string) {
   const { data } = await db.from('coaches').update({ [column]: ymd }).eq('id', coachId)
     .or(`${column}.is.null,${column}.neq.${ymd}`).select('id');
   return (data ?? []).length > 0;
+}
+
+type CoachSettings = { self?: Record<string, unknown>; clients?: Record<string, unknown> } | undefined;
+
+/** Coach notification settings (00089) by coach id. */
+async function coachSettings(coachIds: string[]): Promise<Map<string, CoachSettings>> {
+  if (!coachIds.length) return new Map();
+  const { data } = await db.from('coach_notification_settings').select('coach_id, self, clients').in('coach_id', coachIds);
+  return new Map(((data ?? []) as any[]).map((r) => [r.coach_id, { self: r.self, clients: r.clients }]));
 }
 
 serve(async (req: Request) => {
@@ -90,15 +105,15 @@ serve(async (req: Request) => {
 
   const now = new Date();
   const pushes: Push[] = [];
-  const counts = { parent24h: 0, parent2h: 0, coachHeadsUp: 0, summaries: 0, unpaidNudges: 0, emails: 0 };
+  const counts = { parent24h: 0, parent2h: 0, athleteDayBefore: 0, coachHeadsUp: 0, summaries: 0, unpaidNudges: 0, weekAhead: 0, tomorrow: 0, emails: 0 };
 
   // ── Upcoming confirmed lessons (next 26h): parent reminders, coach heads-up, morning summary ──
   const { data: upcoming, error } = await db
     .from('bookings')
     .select(`
-      id, parent_user_id, price_cents, created_at, reminder_sent_24h, reminder_sent_2h, coach_reminder_sent,
+      id, parent_user_id, price_cents, created_at, reminder_sent_24h, reminder_sent_2h, coach_reminder_sent, athlete_reminder_sent,
       coaches(id, user_id, display_name, default_timezone, last_summary_date),
-      athletes(first_name),
+      athletes(first_name, user_id),
       slots!inner(id, starts_at, facilities(label))
     `)
     .eq('status', 'confirmed')
@@ -108,7 +123,8 @@ serve(async (req: Request) => {
   if (error) return json({ error: error.message }, 500);
   const rows = (upcoming ?? []) as any[];
 
-  const out = await optedOut([...new Set(rows.flatMap((b) => [b.parent_user_id, b.coaches?.user_id]).filter(Boolean))]);
+  const out = await optedOut([...new Set(rows.flatMap((b) => [b.parent_user_id, b.coaches?.user_id, b.athletes?.user_id]).filter(Boolean))]);
+  const settings = await coachSettings([...new Set(rows.map((b) => b.coaches?.id).filter(Boolean))]);
 
   // Parents
   for (const b of rows) {
@@ -122,9 +138,11 @@ serve(async (req: Request) => {
     if (!(await claim(b.id, column))) continue;
     // Within 2h the 24h reminder is moot: mark it too so it never fires late.
     if (column === 'reminder_sent_2h' && !b.reminder_sent_24h) await claim(b.id, 'reminder_sent_24h');
-    if (action.startsWith('skip') || out.has(b.parent_user_id)) continue;
+    const kind = action.endsWith('24h') ? '24h' : '2h';
+    // The coach can turn either reminder off for all their families.
+    const clientOn = settingOn(settings.get(b.coaches?.id), 'clients', kind === '24h' ? 'reminder_24h' : 'reminder_2h');
+    if (action.startsWith('skip') || out.has(b.parent_user_id) || !clientOn) continue;
 
-    const kind = action === 'send_24h' ? '24h' : '2h';
     const facility = b.slots.facilities?.label ?? null;
     const athlete = b.athletes?.first_name ?? 'Your athlete';
     const coachName = b.coaches?.display_name ?? 'your coach';
@@ -134,6 +152,25 @@ serve(async (req: Request) => {
       day: dayWord(now, startsAt, tz).replace(/^./, (c) => c.toUpperCase()),
     }, { ...fb, channels: kind === '24h' ? ['push', 'email'] : ['push'] }, { type: 'lesson_reminder', bookingId: b.id }, pushes, counts);
     if (kind === '24h') counts.parent24h++; else counts.parent2h++;
+  }
+
+  // Players: day-before confirmation to the athlete's own login (not a second copy to the parent).
+  for (const b of rows) {
+    const athleteUser = b.athletes?.user_id;
+    if (!athleteUser || athleteUser === b.parent_user_id || b.athlete_reminder_sent) continue;
+    const tz = b.coaches?.default_timezone || DEFAULT_TZ;
+    const startsAt = new Date(b.slots.starts_at);
+    const action = athleteReminderAction(now, { startsAt, createdAt: new Date(b.created_at), sent: b.athlete_reminder_sent }, tz);
+    if (!action || !(await claim(b.id, 'athlete_reminder_sent'))) continue;
+    if (action === 'skip' || out.has(athleteUser) || !settingOn(settings.get(b.coaches?.id), 'clients', 'day_before_athlete')) continue;
+    const facility = b.slots.facilities?.label ?? null;
+    const coachName = b.coaches?.display_name ?? 'your coach';
+    const fb = athleteDayBeforeText({ coach: coachName, facility, startsAt, now, tz });
+    await notify(athleteUser, 'lesson_day_before_athlete', {
+      day: dayWord(now, startsAt, tz), time: fmtTime(startsAt, tz), coach: coachName,
+      where: facility ? ` · ${facility}` : '', facility: facility ?? '',
+    }, { ...fb, channels: ['push'] }, { type: 'lesson_reminder', bookingId: b.id }, pushes, counts);
+    counts.athleteDayBefore++;
   }
 
   // Coaches: group by coach, then by slot (a group lesson is one heads-up).
@@ -147,6 +184,7 @@ serve(async (req: Request) => {
   for (const { coach, bookings } of byCoach.values()) {
     if (out.has(coach.user_id)) continue;
     const tz = coach.default_timezone || DEFAULT_TZ;
+    const cs = settings.get(coach.id);
 
     // 1h heads-up per slot
     const bySlot = new Map<string, any[]>();
@@ -157,7 +195,7 @@ serve(async (req: Request) => {
       if (!due.length) continue;
       const claimed: any[] = [];
       for (const b of due) if (await claim(b.id, 'coach_reminder_sent')) claimed.push(b);
-      if (!claimed.length) continue;
+      if (!claimed.length || !settingOn(cs, 'self', 'heads_up')) continue;
       const names = group.map((b) => b.athletes?.first_name ?? 'athlete');
       const facility = group[0].slots.facilities?.label ?? null;
       const fb = coachHeadsUpText({ athletes: names, facility, startsAt, tz });
@@ -169,7 +207,7 @@ serve(async (req: Request) => {
     }
 
     // Morning summary of today's lessons
-    if (morningSummaryDue(now, tz, coach.last_summary_date)) {
+    if (settingOn(cs, 'self', 'morning_summary') && morningSummaryDue(now, tz, coach.last_summary_date)) {
       const today = localParts(now, tz).ymd;
       const todays = bookings.filter((b) => localParts(new Date(b.slots.starts_at), tz).ymd === today);
       if (todays.length && (await claimCoachDay(coach.id, 'last_summary_date', today))) {
@@ -213,9 +251,11 @@ serve(async (req: Request) => {
     unpaidByCoach.set(b.coaches.id, e);
   }
   const unpaidOut = await optedOut([...unpaidByCoach.values()].map((e) => e.coach.user_id));
+  const unpaidSettings = await coachSettings([...unpaidByCoach.keys()]);
   for (const { coach, lessons } of unpaidByCoach.values()) {
     const tz = coach.default_timezone || DEFAULT_TZ;
-    if (unpaidOut.has(coach.user_id) || !eveningNudgeDue(now, tz, coach.last_unpaid_nudge_date)) continue;
+    if (unpaidOut.has(coach.user_id) || !settingOn(unpaidSettings.get(coach.id), 'self', 'unpaid_nudge')) continue;
+    if (!eveningNudgeDue(now, tz, coach.last_unpaid_nudge_date)) continue;
     if (!(await claimCoachDay(coach.id, 'last_unpaid_nudge_date', localParts(now, tz).ymd))) continue;
     for (const l of lessons) {
       await db.from('bookings').update({ unpaid_nudge_count: l.unpaid_nudge_count + 1 }).eq('id', l.id).eq('unpaid_nudge_count', l.unpaid_nudge_count);
@@ -226,6 +266,60 @@ serve(async (req: Request) => {
       lessons: plural(lessons.length, 'lesson'), total: money(totalCents),
     }, { ...fb, channels: ['push', 'email'] }, { type: 'unpaid_lessons' }, pushes, counts);
     counts.unpaidNudges++;
+  }
+
+  // ── Coach evenings (7–10pm local): tomorrow's schedule; on Sundays the week ahead (tomorrow folded in) ──
+  const { data: week } = await db
+    .from('bookings')
+    .select(`
+      id, price_cents,
+      coaches(id, user_id, default_timezone, last_week_ahead_date, last_tomorrow_date),
+      athletes(first_name),
+      slots!inner(id, starts_at, facility_status)
+    `)
+    .eq('status', 'confirmed')
+    .gt('slots.starts_at', now.toISOString())
+    .lte('slots.starts_at', new Date(now.getTime() + 8 * 24 * H).toISOString())
+    .limit(5000);
+  const weekByCoach = new Map<string, { coach: any; slots: Map<string, SlotSummary> }>();
+  for (const b of (week ?? []) as any[]) {
+    if (!b.coaches?.id) continue;
+    const e = weekByCoach.get(b.coaches.id) ?? { coach: b.coaches, slots: new Map() };
+    const s0 = e.slots.get(b.slots.id) ?? { startsAt: new Date(b.slots.starts_at), athletes: [], priceCents: 0, gymReserved: b.slots.facility_status === 'reserved' };
+    s0.athletes.push(b.athletes?.first_name ?? 'athlete');
+    s0.priceCents += b.price_cents ?? 0;
+    e.slots.set(b.slots.id, s0);
+    weekByCoach.set(b.coaches.id, e);
+  }
+  const eveningOut = await optedOut([...weekByCoach.values()].map((e) => e.coach.user_id));
+  const eveningSettings = await coachSettings([...weekByCoach.keys()]);
+  for (const { coach, slots } of weekByCoach.values()) {
+    if (eveningOut.has(coach.user_id)) continue;
+    const tz = coach.default_timezone || DEFAULT_TZ;
+    const cs = eveningSettings.get(coach.id);
+    const all = [...slots.values()];
+    const tmrYmd = tomorrowYmd(now, tz);
+    const tomorrow = all.filter((x) => localParts(x.startsAt, tz).ymd === tmrYmd);
+    const sevenDays = all.filter((x) => x.startsAt.getTime() <= now.getTime() + 7 * 24 * H);
+    const today = localParts(now, tz).ymd;
+    const wantTomorrow = tomorrow.length > 0 && settingOn(cs, 'self', 'tomorrow_schedule') && tomorrowScheduleDue(now, tz, coach.last_tomorrow_date);
+
+    if (sevenDays.length && settingOn(cs, 'self', 'week_ahead') && weekAheadDue(now, tz, coach.last_week_ahead_date)) {
+      if (!(await claimCoachDay(coach.id, 'last_week_ahead_date', today))) continue;
+      const folded = wantTomorrow && (await claimCoachDay(coach.id, 'last_tomorrow_date', today));
+      const fb = weekAheadText(sevenDays, folded ? tomorrow : [], tz);
+      await notify(coach.user_id, 'coach_week_ahead', fb.vars, { title: fb.title, body: fb.body, channels: ['push'] },
+        { type: 'coach_week_ahead' }, pushes, counts);
+      counts.weekAhead++;
+      continue;
+    }
+    if (wantTomorrow && (await claimCoachDay(coach.id, 'last_tomorrow_date', today))) {
+      const fb = tomorrowScheduleText(tomorrow, tz);
+      await notify(coach.user_id, 'coach_tomorrow_schedule', {
+        lessons: plural(tomorrow.length, 'lesson'), schedule: scheduleLine(tomorrow, tz),
+      }, { ...fb, channels: ['push'] }, { type: 'coach_tomorrow_schedule' }, pushes, counts);
+      counts.tomorrow++;
+    }
   }
 
   const delivered = await sendPushes(pushes);

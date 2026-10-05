@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   fetchSchedule, getCalendarToken, calendarFeedUrl, googleCalendarSubscribeUrl,
   fetchWeekSlots, fetchSessionTypes, weekSummary, blockRevenue, fmtMoney, setSlotFacilityStatus,
-  FACILITY_STATUS_STYLE, hasRealAllergies, isSupabaseConfigured, sessionKindStyle, type ScheduleItem, type SlotWithRefs,
+  FACILITY_STATUS_STYLE, hasRealAllergies, paymentBadge, PAYMENT_BADGE_STYLE, isSupabaseConfigured, sessionKindStyle, type ScheduleItem, type SlotWithRefs,
 } from '@/lib/coach';
 import { webcalUrl } from '@/lib/calendarFormat';
 import { useCoachStore } from '@/stores/useCoachStore';
@@ -284,22 +284,37 @@ export default function CoachScheduleScreen() {
                             {fmtTime(item.starts_at)} – {fmtTime(item.ends_at)} · {summary(item)}
                           </Text>
                           <Text className="text-xs text-stone dark:text-parchment mt-0.5">
-                            {[typesLabel, rev.booked ? fmtMoney(rev.booked) : null, rev.open ? `${fmtMoney(rev.open)} still open` : null].filter(Boolean).join(' · ')}
+                            {[typesLabel, rev.booked ? fmtMoney(rev.booked) : null,
+                              item.seats_total > 1 && item.seats_total - item.attendees.length > 0 ? `${item.seats_total - item.attendees.length} open spot${item.seats_total - item.attendees.length === 1 ? '' : 's'}` : null,
+                            ].filter(Boolean).join(' · ')}
                           </Text>
                         </View>
-                        <View className={`px-2 py-1 rounded-md ${pending ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-green-100 dark:bg-green-900/30'}`}>
-                          <Text className={`text-[10px] font-bold ${pending ? 'text-amber-700 dark:text-amber-300' : 'text-green-700 dark:text-green-300'}`}>
-                            {pending ? 'PENDING' : item.seats_total > 1 ? `${item.attendees.filter((a) => a.kind === 'booking').length}/${item.seats_total}` : 'BOOKED'}
-                          </Text>
-                        </View>
+                        {(() => {
+                          // Payment status carries the weight (PAID / UNPAID / FAILED …); requests show PENDING.
+                          const bookedA = item.attendees.filter((a) => a.kind === 'booking');
+                          if (pending || !bookedA.length) {
+                            return (
+                              <View className="px-2.5 py-1 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                                <Text className="text-xs font-extrabold text-amber-700 dark:text-amber-300">PENDING</Text>
+                              </View>
+                            );
+                          }
+                          const unpaidA = bookedA.find((a) => paymentBadge(a, item.starts_at) !== 'paid');
+                          const st = PAYMENT_BADGE_STYLE[paymentBadge(unpaidA ?? bookedA[0], item.starts_at)];
+                          return (
+                            <View className="px-2.5 py-1 rounded-lg items-end" style={{ backgroundColor: st.bg }}>
+                              <Text style={{ color: st.fg, fontSize: 12, fontWeight: '800' }}>{st.label}</Text>
+                              {item.seats_total > 1 ? <Text style={{ color: st.fg, fontSize: 10, fontWeight: '600' }}>{bookedA.length}/{item.seats_total} booked</Text> : null}
+                            </View>
+                          );
+                        })()}
                       </Pressable>
                       <View className="flex-row flex-wrap items-center">
                         {gymChip}
                         {item.attendees.some((a) => hasRealAllergies(a.athlete_profile?.allergies)) && (
-                          <View className="flex-row items-center rounded-full px-2 py-0.5 mt-1.5 ml-1.5" style={{ backgroundColor: '#dc26261f' }}>
-                            <Ionicons name="warning" size={11} color="#dc2626" />
-                            <Text className="text-[10px] font-bold ml-1" style={{ color: '#dc2626' }}>ALLERGY</Text>
-                          </View>
+                          <Text className="text-[11px] text-stone dark:text-parchment mt-1.5 ml-2" numberOfLines={1}>
+                            Allergy: {item.attendees.map((a) => a.athlete_profile?.allergies).filter((x) => hasRealAllergies(x)).join('; ')}
+                          </Text>
                         )}
                       </View>
 

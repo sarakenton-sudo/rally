@@ -6,14 +6,19 @@ const base = (o: Partial<CoachPlusContext> = {}): CoachPlusContext => ({
 });
 
 describe('coach + sheet ordering', () => {
-  it('default order: open time, book a family, record payment, share link, invite family', () => {
+  it('default order: add a client, invite a client, open time, book a lesson, record payment, share link', () => {
     const o = getCoachPlusOrder(base());
-    expect(o.topItems).toEqual(['open_time', 'book_family', 'record_payment', 'share_link', 'invite_family']);
+    expect(o.topItems).toEqual(['add_client', 'invite_family', 'open_time', 'book_family', 'record_payment', 'share_link']);
     expect(o.rule).toBe('default');
   });
 
-  it('invite a family is in the top tier', () => {
-    expect(getCoachPlusOrder(base()).topItems).toContain('invite_family');
+  it('add a client and invite a client lead the list', () => {
+    expect(getCoachPlusOrder(base()).topItems.slice(0, 2)).toEqual(['add_client', 'invite_family']);
+  });
+
+  it('context rules keep add/invite right after the promoted item', () => {
+    const o = getCoachPlusOrder(base({ openSlotsNext7Days: 0 }));
+    expect(o.topItems.slice(0, 3)).toEqual(['open_time', 'add_client', 'invite_family']);
   });
 
   it('a lesson that ended today unpaid puts Record a payment first', () => {

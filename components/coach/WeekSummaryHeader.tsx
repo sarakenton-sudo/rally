@@ -2,8 +2,8 @@ import { View, Text } from 'react-native';
 import { fmtMoney, type WeekSummary } from '@/lib/coach';
 
 /**
- * "Money is the home screen": Booked / Pending / Collected / Outstanding for the
- * week, plus open revenue, full-book potential and utilization.
+ * The week's money: Booked / Pending / Collected / Outstanding, plus how full
+ * the week is. Unbooked capacity isn't shown in dollars — it isn't money yet.
  */
 export default function WeekSummaryHeader({ s }: { s: WeekSummary }) {
   const tiles = [
@@ -26,20 +26,10 @@ export default function WeekSummaryHeader({ s }: { s: WeekSummary }) {
         ))}
       </View>
       <View className="flex-row items-center justify-between bg-rally-50 dark:bg-rally-900/20 rounded-xl px-3 py-2.5">
-        <View>
-          <Text className="text-[11px] font-semibold uppercase tracking-wider text-stone">Still open</Text>
-          <Text className="text-base font-bold text-rally-600">{fmtMoney(s.open)}</Text>
-        </View>
-        <View>
-          <Text className="text-[11px] font-semibold uppercase tracking-wider text-stone">Full book</Text>
-          <Text className="text-base font-bold text-bark dark:text-cream">{fmtMoney(s.fullBook)}</Text>
-        </View>
-        <View className="items-end">
-          <Text className="text-[11px] font-semibold uppercase tracking-wider text-stone">Utilization</Text>
-          <Text className="text-base font-bold text-bark dark:text-cream">
-            {s.utilization === null ? '—' : `${s.utilization}%`}
-          </Text>
-        </View>
+        <Text className="text-[11px] font-semibold uppercase tracking-wider text-stone">How full this week is</Text>
+        <Text className="text-base font-bold text-bark dark:text-cream">
+          {s.utilization === null ? '—' : `${s.utilization}% booked`}
+        </Text>
       </View>
       {s.utilization !== null && (
         <View className="h-1.5 rounded-full bg-parchment dark:bg-rally-900 mt-2 overflow-hidden">

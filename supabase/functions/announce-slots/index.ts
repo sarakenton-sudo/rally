@@ -61,6 +61,8 @@ serve(async (req: Request) => {
   if (!message) return json({ error: 'Write a message' }, 400);
 
   const since = new Date(Date.now() - 24 * 3_600_000).toISOString();
+  const { data: cns } = await supabaseAdmin.from('coach_notification_settings').select('clients').eq('coach_id', coach.id).maybeSingle();
+  if ((cns as any)?.clients?.announcements === false) return json({ error: 'Announcements are turned off in Business → Notifications.' }, 403);
   const { count } = await supabaseAdmin.from('announcements').select('id', { count: 'exact', head: true }).eq('coach_id', coach.id).gte('sent_at', since);
   if ((count ?? 0) >= DAILY_CAP) return json({ error: `You can send ${DAILY_CAP} announcements a day — try again tomorrow.` }, 429);
 

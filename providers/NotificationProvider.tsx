@@ -187,12 +187,16 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           else handledResponses.current.delete(key); // retry once signed in
         } else if (data?.type === 'family_lesson_cancelled') {
           router.push('/coach-schedule');
+        } else if (data?.type === 'sign_release' && data?.coachId && data?.athleteId) {
+          router.push({ pathname: '/coaching/sign', params: { coachId: String(data.coachId), athleteId: String(data.athleteId) } });
         } else if (data?.type === 'reschedule_answered') {
           router.push('/coach-schedule');
         } else if (data?.type === 'lesson_changed') {
           router.push('/coaching');
         } else if (data?.type === 'lesson_reminder') {
           router.push('/(tabs)');
+        } else if (data?.type === 'coach_week_ahead' || data?.type === 'coach_tomorrow_schedule') {
+          router.push('/coach-schedule');
         } else if (data?.type === 'coach_lesson_reminder' || data?.type === 'coach_daily_summary') {
           router.push('/today');
         } else if (data?.type === 'unpaid_lessons') {

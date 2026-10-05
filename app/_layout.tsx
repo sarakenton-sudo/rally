@@ -2,6 +2,7 @@ import "../global.css";
 import { ThemeProvider, type Theme } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, router, useSegments } from 'expo-router';
+import { Platform } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef } from 'react';
 import { View } from 'react-native';
@@ -12,7 +13,7 @@ import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { DataProvider } from '@/providers/DataProvider';
 import { NotificationProvider } from '@/providers/NotificationProvider';
 import { useSeasonStore } from '@/stores/useSeasonStore';
-import { takeNextPath } from '@/lib/bookingPage';
+import { takeNextPath, rememberNextPath } from '@/lib/bookingPage';
 import { ToastHost } from '@/components/Toast';
 import { CalendarChooserHost } from '@/components/CalendarChooser';
 
@@ -138,7 +139,13 @@ function RootLayoutNav() {
     if (next) {
       target = next;
     } else if (!session) {
-      if (!inAuthFlow && !inPublic) target = '/auth';
+      if (!inAuthFlow && !inPublic) {
+        // e.g. an emailed /coaching/sign?coachId…&athleteId… link: return there after sign-in.
+        if (segments[0] === 'coaching' && Platform.OS === 'web' && typeof window !== 'undefined') {
+          rememberNextPath(window.location.pathname + window.location.search);
+        }
+        target = '/auth';
+      }
     } else if (isCoach) {
       // Coach account — lives in /coach. Only pull them off the "wrong home"
       // screens (auth/onboarding/tabs), never out of legit stack routes (settings).

@@ -313,6 +313,13 @@ export default function CoachDashboardScreen() {
             onPress={() => router.push('/coach/policies')}
           />
           <DashRow
+            icon="notifications-outline"
+            color="#0891b2"
+            title="Notifications"
+            subtitle="Choose what you and your families get"
+            onPress={() => router.push('/coach/notifications')}
+          />
+          <DashRow
             icon="cash-outline"
             color="#16a34a"
             title="Payments & earnings"

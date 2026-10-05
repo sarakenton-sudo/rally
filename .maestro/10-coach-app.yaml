@@ -7,10 +7,11 @@ env: { EMAIL: "${QA_COACH_EMAIL}", PASSWORD: "${QA_COACH_PASSWORD}" }
 - extendedWaitUntil: { visible: ".*This week's money.*", timeout: 30000 }
 - tapOn: { id: "plus-button" }
 - assertVisible: ".*Add open time.*"
-- assertVisible: ".*Book a family.*"
+- assertVisible: ".*Book a lesson.*"
 - assertVisible: ".*Record a payment.*"
 - assertVisible: ".*Share my booking link.*"
-- assertVisible: ".*Invite a family.*"
+- assertVisible: ".*Invite a client.*"
+- assertVisible: ".*Add a client.*"
 - tapOn: ".*Close.*"
 - tapOn: ".*Schedule.*"
 - assertVisible: "Add to Google Calendar|Sync to your calendar"
@@ -32,7 +33,7 @@ env: { EMAIL: "${QA_COACH_EMAIL}", PASSWORD: "${QA_COACH_PASSWORD}" }
 - assertVisible: "Record a payment|All paid up"
 - openLink: "rally://coach/book-family"
 - tapOn: { text: "Open", optional: true }   # iOS "Open in RallyHUB?"
-- assertVisible: ".*Book a family.*"
+- assertVisible: ".*Book a lesson.*"
 - openLink: "rally://coach/announce"
 - tapOn: { text: "Open", optional: true }   # iOS "Open in RallyHUB?"
 - assertVisible: ".*Announce open times.*"

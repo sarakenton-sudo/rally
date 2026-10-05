@@ -23,8 +23,8 @@ test('coach-only login has no Family switch (C-01)', async ({ page }) => {
 test('coach + sheet top tier (C-16)', async ({ page }) => {
   await page.goto('/today');
   await openPlus(page);
-  for (const t of ['Add open time', 'Book a family', 'Record a payment', 'Share my booking link', 'Invite a family']) {
-    await expect(page.getByText(t, { exact: true }).first(), t).toBeVisible();
+  for (const t of ['Add a client', 'Invite a client', 'Add open time', 'Book a lesson', 'Record a payment', 'Share my booking link']) {
+    await expect(page.getByText(t, { exact: true }).locator('visible=true').first(), t).toBeVisible();
   }
   await expect(page.getByText('Announce open times')).toBeVisible();
 });
@@ -34,7 +34,7 @@ test('every coach screen opens (C-02…C-27)', async ({ page }) => {
   const screens: [string, RegExp | string][] = [
     ['/coach-schedule', 'Schedule'], ['/coach-clients', 'Clients'], ['/business', 'Your business'],
     ['/coach/booking-page', 'Booking Page'], ['/coach/policies', 'Terms & Release'], ['/coach/payments', 'Earnings'],
-    ['/coach/unpaid', /Record a payment|All paid up/], ['/coach/book-family', 'Book a family'],
+    ['/coach/unpaid', /Record a payment|All paid up/], ['/coach/book-family', 'Book a lesson'],
     ['/coach/announce', /Announce open times/], ['/coach/facilities', /Facilit/], ['/coach/session-types', /Session Types|session types/],
     ['/coach/availability', /Availability|Open/], ['/coach/requests', /Request/],
   ];

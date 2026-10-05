@@ -110,3 +110,76 @@ describe('wording', () => {
     expect(coachHeadsUpText({ athletes: ['Drue', 'Mia', 'Ava'], facility: null, startsAt: at(1), tz: TZ }).title).toBe('Lesson with Drue, Mia +1 in 1 hour');
   });
 });
+
+import {
+  settingOn, athleteReminderAction, athleteDayBeforeText, localWeekday, weekAheadDue, tomorrowScheduleDue,
+  tomorrowYmd, scheduleLine, tomorrowScheduleText, weekAheadText,
+} from '../../supabase/functions/_shared/reminders';
+
+describe('coach notification settings', () => {
+  it('missing keys are on; false turns off', () => {
+    expect(settingOn(undefined, 'self', 'week_ahead')).toBe(true);
+    expect(settingOn({ self: {} }, 'self', 'week_ahead')).toBe(true);
+    expect(settingOn({ self: { week_ahead: false } }, 'self', 'week_ahead')).toBe(false);
+    expect(settingOn({ self: { week_ahead: false } }, 'clients', 'week_ahead')).toBe(true);
+    expect(settingOn({ clients: { reminder_2h: false } }, 'clients', 'reminder_2h')).toBe(false);
+  });
+});
+
+describe('player day-before confirmation', () => {
+  const TZ = 'America/Chicago';
+  // Mon Oct 5 2026, 3pm CDT (20:00Z); lesson Tue 4pm CDT (21:00Z), 25h out
+  const now = new Date('2026-10-05T20:00:00Z');
+  const startsAt = new Date('2026-10-06T21:00:00Z');
+  it('sends the day before, once', () => {
+    expect(athleteReminderAction(now, { startsAt, createdAt: new Date('2026-09-30T00:00:00Z'), sent: false }, TZ)).toBe('send');
+    expect(athleteReminderAction(now, { startsAt, createdAt: new Date('2026-09-30T00:00:00Z'), sent: true }, TZ)).toBeNull();
+  });
+  it('skips when booked late or too close', () => {
+    // booked Mon 5pm for Tue 4pm (under 24h ahead): the booking confirmation already covered it
+    expect(athleteReminderAction(new Date('2026-10-05T23:00:00Z'), { startsAt, createdAt: new Date('2026-10-05T22:00:00Z'), sent: false }, TZ)).toBe('skip');
+    expect(athleteReminderAction(new Date('2026-10-06T17:00:00Z'), { startsAt, createdAt: new Date('2026-09-30T00:00:00Z'), sent: false }, TZ)).toBe('skip');
+  });
+  it('waits until morning in quiet hours', () => {
+    expect(athleteReminderAction(new Date('2026-10-06T04:00:00Z'), { startsAt, createdAt: new Date('2026-09-30T00:00:00Z'), sent: false }, TZ)).toBeNull();
+  });
+  it('reads like a confirmation', () => {
+    expect(athleteDayBeforeText({ coach: 'Coach Ben', facility: 'Westside Gym', startsAt, now, tz: TZ }))
+      .toEqual({ title: 'Lesson tomorrow at 4:00 PM', body: 'With Coach Ben · Westside Gym. See you there!' });
+  });
+});
+
+describe('coach evening pushes', () => {
+  const TZ = 'America/Chicago';
+  const sun7pm = new Date('2026-10-12T00:30:00Z'); // Sun Oct 11, 7:30pm CDT
+  const sat7pm = new Date('2026-10-11T00:30:00Z'); // Sat Oct 10, 7:30pm CDT
+  it('knows the local weekday', () => {
+    expect(localWeekday(sun7pm, TZ)).toBe(0);
+    expect(localWeekday(sat7pm, TZ)).toBe(6);
+  });
+  it('week ahead: Sunday 7–10pm, once', () => {
+    expect(weekAheadDue(sun7pm, TZ, null)).toBe(true);
+    expect(weekAheadDue(sun7pm, TZ, '2026-10-11')).toBe(false);
+    expect(weekAheadDue(sat7pm, TZ, null)).toBe(false);
+    expect(weekAheadDue(new Date('2026-10-11T22:00:00Z'), TZ, null)).toBe(false); // Sun 5pm
+  });
+  it('tomorrow: every night 7–10pm, once', () => {
+    expect(tomorrowScheduleDue(sat7pm, TZ, null)).toBe(true);
+    expect(tomorrowScheduleDue(sat7pm, TZ, '2026-10-10')).toBe(false);
+    expect(tomorrowScheduleDue(new Date('2026-10-11T03:30:00Z'), TZ, null)).toBe(false); // 10:30pm
+    expect(tomorrowYmd(sat7pm, TZ)).toBe('2026-10-11');
+  });
+  const mon = (h: number, names: string[], cents = 8000, reserved = true) =>
+    ({ startsAt: new Date(`2026-10-12T${String(h + 5).padStart(2, '0')}:00:00Z`), athletes: names, priceCents: cents, gymReserved: reserved });
+  it('lists tomorrow by time', () => {
+    const t = tomorrowScheduleText([mon(17, ['Miles']), mon(16, ['Drue'])], TZ);
+    expect(t).toEqual({ title: 'Tomorrow: 2 lessons', body: '4:00 PM Drue · 5:00 PM Miles' });
+    expect(scheduleLine([mon(16, ['A']), mon(17, ['B']), mon(18, ['C']), mon(19, ['D']), mon(20, ['E'])], TZ)).toMatch(/\+1 more$/);
+  });
+  it('week ahead totals money and gyms, folding in tomorrow on Sunday', () => {
+    const w = weekAheadText([mon(16, ['Drue']), mon(17, ['Miles'], 8000, false)], [mon(16, ['Drue'])], TZ);
+    expect(w.title).toBe('This week: 2 lessons');
+    expect(w.body).toBe('$160 booked · 1 gym not reserved\nTomorrow: 4:00 PM Drue');
+    expect(weekAheadText([mon(16, ['Drue'])], [], TZ).body).toBe('$80 booked');
+  });
+});

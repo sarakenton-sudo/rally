@@ -3,6 +3,7 @@ import { View, Pressable } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import CoachQuickAddSheet from '@/components/coach/CoachQuickAddSheet';
+import { CORAL } from '@/lib/colors';
 
 /**
  * Coach app: Today · Schedule · (+) · Clients · Business.
@@ -31,7 +32,7 @@ export default function CoachTabsLayout() {
             // Not a real screen: the center button opens the coach + sheet.
             tabBarButton: () => (
               <Pressable onPress={() => setAddOpen(true)} accessibilityRole="button" accessibilityLabel="Add" testID="plus-button" style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#3B82B0', alignItems: 'center', justifyContent: 'center', marginTop: -14, borderWidth: 3, borderColor: '#1E3A5F', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 6, elevation: 6 }}>
+                <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: CORAL, alignItems: 'center', justifyContent: 'center', marginTop: -14, borderWidth: 3, borderColor: '#1E3A5F', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 6, elevation: 6 }}>
                   <Ionicons name="add" size={30} color="#FEFEFE" />
                 </View>
               </Pressable>

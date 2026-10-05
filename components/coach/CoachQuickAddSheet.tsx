@@ -46,9 +46,25 @@ export default function CoachQuickAddSheet({ visible, onClose }: { visible: bool
     })();
   }, [visible, coach?.id]);
 
-  const go = (path: string) => { onClose(); router.push(path as any); };
+  // Navigating or opening the share sheet while the pageSheet is still
+  // animating closed is dropped on iOS (the "+ links just close the sheet"
+  // bug). Close first, then run the action once the sheet is gone: iOS fires
+  // Modal.onDismiss; web/Android get a short delay.
+  const afterClose = useRef<(() => void) | null>(null);
+  const runPending = () => {
+    const fn = afterClose.current;
+    afterClose.current = null;
+    fn?.();
+  };
+  const closeThen = (fn: () => void) => {
+    afterClose.current = fn;
+    onClose();
+    // iOS normally runs it from onDismiss; the timer is a fallback (runPending runs once).
+    setTimeout(runPending, Platform.OS === 'ios' ? 700 : 300);
+  };
+  const go = (path: string) => closeThen(() => router.push(path as any));
 
-  const share = async (message: string, event: string) => {
+  const share = (message: string, event: string) => closeThen(async () => {
     if (Platform.OS === 'web') {
       await Clipboard.setStringAsync(message);
       showToast('Copied — paste it into a text');
@@ -56,7 +72,7 @@ export default function CoachQuickAddSheet({ visible, onClose }: { visible: bool
       await Share.share({ message });
     }
     track(event);
-  };
+  });
 
   const published = !!(coach as any)?.booking_page_published && !!coach?.slug;
 
@@ -66,9 +82,14 @@ export default function CoachQuickAddSheet({ visible, onClose }: { visible: bool
       subtitle: order.rule === 'no_open_time' ? 'Nothing open in the next 7 days' : 'One-off or recurring',
       run: () => go('/coach/availability-add'),
     },
+    add_client: {
+      icon: 'person-add', color: '#0f766e', title: 'Add a client',
+      subtitle: "Parent email + athlete name — that's it",
+      run: () => go('/coach/add-client'),
+    },
     book_family: {
-      icon: 'person-outline', color: '#be185d', title: 'Book a family',
-      subtitle: 'Schedule a lesson for one of your athletes',
+      icon: 'calendar-number-outline', color: '#be185d', title: 'Book a lesson',
+      subtitle: 'For an existing athlete',
       run: () => go('/coach/book-family'),
     },
     record_payment: {
@@ -79,17 +100,19 @@ export default function CoachQuickAddSheet({ visible, onClose }: { visible: bool
     share_link: {
       icon: 'qr-code-outline', color: '#0891b2', title: 'Share my booking link',
       subtitle: published ? 'Link, QR code, or text' : 'Publish your page first',
-      run: () => published ? (onClose(), share(`Book a lesson with me on RallyHUB: ${bookingPageUrl(coach!.slug!)}`, 'coach_link_shared')) : go('/coach/booking-page'),
+      run: () => published
+        ? share(`Book a lesson with me on RallyHUB: ${bookingPageUrl(coach!.slug!)}`, 'coach_link_shared')
+        : go('/coach/booking-page'),
     },
     invite_family: {
-      icon: 'person-add-outline', color: '#7c3aed', title: 'Invite a family',
-      subtitle: 'Send your code or booking link',
-      run: () => { if (coach) { onClose(); share(familyInviteMessage(coach), 'coach_family_invited'); } },
+      icon: 'paper-plane-outline', color: '#7c3aed', title: 'Invite a client',
+      subtitle: 'Text them your booking link or code',
+      run: () => { if (coach) share(familyInviteMessage(coach), 'coach_family_invited'); },
     },
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose} onDismiss={runPending}>
       <View className="flex-1 bg-cream dark:bg-bark">
         <View className="flex-row items-center justify-between px-4 pt-4 pb-2">
           <Text className="text-xl font-bold text-bark dark:text-cream">Add</Text>

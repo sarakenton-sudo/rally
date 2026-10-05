@@ -1,11 +1,13 @@
 import { useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert, Platform } from 'react-native';
+import { showToast } from '@/components/Toast';
 import { SafeAreaView } from '@/components/SafeAreaView';
 import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useCoachStore } from '@/stores/useCoachStore';
 import {
   fetchClientRoster, fetchClientGroups, clientDisplayName, isSupabaseConfigured,
+  fetchPendingClients, resendClientInvite, deletePendingClient, type PendingClient,
   GROUP_COLORS, avatarColor, initials, type RosterClient,
 } from '@/lib/coach';
 import type { ClientGroup } from '@/types/database';
@@ -25,14 +27,35 @@ export default function CoachClientsScreen() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [groupFilter, setGroupFilter] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingClient[]>([]);
 
   const load = useCallback(async () => {
     if (!coachProfile || !isSupabaseConfigured) { setLoading(false); return; }
-    const [r, g] = await Promise.all([fetchClientRoster(), fetchClientGroups(coachProfile.id)]);
+    const [r, g, p] = await Promise.all([fetchClientRoster(), fetchClientGroups(coachProfile.id), fetchPendingClients(coachProfile.id)]);
     setClients(r.data);
     setGroups(g.data);
+    setPending(p);
     setLoading(false);
   }, [coachProfile]);
+
+  const resend = async (p: PendingClient) => {
+    tapLight();
+    const { emailStatus, error } = await resendClientInvite(p.id);
+    showToast(error ? "Couldn't resend. Try again." : emailStatus === 202 ? `Invite resent to ${p.parent_email}` : "Email is down right now — send them your booking link instead");
+  };
+
+  const removePending = async (p: PendingClient) => {
+    const ok = Platform.OS === 'web'
+      ? window.confirm(`Remove ${p.athlete_first_name} (${p.parent_email})?`)
+      : await new Promise<boolean>((res) => Alert.alert('Remove invite?', `${p.athlete_first_name} · ${p.parent_email}`, [
+          { text: 'Keep', style: 'cancel', onPress: () => res(false) },
+          { text: 'Remove', style: 'destructive', onPress: () => res(true) },
+        ]));
+    if (!ok) return;
+    const { error } = await deletePendingClient(p.id);
+    if (error) { showToast("Couldn't remove. Try again."); return; }
+    setPending((x) => x.filter((y) => y.id !== p.id));
+  };
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -58,6 +81,10 @@ export default function CoachClientsScreen() {
         )}
         <Text className="text-lg font-bold text-bark dark:text-cream">Clients</Text>
         <View className="flex-row items-center">
+        <Pressable onPress={() => router.push('/coach/add-client')} className="flex-row items-center rounded-full px-2.5 py-1 mr-2 bg-rally-600 active:opacity-80" accessibilityLabel="Add a client">
+          <Ionicons name="add" size={15} color="#fff" />
+          <Text className="text-xs font-bold text-white ml-0.5">Add</Text>
+        </Pressable>
         <Pressable onPress={() => router.push('/coach/announce')} className="p-1 mr-2" accessibilityLabel="Announce open times">
           <Ionicons name="megaphone-outline" size={22} color="#3B82B0" />
         </Pressable>
@@ -103,15 +130,40 @@ export default function CoachClientsScreen() {
 
         {loading ? (
           <ActivityIndicator color="#3B82B0" className="mt-6" />
-        ) : clients.length === 0 ? (
+        ) : clients.length === 0 && pending.length === 0 ? (
           <View className="items-center py-10 px-6">
             <Ionicons name="people-outline" size={34} color={ic.placeholder} />
             <Text className="text-base font-semibold text-bark dark:text-cream mt-3">No clients yet</Text>
             <Text className="text-sm text-stone dark:text-parchment text-center mt-1">
-              Families appear here once they enter your client code. Share it from your dashboard with “Invite a client by text.”
+              Add a family with just the parent's email and the athlete's name. Families who book from your page show up here too.
             </Text>
+            <Pressable onPress={() => router.push('/coach/add-client')} className="rounded-xl px-5 py-2.5 mt-4 bg-rally-600 active:opacity-80">
+              <Text className="text-sm font-bold text-white">Add a client</Text>
+            </Pressable>
           </View>
-        ) : shown.length === 0 ? (
+        ) : (
+          <>
+          {/* Invited — not on RallyHUB yet (attach automatically when they sign up) */}
+          {pending.length > 0 && !groupFilter && !query.trim() && (
+            <View className="mb-3">
+              <Text className="text-xs font-semibold uppercase tracking-wider text-stone mb-2 ml-1">Invited · not on RallyHUB yet</Text>
+              {pending.map((p) => (
+                <View key={p.id} className="bg-warm-white dark:bg-bark-light rounded-xl p-3.5 border border-dashed border-parchment dark:border-rally-900 mb-2 flex-row items-center">
+                  <View className="flex-1">
+                    <Text className="text-sm font-semibold text-bark dark:text-cream">{p.athlete_first_name}{p.athlete_last_name ? ` ${p.athlete_last_name}` : ''}</Text>
+                    <Text className="text-xs text-stone dark:text-parchment mt-0.5" numberOfLines={1}>{p.parent_name ? `${p.parent_name} · ` : ''}{p.parent_email}</Text>
+                  </View>
+                  <Pressable onPress={() => resend(p)} className="rounded-lg px-2.5 py-1 border border-rally-600 mr-2 active:opacity-70" accessibilityLabel={`Resend invite to ${p.parent_email}`}>
+                    <Text className="text-[11px] font-bold text-rally-600">Resend</Text>
+                  </Pressable>
+                  <Pressable onPress={() => removePending(p)} hitSlop={8} accessibilityLabel={`Remove ${p.athlete_first_name}`}>
+                    <Ionicons name="close" size={18} color="#8FA8BF" />
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          )}
+          {shown.length === 0 && clients.length > 0 ? (
           <Text className="text-sm text-stone dark:text-parchment text-center mt-6">No clients match.</Text>
         ) : (
           shown.map((c) => {
@@ -142,6 +194,11 @@ export default function CoachClientsScreen() {
                     </Text>
                   </View>
                   <View className="items-end ml-2">
+                    {(c.unpaid_lessons ?? 0) > 0 ? (
+                      <View className="px-2 py-0.5 rounded-md mb-1" style={{ backgroundColor: '#dc26261a' }}>
+                        <Text className="text-[10px] font-extrabold" style={{ color: '#dc2626' }}>{c.unpaid_lessons} UNPAID</Text>
+                      </View>
+                    ) : null}
                     {c.pending_requests > 0 ? (
                       <View className="bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-md mb-1">
                         <Text className="text-[10px] font-bold text-amber-700 dark:text-amber-300">{c.pending_requests} PENDING</Text>
@@ -168,6 +225,8 @@ export default function CoachClientsScreen() {
               </Pressable>
             );
           })
+        )}
+          </>
         )}
       </ScrollView>
     </SafeAreaView>

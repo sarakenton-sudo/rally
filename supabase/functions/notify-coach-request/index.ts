@@ -45,7 +45,7 @@ serve(async (req: Request) => {
     .from('booking_requests')
     .select(`
       id, status, parent_user_id,
-      coaches(user_id, default_timezone),
+      coach_id, coaches(user_id, default_timezone),
       athletes(first_name, last_name),
       session_types(name),
       slots(starts_at, facilities(label))
@@ -56,6 +56,9 @@ serve(async (req: Request) => {
   if (!r || r.parent_user_id !== callerId) return json({ error: 'not found' }, 404);
 
   const req_ = r as any;
+  // Coach turned off new-request alerts in Business → Notifications (00089)? In-app still shows it.
+  const { data: cns } = await supabaseAdmin.from('coach_notification_settings').select('self').eq('coach_id', req_.coach_id).maybeSingle();
+  if ((cns as any)?.self?.lesson_request === false) return json({ pushed: 0, emailed: false, muted: true });
   const coachUserId: string | undefined = req_.coaches?.user_id;
   if (!coachUserId) return json({ sent: 0 });
 

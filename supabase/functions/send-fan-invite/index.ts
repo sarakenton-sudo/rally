@@ -43,7 +43,7 @@ serve(async (req) => {
   const subject = `Follow ${athlete}'s volleyball season on RallyHUB`;
   const html = `
     <p>${first ? `Hi ${esc(first)},` : 'Hi,'}</p>
-    <p>${esc(from)} invited you to follow ${esc(athlete)}'s season on RallyHUB: every tournament's dates and location, live stream and ticket links, and a heads-up on game day.</p>
+    <p>${esc(from)} invited you to follow ${esc(athlete)}'s season on RallyHUB: every tournament's dates and location, and live stream and ticket links, all in one place.</p>
     <p><a href="${link}" style="display:inline-block;background:#3B82B0;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:bold">Follow ${esc(athlete)}</a></p>
     <p>On iPhone, <a href="${APP_STORE_URL}">get the free RallyHUB app</a> and enter fan code <b>${code}</b> when you sign up.</p>
     <p style="color:#6B8BA8;font-size:13px">You're getting this because ${esc(from)} added you as a guest in RallyHUB.</p>`;

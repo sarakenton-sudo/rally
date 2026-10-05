@@ -109,7 +109,7 @@ export default function BookFamilyScreen() {
           <Pressable onPress={() => router.back()} className="p-1" accessibilityLabel="Close">
             <Ionicons name="close" size={24} color={ic.muted} />
           </Pressable>
-          <Text className="text-lg font-bold text-bark dark:text-cream">Book a family</Text>
+          <Text className="text-lg font-bold text-bark dark:text-cream">Book a lesson</Text>
           <Pressable onPress={book} disabled={saving} className={`px-4 py-1.5 rounded-lg ${saving ? 'bg-parchment' : 'bg-rally-600 active:opacity-80'}`}>
             <Text className="text-sm font-semibold text-cream">{saving ? 'Booking…' : 'Book'}</Text>
           </Pressable>

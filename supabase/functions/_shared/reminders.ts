@@ -132,3 +132,87 @@ export function unpaidNudgeText(v: { lessons: number; totalCents: number }) {
     body: 'Tap to record cash, Venmo, or Zelle.',
   };
 }
+
+// ---------- Coach settings (00089 coach_notification_settings) ----------
+
+export type CoachSelfKey = 'lesson_request' | 'family_reschedule' | 'family_cancelled' | 'heads_up'
+  | 'morning_summary' | 'unpaid_nudge' | 'week_ahead' | 'tomorrow_schedule';
+export type CoachClientKey = 'reminder_24h' | 'reminder_2h' | 'day_before_athlete' | 'lesson_changes' | 'announcements';
+
+/** A missing key means ON. */
+export function settingOn(settings: { self?: Record<string, unknown>; clients?: Record<string, unknown> } | null | undefined,
+  scope: 'self' | 'clients', key: string): boolean {
+  return (settings?.[scope] as Record<string, unknown> | undefined)?.[key] !== false;
+}
+
+// ---------- Player day-before confirmation ----------
+
+/**
+ * The athlete's own login gets a day-before confirmation on the same schedule
+ * as the parent's 24h reminder (2–26h out, deferred past quiet hours, skipped
+ * if booked late or already within 6h).
+ */
+export function athleteReminderAction(now: Date, b: { startsAt: Date; createdAt: Date; sent: boolean }, tz: string): 'send' | 'skip' | null {
+  const a = parentReminderAction(now, { startsAt: b.startsAt, createdAt: b.createdAt, sent24h: b.sent, sent2h: true }, tz);
+  return a === 'send_24h' ? 'send' : a === 'skip_24h' ? 'skip' : null;
+}
+
+export function athleteDayBeforeText(v: { coach: string; facility: string | null; startsAt: Date; now: Date; tz: string }) {
+  const day = dayWord(v.now, v.startsAt, v.tz);
+  return {
+    title: `Lesson ${day} at ${fmtTime(v.startsAt, v.tz)}`,
+    body: `With ${v.coach}${v.facility ? ` · ${v.facility}` : ''}. See you there!`,
+  };
+}
+
+// ---------- Coach evening pushes ----------
+
+/** Local weekday 0 (Sunday) – 6. */
+export function localWeekday(at: Date, tz: string): number {
+  const w = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' }).format(at);
+  return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(w);
+}
+
+/** Sunday-night week ahead: once per Sunday, 7–10pm local. */
+export function weekAheadDue(now: Date, tz: string, lastSentYmd: string | null): boolean {
+  const { ymd, hour } = localParts(now, tz);
+  return localWeekday(now, tz) === 0 && hour >= 19 && hour < 22 && lastSentYmd !== ymd;
+}
+
+/** Nightly tomorrow's schedule: once per night, 7–10pm local. */
+export function tomorrowScheduleDue(now: Date, tz: string, lastSentYmd: string | null): boolean {
+  const { ymd, hour } = localParts(now, tz);
+  return hour >= 19 && hour < 22 && lastSentYmd !== ymd;
+}
+
+/** Local date of the day after `now`. */
+export const tomorrowYmd = (now: Date, tz: string) => localParts(new Date(now.getTime() + 24 * HOUR), tz).ymd;
+
+export interface SlotSummary { startsAt: Date; athletes: string[]; priceCents: number; gymReserved: boolean }
+
+/** "4:00 PM Drue · 5:00 PM Miles & Ava · 6:00 PM Jo +1 more" */
+export function scheduleLine(slots: SlotSummary[], tz: string, max = 4): string {
+  const sorted = [...slots].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+  const parts = sorted.slice(0, max).map((s) => `${fmtTime(s.startsAt, tz)} ${s.athletes.length > 2 ? `${s.athletes.slice(0, 2).join(', ')} +${s.athletes.length - 2}` : s.athletes.join(' & ')}`);
+  return parts.join(' · ') + (sorted.length > max ? ` · +${sorted.length - max} more` : '');
+}
+
+export function tomorrowScheduleText(slots: SlotSummary[], tz: string) {
+  return { title: `Tomorrow: ${plural(slots.length, 'lesson')}`, body: scheduleLine(slots, tz) };
+}
+
+/**
+ * Sunday week ahead. When tomorrow (Monday) has lessons, its schedule is
+ * folded in, so the coach gets one push instead of two a few minutes apart.
+ */
+export function weekAheadText(week: SlotSummary[], tomorrow: SlotSummary[], tz: string) {
+  const total = week.reduce((s, x) => s + x.priceCents, 0);
+  const unreserved = week.filter((x) => !x.gymReserved).length;
+  const gyms = unreserved ? ` · ${plural(unreserved, 'gym')} not reserved` : '';
+  const tmr = tomorrow.length ? `\nTomorrow: ${scheduleLine(tomorrow, tz, 3)}` : '';
+  return {
+    title: `This week: ${plural(week.length, 'lesson')}`,
+    body: `${money(total)} booked${gyms}${tmr}`,
+    vars: { lessons: plural(week.length, 'lesson'), total: money(total), gyms, tomorrow: tmr },
+  };
+}

@@ -66,8 +66,8 @@ export default function LessonActions({ attendee, slotId, startsAt, coachId, onC
     <View className="mt-2">
       {/* Payment */}
       <View className="flex-row items-center flex-wrap">
-        <View className="rounded-md px-2 py-0.5 mr-2 mb-1" style={{ backgroundColor: badgeStyle.bg }}>
-          <Text className="text-[10px] font-bold" style={{ color: badgeStyle.fg }}>
+        <View className="rounded-lg px-2.5 py-1 mr-2 mb-1" style={{ backgroundColor: badgeStyle.bg }}>
+          <Text style={{ color: badgeStyle.fg, fontSize: 12, fontWeight: '800' }}>
             {badgeStyle.label}{attendee.price_cents ? ` · ${fmtMoney(attendee.price_cents)}` : ''}
             {badge === 'paid' && attendee.payment_method ? ` · ${attendee.payment_method.toUpperCase()}` : ''}
           </Text>
@@ -100,7 +100,8 @@ export default function LessonActions({ attendee, slotId, startsAt, coachId, onC
       {attendee.proposed_starts_at && attendee.proposed_by === 'parent' ? (
         <View className="mt-1.5 rounded-lg px-2.5 py-2" style={{ backgroundColor: '#d977061a' }}>
           <Text className="text-xs font-semibold" style={{ color: '#b45309' }}>
-            The family asked to move this to {fmtSlot(attendee.proposed_starts_at)}
+            {attendee.athlete_name.split(' ')[0]}'s family asked to move this lesson{'\n'}
+            <Text style={{ fontWeight: '400' }}>From {fmtSlot(startsAt)} → </Text>{fmtSlot(attendee.proposed_starts_at)}
           </Text>
           <View className="flex-row mt-1.5" style={{ gap: 8 }}>
             <Pressable disabled={busy} onPress={() => run(() => coachRespondToReschedule(attendee.id, true), "Couldn't move the lesson")} className="rounded-md px-2.5 py-1 bg-rally-600 active:opacity-80">

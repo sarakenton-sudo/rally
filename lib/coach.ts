@@ -1,4 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
+import type { NewClientInput } from '@/lib/clientForm';
 import { supabase } from '@/lib/supabase';
 import type { Ionicons } from '@expo/vector-icons';
 import type { Coach, Facility, FacilityStatus, SessionType, SessionKind, Slot, SlotVisibility, ClientGroup, CoachClient, BookingRequest, Booking } from '@/types/database';
@@ -333,6 +334,14 @@ export interface ClientAthlete {
   club_team: string | null;
   height_inches: number | null;
   goals: string | null;
+  // 00088
+  sport?: string | null;
+  has_login?: boolean;
+  allergies?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  release?: { signer_name: string; accepted_at: string; outdated: boolean } | null;
+  athlete_signed_at?: string | null;
 }
 
 export interface RosterClient {
@@ -341,6 +350,11 @@ export interface RosterClient {
   connected_at: string;
   parent_name: string | null;
   parent_email: string | null;
+  // 00088: coach-side copies + notes
+  parent_phone?: string | null;
+  account_email?: string | null;
+  coach_notes?: string | null;
+  unpaid_lessons?: number;
   athletes: ClientAthlete[];
   group_ids: string[];
   lessons_booked: number;
@@ -377,6 +391,106 @@ export function clientDisplayName(c: RosterClient): string {
     return lasts.length === 1 ? `${firsts} ${lasts[0]}` : c.athletes.map((a) => `${a.first_name}${a.last_name ? ' ' + a.last_name : ''}`).join(' & ');
   }
   return c.parent_name?.trim() || c.parent_email?.split('@')[0] || 'New client';
+}
+
+// ---- Add / edit clients (00088) ----
+
+export interface PendingClient {
+  id: string; coach_id: string; parent_email: string; parent_name: string | null; parent_phone: string | null;
+  athlete_first_name: string; athlete_last_name: string | null; sport: string | null;
+  primary_position: string | null; secondary_position: string | null; grad_year: number | null; club_team: string | null;
+  group_ids: string[]; status: 'pending' | 'claimed'; invited_at: string | null; created_at: string;
+}
+
+export type AddClientResult =
+  | { status: 'connected'; connection_id: string; athlete_id: string }
+  | { status: 'pending'; pending_id: string };
+
+/**
+ * Add a client with just a parent email + athlete name. Parents already on
+ * RallyHUB are connected now; others become pending and are invited by email
+ * (attached automatically when they sign up with that email).
+ */
+export async function coachAddClient(v: NewClientInput): Promise<{ data: AddClientResult | null; emailStatus: string | number | null; error: Error | null }> {
+  const { data, error } = await (supabase.rpc as any)('coach_add_client', {
+    p_parent_email: v.parentEmail.trim(),
+    p_athlete_first: v.athleteFirst.trim(),
+    p_athlete_last: v.athleteLast?.trim() || null,
+    p_parent_name: v.parentName?.trim() || null,
+    p_parent_phone: v.parentPhone?.trim() || null,
+    p_sport: v.sport?.trim() || 'volleyball',
+    p_primary: v.primary?.trim() || null,
+    p_secondary: v.secondary?.trim() || null,
+    p_grad_year: v.gradYear?.trim() ? parseInt(v.gradYear, 10) : null,
+    p_club: v.club?.trim() || null,
+    p_group_ids: v.groupIds ?? [],
+  });
+  if (error || !data) return { data: null, emailStatus: null, error: error ?? new Error('Could not add client') };
+  const res = data as AddClientResult;
+  // Invite (pending) or a heads-up (already on RallyHUB). Email may be down — the client is saved regardless.
+  const body = res.status === 'pending' ? { action: 'invite', pending_id: res.pending_id } : { action: 'welcome', connection_id: res.connection_id };
+  const { data: mail } = await supabase.functions.invoke('coach-add-client', { body });
+  return { data: res, emailStatus: (mail as any)?.email_status ?? null, error: null };
+}
+
+export async function fetchPendingClients(coachId: string): Promise<PendingClient[]> {
+  const { data } = await (supabase.from('coach_pending_clients') as any)
+    .select('*').eq('coach_id', coachId).eq('status', 'pending').order('created_at', { ascending: false });
+  return (data as PendingClient[] | null) ?? [];
+}
+
+export async function resendClientInvite(pendingId: string): Promise<{ emailStatus: string | number | null; error: Error | null }> {
+  const { data, error } = await supabase.functions.invoke('coach-add-client', { body: { action: 'invite', pending_id: pendingId } });
+  return { emailStatus: (data as any)?.email_status ?? null, error: error ?? null };
+}
+
+export async function updatePendingClient(id: string, v: Partial<Omit<PendingClient, 'id' | 'coach_id' | 'status' | 'created_at'>>): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.from('coach_pending_clients') as any).update(v).eq('id', id);
+  return { error: error ?? null };
+}
+
+export async function deletePendingClient(id: string): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.from('coach_pending_clients') as any).delete().eq('id', id);
+  return { error: error ?? null };
+}
+
+export async function coachUpdateClient(connectionId: string, v: { parentName: string; parentPhone: string; parentEmail: string; notes: string }): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.rpc as any)('coach_update_client', {
+    p_connection_id: connectionId, p_parent_name: v.parentName, p_parent_phone: v.parentPhone, p_parent_email: v.parentEmail, p_notes: v.notes,
+  });
+  return { error: error ?? null };
+}
+
+export async function coachUpdateClientAthlete(connectionId: string, athleteId: string, v: {
+  first: string; last: string; sport: string; primary: string; secondary: string; gradYear: string; club: string;
+}): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.rpc as any)('coach_update_client_athlete', {
+    p_connection_id: connectionId, p_athlete_id: athleteId, p_first: v.first, p_last: v.last, p_sport: v.sport,
+    p_primary: v.primary, p_secondary: v.secondary, p_grad_year: v.gradYear.trim() ? parseInt(v.gradYear, 10) : null, p_club: v.club,
+  });
+  return { error: error ?? null };
+}
+
+export interface ClientLesson {
+  booking_id: string; starts_at: string; status: string; payment_status: string; payment_method: string | null;
+  price_cents: number; athlete_first_name: string | null; session_type: string | null;
+}
+
+export async function fetchClientLessons(connectionId: string): Promise<ClientLesson[]> {
+  const { data } = await (supabase.rpc as any)('get_coach_client_lessons', { p_connection_id: connectionId });
+  return (data as ClientLesson[] | null) ?? [];
+}
+
+/** Ask the family to sign terms + release for one athlete (push + email + in-app). */
+export async function requestReleaseSignature(connectionId: string, athleteId: string): Promise<{ emailStatus: string | number | null; pushed: number; error: Error | null }> {
+  const { data, error } = await supabase.functions.invoke('coach-add-client', { body: { action: 'request_signature', connection_id: connectionId, athlete_id: athleteId } });
+  return { emailStatus: (data as any)?.email_status ?? null, pushed: (data as any)?.pushed ?? 0, error: error ?? null };
+}
+
+/** An athlete with their own login co-signs the coach's terms + release. */
+export async function acceptPoliciesAsAthlete(coachId: string, signerName: string): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.rpc as any)('accept_coach_policies_as_athlete', { p_coach_id: coachId, p_signer_name: signerName });
+  return { error: error ?? null };
 }
 
 export async function removeGroupMember(groupId: string, connectionId: string): Promise<{ error: Error | null }> {
@@ -999,22 +1113,16 @@ export interface FamilyRescheduleRequest {
 }
 
 /** Families asking this coach to move a lesson (coach Today → Needs you). */
-export async function fetchFamilyRescheduleRequests(coachId: string): Promise<FamilyRescheduleRequest[]> {
-  const { data } = await (supabase.from('bookings') as any)
-    .select('id, proposal_reason, athletes(first_name, last_name), slots:slot_id(starts_at), proposed:proposed_slot_id(starts_at, facilities(label))')
-    .eq('coach_id', coachId)
-    .eq('status', 'confirmed')
-    .eq('proposed_by', 'parent')
-    .not('proposed_slot_id', 'is', null);
-  return ((data as any[]) ?? [])
-    .filter((r) => r.proposed?.starts_at && Date.parse(r.proposed.starts_at) > Date.now())
-    .map((r) => ({
-      booking_id: r.id,
-      athlete_name: r.athletes ? `${r.athletes.first_name}${r.athletes.last_name ? ' ' + r.athletes.last_name : ''}` : 'Athlete',
-      parent_name: null,
-      current_starts_at: r.slots?.starts_at, proposed_starts_at: r.proposed.starts_at,
-      proposed_facility: r.proposed.facilities?.label ?? null, reason: r.proposal_reason ?? null,
-    }));
+export async function fetchFamilyRescheduleRequests(_coachId: string): Promise<FamilyRescheduleRequest[]> {
+  // SECURITY DEFINER RPC (00090): coaches can't read families' athlete/profile rows directly.
+  const { data } = await (supabase.rpc as any)('coach_move_requests');
+  return ((data as any[]) ?? []).map((r) => ({
+    booking_id: r.booking_id,
+    athlete_name: r.athlete_name || 'Athlete',
+    parent_name: r.parent_name ?? null,
+    current_starts_at: r.current_starts_at, proposed_starts_at: r.proposed_starts_at,
+    proposed_facility: r.proposed_facility ?? null, reason: r.reason ?? null,
+  }));
 }
 
 type LessonChange =
@@ -1114,6 +1222,7 @@ export interface PolicyAcceptance {
   platform_text: string;
   policies_version: string;
   accepted_at: string;
+  signer_role?: 'guardian' | 'athlete';
   coaches?: { display_name: string; policies_updated_at?: string } | null;
   athletes?: { first_name: string; last_name: string | null } | null;
 }

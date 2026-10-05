@@ -41,7 +41,7 @@ serve(async (req: Request) => {
 
   const { data: b } = await supabaseAdmin
     .from('bookings')
-    .select('id, parent_user_id, athlete_id, change_reason, proposal_reason, coaches(user_id, display_name, default_timezone), athletes(first_name), slots:slot_id(starts_at, facilities(label, address)), proposed:proposed_slot_id(starts_at, facilities(label, address))')
+    .select('id, coach_id, parent_user_id, athlete_id, change_reason, proposal_reason, coaches(user_id, display_name, default_timezone), athletes(first_name), slots:slot_id(starts_at, facilities(label, address)), proposed:proposed_slot_id(starts_at, facilities(label, address))')
     .eq('id', booking_id)
     .maybeSingle();
   const bk = b as any;
@@ -127,6 +127,14 @@ serve(async (req: Request) => {
     user_id: recipientId, notification_type: 'schedule_change', channel: 'push',
     message: `${title}. ${body.replace(/\n/g, ' ')}`, status: 'sent',
   }).then(({ error }) => { if (error) console.error('[notify-booking-change] log', error.message); });
+
+  // Coach's Business → Notifications (00089): for themselves, or for all their clients.
+  const { data: cns } = await supabaseAdmin.from('coach_notification_settings').select('self, clients').eq('coach_id', bk.coach_id).maybeSingle();
+  const off = (scope: 'self' | 'clients', k: string) => (cns as any)?.[scope]?.[k] === false;
+  const coachKey: Record<string, string> = { parent_cancelled: 'family_cancelled', parent_reschedule_proposed: 'family_reschedule', reschedule_accepted: 'family_reschedule', reschedule_declined: 'family_reschedule' };
+  if (toCoach ? off('self', coachKey[change] ?? '') : off('clients', 'lesson_changes')) {
+    return json({ pushed: 0, emailed: false, email_status: 'off in coach settings' });
+  }
 
   // Families can turn off lesson-change push/email in Settings → Notifications (00083).
   if (!toCoach) {
