@@ -135,7 +135,11 @@ export default function MyCoachesScreen() {
                 {lessons.map((l) => {
                   const st = STATUS_STYLE[l.status] ?? STATUS_STYLE.requested;
                   return (
-                    <View key={l.id} className="bg-warm-white dark:bg-bark-light rounded-xl p-3.5 border border-parchment dark:border-rally-900 mb-2 flex-row items-center">
+                    <Pressable
+                      key={l.id}
+                      onPress={() => router.push({ pathname: '/lesson/[id]', params: { id: l.id } })}
+                      className="bg-warm-white dark:bg-bark-light rounded-xl p-3.5 border border-parchment dark:border-rally-900 mb-2 flex-row items-center active:opacity-80"
+                    >
                       <View className="flex-1">
                         <Text className="text-sm font-semibold text-bark dark:text-cream">
                           {l.coaches?.display_name ?? 'Coach'}{l.session_types?.name ? ` · ${l.session_types.name}` : ''}
@@ -147,7 +151,8 @@ export default function MyCoachesScreen() {
                       <View className={`px-2 py-1 rounded-md ${st.bg}`}>
                         <Text className={`text-[10px] font-bold ${st.fg}`}>{st.label}</Text>
                       </View>
-                    </View>
+                      <Ionicons name="chevron-forward" size={14} color="#8FA8BF" style={{ marginLeft: 6 }} />
+                    </Pressable>
                   );
                 })}
               </View>

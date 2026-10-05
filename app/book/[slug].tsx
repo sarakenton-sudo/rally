@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Image, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, Image, ActivityIndicator, Platform, Linking } from 'react-native';
+import { APP_STORE_URL } from '@/lib/fan';
 import { SafeAreaView } from '@/components/SafeAreaView';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -245,6 +246,17 @@ export default function PublicBookingPage() {
           </Pressable>
         )}
       </View>
+      {/* Drive app downloads from the web (not in iframe embeds). */}
+      {Platform.OS === 'web' && (
+        <Pressable
+          onPress={() => Linking.openURL(APP_STORE_URL)}
+          style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: accent }}
+          accessibilityLabel="Get the free RallyHUB app"
+        >
+          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700', flex: 1 }}>Get the free RallyHUB app for lesson reminders and game-day alerts</Text>
+          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>Get it ›</Text>
+        </Pressable>
+      )}
       {body}
     </SafeAreaView>
   );

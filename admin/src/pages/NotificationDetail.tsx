@@ -62,6 +62,24 @@ const EXAMPLE_VALUES: Record<string, string> = {
   days_until: '3',
   cost: '$149.00',
   link: 'https://rally.app/t/abc123',
+  // Lessons (00084)
+  athlete: 'Drue',
+  athletes: 'Drue & Miles',
+  coach: 'Coach Ben',
+  day: 'Tomorrow',
+  where: ' · Westside Volleyball',
+  facility: 'Westside Volleyball',
+  when: 'Tue, Oct 6, 4:00 PM',
+  proposed_when: 'Wed, Oct 7, 5:00 PM',
+  proposed_where: ' · Westside Volleyball',
+  reason: '"Gym conflict — sorry!"',
+  details: 'Private Lesson · Tue, Oct 6, 4:00 PM · Westside Volleyball',
+  lesson_type: 'Private Lesson',
+  lessons: '3 lessons',
+  first_time: '4:00 PM',
+  total: ' · $240',
+  amount: '$240',
+  message: 'I have open times Tue 4pm and Thu 6pm. Book at rally-hub.com/book/coach-ben.',
 };
 
 function renderPreview(template: string): string {
@@ -72,7 +90,7 @@ function renderPreview(template: string): string {
 
 // ---- Preview Tabs ----
 
-type PreviewTab = 'ios' | 'android' | 'sms';
+type PreviewTab = 'ios' | 'android' | 'sms' | 'email';
 
 function IOSPreview({ title, body }: { title: string; body: string }) {
   return (
@@ -105,6 +123,21 @@ function AndroidPreview({ title, body }: { title: string; body: string }) {
         </div>
         <p className="text-sm font-medium text-bark">{renderPreview(title)}</p>
         <p className="mt-1 text-sm text-bark/70">{renderPreview(body)}</p>
+      </div>
+    </div>
+  );
+}
+
+function EmailPreview({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="mx-auto w-full max-w-sm rounded-lg bg-white shadow-md">
+      <div className="border-b border-frost px-4 py-2 text-xs text-stone">
+        <div><span className="font-semibold text-bark">From:</span> RallyHUB &lt;hello@rally-hub.com&gt;</div>
+        <div><span className="font-semibold text-bark">Subject:</span> {renderPreview(title)}</div>
+      </div>
+      <div className="px-4 py-4 text-sm leading-relaxed text-bark">
+        <p className="whitespace-pre-line">{renderPreview(body)}</p>
+        <span className="mt-3 inline-block rounded-lg bg-rally-500 px-4 py-2 text-xs font-bold text-white">Open RallyHUB</span>
       </div>
     </div>
   );
@@ -250,7 +283,7 @@ export function NotificationDetail() {
   const bodyOverLimit = body.length > bodyLimit;
   const hasChannels = useMemo(() => {
     const ch = tpl?.channels ?? [];
-    return { push: ch.includes('push'), sms: ch.includes('sms') };
+    return { push: ch.includes('push'), sms: ch.includes('sms'), email: ch.includes('email') };
   }, [tpl]);
 
   // ---- Render ----
@@ -436,6 +469,7 @@ export function NotificationDetail() {
                 { key: 'ios' as const, label: 'iOS', show: hasChannels.push },
                 { key: 'android' as const, label: 'Android', show: hasChannels.push },
                 { key: 'sms' as const, label: 'SMS', show: hasChannels.sms },
+                { key: 'email' as const, label: 'Email', show: hasChannels.email },
               ] as const
             )
               .filter((t) => t.show)
@@ -459,6 +493,7 @@ export function NotificationDetail() {
             {previewTab === 'ios' && <IOSPreview title={title} body={body} />}
             {previewTab === 'android' && <AndroidPreview title={title} body={body} />}
             {previewTab === 'sms' && <SMSPreview body={body} />}
+            {previewTab === 'email' && <EmailPreview title={title} body={body} />}
           </div>
 
           <p className="mt-3 text-xs text-stone">

@@ -8,6 +8,7 @@ import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useAuth } from '@/providers/AuthProvider';
 import { updateAdminConfig } from '@/hooks/useSupabaseData';
 import { useIconColors } from '@/lib/colors';
+import { supabase } from '@/lib/supabase';
 import { notifySuccess } from '@/lib/haptics';
 import type { NotificationPreferences } from '@/types/database';
 import { getMarketingEmail, setMarketingEmail as saveMarketingEmail } from '@/lib/marketing';
@@ -15,10 +16,17 @@ import { getMarketingEmail, setMarketingEmail as saveMarketingEmail } from '@/li
 const PREF_ROWS: { key: keyof NotificationPreferences; label: string; description: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'tournament_reminders', label: 'Tournament Reminders', description: 'Countdown alerts before each tournament', icon: 'calendar' },
   { key: 'cancellation_deadlines', label: 'Cancellation Deadlines', description: 'Alerts when hotel cancellation dates approach', icon: 'warning' },
-  { key: 'email_arrivals', label: 'VIP Email Arrivals', description: 'Notify when VIP sender emails are forwarded', icon: 'mail' },
-  { key: 'rsvp_responses', label: 'RSVP Responses', description: 'Notify when guests respond to RSVP requests', icon: 'people' },
   { key: 'schedule_changes', label: 'Schedule Changes', description: 'Alerts when tournament schedules are updated', icon: 'swap-horizontal' },
 ];
+
+// Lesson notifications live in coaching_notification_prefs (per user, 00058/00079/00083).
+type LessonPrefKey = 'lesson_reminders' | 'lesson_changes' | 'announcements';
+const LESSON_ROWS: { key: LessonPrefKey; label: string; description: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'lesson_reminders', label: 'Lesson Reminders', description: 'A day before and 2 hours before each lesson', icon: 'alarm-outline' },
+  { key: 'lesson_changes', label: 'Lesson Changes', description: 'When a coach books, moves or cancels a lesson', icon: 'swap-horizontal' },
+  { key: 'announcements', label: 'Coach Announcements', description: 'When your coaches post new open lesson times', icon: 'megaphone-outline' },
+];
+const DEFAULT_LESSON_PREFS: Record<LessonPrefKey, boolean> = { lesson_reminders: true, lesson_changes: true, announcements: true };
 
 export default function NotificationPreferencesScreen() {
   const ic = useIconColors();
@@ -41,6 +49,23 @@ export default function NotificationPreferencesScreen() {
   const [prefs, setPrefs] = useState<NotificationPreferences>(
     adminConfig?.notification_preferences ?? defaultPrefs
   );
+  const [lessonPrefs, setLessonPrefs] = useState<Record<LessonPrefKey, boolean>>(DEFAULT_LESSON_PREFS);
+  const [lessonPrefsChanged, setLessonPrefsChanged] = useState(false);
+  useEffect(() => {
+    if (!user || !isSupabaseConfigured) return;
+    (supabase.from('coaching_notification_prefs') as any)
+      .select('lesson_reminders, lesson_changes, announcements')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }: { data: Partial<Record<LessonPrefKey, boolean>> | null }) => {
+        if (data) setLessonPrefs({ ...DEFAULT_LESSON_PREFS, ...data });
+      });
+  }, [user?.id]);
+  const toggleLessonPref = (key: LessonPrefKey) => {
+    setLessonPrefs((prev) => ({ ...prev, [key]: !prev[key] }));
+    setLessonPrefsChanged(true);
+  };
+
   const [isSaving, setIsSaving] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<string | null>(null);
 
@@ -82,6 +107,14 @@ export default function NotificationPreferencesScreen() {
         if (error) {
           Alert.alert('Save failed', error.message);
           return;
+        }
+        if (lessonPrefsChanged) {
+          const { error: lessonError } = await (supabase.from('coaching_notification_prefs') as any)
+            .upsert({ user_id: user.id, ...lessonPrefs }, { onConflict: 'user_id' });
+          if (lessonError) {
+            Alert.alert('Save failed', lessonError.message);
+            return;
+          }
         }
       }
       setAdminConfig({ ...adminConfig, ...updates });
@@ -161,6 +194,27 @@ export default function NotificationPreferencesScreen() {
               onValueChange={() => togglePref(row.key)}
               trackColor={{ false: '#D8E2EC', true: '#7DBDD9' }}
               thumbColor={prefs[row.key] ? '#3B82B0' : '#FEFEFE'}
+            />
+          </View>
+        ))}
+
+        {/* Lessons */}
+        <Text className="text-xs font-semibold uppercase tracking-wider text-stone mt-5 mb-2 ml-1">Lessons</Text>
+        {LESSON_ROWS.map((row) => (
+          <View key={row.key} className="bg-cream dark:bg-bark-light rounded-xl px-4 py-3 mb-2 flex-row items-center">
+            <View className="w-9 h-9 rounded-full items-center justify-center mr-3" style={{ backgroundColor: '#3B82B015' }}>
+              <Ionicons name={row.icon} size={18} color="#3B82B0" />
+            </View>
+            <View className="flex-1 mr-3">
+              <Text className="text-sm font-medium text-bark dark:text-cream">{row.label}</Text>
+              <Text className="text-xs text-stone mt-0.5">{row.description}</Text>
+            </View>
+            <Switch
+              value={lessonPrefs[row.key]}
+              onValueChange={() => toggleLessonPref(row.key)}
+              trackColor={{ false: '#D8E2EC', true: '#7DBDD9' }}
+              thumbColor={lessonPrefs[row.key] ? '#3B82B0' : '#FEFEFE'}
+              accessibilityLabel={row.label}
             />
           </View>
         ))}

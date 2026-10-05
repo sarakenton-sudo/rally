@@ -4,10 +4,13 @@ import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import type { Session, User } from '@supabase/supabase-js';
 import type { UserProfile, AccountType } from '@/types/database';
 import { resetStores } from '@/lib/resetStores';
 import { applyPendingMarketing } from '@/lib/marketing';
+import { takeFanCode, acceptFanInvite } from '@/lib/fan';
 
 interface AuthContextType {
   session: Session | null;
@@ -17,6 +20,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, accountType?: AccountType) => Promise<{ error: string | null }>;
   signInWithGoogle: (accountType?: AccountType) => Promise<{ error: string | null }>;
+  signInWithApple: (accountType?: AccountType) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
@@ -31,6 +35,7 @@ const AuthContext = createContext<AuthContextType>({
   signIn: async () => ({ error: null }),
   signUp: async () => ({ error: null }),
   signInWithGoogle: async () => ({ error: null }),
+  signInWithApple: async () => ({ error: null }),
   signOut: async () => {},
   resetPassword: async () => ({ error: null }),
   updatePassword: async () => ({ error: null }),
@@ -90,6 +95,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (claimed) profile = { ...profile, account_type: 'coach' };
     }
     clearPendingAccountType();
+    // Signed up from a fan invite (rally-hub.com/fan/CODE): link it before routing,
+    // so a new fan lands in the fan view instead of parent onboarding.
+    const fanCode = takeFanCode();
+    if (fanCode) {
+      const r = await acceptFanInvite(fanCode);
+      if (!r.error) {
+        const { data: again } = await supabase.from('user_profiles').select('*').eq('id', userId).single();
+        if (again) profile = again as UserProfile;
+      }
+    }
     setUserProfile(profile);
     // Marketing checkbox from sign-up (email or Google) — recorded once.
     applyPendingMarketing().catch(() => {});
@@ -173,6 +188,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: { data: { account_type: accountType } },
     });
     return { error: error?.message ?? null };
+  };
+
+  /**
+   * Sign in with Apple (iPhone). Native sheet → Apple identity token → Supabase.
+   * Required by App Store guideline 4.8 because the app also offers Google.
+   * Apple shares the person's name only on the first sign-in, so save it then.
+   */
+  const signInWithApple = async (accountType?: AccountType) => {
+    if (Platform.OS !== 'ios') return { error: 'Sign in with Apple is available in the iPhone app.' };
+    if (accountType === 'coach') savePendingAccountType('coach');
+    else clearPendingAccountType();
+    try {
+      const rawNonce = Crypto.randomUUID();
+      const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce);
+      const cred = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+        nonce: hashedNonce,
+      });
+      if (!cred.identityToken) return { error: "Apple didn't return a sign-in token. Try again." };
+      const { data, error } = await supabase.auth.signInWithIdToken({ provider: 'apple', token: cred.identityToken, nonce: rawNonce });
+      if (error) return { error: error.message };
+      const name = [cred.fullName?.givenName, cred.fullName?.familyName].filter(Boolean).join(' ');
+      if (name && data.user) {
+        await (supabase.from('user_profiles') as any).update({ display_name: name }).eq('id', data.user.id).is('display_name', null);
+      }
+      return { error: null };
+    } catch (e: any) {
+      if (e?.code === 'ERR_REQUEST_CANCELED') return { error: null }; // closed the sheet
+      return { error: e?.message ?? 'Sign in with Apple failed' };
+    }
   };
 
   const signInWithGoogle = async (accountType?: AccountType) => {
@@ -267,7 +315,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, userProfile, isLoading, signIn, signUp, signInWithGoogle, signOut, resetPassword, updatePassword, acceptInvite }}>
+    <AuthContext.Provider value={{ session, user: session?.user ?? null, userProfile, isLoading, signIn, signUp, signInWithGoogle, signInWithApple, signOut, resetPassword, updatePassword, acceptInvite }}>
       {children}
     </AuthContext.Provider>
   );

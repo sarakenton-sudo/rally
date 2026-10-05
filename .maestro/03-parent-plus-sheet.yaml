@@ -7,17 +7,21 @@ env: { EMAIL: "${QA_PARENT_EMAIL}", PASSWORD: "${QA_PARENT_PASSWORD}" }
 - extendedWaitUntil: { visible: ".*Coming up.*", timeout: 30000 }
 - tapOn: { id: "plus-button" }
 - assertVisible: ".*Paste anything.*"
-- assertVisible: ".*Add travel.*"
-- assertVisible: ".*Book a lesson.*"
-- assertVisible: ".*Save a login or code.*"
+- assertVisible: ".*View inbox.*"
+- scrollUntilVisible: { element: ".*Add travel.*" }
+- scrollUntilVisible: { element: ".*Book a lesson.*" }
+- scrollUntilVisible: { element: ".*Save a login or code.*" }
+- scrollUntilVisible: { element: ".*Invite a coach.*" }
+- scrollUntilVisible: { element: ".*Add an athlete.*" }
 - assertVisible: ".*Add a team event.*"
-- assertVisible: ".*Add an athlete.*"
 - tapOn: ".*Add a tournament or season.*"
 - assertVisible: ".*Paste a season schedule.*"
+- scrollUntilVisible: { element: ".*Save a login or code.*", direction: UP }
 - tapOn: ".*Save a login or code.*"
 - assertVisible: '.*Whose is it\?.*'
 - tapOn: ".*Close.*"
 - tapOn: { id: "plus-button" }
+- scrollUntilVisible: { element: ".*Add travel.*" }
 - tapOn: ".*Add travel.*"
 - tapOn: "Hotel"
 - assertVisible: ".*Cancellation Deadline.*"    # Add Hotel is not a blank screen

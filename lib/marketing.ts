@@ -8,7 +8,7 @@ export const MARKETING_CONSENT_TEXT =
   'Email me RallyHUB tips, new features and offers. Unsubscribe anytime. (v1)';
 export const MARKETING_CONSENT_LABEL = 'Email me RallyHUB tips, new features and offers. Unsubscribe anytime.';
 
-type Source = 'signup_email' | 'signup_google' | 'settings';
+type Source = 'signup_email' | 'signup_google' | 'signup_apple' | 'settings';
 const KEY = 'rally.pendingMarketing';
 let memory: { optIn: boolean; source: Source; at: number } | null = null;
 

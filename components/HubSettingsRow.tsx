@@ -14,6 +14,8 @@ interface HubSettingsRowProps {
 
 export default function HubSettingsRow({ icon, iconColor, title, subtitle, badge, comingSoon, onPress }: HubSettingsRowProps) {
   const ic = useIconColors();
+  // Unbuilt features stay hidden in release builds (App Store 2.1: no placeholders).
+  if (comingSoon) return null;
 
   return (
     <Pressable

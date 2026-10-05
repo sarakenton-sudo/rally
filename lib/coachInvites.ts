@@ -69,5 +69,7 @@ export async function claimPendingCoachInvite(): Promise<string | null> {
     return null;
   }
   clearCoachInvite();
+  // Tell the parent who invited this coach (push + email; in-app is a DB trigger).
+  supabase.functions.invoke('notify-coach-joined', { body: { code } }).catch(() => {});
   return (data as string) ?? '';
 }

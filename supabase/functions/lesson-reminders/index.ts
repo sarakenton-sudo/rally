@@ -9,8 +9,9 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import {
   parentReminderAction, coachHeadsUpDue, morningSummaryDue, eveningNudgeDue, needsUnpaidNudge, localParts,
-  parentReminderText, coachHeadsUpText, morningSummaryText, unpaidNudgeText,
+  parentReminderText, coachHeadsUpText, morningSummaryText, unpaidNudgeText, fmtTime, dayWord,
 } from '../_shared/reminders.ts';
+import { renderNotification, emailHtml, sendEmail, type Fallback, type Vars } from '../_shared/templates.ts';
 
 const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? '';
 const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY') ?? '';
@@ -20,7 +21,8 @@ const H = 3_600_000;
 
 const db = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+const money = (cents: number) => `$${(cents / 100).toFixed(cents % 100 ? 2 : 0)}`;
+const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`;
 
 type Push = { userId: string; title: string; body: string; data: Record<string, unknown> };
 
@@ -48,21 +50,26 @@ async function sendPushes(pushes: Push[]) {
   return messages.length;
 }
 
-async function email(userId: string, subject: string, text: string) {
-  if (!SENDGRID_API_KEY) return;
+async function email(userId: string, subject: string, text: string): Promise<boolean> {
+  if (!SENDGRID_API_KEY) return false;
   const { data } = await db.auth.admin.getUserById(userId);
   const to = data?.user?.email;
-  if (!to) return;
-  await fetch('https://api.sendgrid.com/v3/mail/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SENDGRID_API_KEY}` },
-    body: JSON.stringify({
-      personalizations: [{ to: [{ email: to }] }],
-      from: { email: 'hello@rally-hub.com', name: 'RallyHUB' },
-      subject,
-      content: [{ type: 'text/html', value: `<p>${esc(text)}</p><p>See your lessons in <a href="https://rally-hub.com/app">RallyHUB</a>.</p>` }],
-    }),
-  }).catch((e) => console.error('[lesson-reminders] email', e));
+  if (!to) return false;
+  return (await sendEmail(SENDGRID_API_KEY, to, subject, emailHtml(text))) === true;
+}
+
+/**
+ * Render a notification from its admin template (falls back to built-in copy),
+ * then queue the push and/or send the email per the template's channels.
+ */
+async function notify(
+  userId: string, slug: string, vars: Vars, fallback: Fallback, data: Record<string, unknown>,
+  pushes: Push[], counts: { emails: number },
+): Promise<boolean> {
+  const r = await renderNotification(db, slug, vars, fallback);
+  if (r.push) pushes.push({ userId, title: r.title, body: r.body, data });
+  if (r.email && (await email(userId, r.title, r.body))) counts.emails++;
+  return r.push || r.email;
 }
 
 /** Claim a boolean flag on a booking; true only for the run that flipped it. */
@@ -118,13 +125,15 @@ serve(async (req: Request) => {
     if (action.startsWith('skip') || out.has(b.parent_user_id)) continue;
 
     const kind = action === 'send_24h' ? '24h' : '2h';
-    const { title, body } = parentReminderText(kind, {
-      athlete: b.athletes?.first_name ?? 'Your athlete', coach: b.coaches?.display_name ?? 'your coach',
-      facility: b.slots.facilities?.label ?? null, startsAt, now, tz,
-    });
-    pushes.push({ userId: b.parent_user_id, title, body, data: { type: 'lesson_reminder', bookingId: b.id } });
-    if (kind === '24h') { counts.parent24h++; await email(b.parent_user_id, `Reminder: ${title}`, body); counts.emails++; }
-    else counts.parent2h++;
+    const facility = b.slots.facilities?.label ?? null;
+    const athlete = b.athletes?.first_name ?? 'Your athlete';
+    const coachName = b.coaches?.display_name ?? 'your coach';
+    const fb = parentReminderText(kind, { athlete, coach: coachName, facility, startsAt, now, tz });
+    await notify(b.parent_user_id, kind === '24h' ? 'lesson_reminder_24h' : 'lesson_reminder_2h', {
+      athlete, coach: coachName, time: fmtTime(startsAt, tz), where: facility ? ` · ${facility}` : '', facility: facility ?? '',
+      day: dayWord(now, startsAt, tz).replace(/^./, (c) => c.toUpperCase()),
+    }, { ...fb, channels: kind === '24h' ? ['push', 'email'] : ['push'] }, { type: 'lesson_reminder', bookingId: b.id }, pushes, counts);
+    if (kind === '24h') counts.parent24h++; else counts.parent2h++;
   }
 
   // Coaches: group by coach, then by slot (a group lesson is one heads-up).
@@ -149,10 +158,13 @@ serve(async (req: Request) => {
       const claimed: any[] = [];
       for (const b of due) if (await claim(b.id, 'coach_reminder_sent')) claimed.push(b);
       if (!claimed.length) continue;
-      const { title, body } = coachHeadsUpText({
-        athletes: group.map((b) => b.athletes?.first_name ?? 'athlete'), facility: group[0].slots.facilities?.label ?? null, startsAt, tz,
-      });
-      pushes.push({ userId: coach.user_id, title, body, data: { type: 'coach_lesson_reminder', bookingId: claimed[0].id } });
+      const names = group.map((b) => b.athletes?.first_name ?? 'athlete');
+      const facility = group[0].slots.facilities?.label ?? null;
+      const fb = coachHeadsUpText({ athletes: names, facility, startsAt, tz });
+      await notify(coach.user_id, 'coach_lesson_heads_up', {
+        athletes: names.length > 2 ? `${names.slice(0, 2).join(', ')} +${names.length - 2}` : names.join(' & '),
+        time: fmtTime(startsAt, tz), where: facility ? ` · ${facility}` : '', facility: facility ?? '',
+      }, { ...fb, channels: ['push'] }, { type: 'coach_lesson_reminder', bookingId: claimed[0].id }, pushes, counts);
       counts.coachHeadsUp++;
     }
 
@@ -164,8 +176,11 @@ serve(async (req: Request) => {
         const slots = new Set(todays.map((b) => b.slots.id));
         const firstAt = new Date(Math.min(...todays.map((b) => new Date(b.slots.starts_at).getTime())));
         const totalCents = todays.reduce((s, b) => s + (b.price_cents ?? 0), 0);
-        const { title, body } = morningSummaryText({ lessons: slots.size, firstAt, totalCents, tz });
-        pushes.push({ userId: coach.user_id, title, body, data: { type: 'coach_daily_summary' } });
+        const fb = morningSummaryText({ lessons: slots.size, firstAt, totalCents, tz });
+        await notify(coach.user_id, 'coach_daily_summary', {
+          lessons: plural(slots.size, 'lesson'), first_time: fmtTime(firstAt, tz),
+          total: totalCents ? ` · ${money(totalCents)}` : '', amount: totalCents ? money(totalCents) : '',
+        }, { ...fb, channels: ['push'] }, { type: 'coach_daily_summary' }, pushes, counts);
         counts.summaries++;
       }
     }
@@ -205,8 +220,11 @@ serve(async (req: Request) => {
     for (const l of lessons) {
       await db.from('bookings').update({ unpaid_nudge_count: l.unpaid_nudge_count + 1 }).eq('id', l.id).eq('unpaid_nudge_count', l.unpaid_nudge_count);
     }
-    const { title, body } = unpaidNudgeText({ lessons: lessons.length, totalCents: lessons.reduce((s, l) => s + (l.price_cents ?? 0), 0) });
-    pushes.push({ userId: coach.user_id, title, body, data: { type: 'unpaid_lessons' } });
+    const totalCents = lessons.reduce((s, l) => s + (l.price_cents ?? 0), 0);
+    const fb = unpaidNudgeText({ lessons: lessons.length, totalCents });
+    await notify(coach.user_id, 'coach_unpaid_nudge', {
+      lessons: plural(lessons.length, 'lesson'), total: money(totalCents),
+    }, { ...fb, channels: ['push', 'email'] }, { type: 'unpaid_lessons' }, pushes, counts);
     counts.unpaidNudges++;
   }
 

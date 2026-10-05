@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, Alert, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert, Platform, TextInput } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -52,6 +52,25 @@ export default function AccountScreen() {
     }
 
     setLoading(false);
+  };
+
+  const [deleting, setDeleting] = useState(false);
+  const [deleteText, setDeleteText] = useState('');
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const handleDeleteAccount = async () => {
+    setDeleteBusy(true);
+    setDeleteError(null);
+    const { data, error } = await supabase.functions.invoke('delete-account', { body: {} });
+    setDeleteBusy(false);
+    if (error || !data?.deleted) {
+      // functions.invoke puts the JSON error body on error.context for non-2xx.
+      let msg = "We couldn't delete your account. Try again, or email hello@rally-hub.com.";
+      try { const b = await (error as any)?.context?.json?.(); if (b?.error) msg = b.error; } catch {}
+      setDeleteError(msg);
+      return;
+    }
+    signOut();
   };
 
   const handleSignOut = () => {
@@ -228,6 +247,44 @@ export default function AccountScreen() {
         >
           <Text className="text-sm font-semibold text-red-600">Sign Out</Text>
         </Pressable>
+
+        {/* Delete account (App Store 5.1.1(v)). Typed confirmation works on web and iOS. */}
+        <View className="mt-10 mb-6">
+          {!deleting ? (
+            <Pressable onPress={() => { setDeleting(true); setDeleteError(null); }} className="items-center py-2" accessibilityLabel="Delete my account">
+              <Text className="text-xs font-semibold text-stone underline">Delete my account</Text>
+            </Pressable>
+          ) : (
+            <View className="rounded-xl p-4 border border-red-300 bg-red-50 dark:bg-red-900/20">
+              <Text className="text-sm font-bold text-red-700">Delete your RallyHUB account?</Text>
+              <Text className="text-xs text-red-700 mt-1 leading-4">
+                This permanently deletes your login, your saved logins and notes, your lesson history, and any athletes that only you manage, with their teams and tournaments. Athletes shared with a co-parent stay with them. This can't be undone.
+              </Text>
+              <Text className="text-xs text-bark dark:text-cream mt-3 mb-1">Type DELETE to confirm</Text>
+              <TextInput
+                value={deleteText}
+                onChangeText={setDeleteText}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                className="bg-white dark:bg-bark-light rounded-lg px-3 py-2 text-sm text-bark dark:text-cream border border-red-200"
+                accessibilityLabel="Type DELETE to confirm"
+              />
+              {deleteError ? <Text className="text-xs text-red-700 mt-2">{deleteError}</Text> : null}
+              <View className="flex-row mt-3">
+                <Pressable
+                  disabled={deleteText.trim().toUpperCase() !== 'DELETE' || deleteBusy}
+                  onPress={handleDeleteAccount}
+                  className={`rounded-lg px-4 py-2 mr-2 ${deleteText.trim().toUpperCase() === 'DELETE' ? 'bg-red-600' : 'bg-red-300'}`}
+                >
+                  <Text className="text-xs font-bold text-white">{deleteBusy ? 'Deleting…' : 'Delete account'}</Text>
+                </Pressable>
+                <Pressable onPress={() => { setDeleting(false); setDeleteText(''); }} className="rounded-lg px-4 py-2">
+                  <Text className="text-xs font-semibold text-stone">Keep my account</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

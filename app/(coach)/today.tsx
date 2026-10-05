@@ -14,7 +14,8 @@ import {
   fetchMyCoach, fetchSchedule, fetchWeekSlots, fetchSessionTypes, fetchUpcomingSlots, fetchPendingRequests,
   fetchCoachPolicies, fetchUnpaidLessons, getRequestDetail, acceptRequest, declineRequest, weekSummary,
   fmtMoney, sessionKindStyle, hasRealAllergies, paymentBadge, PAYMENT_BADGE_STYLE, isSupabaseConfigured,
-  type ScheduleItem, type WeekSummary, type CoachPolicies, type RequestDetail,
+  fetchFamilyRescheduleRequests, coachRespondToReschedule,
+  type ScheduleItem, type WeekSummary, type CoachPolicies, type RequestDetail, type FamilyRescheduleRequest,
 } from '@/lib/coach';
 import { notifySuccess, notifyError, tapLight } from '@/lib/haptics';
 
@@ -44,6 +45,7 @@ export default function CoachTodayScreen() {
   const [slotCount, setSlotCount] = useState<number | null>(null);
   const [policies, setPolicies] = useState<CoachPolicies | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [moveRequests, setMoveRequests] = useState<FamilyRescheduleRequest[]>([]);
 
   const load = useCallback(async () => {
     if (!isSupabaseConfigured || !user) { setLoading(false); return; }
@@ -53,6 +55,7 @@ export default function CoachTodayScreen() {
       if (data) { setCoach(data); c = data; }
     }
     if (!c) { setLoading(false); return; }
+    fetchFamilyRescheduleRequests(c.id).then(setMoveRequests);
     const now = new Date();
     const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const mon = startOfWeek(now);
@@ -98,6 +101,17 @@ export default function CoachTodayScreen() {
     })();
   }, [load, coach?.id]));
 
+  const answerMove = async (r: FamilyRescheduleRequest, accept: boolean) => {
+    setBusy(r.booking_id);
+    const { error } = await coachRespondToReschedule(r.booking_id, accept);
+    setBusy(null);
+    if (error) { notifyError(); showToast(error.message); return; }
+    notifySuccess();
+    setMoveRequests((list) => list.filter((x) => x.booking_id !== r.booking_id));
+    showToast(accept ? 'Lesson moved — the family has been told' : 'Original time kept — the family has been told');
+    load();
+  };
+
   const respond = async (id: string, kind: 'accept' | 'decline') => {
     setBusy(id);
     const { error } = kind === 'accept' ? await acceptRequest(id) : await declineRequest(id);
@@ -122,7 +136,8 @@ export default function CoachTodayScreen() {
   }
 
   const first = coach.display_name.replace(/^coach\s+/i, '').split(' ')[0];
-  const needsCount = pending.length + (unreserved ? 1 : 0) + (unpaidEnded ? 1 : 0);
+  const needsCount = pending.length + moveRequests.length + (unreserved ? 1 : 0) + (unpaidEnded ? 1 : 0);
+  const fmtMove = (iso: string) => `${new Date(iso).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} ${new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
 
   const LessonRow = ({ item, compact }: { item: ScheduleItem; compact?: boolean }) => {
     const booked = item.attendees.filter((a) => a.kind === 'booking');
@@ -203,6 +218,24 @@ export default function CoachTodayScreen() {
         {needsCount > 0 && (
           <>
             <Text className="text-xs font-semibold uppercase tracking-wider text-stone mb-2 ml-1">Needs you</Text>
+            {moveRequests.map((r) => (
+              <View key={r.booking_id} className="bg-warm-white dark:bg-bark-light rounded-xl p-3.5 mb-2 border border-amber-300 dark:border-amber-700">
+                <Text className="text-[10px] font-bold text-amber-700 mb-0.5">MOVE REQUEST</Text>
+                <Text className="text-sm font-bold text-bark dark:text-cream">{r.athlete_name}'s family asked to move a lesson</Text>
+                <Text className="text-xs text-stone dark:text-parchment mt-0.5">
+                  From {fmtMove(r.current_starts_at)} to <Text className="font-bold">{fmtMove(r.proposed_starts_at)}</Text>{r.proposed_facility ? ` · ${r.proposed_facility}` : ''}
+                </Text>
+                {r.reason ? <Text className="text-xs text-stone italic mt-0.5">"{r.reason}"</Text> : null}
+                <View className="flex-row mt-2" style={{ gap: 8 }}>
+                  <Pressable disabled={busy === r.booking_id} onPress={() => answerMove(r, true)} className="rounded-lg px-3 py-2 bg-rally-600 active:opacity-80" accessibilityLabel="Accept new time">
+                    <Text className="text-xs font-bold text-white">Accept new time</Text>
+                  </Pressable>
+                  <Pressable disabled={busy === r.booking_id} onPress={() => answerMove(r, false)} className="rounded-lg px-3 py-2 border border-parchment dark:border-rally-900 active:opacity-70" accessibilityLabel="Keep original">
+                    <Text className="text-xs font-bold text-bark dark:text-cream">Keep original</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ))}
             {pending.map((p) => {
               const a = p.detail?.athlete;
               const meta = [a?.grad_year ? `'${String(a.grad_year).slice(-2)}` : null, a?.positions?.join('/') || null, a?.club_team].filter(Boolean).join(' · ');

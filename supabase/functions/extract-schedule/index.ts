@@ -23,7 +23,9 @@ Important rules:
 - If you cannot parse any tournaments, return an empty array.
 - Return ONLY valid JSON, no markdown fencing, no explanation.
 
-Respond with a JSON object: { "tournaments": [...] }`;
+Games: school and club schedules also list one-day GAMES against a single opponent. A row is a tournament only if it spans several dates or is named a Tournament/Tourn/Classic/Invitational/Cup; every other dated row with an opponent or a time is a game. Put games in "games" (not "tournaments"), each with: date (YYYY-MM-DD), opponent ("" if none listed), location ("" if none), home_away ("home" | "away" | ""), times (every time on the row as written), start_time (earliest time, 24h "HH:MM"; 1:00–7:59 are PM), notes, needs_review (true if several times or no opponent). Skip rows that are only dashes.
+
+Respond with a JSON object: { "tournaments": [...], "games": [...] }`;
 
 interface ExtractedTournament {
   name: string;
@@ -73,7 +75,7 @@ serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 4096,
+        max_tokens: 8192,
         system: SYSTEM_PROMPT + '\n\n' + dateContext(),
         messages: [
           {
@@ -97,7 +99,7 @@ serve(async (req: Request) => {
     const rawText = claudeData.content?.[0]?.text ?? '';
 
     // Parse the JSON from Claude's response
-    let extracted: { tournaments: ExtractedTournament[] };
+    let extracted: { tournaments: ExtractedTournament[]; games?: unknown[] };
     try {
       extracted = JSON.parse(rawText);
     } catch {

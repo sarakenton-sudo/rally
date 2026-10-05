@@ -50,8 +50,8 @@ export default function AddGuestScreen() {
       showError('Missing field', 'Please enter a name.');
       return;
     }
-    if (!phone.trim()) {
-      showError('Missing field', 'Please enter a phone number for SMS notifications.');
+    if (!phone.trim() && !email.trim()) {
+      showError('Missing field', 'Add an email or phone number so you can send them an app invite.');
       return;
     }
     if (!relationship) {
@@ -69,7 +69,7 @@ export default function AddGuestScreen() {
     const guestData = {
       user_id: user.id,
       name: name.trim(),
-      phone: phone.trim(),
+      phone: phone.trim(), // may be empty when inviting by email (00086 made it optional)
       email: email.trim() || null,
       relationship,
       notification_pref: 'sms' as NotificationPref,
@@ -140,6 +140,16 @@ export default function AddGuestScreen() {
 
   const handleDelete = () => {
     if (!existing) return;
+    // Alert.alert with buttons does nothing on web.
+    if (Platform.OS === 'web') {
+      if (!window.confirm(`Remove "${existing.name}" from your guest list?`)) return;
+      (async () => {
+        if (isSupabaseConfigured && user) await deleteGuestDB(editId!);
+        removeGuest(editId!);
+        router.back();
+      })();
+      return;
+    }
     Alert.alert(
       'Delete Guest',
       `Remove "${existing.name}" from your guest list?`,
@@ -185,8 +195,8 @@ export default function AddGuestScreen() {
 
         <ScrollView className="flex-1 px-4 pt-4" keyboardShouldPersistTaps="handled">
           <FormField label="Name" value={name} onChangeText={setName} placeholder="e.g. Grandma Kenton" />
-          <FormField label="Phone Number" value={phone} onChangeText={setPhone} placeholder="+1 (512) 555-1001" keyboardType="phone-pad" />
-          <FormField label="Email (optional)" value={email} onChangeText={setEmail} placeholder="grandma@example.com" keyboardType="email-address" autoCapitalize="none" />
+          <FormField label="Email" value={email} onChangeText={setEmail} placeholder="grandma@example.com" keyboardType="email-address" autoCapitalize="none" />
+          <FormField label="Phone (optional)" value={phone} onChangeText={setPhone} placeholder="+1 (512) 555-1001" keyboardType="phone-pad" />
           <DropdownField label="Relationship" value={relationship} options={RELATIONSHIPS} onChange={setRelationship} />
 
           {/* Default invited toggle */}
@@ -220,8 +230,8 @@ export default function AddGuestScreen() {
             <View className="flex-row items-start">
               <Ionicons name="information-circle" size={18} color="#3B82B0" />
               <Text className="text-xs text-rally-700 dark:text-rally-300 ml-2 flex-1">
-                Guests receive automated notifications via SMS or push — no app install required.
-                They can RSVP by replying YES, NO, or MAYBE to the SMS.
+                Guests automatically get the key details for the tournaments you share with them:
+                dates, locations, streaming links and ticket info.
               </Text>
             </View>
           </View>

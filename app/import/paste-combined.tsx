@@ -7,6 +7,7 @@ import { isSupabaseConfigured } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { extractTournamentDetails } from '@/lib/tournament-detail-parser';
 import { smartExtract } from '@/lib/schedule-parser';
+import { parseSchoolSchedule, normalizeGames } from '@/lib/scheduleGames';
 import { useAuth } from '@/providers/AuthProvider';
 import { trackEvent } from '@/lib/track-event';
 
@@ -109,11 +110,17 @@ export default function PasteCombinedScreen() {
             const data = await resp.json();
             // AI goes first: the regex parser used to run first and, if it found
             // anything, skipped AI entirely — mangling names/dates on real schedules.
-            const aiSchedule = data?.schedule?.tournaments;
-            if (Array.isArray(aiSchedule) && aiSchedule.length > 0) {
+            const aiSchedule = Array.isArray(data?.schedule?.tournaments) ? data.schedule.tournaments : [];
+            let aiGames = normalizeGames(data?.schedule?.games);
+            // School schedules: if the AI missed the games, the row parser catches them.
+            if (!aiGames.length) {
+              const local = parseSchoolSchedule(trimmed);
+              if (local.games.length >= 2) aiGames = local.games;
+            }
+            if (aiSchedule.length > 0 || aiGames.length > 0) {
               advance({
                 pathname: '/import/review',
-                params: { tournaments: JSON.stringify(aiSchedule) },
+                params: { tournaments: JSON.stringify(aiSchedule), games: JSON.stringify(aiGames) },
               });
               return;
             }
@@ -152,7 +159,16 @@ export default function PasteCombinedScreen() {
         }
       }
 
-      // Local fallback (AI unreachable / found nothing) — schedule list parser first
+      // Local fallback (AI unreachable / found nothing) — school schedule rows
+      // (games + tournaments) first, then the club schedule list parser.
+      const school = parseSchoolSchedule(trimmed);
+      if (school.games.length >= 2) {
+        advance({
+          pathname: '/import/review',
+          params: { tournaments: JSON.stringify(school.tournaments), games: JSON.stringify(school.games) },
+        });
+        return;
+      }
       const scheduleTournaments = smartExtract(trimmed);
       if (scheduleTournaments.length > 0) {
         advance({

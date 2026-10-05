@@ -6,7 +6,7 @@ import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useAuth } from './AuthProvider';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { acceptRequest, declineRequest, respondToReschedule } from '@/lib/coach';
+import { acceptRequest, declineRequest, respondToReschedule, coachRespondToReschedule } from '@/lib/coach';
 
 // Configure how notifications appear when app is in foreground
 if (Platform.OS !== 'web') {
@@ -27,11 +27,28 @@ if (Platform.OS !== 'web') {
     { identifier: 'decline', buttonTitle: 'Decline', options: { opensAppToForeground: true, isAuthenticationRequired: true, isDestructive: true } },
   ]).catch(() => {});
 
+  // A family asked to move a lesson: the coach answers from the push (00082).
+  Notifications.setNotificationCategoryAsync('family_reschedule_request', [
+    { identifier: 'accept', buttonTitle: 'Accept new time', options: { opensAppToForeground: true, isAuthenticationRequired: true } },
+    { identifier: 'keep', buttonTitle: 'Keep original', options: { opensAppToForeground: true, isAuthenticationRequired: true } },
+  ]).catch(() => {});
+
   // Coach asked to move a lesson: the family answers from the push.
   Notifications.setNotificationCategoryAsync('reschedule_proposal', [
     { identifier: 'accept', buttonTitle: 'Accept new time', options: { opensAppToForeground: true, isAuthenticationRequired: true } },
     { identifier: 'keep', buttonTitle: 'Keep original', options: { opensAppToForeground: true, isAuthenticationRequired: true } },
   ]).catch(() => {});
+}
+
+/** Coach: Accept / Keep original on a family's move request, else open Today. */
+async function handleFamilyRescheduleResponse(response: Notifications.NotificationResponse) {
+  const bookingId = response.notification.request.content.data?.bookingId as string | undefined;
+  const action = response.actionIdentifier;
+  router.push('/today');
+  if (!bookingId || (action !== 'accept' && action !== 'keep')) return; // plain tap: answer on Today
+  const { error } = await coachRespondToReschedule(bookingId, action === 'accept');
+  if (error) Alert.alert("Couldn't update the lesson", error.message);
+  else Alert.alert(action === 'accept' ? 'Lesson moved' : 'Original time kept', 'The family has been told.');
 }
 
 /** Accept / Keep original straight from a "move this lesson?" push, else open Home. */
@@ -165,6 +182,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         } else if (data?.type === 'reschedule_proposed') {
           if (user) handleRescheduleResponse(response);
           else handledResponses.current.delete(key); // retry once signed in
+        } else if (data?.type === 'family_reschedule_proposed') {
+          if (user) handleFamilyRescheduleResponse(response);
+          else handledResponses.current.delete(key); // retry once signed in
+        } else if (data?.type === 'family_lesson_cancelled') {
+          router.push('/coach-schedule');
         } else if (data?.type === 'reschedule_answered') {
           router.push('/coach-schedule');
         } else if (data?.type === 'lesson_changed') {

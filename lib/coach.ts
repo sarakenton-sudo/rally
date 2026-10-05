@@ -441,41 +441,81 @@ export interface ParentLesson {
   status: 'requested' | 'accepted' | 'cancelled' | 'declined';
   change_reason?: string | null;    // coach's note on a cancellation
   athlete_id: string;
+  athlete_first_name: string | null;
+  coach_id: string;
   coach_name: string;
   session_type: string | null;
   session_kind: SessionKind | null;
   starts_at: string;
   ends_at: string;
   facility: string | null;
+  facility_address?: string | null;
+  booking_id?: string | null;       // set once the coach confirms
+  cancelled_by?: 'coach' | 'parent' | null;
+  /** A pending "move this lesson" proposal (00080/00082). */
+  proposal?: { by: 'coach' | 'parent'; starts_at: string } | null;
 }
 
-/** The parent's requested + confirmed lessons starting in the next `days` days. */
+const PARENT_LESSON_SELECT =
+  'id, status, athlete_id, coach_id, athletes(first_name), coaches(display_name), session_types(name, kind), ' +
+  'slots!inner(starts_at, ends_at, facilities(label, address)), ' +
+  'bookings(id, status, change_reason, cancelled_by, proposed_by, proposed:proposed_slot_id(starts_at))';
+
+function toParentLesson(r: any): ParentLesson {
+  const bks: any[] = r.bookings ?? [];
+  const bk = bks.find((b) => b.status !== 'cancelled') ?? bks[0] ?? null;
+  return {
+    id: r.id,
+    status: bks.some((b) => b.status === 'cancelled') ? 'cancelled' : r.status,
+    change_reason: bks.find((b) => b.change_reason)?.change_reason ?? null,
+    athlete_id: r.athlete_id,
+    athlete_first_name: r.athletes?.first_name ?? null,
+    coach_id: r.coach_id,
+    coach_name: r.coaches?.display_name ?? 'Coach',
+    session_type: r.session_types?.name ?? null,
+    session_kind: r.session_types?.kind ?? null,
+    starts_at: r.slots.starts_at,
+    ends_at: r.slots.ends_at,
+    facility: r.slots.facilities?.label ?? null,
+    facility_address: r.slots.facilities?.address ?? null,
+    booking_id: bk?.id ?? null,
+    cancelled_by: bk?.cancelled_by ?? null,
+    proposal: bk?.proposed?.starts_at ? { by: bk.proposed_by === 'parent' ? 'parent' : 'coach', starts_at: bk.proposed.starts_at } : null,
+  };
+}
+
+/** The parent's requested + confirmed lessons starting in the next `days` days (Home uses 90). */
 export async function fetchMyUpcomingLessons(days = 30): Promise<{ data: ParentLesson[]; error: Error | null }> {
   const now = new Date();
   const until = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
   const { data, error } = await supabase
     .from('booking_requests')
-    .select('id, status, athlete_id, coaches(display_name), session_types(name, kind), slots!inner(starts_at, ends_at, facilities(label)), bookings(status, change_reason)')
+    .select(PARENT_LESSON_SELECT)
     // Keep cancelled/declined lessons visible (marked) so a parent who missed
     // the push still sees it on Home.
     .in('status', ['requested', 'accepted', 'cancelled', 'declined'])
     .gte('slots.starts_at', now.toISOString())
     .lte('slots.starts_at', until.toISOString());
-  const rows = ((data as any[]) ?? [])
-    .map((r): ParentLesson => ({
-      id: r.id,
-      status: (r.bookings ?? []).some((b: any) => b.status === 'cancelled') ? 'cancelled' : r.status,
-      change_reason: (r.bookings ?? []).find((b: any) => b.change_reason)?.change_reason ?? null,
-      athlete_id: r.athlete_id,
-      coach_name: r.coaches?.display_name ?? 'Coach',
-      session_type: r.session_types?.name ?? null,
-      session_kind: r.session_types?.kind ?? null,
-      starts_at: r.slots.starts_at,
-      ends_at: r.slots.ends_at,
-      facility: r.slots.facilities?.label ?? null,
-    }))
-    .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+  const rows = ((data as any[]) ?? []).map(toParentLesson).sort((a, b) => a.starts_at.localeCompare(b.starts_at));
   return { data: rows, error: error ?? null };
+}
+
+/** One lesson for the parent's lesson detail screen (by booking_request id). */
+export async function fetchParentLesson(requestId: string): Promise<{ data: ParentLesson | null; coach: Coach | null; error: Error | null }> {
+  const { data, error } = await (supabase.from('booking_requests') as any)
+    .select(PARENT_LESSON_SELECT)
+    .eq('id', requestId)
+    .maybeSingle();
+  if (error || !data) return { data: null, coach: null, error: error ?? null };
+  const lesson = toParentLesson(data);
+  const { data: coach } = await fetchCoachById(lesson.coach_id);
+  return { data: lesson, coach, error: null };
+}
+
+/** Hours before start the family can still cancel or move a lesson in the app (00082). */
+export const LESSON_CHANGE_CUTOFF_HOURS = 24;
+export function canFamilyChangeLesson(startsAt: string, now = new Date()): boolean {
+  return Date.parse(startsAt) - now.getTime() >= LESSON_CHANGE_CUTOFF_HOURS * 3_600_000;
 }
 
 /** Parent's lesson history for the "+" sheet's rebook pattern (spec §4.2). */
@@ -623,8 +663,9 @@ export interface ScheduleAttendee {
   payment_status?: string | null;   // bookings: pending|authorized|captured|refunded|failed
   payment_method?: string | null;   // card|apple_pay|google_pay|ach|cash|venmo|zelle|other
   paid_at?: string | null;
-  /** Coach asked to move this lesson; waiting for the family (00080). */
+  /** A pending move (00080/00082): the coach's offer, or the family's request. */
   proposed_starts_at?: string | null;
+  proposed_by?: 'coach' | 'parent' | null;
 }
 
 export interface ScheduleItem {
@@ -650,11 +691,14 @@ export async function fetchSchedule(from: Date, to: Date): Promise<{ data: Sched
   const ids = items.flatMap((i) => i.attendees.filter((a) => a.kind === 'booking').map((a) => a.id));
   if (ids.length) {
     const { data: props } = await (supabase.from('bookings') as any)
-      .select('id, proposed:proposed_slot_id(starts_at)')
+      .select('id, proposed_by, proposed:proposed_slot_id(starts_at)')
       .in('id', ids)
       .not('proposed_slot_id', 'is', null);
-    const byId = new Map(((props as any[]) ?? []).map((p) => [p.id, p.proposed?.starts_at ?? null]));
-    for (const i of items) for (const a of i.attendees) if (byId.has(a.id)) a.proposed_starts_at = byId.get(a.id);
+    const byId = new Map(((props as any[]) ?? []).map((p) => [p.id, p]));
+    for (const i of items) for (const a of i.attendees) {
+      const p = byId.get(a.id);
+      if (p) { a.proposed_starts_at = p.proposed?.starts_at ?? null; a.proposed_by = p.proposed_by === 'parent' ? 'parent' : 'coach'; }
+    }
   }
   return { data: items, error: error ?? null };
 }
@@ -902,7 +946,8 @@ export async function fetchMyRescheduleProposals(): Promise<RescheduleProposal[]
   const { data } = await (supabase.from('bookings') as any)
     .select('id, athlete_id, proposal_reason, coaches(display_name), athletes(first_name), slots:slot_id(starts_at), proposed:proposed_slot_id(starts_at, facilities(label))')
     .eq('status', 'confirmed')
-    .not('proposed_slot_id', 'is', null);
+    .not('proposed_slot_id', 'is', null)
+    .or('proposed_by.is.null,proposed_by.eq.coach');   // the family's own requests wait on the coach
   return ((data as any[]) ?? [])
     .filter((r) => r.proposed?.starts_at && Date.parse(r.proposed.starts_at) > Date.now())
     .map((r) => ({
@@ -913,8 +958,71 @@ export async function fetchMyRescheduleProposals(): Promise<RescheduleProposal[]
     }));
 }
 
+// ---- Family-initiated changes (00082) ----
+
+const cutoffMessage = (e: Error | null) =>
+  e ? new Error(e.message.replace(/^CUTOFF: /, '')) : null;
+
+/** Family cancels a confirmed lesson (outside the cutoff); refunds anything charged in RallyHUB. */
+export async function parentCancelBooking(bookingId: string, reason: string): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.rpc as any)('parent_cancel_booking', { p_booking_id: bookingId, p_reason: reason });
+  if (!error) {
+    notifyParentOfChange(bookingId, 'parent_cancelled');
+    supabase.functions.invoke('refund-booking', { body: { booking_id: bookingId } })
+      .then(({ error: e }) => { if (e) console.warn('[parent] refund failed:', e.message); });
+  }
+  return { error: cutoffMessage(error ?? null) };
+}
+
+/** Family asks the coach to move a lesson to one of the coach's open times. */
+export async function parentProposeReschedule(bookingId: string, newSlotId: string, reason: string): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.rpc as any)('parent_propose_reschedule', { p_booking_id: bookingId, p_new_slot_id: newSlotId, p_reason: reason });
+  if (!error) notifyParentOfChange(bookingId, 'parent_reschedule_proposed');
+  return { error: cutoffMessage(error ?? null) };
+}
+
+export async function parentWithdrawReschedule(bookingId: string): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.rpc as any)('parent_withdraw_reschedule', { p_booking_id: bookingId });
+  return { error: error ?? null };
+}
+
+/** Coach answers a family's request to move a lesson. */
+export async function coachRespondToReschedule(bookingId: string, accept: boolean): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.rpc as any)('coach_respond_to_reschedule', { p_booking_id: bookingId, p_accept: accept });
+  if (!error) notifyParentOfChange(bookingId, accept ? 'coach_accepted_reschedule' : 'coach_declined_reschedule');
+  return { error: error ?? null };
+}
+
+export interface FamilyRescheduleRequest {
+  booking_id: string; athlete_name: string; parent_name: string | null;
+  current_starts_at: string; proposed_starts_at: string; proposed_facility: string | null; reason: string | null;
+}
+
+/** Families asking this coach to move a lesson (coach Today → Needs you). */
+export async function fetchFamilyRescheduleRequests(coachId: string): Promise<FamilyRescheduleRequest[]> {
+  const { data } = await (supabase.from('bookings') as any)
+    .select('id, proposal_reason, athletes(first_name, last_name), slots:slot_id(starts_at), proposed:proposed_slot_id(starts_at, facilities(label))')
+    .eq('coach_id', coachId)
+    .eq('status', 'confirmed')
+    .eq('proposed_by', 'parent')
+    .not('proposed_slot_id', 'is', null);
+  return ((data as any[]) ?? [])
+    .filter((r) => r.proposed?.starts_at && Date.parse(r.proposed.starts_at) > Date.now())
+    .map((r) => ({
+      booking_id: r.id,
+      athlete_name: r.athletes ? `${r.athletes.first_name}${r.athletes.last_name ? ' ' + r.athletes.last_name : ''}` : 'Athlete',
+      parent_name: null,
+      current_starts_at: r.slots?.starts_at, proposed_starts_at: r.proposed.starts_at,
+      proposed_facility: r.proposed.facilities?.label ?? null, reason: r.proposal_reason ?? null,
+    }));
+}
+
+type LessonChange =
+  | 'cancelled' | 'rescheduled' | 'booked' | 'reschedule_proposed' | 'reschedule_accepted' | 'reschedule_declined'
+  | 'parent_cancelled' | 'parent_reschedule_proposed' | 'coach_accepted_reschedule' | 'coach_declined_reschedule';
+
 /** Push + email + in-app about a lesson change (notify-booking-change). Fire-and-forget. */
-function notifyParentOfChange(bookingId: string, change: 'cancelled' | 'rescheduled' | 'booked' | 'reschedule_proposed' | 'reschedule_accepted' | 'reschedule_declined') {
+function notifyParentOfChange(bookingId: string, change: LessonChange) {
   supabase.functions.invoke('notify-booking-change', { body: { booking_id: bookingId, change } })
     .then(({ error }) => { if (error) console.warn('[coach] parent notify failed:', error.message); });
 }

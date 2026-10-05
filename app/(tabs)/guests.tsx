@@ -1,19 +1,43 @@
-import { View, Text, FlatList, Pressable } from 'react-native';
+import { useState } from 'react';
+import { View, Text, FlatList, Pressable, Platform, Share } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useIconColors } from '@/lib/colors';
-import GuestCard from '@/components/GuestCard';
+import GuestCard, { type GuestWithFan } from '@/components/GuestCard';
+import { showToast } from '@/components/Toast';
+import { useSeasonStore } from '@/stores/useSeasonStore';
+import { createFanInvite, emailFanInvite, fanInviteMessage } from '@/lib/fan';
 import { useGuestStore } from '@/stores/useGuestStore';
 import { useDataRefresh } from '@/providers/DataProvider';
 import ReferFriend from '@/components/ReferFriend';
-import type { Guest } from '@/types/database';
 
 export default function GuestsScreen() {
   const ic = useIconColors();
   const guests = useGuestStore((s) => s.guests);
   const { refresh, isRefreshing } = useDataRefresh();
 
-  const autoInvited = guests.filter((g) => g.default_invited).length;
+  const athletes = useSeasonStore((s) => s.athletes);
+  const [inviting, setInviting] = useState<string | null>(null);
+  const onApp = (guests as GuestWithFan[]).filter((g) => g.invite_status === 'joined').length;
+
+  // Guests become fans in the app (00086): share the link; email it too if we have an address.
+  const invite = async (g: GuestWithFan) => {
+    setInviting(g.id);
+    const { code, error } = await createFanInvite(g.id);
+    setInviting(null);
+    if (error || !code) { showToast("Couldn't create the invite. Try again."); return; }
+    const athlete = athletes.find((a) => a.id === g.athlete_id)?.first_name ?? 'our athlete';
+    const message = fanInviteMessage(g.name.trim().split(' ')[0], athlete, code);
+    if (g.email) emailFanInvite(g.id);
+    if (Platform.OS === 'web') {
+      await Clipboard.setStringAsync(message);
+      showToast(g.email ? `Invite emailed to ${g.email} and copied` : 'Invite copied — paste it into a text');
+    } else {
+      await Share.share({ message });
+    }
+    refresh();
+  };
 
   return (
     <View className="flex-1 bg-cream dark:bg-bark">
@@ -30,12 +54,25 @@ export default function GuestsScreen() {
             </Text>
             <Text className="text-sm text-stone dark:text-parchment mt-1">
               {guests.length} guest{guests.length !== 1 ? 's' : ''}
-              {autoInvited > 0 ? ` · ${autoInvited} auto-invited` : ''}
+              {onApp > 0 ? ` · ${onApp} on the app` : ''}
             </Text>
+            <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-4 mt-3 flex-row items-start">
+              <Ionicons name="information-circle" size={18} color="#3B82B0" />
+              <Text className="text-sm text-rally-700 dark:text-rally-300 ml-2 flex-1 leading-5">
+                Guests lets you easily share and automate key information — upcoming tournaments, locations,
+                streaming links and ticket info — with grandparents, family and other fans.
+                {'\n\n'}Invite guests to the free RallyHUB app — they'll get game-day alerts and every detail without texts.
+              </Text>
+            </View>
           </View>
         }
-        renderItem={({ item }: { item: Guest }) => (
-          <GuestCard guest={item} onPress={() => router.push({ pathname: '/guest/add', params: { editId: item.id } })} />
+        renderItem={({ item }: { item: GuestWithFan }) => (
+          <GuestCard
+            guest={item}
+            inviting={inviting === item.id}
+            onInvite={() => invite(item)}
+            onPress={() => router.push({ pathname: '/guest/add', params: { editId: item.id } })}
+          />
         )}
         ListFooterComponent={() => <ReferFriend />}
         ListEmptyComponent={

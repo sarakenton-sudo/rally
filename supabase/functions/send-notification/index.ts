@@ -11,7 +11,7 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
 interface NotificationPayload {
   user_id: string;
-  type: 'tournament_reminder' | 'rsvp_request' | 'cancellation_deadline' | 'schedule_change' | 'custom';
+  type: 'tournament_reminder' | 'cancellation_deadline' | 'schedule_change' | 'custom'; // guest RSVP requests removed
   tournament_id?: string;
   guest_ids?: string[];      // Send to specific guests
   title: string;
@@ -32,6 +32,12 @@ serve(async (req: Request) => {
 
   try {
     const payload: NotificationPayload = await req.json();
+    // Guest RSVP requests were removed; refuse them from older app versions.
+    if ((payload.type as string) === 'rsvp_request') {
+      return new Response(JSON.stringify({ error: 'RSVP requests are no longer supported' }), {
+        status: 410, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
+    }
     const { user_id, type, tournament_id, guest_ids, title, body, data } = payload;
 
     if (!user_id || !title || !body) {

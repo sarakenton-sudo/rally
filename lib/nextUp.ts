@@ -56,3 +56,20 @@ export function countdownLabel(daysAway: number) {
   if (daysAway === 1) return 'Tomorrow';
   return `In ${daysAway} days`;
 }
+
+/** Group a date-sorted timeline into month sections ("NOVEMBER", or "JANUARY 2027" when the year changes). */
+export function groupByMonth<T extends { date: string }>(items: T[], now = new Date()): { key: string; label: string; items: T[] }[] {
+  const out: { key: string; label: string; items: T[] }[] = [];
+  for (const it of items) {
+    const key = it.date.slice(0, 7);
+    let g = out[out.length - 1];
+    if (!g || g.key !== key) {
+      const [y, m] = key.split('-').map(Number);
+      const name = new Date(y, m - 1, 1).toLocaleString('en-US', { month: 'long' }).toUpperCase();
+      g = { key, label: y === now.getFullYear() ? name : `${name} ${y}`, items: [] };
+      out.push(g);
+    }
+    g.items.push(it);
+  }
+  return out;
+}

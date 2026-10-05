@@ -8,31 +8,30 @@ import QuickAddSheet from '@/components/QuickAddSheet';
 
 const logoWhite = require('@/assets/images/rallyhub_lockup_white.png');
 
+function HeaderButton({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      className="w-10 h-10 rounded-xl items-center justify-center active:opacity-70"
+      style={{ backgroundColor: 'rgba(255,255,255,0.14)' }}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={6}
+    >
+      <Ionicons name={icon} size={21} color="#FEFEFE" />
+    </Pressable>
+  );
+}
+
 function GlobalHeader() {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
 
   return (
-    <View
-      style={{
-        paddingTop: insets.top,
-        backgroundColor: 'rgba(30,58,95,0.97)',
-      }}
-    >
-      {/* Logo row */}
-      <View className="items-center px-5 pt-2 pb-2">
-        {/* Account button (left) */}
-        <Pressable
-          className="w-10 h-10 rounded-xl items-center justify-center active:opacity-70 absolute left-4"
-          style={{
-            top: 6, // inside the row, which already sits below the safe-area padding
-            backgroundColor: 'rgba(255,255,255,0.08)',
-          }}
-          onPress={() => router.push('/notifications')}
-        >
-          <Ionicons name="notifications-outline" size={20} color="rgba(255,255,255,0.65)" />
-        </Pressable>
-
+    <View style={{ paddingTop: insets.top, backgroundColor: '#1E3A5F' }}>
+      {/* Bell · logo · settings in one row, so the buttons always sit inside the navy bar. */}
+      <View className="flex-row items-center justify-between px-4 pt-1 pb-2">
+        <HeaderButton icon="notifications-outline" label="Notifications" onPress={() => router.push('/notifications')} />
         <Pressable
           onPress={() => {
             if (Platform.OS === 'web') {
@@ -40,32 +39,16 @@ function GlobalHeader() {
             }
           }}
           style={{ cursor: Platform.OS === 'web' ? 'pointer' : 'default' } as any}
+          accessibilityLabel="RallyHUB"
         >
-          <Image
-            source={logoWhite}
-            style={{ width: 220, height: 56 }}
-            resizeMode="contain"
-          />
+          <Image source={logoWhite} style={{ width: 200, height: 52 }} resizeMode="contain" />
         </Pressable>
-
-        {/* Settings & account (right) */}
-        <Pressable
-          className="w-10 h-10 rounded-xl items-center justify-center active:opacity-70 absolute right-4"
-          style={{
-            top: 6, // inside the row, which already sits below the safe-area padding
-            backgroundColor: 'rgba(255,255,255,0.08)',
-          }}
-          onPress={() => router.push('/hub')}
-          accessibilityLabel="Settings"
-        >
-          <Ionicons name="person-circle-outline" size={22} color="rgba(255,255,255,0.65)" />
-        </Pressable>
+        <HeaderButton icon="person-circle-outline" label="Settings" onPress={() => router.push('/hub')} />
       </View>
 
-      {/* Season switcher — hidden on Home (has inline filter) and Athlete tab (has its own) */}
+      {/* Season switcher on team-scoped tabs */}
       {(pathname === '/season' || pathname === '/travel') && <SeasonSwitcher />}
 
-      {/* Bottom border */}
       <View className="h-px" style={{ backgroundColor: 'rgba(255,255,255,0.07)' }} />
     </View>
   );

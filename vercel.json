@@ -10,6 +10,10 @@
       "destination": "/book/[slug]"
     },
     {
+      "source": "/fan/:code",
+      "destination": "/fan/[code]"
+    },
+    {
       "source": "/auth-callback",
       "destination": "/app.html"
     },

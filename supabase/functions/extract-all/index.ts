@@ -10,7 +10,7 @@ Parents paste all kinds of text — hotel confirmations, flight bookings, tourna
 Return a JSON object with three optional sections:
 
 {
-  "schedule": { "tournaments": [...] },  // only if the text lists MULTIPLE tournaments/events (a season or team schedule)
+  "schedule": { "tournaments": [...], "games": [...] },  // only if the text lists MULTIPLE events (a season, school or team schedule)
   "travel": { "bookings": [...] },       // only if travel info found
   "tournament_details": { "details": {...} }  // only if detailed info about ONE tournament is found
 }
@@ -26,6 +26,21 @@ If the text is a list of several tournaments or events (e.g. a club's season sch
 - venue_address: address if mentioned, else ""
 - notes: anything else on that line (e.g. "JNQ", "Nat'l Qual"), else ""
 Schedules are often laid out as a date line ("12-Dec 13-Dec"), then a name line, then a city line — sometimes with the name and city on one line. Read the structure carefully; do not drop or merge events. When a schedule is present, do NOT also put one of its events in tournament_details.
+
+## Games (single matches) — put these in "schedule.games", NOT in tournaments
+
+School and club schedules mix one-day GAMES (a match against one opponent) with multi-day TOURNAMENTS. A row is a TOURNAMENT if it spans several dates (e.g. "11/19-11/21") or its name says Tournament/Tourn/Classic/Invitational/Cup. Every other dated row with an opponent or a time is a GAME. Return EVERY game. Each game:
+- date: YYYY-MM-DD
+- opponent: the other team/school (e.g. "Stony Point"); "" if the row lists no opponent (still include the game if it has times)
+- location: venue/school/gym if given (e.g. "Del Valle HS"), else ""
+- home_away: "home", "away", or "" if not stated. A location that is the opponent's school means "away".
+- times: every time on the row exactly as written, e.g. "5:00 b 5:30 7:00" (rows often list one time per team level — freshman, JV, varsity; "b" may follow a time)
+- start_time: the EARLIEST time as 24-hour "HH:MM". School games at 1:00–7:59 are PM (5:15 → "17:15"); 8:00–11:59 are AM; 12 is noon.
+- notes: anything else on the row, else ""
+- needs_review: true when several times are listed or there's no opponent
+Skip rows that are only dashes ("1/8 Fri. ----- ---- ----") — there's no game that day.
+Example row "11/13 Fri. Stony Point Stony Point 5:00 b 5:30 7:00" → {"date":"<year>-11-13","opponent":"Stony Point","location":"Stony Point","home_away":"away","times":"5:00 b 5:30 7:00","start_time":"17:00","notes":"","needs_review":true}
+Example row "11/19-11/21 Thu.-Sat. Marble Falls Tourn ---- ----" → a TOURNAMENT named "Marble Falls Tournament".
 
 If the text contains BOTH travel and tournament info (common with hotel block emails that mention the tournament), extract BOTH.
 
@@ -123,7 +138,7 @@ serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 4096,
+        max_tokens: 8192,
         system: SYSTEM_PROMPT + '\n\n' + dateContext(),
         messages: [
           {

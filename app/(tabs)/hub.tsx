@@ -110,11 +110,6 @@ export default function HubScreen() {
             </View>
             <View className="flex-1">
               <Text className="text-sm font-semibold text-bark dark:text-cream">Email Forwarding</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
-                <View style={{ backgroundColor: 'rgba(251,146,60,0.2)', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#FB923C' }}>Email Auto-Sync coming soon!</Text>
-                </View>
-              </View>
               <Text className="text-xs text-stone dark:text-parchment mt-0.5">
                 Forward travel & tournament emails to RALLY
               </Text>
@@ -193,25 +188,7 @@ export default function HubScreen() {
           onPress={() => router.push('/settings/notifications')}
         />
 
-        {/* VIP Alerts — Coming Soon */}
-        <HubSettingsRow
-          icon="star"
-          iconColor="#6A9E8A"
-          title="VIP Email Alerts"
-          subtitle="Coach & club email senders that trigger push notifications"
-          comingSoon
-          onPress={() => Alert.alert('Coming Soon', 'VIP push notifications will be available in a future release.')}
-        />
 
-        {/* Email Auto-Sync — Coming Soon */}
-        <HubSettingsRow
-          icon="sync"
-          iconColor="#7c3aed"
-          title="Email Auto-Sync"
-          subtitle="Automatically sync travel emails from Gmail"
-          comingSoon
-          onPress={() => Alert.alert('Coming Soon', 'Automatic Gmail sync will be available in a future release.')}
-        />
 
         {/* ============================================================ */}
         {/* PREFERENCES */}
@@ -265,7 +242,7 @@ export default function HubScreen() {
           iconColor="#ca8a04"
           title="Family logins"
           subtitle={`${configuredAdminLinks.length} saved · GroupMe, LeagueApps, AES and more`}
-          onPress={() => router.push('/family')}
+          onPress={() => router.navigate({ pathname: '/(tabs)/family', params: { focus: 'logins' } })}
         />
 
         {/* ============================================================ */}

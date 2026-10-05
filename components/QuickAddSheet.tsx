@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Modal, TextInput, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, Modal, TextInput, Platform, Share } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { usePlusSheetOrder } from '@/lib/usePlusContext';
 import { PLANS_INBOX_EMAIL } from '@/lib/config';
+import { createCoachInvite, coachInviteMessage } from '@/lib/coachInvites';
 import { showToast } from '@/components/Toast';
 import { trackEvent } from '@/lib/track-event';
 import { tapLight } from '@/lib/haptics';
@@ -81,6 +82,22 @@ export default function QuickAddSheet({ visible, onClose }: { visible: boolean; 
   };
 
   const tapItem = (item: string, position: number) => track('plus_item_tapped', { item, position });
+
+  const inviteCoach = async () => {
+    tapLight();
+    tapItem('invite_coach', 0);
+    const code = await createCoachInvite(athletes.length === 1 ? athletes[0].id : null);
+    const who = athletes.length === 1 ? athletes[0].first_name : athletes.length > 1 ? athletes.map((a) => a.first_name).join(' and ') : 'our athlete';
+    const message = coachInviteMessage(who, code);
+    if (Platform.OS === 'web') {
+      await Clipboard.setStringAsync(message);
+      showToast('Invite copied — paste it into a text to your coach');
+    } else {
+      onClose();
+      await Share.share({ message });
+    }
+    track('coach_invite_sent', { channel: 'plus_sheet', has_code: !!code });
+  };
 
   const rebookLabel = order.rebook
     ? `Rebook ${order.rebook.coachName} · ${WEEKDAY[order.rebook.weekday]} ${fmtHour(order.rebook.hour, order.rebook.minute)}`
@@ -165,14 +182,23 @@ export default function QuickAddSheet({ visible, onClose }: { visible: boolean; 
         </View>
 
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 40 }}>
-          {/* 1. Paste / forward */}
-          <View className="mx-4 mb-3 bg-warm-white dark:bg-bark-light rounded-2xl p-3 border border-parchment dark:border-rally-900">
-            {clipboardHasText && !text && (
-              <Pressable onPress={pasteFromClipboard} className="flex-row items-center self-start rounded-full px-3 py-1.5 mb-2 bg-rally-50 dark:bg-rally-900/30 active:opacity-70" accessibilityLabel="Paste from clipboard">
-                <Ionicons name="clipboard-outline" size={14} color="#3B82B0" />
-                <Text className="text-xs font-semibold text-rally-600 ml-1">Paste from clipboard</Text>
-              </Pressable>
-            )}
+          {/* 1. Paste + AI */}
+          <View className="mx-4 mb-3 bg-warm-white dark:bg-bark-light rounded-2xl p-3.5 border" style={{ borderColor: '#7c3aed33' }}>
+            <View className="flex-row items-center mb-2">
+              <View className="w-9 h-9 rounded-full items-center justify-center mr-2.5" style={{ backgroundColor: '#7c3aed18' }}>
+                <Ionicons name="sparkles" size={19} color="#7c3aed" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-bold text-bark dark:text-cream">Paste + AI</Text>
+                <Text className="text-[11px] text-stone dark:text-parchment">Hotel, flight, schedule, team code — AI sorts it out</Text>
+              </View>
+              {clipboardHasText && !text ? (
+                <Pressable onPress={pasteFromClipboard} className="flex-row items-center rounded-full px-3 py-1.5 active:opacity-70" style={{ backgroundColor: '#7c3aed14' }} accessibilityLabel="Paste from clipboard">
+                  <Ionicons name="clipboard-outline" size={14} color="#7c3aed" />
+                  <Text className="text-xs font-semibold ml-1" style={{ color: '#7c3aed' }}>Paste</Text>
+                </Pressable>
+              ) : null}
+            </View>
             <TextInput
               value={text}
               onChangeText={(v) => { setText(v); if (!v) setFromClipboard(false); }}
@@ -183,22 +209,39 @@ export default function QuickAddSheet({ visible, onClose }: { visible: boolean; 
               multiline
               textAlignVertical="top"
               accessibilityLabel="Paste anything"
-              className="text-sm text-bark dark:text-cream"
+              className="text-sm text-bark dark:text-cream rounded-xl px-3 py-2.5 bg-cream dark:bg-bark"
               style={{ minHeight: inputFocused || text ? 140 : 56 }}
             />
             {text.trim() ? (
-              <Pressable onPress={submitPaste} className="bg-rally-600 rounded-xl py-2.5 items-center mt-2 active:opacity-80" accessibilityLabel="Read it">
-                <Text className="text-sm font-bold text-cream">Read it</Text>
+              <Pressable onPress={submitPaste} className="rounded-xl py-2.5 flex-row items-center justify-center mt-2 active:opacity-80" style={{ backgroundColor: '#7c3aed' }} accessibilityLabel="Read it">
+                <Ionicons name="sparkles" size={15} color="#fff" />
+                <Text className="text-sm font-bold text-white ml-1.5">Read it</Text>
               </Pressable>
             ) : null}
-            <View className="flex-row items-center mt-2 pt-2 border-t border-parchment dark:border-rally-900">
-              <Text className="text-xs text-stone dark:text-parchment flex-1">
-                Or forward confirmations to <Text className="font-semibold text-bark dark:text-cream">{PLANS_INBOX_EMAIL}</Text>
-              </Text>
-              <Pressable onPress={copyForward} className="p-1.5 active:opacity-60" accessibilityLabel={`Copy ${PLANS_INBOX_EMAIL}`}>
-                <Ionicons name="copy-outline" size={16} color="#3B82B0" />
+          </View>
+
+          {/* Forward to RallyHUB */}
+          <View className="mx-4 mb-3 bg-warm-white dark:bg-bark-light rounded-2xl p-3.5 border border-parchment dark:border-rally-900">
+            <View className="flex-row items-center">
+              <View className="w-9 h-9 rounded-full items-center justify-center mr-2.5" style={{ backgroundColor: '#3B82B018' }}>
+                <Ionicons name="mail-open" size={18} color="#3B82B0" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-bold text-bark dark:text-cream">Forward emails to RallyHUB</Text>
+                <Text className="text-[11px] text-stone dark:text-parchment">Hotel, flight and tournament confirmations land on the right weekend</Text>
+              </View>
+            </View>
+            <View className="flex-row items-center mt-2.5 rounded-xl px-3 py-2 bg-rally-50 dark:bg-rally-900/30">
+              <Text className="text-sm font-bold text-rally-700 dark:text-rally-300 flex-1" selectable>{PLANS_INBOX_EMAIL}</Text>
+              <Pressable onPress={copyForward} className="flex-row items-center rounded-lg px-3 py-1.5 bg-rally-600 active:opacity-80" accessibilityLabel={`Copy ${PLANS_INBOX_EMAIL}`}>
+                <Ionicons name="copy-outline" size={14} color="#fff" />
+                <Text className="text-xs font-bold text-white ml-1">Copy</Text>
               </Pressable>
             </View>
+            <Pressable onPress={() => { tapItem('inbox', 0); go('/email/inbox'); }} className="flex-row items-center mt-2 self-start active:opacity-70" accessibilityLabel="View inbox">
+              <Ionicons name="file-tray-full-outline" size={15} color="#3B82B0" />
+              <Text className="text-xs font-semibold text-rally-600 ml-1">View inbox</Text>
+            </Pressable>
           </View>
 
           {/* 4.3 setup prompts */}
@@ -224,6 +267,24 @@ export default function QuickAddSheet({ visible, onClose }: { visible: boolean; 
             ))}
           </View>
 
+          {/* Invite a coach — growth loop, always visible */}
+          <Pressable
+            onPress={inviteCoach}
+            className="mx-4 mt-3 flex-row items-center rounded-2xl p-3.5 active:opacity-80"
+            style={{ backgroundColor: '#3B82B0' }}
+            accessibilityRole="button"
+            accessibilityLabel="Invite a coach"
+          >
+            <View className="w-9 h-9 rounded-full items-center justify-center mr-2.5" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+              <Ionicons name="person-add" size={18} color="#fff" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-base font-bold text-white">Invite a coach</Text>
+              <Text className="text-[11px] text-white/85">Book and pay for lessons here — free for coaches</Text>
+            </View>
+            <Ionicons name="share-outline" size={18} color="#fff" />
+          </Pressable>
+
           {/* 3. Setup tier */}
           <View className="mx-4 mt-5 flex-row items-center">
             <View className="flex-1 h-px bg-parchment dark:bg-rally-900" />
@@ -241,7 +302,6 @@ export default function QuickAddSheet({ visible, onClose }: { visible: boolean; 
                 <Pressable onPress={() => go('/tournament/add')} className="py-2"><Text className="text-sm font-semibold text-rally-600">Tournament</Text></Pressable>
                 <Pressable onPress={() => go('/settings/add-season', athletes[0] ? { athleteId: athletes[0].id } : undefined)} className="py-2"><Text className="text-sm font-semibold text-rally-600">Season / new team</Text></Pressable>
                 <Pressable onPress={() => go('/import/paste-combined')} className="py-2"><Text className="text-sm font-semibold text-rally-600">Paste a season schedule</Text></Pressable>
-                <Text className="text-[11px] text-stone py-1">Import from LeagueApps, TeamSnap, or Auto-Sync — coming soon</Text>
               </View>
             )}
             <Pressable onPress={() => { tapItem('team_event', 5); go('/booking/add-team-event'); }} className="flex-row items-center py-2.5 active:opacity-70" accessibilityLabel="Add a team event">

@@ -6,6 +6,7 @@
 // Deploy with --no-verify-jwt (the GET link has no JWT); POST checks the JWT itself.
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { renderNotification } from '../_shared/templates.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY') ?? '';
@@ -71,24 +72,37 @@ serve(async (req: Request) => {
     q = q.in('id', (members ?? []).map((m: any) => m.connection_id).concat(['00000000-0000-0000-0000-000000000000']));
   }
   const { data: conns } = await q;
-  const recipients = (conns ?? []) as { id: string; parent_user_id: string }[];
+  let recipients = (conns ?? []) as { id: string; parent_user_id: string }[];
+  // Families who turned off coach announcements in Settings → Notifications (00083).
+  if (recipients.length) {
+    const { data: off } = await supabaseAdmin.from('coaching_notification_prefs').select('user_id')
+      .in('user_id', recipients.map((r) => r.parent_user_id)).eq('announcements', false);
+    const muted = new Set(((off ?? []) as { user_id: string }[]).map((o) => o.user_id));
+    recipients = recipients.filter((r) => !muted.has(r.parent_user_id));
+  }
   if (!recipients.length) return json({ error: 'No families to send to (some may have unsubscribed).' }, 400);
 
   const link = coach.booking_page_published && coach.slug ? `https://rally-hub.com/book/${coach.slug}` : 'https://rally-hub.com/app';
-  const title = `${coach.display_name} has open lesson times`;
+  // Admin-editable wording/channels (notification_templates 'coach_announcement').
+  // The coach's own message is {{message}}; the push body is capped for the lock screen.
+  const tpl = await renderNotification(supabaseAdmin, 'coach_announcement', { coach: coach.display_name, message, link }, {
+    title: `${coach.display_name} has open lesson times`, body: message, channels: ['push', 'email'],
+  });
+  const title = tpl.title;
+  const emailBody = tpl.body;
   let pushed = 0, emailed = 0;
 
   for (const r of recipients) {
     const { data: tokens } = await supabaseAdmin.from('push_tokens').select('token').eq('user_id', r.parent_user_id);
-    if (tokens?.length) {
+    if (tpl.push && tokens?.length) {
       await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(tokens.map(({ token }) => ({ to: token, title, body: message.slice(0, 180), sound: 'default', data: { type: 'coach_announcement', coachId: coach.id } }))),
+        body: JSON.stringify(tokens.map(({ token }) => ({ to: token, title, body: emailBody.slice(0, 180), sound: 'default', data: { type: 'coach_announcement', coachId: coach.id } }))),
       }).catch(() => {});
       pushed += 1;
     }
-    if (SENDGRID_API_KEY) {
+    if (tpl.email && SENDGRID_API_KEY) {
       const { data: u } = await supabaseAdmin.auth.admin.getUserById(r.parent_user_id);
       const to = u?.user?.email;
       if (to) {
@@ -103,7 +117,7 @@ serve(async (req: Request) => {
             content: [{
               type: 'text/html',
               value: `<div style="font-family:-apple-system,sans-serif;max-width:520px;color:#1E3A5F">` +
-                `<p style="font-size:16px;line-height:1.5">${esc(message).replace(/\n/g, '<br>')}</p>` +
+                `<p style="font-size:16px;line-height:1.5">${esc(emailBody).replace(/\n/g, '<br>')}</p>` +
                 `<p><a href="${link}" style="display:inline-block;background:#3B82B0;color:#fff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:10px">See open times</a></p>` +
                 `<p style="font-size:12px;color:#8FA8BF">You're getting this because you've booked lessons with ${esc(coach.display_name)} on RallyHUB. <a href="${unsub}" style="color:#8FA8BF">Unsubscribe from announcements</a></p></div>`,
             }],

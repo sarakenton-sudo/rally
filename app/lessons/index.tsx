@@ -9,8 +9,10 @@ import { useSeasonStore } from '@/stores/useSeasonStore';
 import Avatar from '@/components/Avatar';
 import { showToast } from '@/components/Toast';
 import {
-  fetchMyCoaches, fetchMyLessonHistory, fetchBookableSlots, connectToCoach, isSupabaseConfigured,
+  fetchMyCoaches, fetchMyLessonHistory, fetchBookableSlots, connectToCoach, fetchAllCoachAvailability, isSupabaseConfigured,
+  type CoachOpening,
 } from '@/lib/coach';
+import OpenTimesList from '@/components/OpenTimesList';
 import { connectViaBookingPage } from '@/lib/bookingPage';
 import { findLessonPattern, type RebookSuggestion } from '@/lib/plusSheet';
 import { createCoachInvite, coachInviteMessage } from '@/lib/coachInvites';
@@ -35,6 +37,7 @@ export default function LessonsEntryScreen() {
   const athletes = useSeasonStore((s) => s.athletes);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [rebook, setRebook] = useState<RebookSuggestion | null>(null);
+  const [openings, setOpenings] = useState<CoachOpening[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [link, setLink] = useState('');
   const [busy, setBusy] = useState(false);
@@ -47,6 +50,8 @@ export default function LessonsEntryScreen() {
     setCoaches(c.data);
     setRebook(c.data.length ? findLessonPattern(history, new Date()) : null);
     setLoading(false);
+    // Every coach's open times, shown right here (no extra tap).
+    if (c.data.length) fetchAllCoachAvailability().then(({ data }) => setOpenings(data));
     track('lesson_entry_opened', { has_coach: c.data.length > 0 });
   }, [user]);
 
@@ -185,10 +190,23 @@ export default function LessonsEntryScreen() {
               </Pressable>
             ))}
           </View>
-          <Pressable onPress={() => router.push('/coaching/availability')} className="flex-row items-center justify-center py-2 mb-5 active:opacity-70">
-            <Ionicons name="calendar-outline" size={15} color="#3B82B0" />
-            <Text className="text-sm font-semibold text-rally-600 ml-1.5">See every open time</Text>
-          </Pressable>
+
+          {/* Open times — all coaches, by day */}
+          <View className="flex-row items-center mb-2 ml-1 mt-2">
+            <Text className="text-xs font-semibold uppercase tracking-wider text-stone flex-1">Open times</Text>
+            {openings && openings.length > 0 ? (
+              <Pressable onPress={() => router.push('/coaching/availability')} className="flex-row items-center active:opacity-70" accessibilityLabel="Filter open times by coach or lesson type">
+                <Ionicons name="options-outline" size={14} color="#3B82B0" />
+                <Text className="text-xs font-semibold text-rally-600 ml-1">Filter</Text>
+              </Pressable>
+            ) : null}
+          </View>
+          {openings === null ? (
+            <ActivityIndicator color="#3B82B0" className="my-4" />
+          ) : (
+            <OpenTimesList openings={openings} />
+          )}
+          <View className="h-3" />
 
           {LinkEntry}
           <Pressable onPress={inviteCoach} className="items-center py-4 active:opacity-70">

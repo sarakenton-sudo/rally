@@ -5,7 +5,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import FormField from '@/components/FormField';
 import { useSeasonStore } from '@/stores/useSeasonStore';
-import { updateAthlete } from '@/hooks/useSupabaseData';
+import { updateAthlete, updateAdminConfig } from '@/hooks/useSupabaseData';
+import { supabase } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 import { useDataRefresh } from '@/providers/DataProvider';
@@ -27,6 +28,36 @@ export default function EditAthleteScreen() {
   const [avatarColor, setAvatarColor] = useState(athlete?.avatar_color ?? AVATAR_COLORS[0]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const adminConfig = useSeasonStore((s) => s.adminConfig);
+  const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
+
+  const handleDelete = async () => {
+    if (!athleteId) return;
+    setDeleting(true);
+    setError(null);
+    const { error: err } = await (supabase.rpc as any)('delete_athlete', { p_athlete_id: athleteId });
+    if (err) {
+      setDeleting(false);
+      setConfirmDelete(false);
+      setError(err.message);
+      return;
+    }
+    // Their saved logins live in the family's config.
+    if (adminConfig) {
+      const kept = (adminConfig.external_links ?? []).filter((l) => l.athlete_id !== athleteId);
+      if (kept.length !== (adminConfig.external_links ?? []).length) {
+        await updateAdminConfig(adminConfig.id, { external_links: kept });
+        setAdminConfig({ ...adminConfig, external_links: kept });
+      }
+    }
+    notifySuccess();
+    await refresh();
+    setDeleting(false);
+    try { if (router.canDismiss()) router.dismissAll(); } catch { /* nothing open */ }
+    router.replace('/family');
+  };
 
   const showError = (title: string, message: string) => {
     if (Platform.OS === 'web') {
@@ -132,6 +163,40 @@ export default function EditAthleteScreen() {
             <View className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 mt-4 flex-row items-start">
               <Ionicons name="alert-circle" size={18} color="#dc2626" />
               <Text className="text-sm text-red-700 dark:text-red-300 ml-2 flex-1">{error}</Text>
+            </View>
+          )}
+
+          {/* Delete — an in-screen confirm (system alerts with buttons do nothing on web) */}
+          {!confirmDelete ? (
+            <Pressable
+              onPress={() => { setError(null); setConfirmDelete(true); }}
+              className="flex-row items-center justify-center rounded-xl py-3.5 mt-8 mb-10 bg-red-50 dark:bg-red-900/20 active:opacity-80"
+              accessibilityLabel={`Delete ${athlete.first_name}`}
+            >
+              <Ionicons name="trash-outline" size={16} color="#dc2626" />
+              <Text className="text-sm font-semibold text-red-600 ml-2">Delete athlete</Text>
+            </Pressable>
+          ) : (
+            <View className="rounded-xl p-4 mt-8 mb-10 border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20">
+              <Text className="text-sm font-bold text-red-700 dark:text-red-300">Delete {athlete.first_name}?</Text>
+              <Text className="text-xs text-red-700/90 dark:text-red-300 mt-1.5 leading-5">
+                This removes {athlete.first_name} for everyone in your family: their teams, tournaments, hotels,
+                flights and tickets, their saved logins, guests tied to them, and any pending invites. It can't be undone.
+                Coaches keep records of past lessons.
+              </Text>
+              <View className="flex-row mt-3" style={{ gap: 8 }}>
+                <Pressable
+                  onPress={handleDelete}
+                  disabled={deleting}
+                  className="rounded-lg px-4 py-2 bg-red-600 active:opacity-80"
+                  accessibilityLabel={`Yes, delete ${athlete.first_name}`}
+                >
+                  <Text className="text-xs font-bold text-white">{deleting ? 'Deleting…' : `Delete ${athlete.first_name}`}</Text>
+                </Pressable>
+                <Pressable onPress={() => setConfirmDelete(false)} className="rounded-lg px-4 py-2 border border-parchment dark:border-rally-900">
+                  <Text className="text-xs font-bold text-bark dark:text-cream">Keep</Text>
+                </Pressable>
+              </View>
             </View>
           )}
         </ScrollView>

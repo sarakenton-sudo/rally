@@ -20,6 +20,19 @@ interface TemplateRow {
 
 const col = createColumnHelper<TemplateRow>();
 
+// Section order when showing every category; anything else follows alphabetically.
+const CATEGORY_ORDER = ['lessons', 'tournament', 'travel', 'guest', 'email', 'system'];
+const CATEGORY_LABEL: Record<string, string> = {
+  lessons: 'Lessons', tournament: 'Tournament', travel: 'Travel', guest: 'Guest', email: 'Email', system: 'System',
+};
+
+function groupByCategory(rows: TemplateRow[]): [string, TemplateRow[]][] {
+  const groups = new Map<string, TemplateRow[]>();
+  for (const r of rows) groups.set(r.category, [...(groups.get(r.category) ?? []), r]);
+  const rank = (c: string) => (CATEGORY_ORDER.includes(c) ? CATEGORY_ORDER.indexOf(c) : CATEGORY_ORDER.length);
+  return [...groups.entries()].sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b));
+}
+
 const columns = [
   col.accessor('status', {
     header: 'Status',
@@ -105,6 +118,7 @@ export function Notifications() {
         >
           <option value="">All channels</option>
           <option value="push">Push</option>
+          <option value="email">Email</option>
           <option value="sms">SMS</option>
         </select>
         <select
@@ -116,6 +130,7 @@ export function Notifications() {
           className="rounded-md border border-frost px-2 py-1.5 text-sm text-bark"
         >
           <option value="">All categories</option>
+          <option value="lessons">Lessons</option>
           <option value="tournament">Tournament</option>
           <option value="travel">Travel</option>
           <option value="email">Email</option>
@@ -140,11 +155,26 @@ export function Notifications() {
         <p className="text-sm text-stone">Loading...</p>
       ) : (
         <>
-          <DataTable<TemplateRow>
-            data={(data as TemplateRow[]) ?? []}
-            columns={columns}
-            onRowClick={(row) => navigate(`/admin/notifications/${row.id}`)}
-          />
+          {categoryFilter ? (
+            <DataTable<TemplateRow>
+              data={(data as TemplateRow[]) ?? []}
+              columns={columns}
+              onRowClick={(row) => navigate(`/admin/notifications/${row.id}`)}
+            />
+          ) : (
+            groupByCategory((data as TemplateRow[]) ?? []).map(([category, rows]) => (
+              <section key={category} className="mb-6">
+                <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-stone">
+                  {CATEGORY_LABEL[category] ?? category} <span className="font-normal">· {rows.length}</span>
+                </h2>
+                <DataTable<TemplateRow>
+                  data={rows}
+                  columns={columns}
+                  onRowClick={(row) => navigate(`/admin/notifications/${row.id}`)}
+                />
+              </section>
+            ))
+          )}
           <div className="mt-4 flex items-center gap-2">
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}

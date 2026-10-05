@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { smartExtract } from '@/lib/schedule-parser';
+import { parseSchoolSchedule, normalizeGames, type ExtractedGame } from '@/lib/scheduleGames';
 import { extractTournamentDetails } from '@/lib/tournament-detail-parser';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
@@ -122,6 +123,7 @@ export default function PasteImportScreen() {
 
       // Regular flow: extract tournament list
       let tournaments;
+      let games: ExtractedGame[] = [];
 
       // Try AI extraction via edge function first
       if (SUPABASE_URL && SUPABASE_ANON_KEY) {
@@ -140,6 +142,7 @@ export default function PasteImportScreen() {
           });
           clearTimeout(timeout);
           const data = await resp.json();
+          if (resp.ok) games = normalizeGames(data.games);
           if (resp.ok && data.tournaments && data.tournaments.length > 0) {
             tournaments = data.tournaments;
           } else if (data.error) {
@@ -150,19 +153,29 @@ export default function PasteImportScreen() {
         }
       }
 
+      // School schedules: games (and their tournaments) from the row parser
+      // when the AI found none.
+      if (!games.length) {
+        const school = parseSchoolSchedule(trimmed);
+        if (school.games.length >= 2) {
+          games = school.games;
+          if (!tournaments || tournaments.length === 0) tournaments = school.tournaments;
+        }
+      }
+
       // Fallback to smart local parser
-      if (!tournaments || tournaments.length === 0) {
+      if ((!tournaments || tournaments.length === 0) && !games.length) {
         tournaments = smartExtract(trimmed);
       }
 
-      if (!tournaments || tournaments.length === 0) {
-        setErrorMsg('Could not extract any tournament details from the text. Try pasting a different format.');
+      if ((!tournaments || tournaments.length === 0) && !games.length) {
+        setErrorMsg('Could not find any tournaments or games in the text. Try pasting a different format.');
         return;
       }
 
       router.push({
         pathname: '/import/review',
-        params: { tournaments: JSON.stringify(tournaments) },
+        params: { tournaments: JSON.stringify(tournaments ?? []), games: JSON.stringify(games) },
       });
     } catch (err: any) {
       setErrorMsg(err.message || 'Something went wrong. Please try again.');

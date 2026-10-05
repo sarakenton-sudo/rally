@@ -16,6 +16,18 @@ import TeamPicker, { useTeamChoice, resolveTeamChoice } from '@/components/TeamP
 import { useDataRefresh } from '@/providers/DataProvider';
 import { updateAdminConfig } from '@/hooks/useSupabaseData';
 import { currentSeasonLabel, seasonMatches } from '@/lib/seasons';
+import { insertTeamEvent } from '@/hooks/useSupabaseData';
+import { gameTitle, type ExtractedGame } from '@/lib/scheduleGames';
+
+const fmtGameDate = (ymd: string) => {
+  const d = new Date(`${ymd}T12:00:00`);
+  return isNaN(d.getTime()) ? ymd : d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+};
+const fmtGameTime = (hhmm: string) => {
+  if (!/^\d{2}:\d{2}$/.test(hhmm)) return '';
+  const [h, m] = hhmm.split(':').map(Number);
+  return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+};
 
 interface ExtractedTournament {
   name: string;
@@ -30,11 +42,14 @@ interface ExtractedTournament {
 }
 
 export default function PasteReviewScreen() {
-  const { tournaments: raw } = useLocalSearchParams<{ tournaments: string }>();
+  const { tournaments: raw, games: rawGames } = useLocalSearchParams<{ tournaments: string; games?: string }>();
   const parsed: ExtractedTournament[] = raw ? JSON.parse(raw) : [];
+  const parsedGames: ExtractedGame[] = (() => { try { return rawGames ? JSON.parse(rawGames) : []; } catch { return []; } })();
 
   const ic = useIconColors();
   const [items, setItems] = useState<ExtractedTournament[]>(parsed);
+  const [games, setGames] = useState<ExtractedGame[]>(parsedGames);
+  const [editingGame, setEditingGame] = useState<number | null>(null);
   const [aesIds, setAesIds] = useState<Record<number, string>>({});
   const [scheduleLinks, setScheduleLinks] = useState<Record<number, string>>({});
   const [ticketLinks, setTicketLinks] = useState<Record<number, string>>({});
@@ -51,11 +66,12 @@ export default function PasteReviewScreen() {
   const { refresh } = useDataRefresh();
   const { user } = useAuth();
   // Which team these go to — guessed from the dates, never silently the active team.
-  const { choice: teamChoice, setChoice: setTeamChoice } = useTeamChoice(items.map((i) => i.start_date));
+  const allDates = [...items.map((i) => i.start_date), ...games.map((g) => g.date)];
+  const { choice: teamChoice, setChoice: setTeamChoice } = useTeamChoice(allDates);
 
   // Track import attempt on mount
   useState(() => {
-    if (user?.id) trackEvent(user.id, 'import_attempt', { type: 'tournament_paste', item_count: parsed.length });
+    if (user?.id) trackEvent(user.id, 'import_attempt', { type: 'tournament_paste', item_count: parsed.length, game_count: parsedGames.length });
   });
 
   const updateField = useCallback((index: number, field: keyof ExtractedTournament, value: string) => {
@@ -70,6 +86,10 @@ export default function PasteReviewScreen() {
     setItems((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
+  const updateGame = useCallback((index: number, patch: Partial<ExtractedGame>) => {
+    setGames((prev) => prev.map((g, i) => (i === index ? { ...g, ...patch } : g)));
+  }, []);
+
   const showError = (message: string) => {
     setErrorMsg(message);
     if (Platform.OS !== 'web') Alert.alert('Error', message);
@@ -79,8 +99,8 @@ export default function PasteReviewScreen() {
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    if (items.length === 0) {
-      showError('Add at least one tournament to save.');
+    if (items.length === 0 && games.length === 0) {
+      showError('Add at least one tournament or game to save.');
       return;
     }
 
@@ -148,10 +168,43 @@ export default function PasteReviewScreen() {
         }
       }
 
-      if (user?.id) trackEvent(user.id, 'import_completed', { type: 'tournament_paste', item_count: items.length });
+      // Games → team events of type 'game' (00084).
+      for (const g of games) {
+        const event = {
+          tournament_id: null,
+          name: gameTitle(g),
+          date: g.date,
+          time: g.start_time || null,
+          venue_name: g.location || '',
+          address: '',
+          reservation_name: null,
+          reservation_number: null,
+          party_size: null,
+          notes: [g.times && `Times: ${g.times}`, g.notes].filter(Boolean).join('\n') || null,
+          family_welcome: true,
+          season_id: seasonId,
+          event_type: 'game',
+          opponent: g.opponent || null,
+          home_away: g.home_away || null,
+        };
+        if (isSupabaseConfigured && user) {
+          const { error } = await insertTeamEvent(event as any);
+          if (error) {
+            showError(`Failed to save the game on ${fmtGameDate(g.date)}: ${error.message}`);
+            setIsSaving(false);
+            return;
+          }
+        }
+      }
+
+      if (user?.id) trackEvent(user.id, 'import_completed', { type: 'tournament_paste', item_count: items.length, game_count: games.length });
       notifySuccess();
       await refresh();
-      const msg = `${items.length} tournament${items.length !== 1 ? 's' : ''} added to ${teamName}.`;
+      const parts = [
+        items.length ? `${items.length} tournament${items.length !== 1 ? 's' : ''}` : '',
+        games.length ? `${games.length} game${games.length !== 1 ? 's' : ''}` : '',
+      ].filter(Boolean).join(' and ');
+      const msg = `${parts} added to ${teamName}.`;
       if (Platform.OS === 'web') {
         setSuccessMsg(msg);
         setTimeout(() => {
@@ -175,13 +228,13 @@ export default function PasteReviewScreen() {
           <Ionicons name="chevron-back" size={24} color={ic.muted} />
         </Pressable>
         <Text className="text-lg font-bold text-bark dark:text-cream">
-          Add a Tournament
+          {games.length ? 'Review Schedule' : 'Add a Tournament'}
         </Text>
         <Pressable
           onPress={handleSaveAll}
-          disabled={isSaving || items.length === 0}
+          disabled={isSaving || (items.length === 0 && games.length === 0)}
           className={`px-4 py-1.5 rounded-lg ${
-            isSaving || items.length === 0 ? 'bg-parchment' : 'bg-rally-600 active:opacity-80'
+            isSaving || (items.length === 0 && games.length === 0) ? 'bg-parchment' : 'bg-rally-600 active:opacity-80'
           }`}
         >
           <Text className="text-sm font-semibold text-cream">
@@ -211,11 +264,69 @@ export default function PasteReviewScreen() {
         <View className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 mb-4 flex-row items-start">
           <Ionicons name="checkmark-circle" size={18} color="#16a34a" />
           <Text className="text-sm text-green-700 dark:text-green-300 ml-2 flex-1">
-            {items.length} tournament{items.length !== 1 ? 's' : ''} extracted. Review and edit before saving.
+            {[
+              items.length ? `${items.length} tournament${items.length !== 1 ? 's' : ''}` : '',
+              games.length ? `${games.length} game${games.length !== 1 ? 's' : ''}` : '',
+            ].filter(Boolean).join(' and ') || 'Nothing'} found. Review and edit before saving.
           </Text>
         </View>
 
-        <TeamPicker dates={items.map((i) => i.start_date)} choice={teamChoice} onChange={setTeamChoice} />
+        <TeamPicker dates={allDates} choice={teamChoice} onChange={setTeamChoice} />
+
+        {/* Games (single matches) */}
+        {games.length > 0 && (
+          <View className="mb-4">
+            <Text className="text-xs font-semibold uppercase tracking-wider text-stone mb-2 ml-1">
+              Games · {games.length}
+            </Text>
+            {games.map((g, index) => (
+              <View key={`${g.date}-${index}`} className="bg-warm-white dark:bg-bark-light rounded-xl border border-parchment dark:border-rally-900 mb-2 p-3">
+                <View className="flex-row items-start">
+                  <View className="w-12 items-center mr-3">
+                    <Text className="text-[10px] font-bold uppercase text-rally-600">{fmtGameDate(g.date).split(' ')[0]}</Text>
+                    <Text className="text-xs font-semibold text-bark dark:text-cream">{fmtGameDate(g.date).split(' ').slice(1).join(' ')}</Text>
+                  </View>
+                  <View className="flex-1">
+                    {editingGame === index ? (
+                      <View className="gap-2">
+                        <EditRow label="Opponent" value={g.opponent} onChange={(v) => updateGame(index, { opponent: v })} placeholder="e.g. Stony Point" />
+                        <EditRow label="Location" value={g.location} onChange={(v) => updateGame(index, { location: v })} placeholder="School or gym" />
+                        <EditRow label="Start time (24h)" value={g.start_time} onChange={(v) => updateGame(index, { start_time: v })} placeholder="17:00" />
+                      </View>
+                    ) : (
+                      <>
+                        <Text className="text-sm font-bold text-bark dark:text-cream">{gameTitle(g)}</Text>
+                        <Text className="text-xs text-stone dark:text-parchment mt-0.5">
+                          {[fmtGameTime(g.start_time), g.location].filter(Boolean).join(' · ') || 'Time and place not listed'}
+                        </Text>
+                        {g.needs_review && g.times ? (
+                          <Text className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">All times listed: {g.times}</Text>
+                        ) : null}
+                      </>
+                    )}
+                  </View>
+                  {g.needs_review && editingGame !== index ? (
+                    <View className="rounded-md px-1.5 py-0.5 mr-1" style={{ backgroundColor: '#FEF3C7' }}>
+                      <Text className="text-[10px] font-bold" style={{ color: '#b45309' }}>CHECK</Text>
+                    </View>
+                  ) : null}
+                  <Pressable onPress={() => setEditingGame(editingGame === index ? null : index)} className="p-1.5" accessibilityLabel={editingGame === index ? 'Done editing game' : 'Edit game'}>
+                    <Ionicons name={editingGame === index ? 'checkmark' : 'create-outline'} size={18} color={editingGame === index ? '#16a34a' : '#8FA8BF'} />
+                  </Pressable>
+                  <Pressable onPress={() => setGames((prev) => prev.filter((_, i) => i !== index))} className="p-1.5" accessibilityLabel="Remove game">
+                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  </Pressable>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {items.length > 0 && games.length > 0 && (
+          <Text className="text-xs font-semibold uppercase tracking-wider text-stone mb-2 ml-1">
+            Tournaments · {items.length}
+          </Text>
+        )}
 
         {items.map((item, index) => (
           <View
@@ -325,7 +436,7 @@ export default function PasteReviewScreen() {
           </View>
         ))}
 
-        {items.length === 0 && (
+        {items.length === 0 && games.length === 0 && (
           <View className="items-center py-16">
             <Ionicons name="document-text-outline" size={48} color={ic.placeholder} />
             <Text className="text-lg font-semibold text-stone mt-4">No tournaments</Text>

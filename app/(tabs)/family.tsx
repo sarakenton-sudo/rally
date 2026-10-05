@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, RefreshControl, Pressable, Share, Platform } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useSeasonStore } from '@/stores/useSeasonStore';
@@ -15,7 +15,7 @@ import Avatar from '@/components/Avatar';
 import AthleteCredentialCard from '@/components/AthleteCredentialCard';
 import ReferFriend from '@/components/ReferFriend';
 import { fetchMyCoaches, isSupabaseConfigured } from '@/lib/coach';
-import { fetchMyCoachInvites, createCoachInvite, coachInviteMessage, markCoachInviteResent, type CoachInvite } from '@/lib/coachInvites';
+import { createCoachInvite, coachInviteMessage } from '@/lib/coachInvites';
 import type { Coach } from '@/types/database';
 
 const AVATAR_COLORS = ['#3B82B0', '#7c3aed', '#6A9E8A', '#d97706', '#dc2626', '#0d9488', '#be185d', '#4f46e5', '#ca8a04', '#0891b2'];
@@ -72,19 +72,23 @@ export default function FamilyScreen() {
   const adminConfig = useSeasonStore((s) => s.adminConfig);
   const guests = useGuestStore((s) => s.guests);
 
+  const { focus } = useLocalSearchParams<{ focus?: string }>();
+  const scrollRef = useRef<ScrollView>(null);
+  const [loginsY, setLoginsY] = useState<number | null>(null);
+  useEffect(() => {
+    if (focus === 'logins' && loginsY !== null) scrollRef.current?.scrollTo({ y: Math.max(0, loginsY - 12), animated: true });
+  }, [focus, loginsY]);
+
   const [coaches, setCoaches] = useState<Coach[]>([]);
-  const [invites, setInvites] = useState<CoachInvite[]>([]);
 
   const load = useCallback(() => {
     if (!isSupabaseConfigured) return;
     fetchMyCoaches().then(({ data }) => setCoaches(data.filter((c) => c.user_id !== user?.id)));
-    fetchMyCoachInvites().then(setInvites);
   }, [user?.id]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const externalLinks = adminConfig?.external_links ?? [];
   const familyLogins = externalLinks.filter((l) => l.scope !== 'athlete' && (l.url || l.username || l.password));
-  const pendingInvites = invites.filter((i) => i.status === 'sent');
   const athleteFirst = athletes.length === 1 ? athletes[0].first_name : athletes.length > 1 ? athletes.map((a) => a.first_name).join(' and ') : 'our athlete';
 
   const sendInvite = async (code: string | null, event: string) => {
@@ -105,21 +109,12 @@ export default function FamilyScreen() {
     load();
   };
 
-  const remind = async (inv: CoachInvite) => {
-    tapLight();
-    await sendInvite(inv.code, 'coach_invite_reminded');
-    await markCoachInviteResent(inv.id);
-    load();
-  };
 
-  const daysAgo = (iso: string) => {
-    const d = Math.floor((Date.now() - Date.parse(iso)) / 86_400_000);
-    return d <= 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`;
-  };
 
   return (
     <View className="flex-1 bg-cream dark:bg-bark">
       <ScrollView
+        ref={scrollRef}
         className="flex-1"
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => { refresh(); load(); }} tintColor="#3B82B0" />}
@@ -178,20 +173,6 @@ export default function FamilyScreen() {
               }
             />
           ))}
-          {pendingInvites.map((inv) => (
-            <Row
-              key={inv.id}
-              icon="hourglass-outline"
-              color="#d97706"
-              title={inv.coach_label || 'Coach invite'}
-              subtitle={`Invited ${daysAgo(inv.last_sent_at)} · not on RallyHUB yet`}
-              right={
-                <Pressable onPress={() => remind(inv)} className="rounded-full px-3 py-1.5 border border-rally-600 active:opacity-70" accessibilityLabel="Send a reminder">
-                  <Text className="text-xs font-bold text-rally-600">Remind</Text>
-                </Pressable>
-              }
-            />
-          ))}
           <Row
             icon="person-add"
             title={coaches.length ? 'Invite another coach' : 'Invite your coach'}
@@ -214,6 +195,7 @@ export default function FamilyScreen() {
         </Section>
 
         {/* Family logins */}
+        <View onLayout={(e) => setLoginsY(e.nativeEvent.layout.y)} />
         <Section title="Family logins" action={{ label: '+ Add', onPress: () => router.push('/profile/edit-link') }}>
           {familyLogins.length ? (
             <View className="flex-row flex-wrap" style={{ gap: 10 }}>

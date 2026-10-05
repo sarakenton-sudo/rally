@@ -16,8 +16,12 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.rallyhub.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
+        "ITSAppUsesNonExemptEncryption": false,
+        "LSApplicationQueriesSchemes": [
+          "comgooglemaps"
+        ]
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -41,7 +45,8 @@
         {
           "calendarPermission": "RallyHUB adds tournaments and lessons to your calendar."
         }
-      ]
+      ],
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true

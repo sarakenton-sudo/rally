@@ -35,6 +35,31 @@ test('+ sheet shows every option in order (P-02)', async ({ page }) => {
   }
   await page.getByLabel('Add a tournament or season').click();
   await expect(page.getByText('Paste a season schedule')).toBeVisible();
+  for (const label of ['Invite a coach', 'View inbox', 'Copy plans@rally-hub.com']) {
+    await expect(page.getByLabel(label).first(), label).toBeVisible();
+  }
+  await expect(page.getByText(/coming soon/i)).toHaveCount(0);
+});
+
+test('Home: 90 days by month, family logins', async ({ page }) => {
+  await page.goto('/(tabs)');
+  await expect(page.getByText('Next 90 days').first()).toBeVisible();
+  await expect(page.getByText('Family logins', { exact: true }).first()).toBeVisible();
+});
+
+test('Schedule header: team details and share', async ({ page }) => {
+  await page.goto('/season');
+  const details = page.getByLabel('Team details').first();
+  test.skip(!(await details.waitFor({ timeout: 8000 }).then(() => true).catch(() => false)), 'No active team for this account');
+  await expect(page.getByLabel('Share team details').first()).toBeVisible();
+});
+
+test('pushed screens have no extra "(tabs)" back bar', async ({ page }) => {
+  await page.goto('/family');
+  const athlete = page.getByText(/Profile, logins|·/).locator('visible=true').first();
+  test.skip(!(await athlete.waitFor({ timeout: 8000 }).then(() => true).catch(() => false)), 'No athletes');
+  await athlete.click();
+  await expect(page.getByText('(tabs)', { exact: true })).toHaveCount(0);
 });
 
 test('copy forwarding address (P-03)', async ({ page, context, browserName }) => {

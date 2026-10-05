@@ -50,6 +50,16 @@ export default function BookScreen() {
   const [openDoc, setOpenDoc] = useState<string | null>(null);
   const [newAthlete, setNewAthlete] = useState({ firstName: '', lastName: '', gradYear: '', position: '', club: '' });
   const [addingAthlete, setAddingAthlete] = useState(false);
+  const [showAddAthlete, setShowAddAthlete] = useState(athletes.length === 0);
+  // Inline, always-visible validation (Alert buttons don't work on the web).
+  const [formError, setFormError] = useState<string | null>(null);
+  // Athletes can load after the screen opens: pick the first and close the add form
+  // unless the parent already started typing a new athlete.
+  useEffect(() => {
+    if (athleteId || !athletes.length) return;
+    setAthleteId(athletes[0].id);
+    if (!newAthlete.firstName.trim()) setShowAddAthlete(false);
+  }, [athletes.length]);
 
   const addAthlete = async () => {
     if (!newAthlete.firstName.trim()) { showAlert('Athlete', "Enter your athlete's first name."); notifyError(); return; }
@@ -63,6 +73,8 @@ export default function BookScreen() {
     } as any;
     useSeasonStore.getState().setAthletes([...athletes, created]);
     setAthleteId(id);
+    setShowAddAthlete(false);
+    setNewAthlete({ firstName: '', lastName: '', gradYear: '', position: '', club: '' });
     notifySuccess();
   };
   // Payment (only when the coach takes payments in RallyHUB)
@@ -128,14 +140,17 @@ export default function BookScreen() {
   const selectedType = types.find((t) => t.id === sessionTypeId);
 
   const handleSubmit = async () => {
-    if (!athleteId) { showAlert('Pick an athlete', 'Choose who this lesson is for.'); notifyError(); return; }
-    if (!sessionTypeId) { showAlert('Pick a session type', 'Choose what to book.'); notifyError(); return; }
-    if (!allergies.trim()) { showAlert('Allergies', 'List any allergies, or type "None".'); notifyError(); return; }
-    if (!ecName.trim() || !ecPhone.trim()) { showAlert('Emergency contact', 'Add an emergency contact name and phone.'); notifyError(); return; }
-    if (coachPay?.enabled && !pm) { showAlert('Payment method', 'Add a card or bank account. You won\'t be charged until the coach confirms.'); notifyError(); return; }
+    const fail = (msg: string) => { setFormError(msg); notifyError(); };
+    setFormError(null);
+    if (!athleteId) return fail("Choose who this lesson is for (or add your athlete).");
+    if (!sessionTypeId) return fail('Choose a session type.');
+    if (!allergies.trim()) return fail('Allergies are required — list any, or type "None".');
+    if (!ecName.trim()) return fail('Add an emergency contact name.');
+    if (ecPhone.replace(/\D/g, '').length < 10) return fail("Add the emergency contact's phone number (10 digits).");
+    if (coachPay?.enabled && !pm) return fail("Add a card or bank account. You won't be charged until the coach confirms.");
     if (!accepted) {
-      if (!agreeTerms || !agreeRelease) { showAlert('Terms & release', 'Please accept the lesson terms and the release to continue.'); notifyError(); return; }
-      if (signer.trim().length < 2) { showAlert('Signature', 'Type your full name to sign.'); notifyError(); return; }
+      if (!agreeTerms || !agreeRelease) return fail('Accept the lesson terms and the release to continue.');
+      if (signer.trim().length < 2) return fail('Type your full name to sign.');
     }
 
     const filmLinks = film.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
@@ -187,6 +202,13 @@ export default function BookScreen() {
           </Pressable>
         </View>
 
+        {formError ? (
+          <View className="flex-row items-start px-4 py-2.5 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-900" accessibilityLiveRegion="polite">
+            <Ionicons name="alert-circle" size={16} color="#dc2626" style={{ marginTop: 1 }} />
+            <Text className="text-xs font-semibold text-red-700 dark:text-red-300 ml-1.5 flex-1">{formError}</Text>
+          </View>
+        ) : null}
+
         {loading ? (
           <ActivityIndicator color="#3B82B0" className="mt-8" />
         ) : (
@@ -214,11 +236,36 @@ export default function BookScreen() {
               </View>
             ) : null}
 
-            {/* Athlete */}
-            {athletes.length === 0 ? (
+            {/* Athlete — always changeable; add one inline */}
+            <Text className="text-sm font-medium text-bark dark:text-parchment mb-1.5">Who's the lesson for?</Text>
+            {athletes.length > 0 && (
+              <View className="flex-row flex-wrap mb-2">
+                {athletes.map((a) => {
+                  const on = athleteId === a.id && !showAddAthlete;
+                  return (
+                    <Pressable
+                      key={a.id}
+                      onPress={() => { setAthleteId(a.id); setShowAddAthlete(false); setFormError(null); }}
+                      className={`rounded-full px-3.5 py-2 mr-2 mb-2 border ${on ? 'bg-rally-600 border-rally-600' : 'border-parchment dark:border-rally-900 bg-cream dark:bg-bark-light'}`}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: on }}
+                    >
+                      <Text className={`text-sm font-semibold ${on ? 'text-cream' : 'text-bark dark:text-cream'}`}>{athleteName(a)}</Text>
+                    </Pressable>
+                  );
+                })}
+                <Pressable
+                  onPress={() => setShowAddAthlete(true)}
+                  className={`rounded-full px-3.5 py-2 mr-2 mb-2 border border-dashed ${showAddAthlete ? 'border-rally-600' : 'border-parchment dark:border-rally-900'}`}
+                  accessibilityLabel="Add another athlete"
+                >
+                  <Text className="text-sm font-semibold text-rally-600">+ Add athlete</Text>
+                </Pressable>
+              </View>
+            )}
+            {showAddAthlete && (
               // Lessons-first parents (e.g. from a coach's booking page) add their athlete here.
               <View className="bg-cream dark:bg-bark-light rounded-xl p-3 mb-4 border border-parchment dark:border-rally-900">
-                <Text className="text-sm font-bold text-bark dark:text-cream mb-1">Who's the lesson for?</Text>
                 <Text className="text-xs text-stone dark:text-parchment mb-2">Your coach sees this so they know who's walking in.</Text>
                 <View className="flex-row gap-3">
                   <View className="flex-1"><FormField label="First name" value={newAthlete.firstName} onChangeText={(v) => setNewAthlete((a) => ({ ...a, firstName: v }))} placeholder="Drue" /></View>
@@ -229,24 +276,17 @@ export default function BookScreen() {
                   <View className="flex-1"><FormField label="Position" value={newAthlete.position} onChangeText={(v) => setNewAthlete((a) => ({ ...a, position: v }))} placeholder="e.g. Setter" /></View>
                 </View>
                 <FormField label="Club (optional)" value={newAthlete.club} onChangeText={(v) => setNewAthlete((a) => ({ ...a, club: v }))} placeholder="e.g. AJV" />
-                <Pressable disabled={addingAthlete} onPress={addAthlete} className="bg-rally-600 rounded-lg py-2.5 items-center active:opacity-80">
-                  <Text className="text-sm font-semibold text-cream">{addingAthlete ? 'Adding…' : 'Add athlete'}</Text>
-                </Pressable>
-              </View>
-            ) : athletes.length === 1 ? (
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-bark dark:text-parchment mb-1.5">Athlete</Text>
-                <View className="bg-cream dark:bg-bark-light rounded-xl px-4 py-3">
-                  <Text className="text-base text-bark dark:text-cream">{athleteName(athletes[0])}</Text>
+                <View className="flex-row" style={{ gap: 8 }}>
+                  <Pressable disabled={addingAthlete} onPress={addAthlete} className="flex-1 bg-rally-600 rounded-lg py-2.5 items-center active:opacity-80">
+                    <Text className="text-sm font-semibold text-cream">{addingAthlete ? 'Adding…' : 'Add athlete'}</Text>
+                  </Pressable>
+                  {athletes.length > 0 && (
+                    <Pressable onPress={() => setShowAddAthlete(false)} className="rounded-lg px-4 py-2.5 items-center">
+                      <Text className="text-sm font-semibold text-stone">Cancel</Text>
+                    </Pressable>
+                  )}
                 </View>
               </View>
-            ) : (
-              <DropdownField
-                label="Athlete"
-                value={athleteId ? athleteName(athletes.find((a) => a.id === athleteId)!) : ''}
-                options={athletes.map(athleteName)}
-                onChange={(name) => setAthleteId(athletes.find((a) => athleteName(a) === name)?.id ?? null)}
-              />
             )}
 
             <FormField
@@ -306,8 +346,8 @@ export default function BookScreen() {
             <FormField label="Allergies (required)" value={allergies} onChangeText={setAllergies} placeholder='e.g. peanuts, bee stings — or "None"' />
             <FormField label="Medical conditions or notes (optional)" value={medicalNotes} onChangeText={setMedicalNotes} placeholder="e.g. asthma (inhaler in bag), recent ankle sprain" multiline style={{ minHeight: 50, textAlignVertical: 'top' }} />
             <View className="flex-row gap-3">
-              <View className="flex-1"><FormField label="Emergency contact" value={ecName} onChangeText={setEcName} placeholder="Name" /></View>
-              <View className="flex-1"><FormField label="Their phone" value={ecPhone} onChangeText={setEcPhone} placeholder="(512) 555-0100" keyboardType="phone-pad" /></View>
+              <View className="flex-1"><FormField label="Emergency contact (required)" value={ecName} onChangeText={(v) => { setEcName(v); setFormError(null); }} placeholder="Name" /></View>
+              <View className="flex-1"><FormField label="Their phone (required)" value={ecPhone} onChangeText={(v) => { setEcPhone(v); setFormError(null); }} placeholder="(512) 555-0100" keyboardType="phone-pad" /></View>
             </View>
 
             {/* Terms, release, platform terms */}

@@ -23,9 +23,13 @@ interface NotificationLogEntry {
 
 const TYPE_CONFIG: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string }> = {
   tournament_reminder: { icon: 'calendar', color: '#3B82B0', label: 'Reminder' },
-  rsvp_request: { icon: 'mail', color: '#7c3aed', label: 'RSVP' },
   cancellation_deadline: { icon: 'warning', color: '#dc2626', label: 'Deadline' },
-  schedule_change: { icon: 'swap-horizontal', color: '#d97706', label: 'Schedule' },
+  // Lesson changes (notify-booking-change logs these): booked, moved, cancelled, new-time requests.
+  schedule_change: { icon: 'swap-horizontal', color: '#d97706', label: 'Lesson' },
+  lesson_reminder: { icon: 'alarm-outline', color: '#3B82B0', label: 'Lesson' },
+  lesson_changed: { icon: 'swap-horizontal', color: '#d97706', label: 'Lesson' },
+  reschedule_proposed: { icon: 'swap-horizontal', color: '#d97706', label: 'New time?' },
+  coach_announcement: { icon: 'megaphone-outline', color: '#7c3aed', label: 'Coach' },
   custom: { icon: 'notifications', color: '#8FA8BF', label: 'Custom' },
 };
 
@@ -201,7 +205,7 @@ export default function NotificationsScreen() {
               <Ionicons name="notifications-off-outline" size={48} color={ic.placeholder} />
               <Text className="text-lg font-semibold text-stone mt-4">No notifications yet</Text>
               <Text className="text-sm text-stone mt-1 text-center px-8">
-                Notifications will appear here when you send RSVP requests, reminders, or deadline alerts.
+                Lesson updates, tournament reminders and hotel deadline alerts will appear here.
               </Text>
             </View>
           }

@@ -21,13 +21,20 @@ serve(async (req: Request) => {
 
     const { data: b } = await supabaseAdmin
       .from('bookings')
-      .select('id, request_id, parent_user_id, status, payment_status, stripe_payment_intent_id, refunded_cents, amount_charged_cents, updated_at, coaches(user_id), slots(starts_at)')
+      .select('id, request_id, parent_user_id, athlete_id, status, payment_status, stripe_payment_intent_id, refunded_cents, amount_charged_cents, updated_at, coaches(user_id), slots(starts_at)')
       .eq('id', booking_id)
       .maybeSingle();
     const bk = b as any;
     if (!bk) return json({ error: 'booking not found' }, 404);
     const byCoach = bk.coaches?.user_id === userId;
-    if (!byCoach && bk.parent_user_id !== userId) return json({ error: 'not authorized' }, 403);
+    // The family: the parent who booked, or a co-parent who manages the athlete.
+    let byFamily = bk.parent_user_id === userId;
+    if (!byCoach && !byFamily) {
+      const { data: mgr } = await supabaseAdmin.from('admin_athletes').select('admin_id')
+        .eq('athlete_id', bk.athlete_id).eq('admin_id', userId).eq('permission', 'manage').maybeSingle();
+      byFamily = !!mgr;
+    }
+    if (!byCoach && !byFamily) return json({ error: 'not authorized' }, 403);
     if (bk.status !== 'cancelled') return json({ error: 'booking is not cancelled' }, 400);
     if (!bk.stripe_payment_intent_id || !['captured', 'processing'].includes(bk.payment_status)) {
       return json({ refunded: false, reason: 'nothing charged in RallyHUB' });

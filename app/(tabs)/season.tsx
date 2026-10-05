@@ -1,4 +1,4 @@
-import { View, Text, FlatList, ActivityIndicator, Pressable, Alert, Platform, Linking } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, Pressable, Alert, Platform, Linking, Share } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +10,8 @@ import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
-import { daysUntil } from '@/lib/dates';
+import { daysUntil, formatDateRange } from '@/lib/dates';
+import { showToast } from '@/components/Toast';
 import ReferFriend from '@/components/ReferFriend';
 import type { Tournament } from '@/types/database';
 import { addAllDayEventsToCalendar } from '@/lib/calendar';
@@ -46,6 +47,38 @@ export default function SeasonScreen() {
     activeSeasonId ? tournaments.filter((t) => t.season_id === activeSeasonId) : tournaments,
     [tournaments, activeSeasonId]
   );
+
+  // Share: team, season, code and the upcoming tournaments — for co-parents, grandparents, carpools.
+  const shareTeam = async () => {
+    if (!activeSeason) return;
+    tapLight();
+    const upcoming = seasonTournaments
+      .filter((t) => daysUntil(t.end_date) >= 0)
+      .sort((a, b) => a.start_date.localeCompare(b.start_date));
+    const lines = [
+      `${activeSeason.team_name}${activeAthlete ? ` (${activeAthlete.first_name})` : ''} · ${activeSeason.season_year}`,
+      activeSeason.club_name ? activeSeason.club_name : null,
+      activeSeason.team_code ? `Team code: ${activeSeason.team_code}` : null,
+      activeSeason.default_stream_url ? `Watch live: ${activeSeason.default_stream_url}` : null,
+      upcoming.length ? '' : null,
+      upcoming.length ? 'Upcoming tournaments:' : null,
+      ...upcoming.map((t) => {
+        const venue = t.venues?.find((v) => v.is_confirmed) ?? t.venues?.[0];
+        const where = [venue?.label, venue?.address || t.location_city].filter(Boolean).join(', ');
+        const stream = t.streaming_links?.[0]?.url;
+        return `• ${t.name} — ${formatDateRange(t.start_date, t.end_date)}${where ? ` · ${where}` : ''}${stream ? `\n  Watch: ${stream}` : ''}`;
+      }),
+      '',
+      'Shared from RallyHUB · rally-hub.com',
+    ].filter((l) => l !== null) as string[];
+    const message = lines.join('\n');
+    if (Platform.OS === 'web') {
+      await Clipboard.setStringAsync(message);
+      showToast('Team details copied');
+    } else {
+      await Share.share({ message });
+    }
+  };
 
   const listItems = useMemo(() => {
     const upcoming = seasonTournaments
@@ -129,16 +162,36 @@ export default function SeasonScreen() {
                   {seasonYear ? `${seasonYear} · ` : ''}{seasonTournaments.length} tournament{seasonTournaments.length !== 1 ? 's' : ''}
                 </Text>
               </View>
-              {activeSeason?.default_stream_url ? (
-                <Pressable
-                  className="flex-row items-center bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg active:opacity-70"
-                  onPress={() => Linking.openURL(activeSeason.default_stream_url!)}
-                >
-                  <Ionicons name="tv-outline" size={14} color="#dc2626" />
-                  <Text className="text-xs font-semibold text-red-600 ml-1">Watch Live</Text>
-                </Pressable>
+              {activeSeason ? (
+                <View className="flex-row items-center" style={{ gap: 6 }}>
+                  <Pressable
+                    className="flex-row items-center rounded-lg px-2.5 py-1.5 bg-rally-50 dark:bg-rally-900/30 active:opacity-70"
+                    onPress={() => router.push('/settings/team-details')}
+                    accessibilityLabel="Team details"
+                  >
+                    <Ionicons name="information-circle-outline" size={15} color="#3B82B0" />
+                    <Text className="text-xs font-semibold text-rally-600 ml-1">Details</Text>
+                  </Pressable>
+                  <Pressable
+                    className="flex-row items-center rounded-lg px-2.5 py-1.5 bg-rally-600 active:opacity-80"
+                    onPress={shareTeam}
+                    accessibilityLabel="Share team details"
+                  >
+                    <Ionicons name="share-outline" size={15} color="#FEFEFE" />
+                    <Text className="text-xs font-semibold text-cream ml-1">Share</Text>
+                  </Pressable>
+                </View>
               ) : null}
             </View>
+            {activeSeason?.default_stream_url ? (
+              <Pressable
+                className="flex-row items-center self-start bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg mt-2 active:opacity-70"
+                onPress={() => Linking.openURL(activeSeason.default_stream_url!)}
+              >
+                <Ionicons name="tv-outline" size={14} color="#dc2626" />
+                <Text className="text-xs font-semibold text-red-600 ml-1">Watch Live</Text>
+              </Pressable>
+            ) : null}
 
             {/* Team Code Block */}
             {teamCode ? (

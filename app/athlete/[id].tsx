@@ -15,6 +15,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
 import PhotoEditor from '@/components/PhotoEditor';
+import AthleteAccountCard from '@/components/AthleteAccountCard';
 
 const ATHLETE_SERVICES = ['SportsRecruits', 'Hudl', 'University Athlete', 'Instagram', 'USA Volleyball'];
 
@@ -266,6 +267,11 @@ export default function AthleteProfileScreen() {
         {/* ============================================================ */}
         {/* HEALTH & SAFETY + SIGNED DOCUMENTS (coach lessons) */}
         {/* ============================================================ */}
+        <View className="mt-6">
+          <HubSectionHeader icon="person-circle" title={`${athlete.first_name}'s login`} iconColor="#3B82B0" />
+        </View>
+        <AthleteAccountCard athleteId={athlete.id} firstName={athlete.first_name} hasLogin={!!athlete.user_id} />
+
         <View className="mt-6">
           <HubSectionHeader icon="medkit" title="Health & Safety" iconColor="#dc2626" />
         </View>

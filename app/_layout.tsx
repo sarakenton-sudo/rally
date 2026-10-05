@@ -14,6 +14,7 @@ import { NotificationProvider } from '@/providers/NotificationProvider';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { takeNextPath } from '@/lib/bookingPage';
 import { ToastHost } from '@/components/Toast';
+import { CalendarChooserHost } from '@/components/CalendarChooser';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -125,7 +126,8 @@ function RootLayoutNav() {
     const inAuthFlow = segments[0] === 'auth' || segments[0] === 'landing';
     const inOnboarding = segments[0] === 'onboarding';
     // Public coach booking pages work logged out.
-    const inPublic = segments[0] === 'book';
+    const inPublic = segments[0] === 'book' || segments[0] === 'fan';   // fan invite page works signed out
+    const isFan = (userProfile?.role as string) === 'fan';
     // Lesson-first parents (arrived via a coach's page) can book without the
     // team/season onboarding.
     const inLessonFlow = inPublic || segments[0] === 'coaching' || segments[0] === 'documents';
@@ -141,6 +143,9 @@ function RootLayoutNav() {
       // Coach account — lives in /coach. Only pull them off the "wrong home"
       // screens (auth/onboarding/tabs), never out of legit stack routes (settings).
       if (inAuthFlow || inOnboarding || segments[0] === '(tabs)') target = '/today';
+    } else if (isFan) {
+      // Fan (guest with the app): read-only family view.
+      if (inAuthFlow || inOnboarding || segments[0] === '(tabs)' || segments[0] === '(coach)') target = '/fan-home';
     } else if (isCoParent) {
       if (inAuthFlow || inOnboarding) target = '/(tabs)';
     } else if (userProfile?.role === 'admin' && !adminConfig && !isCoParent) {
@@ -176,13 +181,16 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={theme}>
-      <Stack>
+      {/* Every screen draws its own header + back button; the default stack header
+          showed a second "< (tabs)" bar on screens not listed here (and on
+          folders with their own _layout, like athlete/). */}
+      <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="(coach)" options={{ headerShown: false }} />
         <Stack.Screen name="landing" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ headerShown: false, presentation: 'card', gestureEnabled: false, animation: 'fade' }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: true }} />
         <Stack.Screen
           name="booking/add-hotel"
           options={{ presentation: 'modal', headerShown: false }}
@@ -449,6 +457,7 @@ function RootLayoutNav() {
         />
       </Stack>
       <ToastHost />
+      <CalendarChooserHost />
     </ThemeProvider>
   );
 }

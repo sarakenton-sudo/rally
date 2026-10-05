@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, Pressable, KeyboardAvoidingView, Platform, Image, ScrollView, Linking } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,8 @@ import { useAuth } from '@/providers/AuthProvider';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import type { AccountType } from '@/types/database';
 import { rememberCoachInvite } from '@/lib/coachInvites';
+import { rememberFanCode } from '@/lib/fan';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { savePendingMarketing, MARKETING_CONSENT_LABEL } from '@/lib/marketing';
 
 function getInitialSignUp(): boolean {
@@ -34,6 +36,12 @@ function captureCoachInvite() {
 }
 captureCoachInvite();
 
+/** rally-hub.com/fan/CODE → sign-up carries ?fan=CODE: accepted once the account exists. */
+if (Platform.OS === 'web' && typeof window !== 'undefined') {
+  const fan = new URLSearchParams(window.location.search).get('fan');
+  if (fan) rememberFanCode(fan);
+}
+
 /** Homepage "Set up your coach page" links here with ?signup=true&role=coach. */
 function getInitialAccountType(): AccountType {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -43,7 +51,18 @@ function getInitialAccountType(): AccountType {
 }
 
 export default function AuthScreen() {
-  const { signIn, signUp, signInWithGoogle, resetPassword, acceptInvite } = useAuth();
+  const { signIn, signUp, signInWithGoogle, signInWithApple, resetPassword, acceptInvite } = useAuth();
+  // Sign in with Apple: iPhone only (App Store 4.8 — offered alongside Google).
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  useEffect(() => {
+    if (Platform.OS === 'ios') AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => {});
+  }, []);
+  const handleAppleSignIn = async () => {
+    setMessage(null);
+    if (isSignUp) savePendingMarketing(marketing, 'signup_apple');
+    const { error } = await signInWithApple(isSignUp ? accountType : undefined);
+    if (error) setMessage({ text: error, type: 'error' });
+  };
   const [isSignUp, setIsSignUp] = useState(getInitialSignUp);
   const [accountType, setAccountType] = useState<AccountType>(getInitialAccountType);
   const [email, setEmail] = useState('');
@@ -208,6 +227,17 @@ export default function AuthScreen() {
                 </Text>
               </Pressable>
             </View>
+          )}
+
+          {/* Sign in with Apple — Apple's own button, above Google (iPhone only) */}
+          {appleAvailable && (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={isSignUp ? AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP : AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+              cornerRadius={14}
+              style={{ height: 50, marginBottom: 10 }}
+              onPress={handleAppleSignIn}
+            />
           )}
 
           {/* Google Sign-In Button — disabled during early access. Set earlyAccessMode = false to re-enable. */}

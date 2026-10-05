@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable, TextInput, ActivityIndicator, Alert, Platform } from 'react-native';
 import {
-  markBookingPaid, markBookingUnpaid, coachCancelBooking, coachProposeReschedule, coachWithdrawReschedule, fetchUpcomingSlots,
+  markBookingPaid, markBookingUnpaid, coachCancelBooking, coachProposeReschedule, coachWithdrawReschedule, coachRespondToReschedule, fetchUpcomingSlots,
   paymentBadge, PAYMENT_BADGE_STYLE, fmtMoney, type ScheduleAttendee, type SlotWithRefs,
 } from '@/lib/coach';
 import { notifySuccess, notifyError, tapLight } from '@/lib/haptics';
@@ -96,8 +96,22 @@ export default function LessonActions({ attendee, slotId, startsAt, coachId, onC
         {busy && <ActivityIndicator size="small" color="#3B82B0" className="ml-1" />}
       </View>
 
-      {/* Waiting on the family to accept a new time */}
-      {attendee.proposed_starts_at ? (
+      {/* Pending move: the coach's offer (waiting on the family) or the family's request (coach answers) */}
+      {attendee.proposed_starts_at && attendee.proposed_by === 'parent' ? (
+        <View className="mt-1.5 rounded-lg px-2.5 py-2" style={{ backgroundColor: '#d977061a' }}>
+          <Text className="text-xs font-semibold" style={{ color: '#b45309' }}>
+            The family asked to move this to {fmtSlot(attendee.proposed_starts_at)}
+          </Text>
+          <View className="flex-row mt-1.5" style={{ gap: 8 }}>
+            <Pressable disabled={busy} onPress={() => run(() => coachRespondToReschedule(attendee.id, true), "Couldn't move the lesson")} className="rounded-md px-2.5 py-1 bg-rally-600 active:opacity-80">
+              <Text className="text-xs font-bold text-white">Accept new time</Text>
+            </Pressable>
+            <Pressable disabled={busy} onPress={() => run(() => coachRespondToReschedule(attendee.id, false), "Couldn't update")} className="rounded-md px-2.5 py-1 border border-parchment active:opacity-70">
+              <Text className="text-xs font-bold text-bark dark:text-cream">Keep original</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : attendee.proposed_starts_at ? (
         <View className="flex-row items-center flex-wrap mt-1.5 rounded-lg px-2.5 py-1.5" style={{ backgroundColor: '#d977061a' }}>
           <Text className="text-xs font-semibold flex-1" style={{ color: '#b45309' }}>
             Asked to move to {fmtSlot(attendee.proposed_starts_at)} · waiting for the family
@@ -112,7 +126,7 @@ export default function LessonActions({ attendee, slotId, startsAt, coachId, onC
       {mode === 'none' && (
         <View className="flex-row mt-1.5">
           <Pressable onPress={openReschedule} className="rounded-lg px-3 py-1.5 mr-2 bg-rally-50 dark:bg-rally-900/30 active:opacity-70">
-            <Text className="text-xs font-semibold text-rally-600">{attendee.proposed_starts_at ? 'Offer a different time' : 'Reschedule'}</Text>
+            <Text className="text-xs font-semibold text-rally-600">{attendee.proposed_starts_at && attendee.proposed_by !== 'parent' ? 'Offer a different time' : 'Reschedule'}</Text>
           </Pressable>
           <Pressable onPress={() => { tapLight(); setMode('cancel'); }} className="rounded-lg px-3 py-1.5 bg-red-50 dark:bg-red-900/20 active:opacity-70">
             <Text className="text-xs font-semibold text-red-600">Cancel lesson</Text>

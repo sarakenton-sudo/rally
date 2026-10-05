@@ -41,3 +41,12 @@ describe('showCoachInvitePrompt', () => {
 it('countdown labels', () => {
   expect([0, 1, 5].map(countdownLabel)).toEqual(['Today', 'Tomorrow', 'In 5 days']);
 });
+
+import { groupByMonth } from '@/lib/nextUp';
+describe('groupByMonth (Home "Coming up")', () => {
+  it('splits a sorted timeline into month sections, year shown when it changes', () => {
+    const g = groupByMonth([{ date: '2026-11-13' }, { date: '2026-11-20' }, { date: '2026-12-01' }, { date: '2027-01-02' }], new Date(2026, 9, 4));
+    expect(g.map((x) => [x.label, x.items.length])).toEqual([['NOVEMBER', 2], ['DECEMBER', 1], ['JANUARY 2027', 1]]);
+  });
+  it('handles an empty list', () => expect(groupByMonth([])).toEqual([]));
+});

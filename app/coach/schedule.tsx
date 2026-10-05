@@ -9,6 +9,7 @@ import {
   fetchWeekSlots, fetchSessionTypes, weekSummary, blockRevenue, fmtMoney, setSlotFacilityStatus,
   FACILITY_STATUS_STYLE, hasRealAllergies, isSupabaseConfigured, sessionKindStyle, type ScheduleItem, type SlotWithRefs,
 } from '@/lib/coach';
+import { webcalUrl } from '@/lib/calendarFormat';
 import { useCoachStore } from '@/stores/useCoachStore';
 import WeekSummaryHeader from '@/components/coach/WeekSummaryHeader';
 import LessonActions from '@/components/coach/LessonActions';
@@ -114,6 +115,12 @@ export default function CoachScheduleScreen() {
   const addToGoogle = () => withToken(false, (token) => {
     tapLight();
     Linking.openURL(googleCalendarSubscribeUrl(token));
+  });
+
+  // Apple Calendar subscribes to webcal:// links directly (iPhone, iPad, Mac).
+  const addToApple = () => withToken(false, (token) => {
+    tapLight();
+    Linking.openURL(webcalUrl(calendarFeedUrl(token)));
   });
 
   const copyLink = () => withToken(false, async (token) => {
@@ -365,7 +372,7 @@ export default function CoachScheduleScreen() {
             <Text className="text-sm font-bold text-bark dark:text-cream ml-2">Sync to your calendar</Text>
           </View>
           <Text className="text-xs text-stone dark:text-parchment mb-3 leading-4">
-            Booked and pending lessons show up in your calendar automatically. Google refreshes every few hours, so brand-new bookings can take a little while to appear.
+            Booked and pending lessons show up in your calendar automatically and stay up to date. Google refreshes every few hours, so brand-new bookings can take a little while to appear there.
           </Text>
           <Pressable
             disabled={syncBusy}
@@ -375,9 +382,17 @@ export default function CoachScheduleScreen() {
             {syncBusy ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="logo-google" size={16} color="#fff" />}
             <Text className="text-sm font-semibold text-cream ml-2">Add to Google Calendar</Text>
           </Pressable>
+          <Pressable
+            disabled={syncBusy}
+            onPress={addToApple}
+            className="flex-row items-center justify-center rounded-xl py-2.5 mt-2 border border-rally-600 active:opacity-70"
+          >
+            <Ionicons name="calendar" size={16} color="#3B82B0" />
+            <Text className="text-sm font-semibold text-rally-600 ml-2">Add to Apple Calendar</Text>
+          </Pressable>
           <View className="flex-row justify-between mt-3">
             <Pressable disabled={syncBusy} onPress={copyLink} className="py-1 active:opacity-60">
-              <Text className="text-xs font-semibold text-rally-600">Copy link (Apple / Outlook)</Text>
+              <Text className="text-xs font-semibold text-rally-600">Copy link (Outlook, others)</Text>
             </Pressable>
             <Pressable disabled={syncBusy} onPress={resetLink} className="py-1 active:opacity-60">
               <Text className="text-xs text-stone">Reset link</Text>

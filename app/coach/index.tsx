@@ -326,6 +326,7 @@ export default function CoachDashboardScreen() {
 }
 
 function DashRow({ icon, color = '#3B82B0', title, subtitle, badge, comingSoon, onPress }: { icon: keyof typeof Ionicons.glyphMap; color?: string; title: string; subtitle: string; badge?: number; comingSoon?: boolean; onPress?: () => void }) {
+  if (comingSoon) return null; // no placeholders in release builds
   return (
     <Pressable
       disabled={!onPress}

@@ -17,12 +17,14 @@ import { fetchMyUpcomingLessons, fetchMyCoaches, fetchMyRescheduleProposals, res
 import { showToast } from '@/components/Toast';
 import { fetchMyCharges, type ParentCharge } from '@/lib/payments';
 import { fetchMyCoachInvites } from '@/lib/coachInvites';
-import { pickNextUp, showCoachInvitePrompt } from '@/lib/nextUp';
+import { pickNextUp, showCoachInvitePrompt, groupByMonth } from '@/lib/nextUp';
+import AthleteCredentialCard from '@/components/AthleteCredentialCard';
 import { getPref, setPref } from '@/lib/prefs';
 import NextUpCard from '@/components/home/NextUpCard';
 import LessonCard from '@/components/LessonCard';
 
 const INVITE_DISMISS_KEY = 'rally.coachInvitePromptDismissedAt';
+const HORIZON_DAYS = 90;
 const fmtWhen = (iso: string) => {
   const d = new Date(iso);
   return `${d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
@@ -72,11 +74,11 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const { refresh, isRefreshing } = useDataRefresh();
 
-  // Lessons/clinics booked with coaches, merged into Next 30 Days.
+  // Lessons/clinics booked with coaches, merged into "Coming up" (next 90 days).
   const [lessons, setLessons] = useState<ParentLesson[]>([]);
   const loadLessons = useCallback(() => {
     if (!coachingConfigured) return;
-    fetchMyUpcomingLessons(30).then(({ data }) => setLessons(data));
+    fetchMyUpcomingLessons(HORIZON_DAYS).then(({ data }) => setLessons(data));
   }, []);
 
   const [athleteFilter, setAthleteFilter] = useState<string>('all');
@@ -345,36 +347,51 @@ export default function HomeScreen() {
     return cards.sort((a, b) => a.priority - b.priority);
   }, [emailsToReview, seasonTournaments, hotelBookings, flightBookings, tournamentTickets, failedCharges, hasCoaches, lastInviteAt, inviteDismissedAt, athletes]);
 
-  // ─── SECTION 3: Next 30 Days ───
-  const hasMultipleAthletes = athletes.length > 1;
+  // ─── SECTION 3: Coming up (next 90 days, by month) ───
+  // Filter chips: the family's athletes plus anyone who only appears on a lesson
+  // (e.g. added from a coach's booking page and not in the season store yet).
+  const filterAthletes = useMemo(() => {
+    const list = athletes.map((a) => ({ id: a.id, first_name: a.first_name, color: a.avatar_color || AVATAR_COLORS[a.first_name.charCodeAt(0) % AVATAR_COLORS.length] }));
+    for (const l of lessons) {
+      if (!l.athlete_id || list.some((a) => a.id === l.athlete_id)) continue;
+      const name = (l as ParentLesson & { athlete_first_name?: string | null }).athlete_first_name || 'Athlete';
+      list.push({ id: l.athlete_id, first_name: name, color: AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length] });
+    }
+    return list;
+  }, [athletes, lessons]);
+  const hasMultipleAthletes = filterAthletes.length > 1;
+  const athleteName = (id: string | null | undefined) => filterAthletes.find((a) => a.id === id)?.first_name;
 
-  const allNext30 = useMemo(() => {
+  const upcomingTournaments = useMemo(() => {
     return tournaments
-      .filter((t) => daysUntil(t.end_date) >= 0 && daysUntil(t.start_date) <= 30)
+      .filter((t) => daysUntil(t.end_date) >= 0 && daysUntil(t.start_date) <= HORIZON_DAYS)
       .sort((a, b) => a.start_date.localeCompare(b.start_date));
   }, [tournaments]);
 
-  const filteredNext30 = useMemo(() => {
-    if (athleteFilter === 'all') return allNext30;
+  const filteredTournaments = useMemo(() => {
+    if (athleteFilter === 'all') return upcomingTournaments;
     const athleteSeasonIds = new Set(
       seasons.filter((s) => s.athlete_id === athleteFilter).map((s) => s.id)
     );
-    return allNext30.filter((t) => athleteSeasonIds.has(t.season_id));
-  }, [allNext30, athleteFilter, seasons]);
+    return upcomingTournaments.filter((t) => athleteSeasonIds.has(t.season_id));
+  }, [upcomingTournaments, athleteFilter, seasons]);
 
   const filteredLessons = useMemo(
     () => (athleteFilter === 'all' ? lessons : lessons.filter((l) => l.athlete_id === athleteFilter)),
     [lessons, athleteFilter],
   );
 
-  // One chronological timeline: tournaments + lessons.
-  const next30Timeline = useMemo(() => {
+  // One chronological timeline (tournaments + lessons) grouped by month.
+  const monthSections = useMemo(() => {
     const items: ({ kind: 'tournament'; date: string; t: typeof tournaments[0] } | { kind: 'lesson'; date: string; l: ParentLesson })[] = [
-      ...filteredNext30.map((t) => ({ kind: 'tournament' as const, date: t.start_date, t })),
+      ...filteredTournaments.map((t) => ({ kind: 'tournament' as const, date: t.start_date, t })),
       ...filteredLessons.map((l) => ({ kind: 'lesson' as const, date: l.starts_at.slice(0, 10), l })),
     ];
-    return items.sort((a, b) => a.date.localeCompare(b.date));
-  }, [filteredNext30, filteredLessons]);
+    // A tournament already under way sorts as today, not its (past) start date.
+    const today = new Date().toISOString().slice(0, 10);
+    const sorted = items.map((i) => ({ ...i, date: i.date < today ? today : i.date })).sort((a, b) => a.date.localeCompare(b.date));
+    return groupByMonth(sorted);
+  }, [filteredTournaments, filteredLessons]);
 
   const hasFlightConflict = (tournamentId: string) => {
     const seen = new Set<string>();
@@ -400,7 +417,7 @@ export default function HomeScreen() {
   const nextLesson = next?.kind === 'lesson' ? lessons.find((l) => l.id === next.id) : undefined;
   const nextSeason = nextTournament ? seasons.find((s) => s.id === nextTournament.season_id) : undefined;
   const nextAthleteName = hasMultipleAthletes
-    ? (nextTournament ? getAthleteForTournament(nextTournament)?.first_name : athletes.find((a) => a.id === nextLesson?.athlete_id)?.first_name)
+    ? (nextTournament ? getAthleteForTournament(nextTournament)?.first_name : athleteName(nextLesson?.athlete_id))
     : undefined;
 
   return (
@@ -486,7 +503,7 @@ export default function HomeScreen() {
             icon="calendar"
             iconColor="#7c3aed"
             title="Coming up"
-            subtitle="Next 30 days"
+            subtitle="Next 90 days"
             right={
               <Pressable
                 onPress={() => { tapLight(); router.push('/lessons'); }}
@@ -508,8 +525,8 @@ export default function HomeScreen() {
               >
                 <Text className={`text-xs font-semibold ${athleteFilter === 'all' ? 'text-cream' : 'text-bark dark:text-parchment'}`}>All Athletes</Text>
               </Pressable>
-              {athletes.map((a) => {
-                const avatarColor = a.avatar_color || AVATAR_COLORS[a.first_name.charCodeAt(0) % AVATAR_COLORS.length];
+              {filterAthletes.map((a) => {
+                const avatarColor = a.color;
                 const isSelected = athleteFilter === a.id;
                 return (
                   <Pressable
@@ -525,30 +542,73 @@ export default function HomeScreen() {
             </ScrollView>
           )}
 
-          {next30Timeline.length > 0 ? (
-            next30Timeline.map((item) => item.kind === 'lesson' ? (
-              <LessonCard
-                key={`l-${item.l.id}`}
-                lesson={item.l}
-                athleteName={hasMultipleAthletes ? athletes.find((a) => a.id === item.l.athlete_id)?.first_name : undefined}
-              />
-            ) : (
-              <TournamentCard
-                key={`t-${item.t.id}`}
-                tournament={item.t}
-                hotelCount={hotelBookings.filter((h) => h.tournament_id === item.t.id).length}
-                flightCount={flightBookings.filter((f) => f.tournament_id === item.t.id).length}
-                backupHotelCount={hotelBookings.filter((h) => h.tournament_id === item.t.id && h.is_backup).length}
-                hasFlightConflict={hasFlightConflict(item.t.id)}
-                athlete={getAthleteForTournament(item.t)}
-                onPress={() => router.push(`/tournament/${item.t.id}`)}
-              />
+          {monthSections.length > 0 ? (
+            monthSections.map((section) => (
+              <View key={section.key}>
+                <Text className="text-xs font-bold uppercase tracking-wider text-stone mt-2 mb-2 ml-1" accessibilityRole="header">{section.label}</Text>
+                {section.items.map((item) => item.kind === 'lesson' ? (
+                  <LessonCard
+                    key={`l-${item.l.id}`}
+                    lesson={item.l}
+                    athleteName={hasMultipleAthletes ? athleteName(item.l.athlete_id) : undefined}
+                  />
+                ) : (
+                  <TournamentCard
+                    key={`t-${item.t.id}`}
+                    tournament={item.t}
+                    hotelCount={hotelBookings.filter((h) => h.tournament_id === item.t.id).length}
+                    flightCount={flightBookings.filter((f) => f.tournament_id === item.t.id).length}
+                    backupHotelCount={hotelBookings.filter((h) => h.tournament_id === item.t.id && h.is_backup).length}
+                    hasFlightConflict={hasFlightConflict(item.t.id)}
+                    athlete={getAthleteForTournament(item.t)}
+                    onPress={() => router.push(`/tournament/${item.t.id}`)}
+                  />
+                ))}
+              </View>
             ))
           ) : (
             <View className="bg-warm-white dark:bg-bark-light rounded-2xl p-5 border border-parchment dark:border-rally-900 items-center">
               <Ionicons name="calendar-outline" size={32} color={ic.placeholder} />
-              <Text className="text-sm text-stone dark:text-parchment mt-2">Nothing in the next 30 days</Text>
+              <Text className="text-sm text-stone dark:text-parchment mt-2">Nothing in the next 90 days</Text>
             </View>
+          )}
+        </View>
+
+        {/* 4. Family logins — one tap to copy or open */}
+        <View className="px-4 pt-6">
+          <SectionHeader
+            icon="key"
+            iconColor="#ca8a04"
+            title="Family logins"
+            right={
+              <Pressable onPress={() => router.push('/profile/edit-link')} hitSlop={8} className="mt-0.5" accessibilityLabel="Add a family login">
+                <Text className="text-xs font-bold text-rally-600">+ Add</Text>
+              </Pressable>
+            }
+          />
+          {familyLogins.length ? (
+            <View className="flex-row flex-wrap" style={{ gap: 10 }}>
+              {familyLogins.map((link, i) => (
+                <View key={`${link.label}-${i}`} style={{ width: '31%' }}>
+                  <AthleteCredentialCard
+                    label={link.label}
+                    url={link.url}
+                    username={link.username ?? null}
+                    password={link.password ?? null}
+                    icon={link.icon_name}
+                    onEdit={() => router.push({ pathname: '/profile/edit-link', params: { index: String(externalLinks.indexOf(link)) } })}
+                  />
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Pressable
+              onPress={() => router.push('/profile/edit-link')}
+              className="rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
+            >
+              <Ionicons name="key-outline" size={18} color="#ca8a04" />
+              <Text className="text-xs text-stone dark:text-parchment ml-2 flex-1">Save GroupMe, LeagueApps, AES and other logins your family shares</Text>
+            </Pressable>
           )}
         </View>
       </ScrollView>

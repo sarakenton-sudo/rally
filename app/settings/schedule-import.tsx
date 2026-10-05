@@ -160,46 +160,6 @@ export default function ScheduleImportScreen() {
           </View>
         </View>
 
-        {/* Coming Soon */}
-        <Pressable
-          className="bg-warm-white rounded-xl p-3 mb-2 border border-parchment opacity-50 flex-row items-center"
-          onPress={() => Alert.alert('Coming Soon', 'Direct import from LeagueApps is planned for a future release.')}
-        >
-          <View className="w-8 h-8 rounded-full items-center justify-center mr-3" style={{ backgroundColor: '#6A9E8A15' }}>
-            <Ionicons name="trophy" size={16} color="#6A9E8A" />
-          </View>
-          <Text className="text-sm font-medium text-bark flex-1">LeagueApps</Text>
-          <View className="bg-amber-100 px-2 py-0.5 rounded-full">
-            <Text className="text-xs font-semibold text-amber-700">Coming Soon</Text>
-          </View>
-        </Pressable>
-
-        <Pressable
-          className="bg-warm-white rounded-xl p-3 mb-2 border border-parchment opacity-50 flex-row items-center"
-          onPress={() => Alert.alert('Coming Soon', 'Direct import from TeamSnap is planned for a future release.')}
-        >
-          <View className="w-8 h-8 rounded-full items-center justify-center mr-3" style={{ backgroundColor: '#6A9E8A15' }}>
-            <Ionicons name="people" size={16} color="#6A9E8A" />
-          </View>
-          <Text className="text-sm font-medium text-bark flex-1">TeamSnap</Text>
-          <View className="bg-amber-100 px-2 py-0.5 rounded-full">
-            <Text className="text-xs font-semibold text-amber-700">Coming Soon</Text>
-          </View>
-        </Pressable>
-
-        <Pressable
-          className="bg-warm-white rounded-xl p-3 mb-3 border border-parchment opacity-50 flex-row items-center"
-          onPress={() => Alert.alert('Coming Soon', 'Auto-Sync will automatically detect confirmations from your email.')}
-        >
-          <View className="w-8 h-8 rounded-full items-center justify-center mr-3" style={{ backgroundColor: '#3B82B015' }}>
-            <Ionicons name="sync" size={16} color="#3B82B0" />
-          </View>
-          <Text className="text-sm font-medium text-bark flex-1">Auto-Sync</Text>
-          <View className="bg-amber-100 px-2 py-0.5 rounded-full">
-            <Text className="text-xs font-semibold text-amber-700">Coming Soon</Text>
-          </View>
-        </Pressable>
-
         <View className="h-8" />
       </ScrollView>
     </SafeAreaView>

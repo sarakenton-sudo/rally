@@ -163,7 +163,7 @@ export default function AnnounceScreen() {
             <View className="flex-row items-start mt-4 px-1">
               <Ionicons name="information-circle-outline" size={14} color={ic.muted} style={{ marginTop: 1 }} />
               <Text className="text-[11px] text-stone dark:text-parchment ml-1 flex-1 leading-4">
-                Goes out as an app notification and email{recipients !== null ? ` to ${recipients} famil${recipients === 1 ? 'y' : 'ies'}` : ''}, with a link to book and a way to unsubscribe. Text messages are coming soon. {DAILY_CAP - Math.min(sentToday, DAILY_CAP)} of {DAILY_CAP} announcements left today.
+                Goes out as an app notification and email{recipients !== null ? ` to ${recipients} famil${recipients === 1 ? 'y' : 'ies'}` : ''}, with a link to book and a way to unsubscribe. {DAILY_CAP - Math.min(sentToday, DAILY_CAP)} of {DAILY_CAP} announcements left today.
               </Text>
             </View>
           </ScrollView>

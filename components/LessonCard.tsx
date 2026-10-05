@@ -10,12 +10,15 @@ export default function LessonCard({ lesson, athleteName }: { lesson: ParentLess
   const off = lesson.status === 'cancelled' || lesson.status === 'declined';
   const tag = off
     ? { label: lesson.status === 'cancelled' ? 'CANCELLED' : 'DECLINED', cls: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300' }
+    : lesson.proposal
+      ? { label: lesson.proposal.by === 'coach' ? 'NEW TIME?' : 'MOVE REQUESTED', cls: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-700 dark:text-amber-300' }
     : confirmed
       ? { label: 'CONFIRMED', cls: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300' }
       : { label: 'REQUESTED', cls: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-700 dark:text-amber-300' };
   return (
     <Pressable
-      onPress={() => router.push('/coaching')}
+      onPress={() => router.push({ pathname: '/lesson/[id]', params: { id: lesson.id } })}
+      accessibilityLabel={`${lesson.session_type ?? 'Lesson'} with ${lesson.coach_name}, ${start.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}`}
       className="bg-warm-white dark:bg-bark-light rounded-2xl p-4 mb-3 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
       style={{ borderLeftWidth: 4, borderLeftColor: off ? '#dc2626' : st.color, opacity: off ? 0.85 : 1, shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
     >

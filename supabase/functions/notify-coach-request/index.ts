@@ -1,12 +1,16 @@
-// notify-coach-request: push the coach when a parent requests (or instant-books)
-// a lesson. Called by the parent's app right after request_booking succeeds.
+// notify-coach-request: tell the coach (push + email) when a parent requests
+// (or instant-books) a lesson. Called by the parent's app right after
+// request_booking succeeds. Wording/channels: notification_templates
+// 'booking_request_coach' / 'booking_confirmed_coach' (admin-editable).
 //   POST { request_id }   (JWT required — caller must be the request's parent)
 // Pending requests use the 'booking_request' notification category, which the
 // app registers with Approve / Decline action buttons.
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { renderNotification, emailHtml, sendEmail } from '../_shared/templates.ts';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
+const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY') ?? '';
 
 const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -55,12 +59,6 @@ serve(async (req: Request) => {
   const coachUserId: string | undefined = req_.coaches?.user_id;
   if (!coachUserId) return json({ sent: 0 });
 
-  const { data: tokens } = await supabaseAdmin
-    .from('push_tokens')
-    .select('token')
-    .eq('user_id', coachUserId);
-  if (!tokens?.length) return json({ sent: 0, reason: 'coach has no registered devices' });
-
   const tz = req_.coaches?.default_timezone || 'America/Chicago';
   const when = req_.slots?.starts_at
     ? new Date(req_.slots.starts_at).toLocaleString('en-US', {
@@ -73,10 +71,39 @@ serve(async (req: Request) => {
   const pending = r.status === 'requested';
   const details = [req_.session_types?.name, when, req_.slots?.facilities?.label].filter(Boolean).join(' · ');
 
+  const tpl = await renderNotification(supabaseAdmin, pending ? 'booking_request_coach' : 'booking_confirmed_coach', {
+    athlete, details, when, lesson_type: req_.session_types?.name ?? '', facility: req_.slots?.facilities?.label ?? '',
+  }, {
+    title: pending ? `Lesson request from ${athlete}` : `New booking: ${athlete}`,
+    body: pending ? `${details}. Approve or decline in RallyHUB.` : details,
+    channels: ['push', 'email'],
+  });
+
+  // Email too: the coach may not have the app installed.
+  let emailed: boolean | string = false;
+  if (tpl.email) {
+    const { data: coachUser } = await supabaseAdmin.auth.admin.getUserById(coachUserId);
+    const to = coachUser?.user?.email;
+    if (to) {
+      emailed = await sendEmail(SENDGRID_API_KEY, to, tpl.title, emailHtml(tpl.body, {
+        label: pending ? 'Review the request' : 'See your schedule', url: 'https://rally-hub.com/today',
+      }));
+    }
+  }
+
+  const { data: tokens } = await supabaseAdmin
+    .from('push_tokens')
+    .select('token')
+    .eq('user_id', coachUserId);
+  if (!tpl.push || !tokens?.length) {
+    return json({ sent: 0, emailed, reason: tpl.push ? 'coach has no registered devices' : 'push turned off in admin' });
+  }
+
   const messages = tokens.map(({ token }) => ({
     to: token,
-    title: pending ? `Lesson request from ${athlete}` : `New booking: ${athlete}`,
-    body: pending ? `${details}\nHold to approve or decline.` : details,
+    title: tpl.title,
+    // The long-press hint only makes sense on the push itself.
+    body: pending ? `${tpl.body}\nHold to approve or decline.` : tpl.body,
     sound: 'default',
     data: { type: pending ? 'booking_request' : 'booking_confirmed', requestId: r.id },
     ...(pending ? { categoryId: 'booking_request' } : {}),
@@ -96,5 +123,5 @@ serve(async (req: Request) => {
     .filter(Boolean);
   if (dead.length) await supabaseAdmin.from('push_tokens').delete().in('token', dead);
 
-  return json({ sent: messages.length - dead.length });
+  return json({ sent: messages.length - dead.length, emailed });
 });
