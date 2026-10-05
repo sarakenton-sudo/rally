@@ -28,7 +28,11 @@ if [ $BUILD = 1 ] || ! xcrun simctl get_app_container "$UDID" com.rallyhub.app >
   echo "Building RallyHUB for the simulator (first time takes 10–20 min)…"
   # Regenerate ios/ from app.json (it's gitignored and goes stale; e.g. a
   # missing calendar permission crashes the app at launch). Same as EAS does.
+  export QA_SIMULATOR=1   # app.config.js: no Apple sign-in entitlement (needs a certificate)
   npx expo prebuild --platform ios --clean --no-install >/dev/null || exit 1
+  # Sign in with Apple needs a signing certificate even on the simulator; the
+  # test build doesn't use it, so drop that entitlement here (TestFlight keeps it).
+  for e in ios/*/*.entitlements; do plutil -remove com.apple.developer.applesignin "$e" 2>/dev/null; done
   npx expo run:ios --configuration Release --device "$UDID" --no-bundler || exit 1
 fi
 
