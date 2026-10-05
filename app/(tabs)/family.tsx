@@ -13,6 +13,7 @@ import { trackEvent } from '@/lib/track-event';
 import { showToast } from '@/components/Toast';
 import Avatar from '@/components/Avatar';
 import AthleteCredentialCard from '@/components/AthleteCredentialCard';
+import { vaultRefFor } from '@/lib/credentials';
 import ReferFriend from '@/components/ReferFriend';
 import { fetchMyCoaches, isSupabaseConfigured } from '@/lib/coach';
 import { createCoachInvite, coachInviteMessage } from '@/lib/coachInvites';
@@ -88,7 +89,7 @@ export default function FamilyScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const externalLinks = adminConfig?.external_links ?? [];
-  const familyLogins = externalLinks.filter((l) => l.scope !== 'athlete' && (l.url || l.username || l.password));
+  const familyLogins = externalLinks.filter((l) => l.scope !== 'athlete' && (l.url || l.username || l.password || l.has_password));
   const athleteFirst = athletes.length === 1 ? athletes[0].first_name : athletes.length > 1 ? athletes.map((a) => a.first_name).join(' and ') : 'our athlete';
 
   const sendInvite = async (code: string | null, event: string) => {
@@ -206,6 +207,7 @@ export default function FamilyScreen() {
                     url={link.url}
                     username={link.username ?? null}
                     password={link.password ?? null}
+                    vault={vaultRefFor(adminConfig?.id, link)}
                     icon={link.icon_name}
                     onEdit={() => router.push({ pathname: '/profile/edit-link', params: { index: String(externalLinks.indexOf(link)) } })}
                   />

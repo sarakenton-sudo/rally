@@ -3,6 +3,7 @@ import { View, Text, Pressable, Platform, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { tapLight } from '@/lib/haptics';
+import { revealPassword, type VaultRef } from '@/lib/credentials';
 
 // App deep link schemes (iOS/Android) — tries app first, falls back to web
 const APP_SCHEMES: Record<string, string> = {
@@ -35,6 +36,8 @@ interface Props {
   url: string;
   username: string | null;
   password: string | null;
+  /** Encrypted password in the Credential Vault (00091): fetched on tap, Face ID on iPhone. */
+  vault?: VaultRef;
   onEdit: () => void;
   /** Icon for services without a brand style (family vault links carry their own). */
   icon?: string | null;
@@ -43,12 +46,13 @@ interface Props {
 }
 
 /** Credential tile: tap logo to open, bottom bar copies username / password, pencil edits. Used by the athlete page and the Home + Hub vaults. */
-export default function AthleteCredentialCard({ label, url, username, password, onEdit, icon, onOpen }: Props) {
+export default function AthleteCredentialCard({ label, url, username, password, vault, onEdit, icon, onOpen }: Props) {
   const brand = getBrand(label, icon ?? undefined);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const lower = label.toLowerCase();
   const isMembershipOnly = MEMBERSHIP_ONLY.some((k) => lower.includes(k));
-  const isLoaded = isMembershipOnly ? !!username : !!(username || password);
+  const hasPassword = !!password || !!vault?.hasPassword;
+  const isLoaded = isMembershipOnly ? !!username : !!(username || hasPassword);
   const hasLink = !!(onOpen || url || brand.defaultUrl);
 
   const handleCopy = async (value: string, field: string) => {
@@ -155,11 +159,15 @@ export default function AthleteCredentialCard({ label, url, username, password, 
               />
             </Pressable>
           ) : null}
-          {password && !isMembershipOnly ? (
+          {hasPassword && !isMembershipOnly ? (
             <Pressable
               className="flex-1 flex-row items-center justify-center py-2.5 active:opacity-60"
               style={{ borderRightWidth: 1, borderRightColor: 'rgba(22,163,106,0.15)' }}
-              onPress={() => handleCopy(password, 'password')}
+              onPress={async () => {
+                const pw = password || (vault ? await revealPassword(vault) : null);
+                if (pw) handleCopy(pw, 'password');
+              }}
+              accessibilityLabel={`Copy ${label} password`}
             >
               <Ionicons
                 name={copiedField === 'password' ? 'checkmark-circle' : 'key-outline'}

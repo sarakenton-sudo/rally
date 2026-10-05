@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, Alert, KeyboardAvoidingView, Platfor
 import { SafeAreaView } from '@/components/SafeAreaView';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { revealPassword, clearSavedPassword, vaultRefFor } from '@/lib/credentials';
 import * as Clipboard from 'expo-clipboard';
 import FormField from '@/components/FormField';
 import { useSeasonStore } from '@/stores/useSeasonStore';
@@ -24,8 +25,9 @@ import {
  * "Family (all athletes)"; athlete logins (Sports Recruits, USAV…) must be
  * one athlete. Team code saves to the chosen team (seasons.team_code).
  *
- * NOTE: passwords are still stored as plain text in admin_config.external_links —
- * encryption is a planned follow-up (see memory: credential-encryption-todo).
+ * Passwords are encrypted in the Credential Vault (00091): a typed password is
+ * sent once and the server moves it into Supabase Vault; existing ones are
+ * revealed on request (Face ID on iPhone) and never held in the link data.
  */
 
 export default function EditLinkScreen() {
@@ -45,7 +47,10 @@ export default function EditLinkScreen() {
   const [label, setLabel] = useState(existingLink?.label ?? newLabel ?? '');
   const [url, setUrl] = useState(existingLink?.url ?? '');
   const [username, setUsername] = useState(existingLink?.username ?? '');
-  const [password, setPassword] = useState(existingLink?.password ?? '');
+  const [password, setPassword] = useState('');           // only a NEW password is ever typed here
+  const [savedPw, setSavedPw] = useState(!!existingLink?.has_password);
+  const [shownPw, setShownPw] = useState<string | null>(null);
+  const vault = existingLink && adminConfig ? vaultRefFor(adminConfig.id, existingLink) : undefined;
   // Whose is it: 'family' or an athlete id. An existing login keeps its owner;
   // a new one gets the platform's default until the parent picks.
   const [owner, setOwner] = useState<Owner>(() => existingLink
@@ -113,6 +118,8 @@ export default function EditLinkScreen() {
 
     const toAthlete = owner !== 'family';
     const linkData = {
+      // Keep the vault id (cred_id/has_password) of an existing login.
+      ...(isEdit && existingLink ? { cred_id: existingLink.cred_id ?? null, has_password: savedPw } : {}),
       label: trimmedLabel,
       url: spec.fields.url ? url.trim() : '',
       icon_name: spec.icon,
@@ -128,8 +135,12 @@ export default function EditLinkScreen() {
     if (isSupabaseConfigured && user) {
       const { error } = await updateAdminConfig(adminConfig.id, updates);
       if (error) { setError(`Save failed: ${error.message}`); return; }
+      // Reload what the server stored: the password is now encrypted and stripped.
+      const { data: fresh } = await (supabase.from('admin_config') as any).select('*').eq('id', adminConfig.id).single();
+      setAdminConfig(fresh ?? { ...adminConfig, ...updates, external_links: updatedLinks.map((l) => ({ ...l, password: null })) });
+    } else {
+      setAdminConfig({ ...adminConfig, ...updates });
     }
-    setAdminConfig({ ...adminConfig, ...updates });
     done(toAthlete ? `/athlete/${owner}` : '/(tabs)');
   };
 
@@ -245,10 +256,42 @@ export default function EditLinkScreen() {
                   ) : null}
                 </View>
               )}
+              {spec.fields.password && savedPw && !password ? (
+                <View className="bg-cream dark:bg-bark-light rounded-xl p-3 mb-2 border border-parchment dark:border-rally-900">
+                  <View className="flex-row items-center">
+                    <Ionicons name="lock-closed" size={15} color="#16a34a" />
+                    <Text className="text-sm font-semibold text-bark dark:text-cream ml-1.5 flex-1">
+                      {shownPw ?? 'Password saved (encrypted)'}
+                    </Text>
+                    {!shownPw ? (
+                      <Pressable onPress={async () => { if (vault) setShownPw(await revealPassword(vault)); }} className="px-2 py-1" accessibilityLabel="Show saved password">
+                        <Text className="text-xs font-bold text-rally-600">Show</Text>
+                      </Pressable>
+                    ) : (
+                      <Pressable onPress={() => handleCopy(shownPw, 'Password')} className="px-2 py-1" accessibilityLabel="Copy password">
+                        <Ionicons name="copy-outline" size={16} color="#3B82B0" />
+                      </Pressable>
+                    )}
+                    <Pressable
+                      onPress={async () => {
+                        if (!vault) return;
+                        const { error } = await clearSavedPassword(vault);
+                        if (error) { setError(`Couldn't remove the password: ${error.message}`); return; }
+                        setSavedPw(false); setShownPw(null);
+                      }}
+                      className="px-2 py-1"
+                      accessibilityLabel="Remove saved password"
+                    >
+                      <Text className="text-xs font-semibold text-stone">Remove</Text>
+                    </Pressable>
+                  </View>
+                  <Text className="text-[11px] text-stone dark:text-parchment mt-1">Type below to replace it.</Text>
+                </View>
+              ) : null}
               {spec.fields.password && (
                 <View className="flex-row items-end">
                   <View className="flex-1 mr-2">
-                    <FormField label="Password" value={password} onChangeText={setPassword} placeholder="password" secureTextEntry autoCapitalize="none" />
+                    <FormField label={savedPw ? 'New password' : 'Password'} value={password} onChangeText={setPassword} placeholder={savedPw ? 'Leave blank to keep the saved one' : 'password'} secureTextEntry autoCapitalize="none" />
                   </View>
                   {password ? (
                     <Pressable onPress={() => handleCopy(password, 'Password')} className="bg-cream dark:bg-bark-light rounded-xl p-3 mb-4 active:opacity-70">

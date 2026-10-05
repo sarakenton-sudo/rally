@@ -19,6 +19,7 @@ import { fetchMyCharges, type ParentCharge } from '@/lib/payments';
 import { fetchMyCoachInvites } from '@/lib/coachInvites';
 import { pickNextUp, showCoachInvitePrompt, groupByMonth } from '@/lib/nextUp';
 import AthleteCredentialCard from '@/components/AthleteCredentialCard';
+import { vaultRefFor } from '@/lib/credentials';
 import { getPref, setPref } from '@/lib/prefs';
 import NextUpCard from '@/components/home/NextUpCard';
 import LessonCard from '@/components/LessonCard';
@@ -88,7 +89,7 @@ export default function HomeScreen() {
   const [athleteFilter, setAthleteFilter] = useState<string>('all');
 
   const externalLinks = adminConfig?.external_links ?? [];
-  const familyLogins = externalLinks.filter((l) => l.scope !== 'athlete' && (l.username || l.password || l.url));
+  const familyLogins = externalLinks.filter((l) => l.scope !== 'athlete' && (l.username || l.password || l.has_password || l.url));
 
   // Growth prompts + lesson payments for "Needs you".
   const [hasCoaches, setHasCoaches] = useState(true);
@@ -452,6 +453,7 @@ export default function HomeScreen() {
             hotels={nextTournament ? hotelBookings.filter((h) => h.tournament_id === nextTournament.id) : []}
             teamCode={nextSeason?.team_code}
             familyLogins={familyLogins}
+            configId={adminConfig?.id}
             athleteName={nextAthleteName}
           />
         </View>
@@ -619,6 +621,7 @@ export default function HomeScreen() {
                     url={link.url}
                     username={link.username ?? null}
                     password={link.password ?? null}
+                    vault={vaultRefFor(adminConfig?.id, link)}
                     icon={link.icon_name}
                     onEdit={() => router.push({ pathname: '/profile/edit-link', params: { index: String(externalLinks.indexOf(link)) } })}
                   />

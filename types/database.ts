@@ -71,9 +71,13 @@ export interface ExternalLink {
   url: string;
   icon_name: string;
   username: string | null;
+  /** Never stored readable since 00091 — sent only when saving a new password (the server encrypts it). */
   password: string | null;
   scope?: 'admin' | 'athlete';
   athlete_id?: string | null;
+  /** Credential Vault (00091): id of the encrypted password, and whether one is saved. */
+  cred_id?: string | null;
+  has_password?: boolean | null;
 }
 
 export type AccountType = 'parent' | 'coach' | 'athlete';

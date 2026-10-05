@@ -9,6 +9,7 @@ import { TOURNAMENT_COLOR, GOLD } from '@/lib/colors';
 import { sessionKindStyle, type ParentLesson } from '@/lib/coach';
 import { countdownLabel, type NextUp } from '@/lib/nextUp';
 import { platformFor } from '@/lib/loginPlatforms';
+import { revealPassword } from '@/lib/credentials';
 import type { Tournament, HotelBooking, ExternalLink } from '@/types/database';
 
 const mapsUrl = (address: string) =>
@@ -37,7 +38,7 @@ function Tile({ icon, label, sub, onPress }: { icon: keyof typeof Ionicons.glyph
  * weekends (and the day before) it becomes game day: team code, schedule,
  * stream, tickets, hotel and event login, each one tap away.
  */
-export default function NextUpCard({ next, tournament, lesson, hotels, teamCode, familyLogins, athleteName }: {
+export default function NextUpCard({ next, tournament, lesson, hotels, teamCode, familyLogins, athleteName, configId }: {
   next: NextUp;
   tournament?: Tournament;
   lesson?: ParentLesson;
@@ -45,6 +46,8 @@ export default function NextUpCard({ next, tournament, lesson, hotels, teamCode,
   teamCode?: string | null;
   familyLogins: ExternalLink[];
   athleteName?: string;
+  /** Family config id, to fetch an encrypted event-login password. */
+  configId?: string | null;
 }) {
   if (!next) {
     return (
@@ -126,8 +129,10 @@ export default function NextUpCard({ next, tournament, lesson, hotels, teamCode,
           {mainHotel?.address ? <Tile icon="bed" label="Hotel" sub={mainHotel.hotel_name} onPress={() => Linking.openURL(mapsUrl(mainHotel.address))} /> : null}
           {venue?.address ? <Tile icon="location" label="Venue" sub={venue.label || 'Directions'} onPress={() => Linking.openURL(mapsUrl(venue.address))} /> : null}
           {eventLogin ? (
-            <Tile icon="log-in" label="Event login" sub={eventLogin.username ?? 'Open'} onPress={() => {
-              if (eventLogin.password) copy(eventLogin.password, 'Password');
+            <Tile icon="log-in" label="Event login" sub={eventLogin.username ?? 'Open'} onPress={async () => {
+              // Encrypted in the vault: Face ID on iPhone, then copy and open the site.
+              const pw = eventLogin.password || (configId ? await revealPassword({ configId, credId: eventLogin.cred_id, hasPassword: eventLogin.has_password }) : null);
+              if (pw) await copy(pw, 'Password');
               if (eventLogin.url) Linking.openURL(eventLogin.url);
             }} />
           ) : null}

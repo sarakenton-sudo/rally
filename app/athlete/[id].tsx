@@ -5,6 +5,7 @@ import { SafeAreaView } from '@/components/SafeAreaView';
 import { Ionicons } from '@expo/vector-icons';
 import HubSectionHeader from '@/components/HubSectionHeader';
 import AthleteCredentialCard from '@/components/AthleteCredentialCard';
+import { vaultRefFor } from '@/lib/credentials';
 import AthleteHealthCard from '@/components/AthleteHealthCard';
 import SignedDocumentsList from '@/components/SignedDocumentsList';
 import { fetchAcceptances, latestAcceptances, saveAthletePhoto, type PolicyAcceptance } from '@/lib/coach';
@@ -64,6 +65,7 @@ export default function AthleteProfileScreen() {
       url: existing?.url ?? '',
       username: existing?.username ?? null,
       password: existing?.password ?? null,
+      vault: existing ? vaultRefFor(adminConfig?.id, existing) : undefined,
       originalIndex,
     };
   });
@@ -258,6 +260,7 @@ export default function AthleteProfileScreen() {
                 url={card.url}
                 username={card.username}
                 password={card.password}
+                vault={card.vault}
                 onEdit={() => handleEditLink(card.originalIndex, card.label)}
               />
             </View>

@@ -46,7 +46,13 @@
           "calendarPermission": "RallyHUB adds tournaments and lessons to your calendar."
         }
       ],
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "RallyHUB uses Face ID to show your saved passwords."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
