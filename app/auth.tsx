@@ -7,6 +7,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import type { AccountType } from '@/types/database';
 import { rememberCoachInvite } from '@/lib/coachInvites';
+import { savePendingMarketing, MARKETING_CONSENT_LABEL } from '@/lib/marketing';
 
 function getInitialSignUp(): boolean {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -49,6 +50,7 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   // Invite emails link to /auth?signup=true&invite=CODE so the code is pre-filled.
   const [inviteCode, setInviteCode] = useState(getInitialInvite);
+  const [marketing, setMarketing] = useState(true);
   const [hasInviteCode, setHasInviteCode] = useState(() => !!getInitialInvite());
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -66,6 +68,7 @@ export default function AuthScreen() {
     setLoading(true);
     try {
       if (isSignUp) {
+        savePendingMarketing(marketing, 'signup_email'); // recorded once the new profile loads
         const { error } = await signUp(email.trim(), password, accountType);
         if (error) { setLoading(false); setMessage({ text: `Sign up error: ${error}`, type: 'error' }); return; }
         if (hasInviteCode && inviteCode.trim()) {
@@ -91,6 +94,7 @@ export default function AuthScreen() {
     setMessage(null);
     setGoogleLoading(true);
     // Google can't carry the Coach choice itself — pass it so it's applied after sign-in.
+    if (isSignUp) savePendingMarketing(marketing, 'signup_google');
     const { error } = await signInWithGoogle(isSignUp ? accountType : undefined);
     setGoogleLoading(false);
     if (error) setMessage({ text: error, type: 'error' });
@@ -185,6 +189,24 @@ export default function AuthScreen() {
                   Set up your private-lesson business — listing, availability, and bookings.
                 </Text>
               )}
+
+              {/* Email marketing consent — pre-checked (US email); applies to Google and email sign-up.
+                  Athlete accounts are never opted in (enforced in the database). */}
+              <Pressable
+                onPress={() => setMarketing(!marketing)}
+                style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 12 }}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: marketing }}
+                aria-checked={marketing}
+                accessibilityLabel={MARKETING_CONSENT_LABEL}
+              >
+                <View style={{ width: 18, height: 18, borderRadius: 4, borderWidth: 1.5, borderColor: marketing ? '#3B82B0' : 'rgba(255,255,255,0.4)', backgroundColor: marketing ? '#3B82B0' : 'transparent', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
+                  {marketing && <Ionicons name="checkmark" size={13} color="#FEFEFE" />}
+                </View>
+                <Text style={{ flex: 1, fontSize: 12, lineHeight: 17, color: 'rgba(255,255,255,0.6)', fontFamily: 'NunitoSans-Regular', marginLeft: 8 }}>
+                  {MARKETING_CONSENT_LABEL}
+                </Text>
+              </Pressable>
             </View>
           )}
 

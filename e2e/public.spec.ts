@@ -37,6 +37,17 @@ test('coach sign-up link preselects Coach (A-08)', async ({ page }) => {
   done();
 });
 
+test('sign-up has a pre-checked marketing email box that can be unchecked', async ({ page }) => {
+  await page.goto('/auth?signup=true');
+  const box = page.getByRole('checkbox', { name: /Email me RallyHUB tips/ });
+  await expect(box).toBeVisible();
+  await expect(box).toBeChecked();
+  await box.click();
+  await expect(box).not.toBeChecked();
+  await page.getByText('Coach', { exact: true }).click();
+  await expect(page.getByRole('checkbox', { name: /Email me RallyHUB tips/ })).toBeVisible(); // coaches too
+});
+
 test('show password toggle (A-05)', async ({ page }) => {
   await page.goto('/auth');
   const pw = page.getByPlaceholder('••••••••');

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Switch, Alert, Platform, Linking } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
 import { router } from 'expo-router';
@@ -10,6 +10,7 @@ import { updateAdminConfig } from '@/hooks/useSupabaseData';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 import type { NotificationPreferences } from '@/types/database';
+import { getMarketingEmail, setMarketingEmail as saveMarketingEmail } from '@/lib/marketing';
 
 const PREF_ROWS: { key: keyof NotificationPreferences; label: string; description: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'tournament_reminders', label: 'Tournament Reminders', description: 'Countdown alerts before each tournament', icon: 'calendar' },
@@ -23,7 +24,10 @@ export default function NotificationPreferencesScreen() {
   const ic = useIconColors();
   const adminConfig = useSeasonStore((s) => s.adminConfig);
   const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
+  // undefined = loading; null = never chosen (treated as off).
+  const [marketingEmail, setMarketingEmail] = useState<boolean | null | undefined>(undefined);
+  useEffect(() => { if (user) getMarketingEmail(user.id).then(setMarketingEmail); }, [user?.id]);
   const isSupabaseConfigured = !!(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
   const defaultPrefs: NotificationPreferences = {
@@ -160,6 +164,34 @@ export default function NotificationPreferencesScreen() {
             />
           </View>
         ))}
+
+        {/* Marketing email (00081) — not offered to athlete accounts */}
+        {userProfile?.role !== 'athlete' && (
+          <>
+            <Text className="text-xs font-semibold uppercase tracking-wider text-stone mt-5 mb-2 ml-1">Email from RallyHUB</Text>
+            <View className="bg-cream dark:bg-bark-light rounded-xl px-4 py-3 mb-2 flex-row items-center">
+              <View className="w-9 h-9 rounded-full items-center justify-center mr-3" style={{ backgroundColor: '#3B82B015' }}>
+                <Ionicons name="megaphone-outline" size={18} color="#3B82B0" />
+              </View>
+              <View className="flex-1 mr-3">
+                <Text className="text-sm font-medium text-bark dark:text-cream">News, tips & offers</Text>
+                <Text className="text-xs text-stone mt-0.5">New features and ideas for your season. Lesson, booking and account emails always come through.</Text>
+              </View>
+              <Switch
+                value={!!marketingEmail}
+                disabled={marketingEmail === undefined}
+                onValueChange={async (v) => {
+                  setMarketingEmail(v);
+                  const { value, error } = await saveMarketingEmail(v);
+                  if (error) setMarketingEmail(!v); else setMarketingEmail(!!value);
+                }}
+                trackColor={{ false: '#D8E2EC', true: '#7DBDD9' }}
+                thumbColor={marketingEmail ? '#3B82B0' : '#FEFEFE'}
+                accessibilityLabel="News, tips and offers by email"
+              />
+            </View>
+          </>
+        )}
 
         <View className="h-8" />
       </ScrollView>

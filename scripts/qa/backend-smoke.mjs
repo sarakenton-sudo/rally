@@ -143,6 +143,10 @@ if (parent) {
   if (athlete) {
     const mine = await ids(athlete, 'athletes');
     await check('sees at least their own athlete profile', () => mine.length > 0 || 'none');
+    await check('is never opted in to marketing email (may be a minor)', async () => {
+      const { data, error } = await athlete.c.rpc('set_marketing_consent', { p_opt_in: true, p_source: 'settings', p_consent_text: 'QA', p_platform: 'qa', p_only_if_unset: false });
+      return (!error && data === false) || `got ${error?.message ?? data}`;
+    });
     await check("can't read the parent's payment events", async () =>
       !(await athlete.c.from('payment_events').select('id').limit(1)).data?.length || 'payment events visible');
   } else skipped('athlete checks', 'set QA_ATHLETE_EMAIL');

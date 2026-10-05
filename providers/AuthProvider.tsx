@@ -7,6 +7,7 @@ import * as Linking from 'expo-linking';
 import type { Session, User } from '@supabase/supabase-js';
 import type { UserProfile, AccountType } from '@/types/database';
 import { resetStores } from '@/lib/resetStores';
+import { applyPendingMarketing } from '@/lib/marketing';
 
 interface AuthContextType {
   session: Session | null;
@@ -90,6 +91,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     clearPendingAccountType();
     setUserProfile(profile);
+    // Marketing checkbox from sign-up (email or Google) — recorded once.
+    applyPendingMarketing().catch(() => {});
   };
 
   useEffect(() => {
