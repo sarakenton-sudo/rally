@@ -646,6 +646,48 @@ export async function fetchSchedule(from: Date, to: Date): Promise<{ data: Sched
   return { data: (data as ScheduleItem[]) ?? [], error: error ?? null };
 }
 
+// ---- Coach "+" sheet helpers ----
+
+/** Text a coach sends a family so they connect (client code) — or book from the page if published. */
+export function familyInviteMessage(coach: Coach): string {
+  const c = coach as any;
+  const page = c.booking_page_published && coach.slug ? `https://rally-hub.com/book/${coach.slug}` : null;
+  return page
+    ? `${coach.display_name} invited you to book lessons on RallyHUB! 🏐\n\nSee open times and request one here: ${page}`
+    : `${coach.display_name} invited you to book lessons on RallyHUB! 🏐\n\n1) Sign up: https://rally-hub.com/auth?signup=true\n2) Open the Hub tab → "My Coaches"\n3) Enter code: ${coach.invite_code ?? ''}`;
+}
+
+export interface UnpaidLesson {
+  id: string;
+  price_cents: number;
+  payment_status: string;
+  last_charge_error: string | null;
+  athletes: { first_name: string; last_name: string | null } | null;
+  slots: { starts_at: string; ends_at: string } | null;
+}
+
+/** Confirmed lessons not yet paid (excludes in-app charges in flight), oldest first. */
+export async function fetchUnpaidLessons(coachId: string): Promise<UnpaidLesson[]> {
+  const { data } = await (supabase.from('bookings') as any)
+    .select('id, price_cents, payment_status, last_charge_error, athletes(first_name, last_name), slots(starts_at, ends_at)')
+    .eq('coach_id', coachId)
+    .in('status', ['confirmed', 'completed'])
+    .in('payment_status', ['pending', 'authorized', 'failed']);
+  return ((data as UnpaidLesson[]) ?? []).sort((a, b) => (a.slots?.starts_at ?? '').localeCompare(b.slots?.starts_at ?? ''));
+}
+
+/** Open, bookable blocks starting in the next 7 days. */
+export async function countOpenSlotsNext7Days(coachId: string): Promise<number> {
+  const now = new Date();
+  const { data } = await (supabase.from('slots') as any)
+    .select('id, seats_total, seats_taken')
+    .eq('coach_id', coachId)
+    .eq('status', 'open')
+    .gte('starts_at', now.toISOString())
+    .lt('starts_at', new Date(now.getTime() + 7 * 86_400_000).toISOString());
+  return ((data as any[]) ?? []).filter((s) => s.seats_taken < s.seats_total).length;
+}
+
 // ---- Phase A: week revenue, payments, cancel / reschedule (00067) ----
 
 export const FACILITY_STATUS_STYLE: Record<FacilityStatus, { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }> = {

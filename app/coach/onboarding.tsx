@@ -43,7 +43,7 @@ export default function CoachOnboardingScreen() {
       setCoachProfile(mock);
     }
     notifySuccess();
-    router.replace('/coach');
+    router.replace('/today');
   };
 
   return (

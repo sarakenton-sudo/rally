@@ -88,7 +88,7 @@ export default function HubScreen() {
           iconColor="#6A9E8A"
           title="Coach Mode"
           subtitle="Run your private lessons — listing, availability & bookings"
-          onPress={() => router.push('/coach')}
+          onPress={() => router.replace('/today')}
         />
 
         {/* ============================================================ */}

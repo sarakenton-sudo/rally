@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, Linking, Alert, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
 import * as Clipboard from 'expo-clipboard';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
   fetchSchedule, getCalendarToken, calendarFeedUrl, googleCalendarSubscribeUrl,
@@ -43,6 +43,8 @@ function summary(item: ScheduleItem): string {
 }
 
 export default function CoachScheduleScreen() {
+  // Rendered as a coach tab (app/(coach)) → no back arrow.
+  const inTab = useSegments()[0] === '(coach)';
   const ic = useIconColors();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
   const coachProfile = useCoachStore((st) => st.coachProfile);
@@ -138,9 +140,11 @@ export default function CoachScheduleScreen() {
   return (
     <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['top', 'bottom']}>
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-parchment dark:border-bark-light bg-warm-white dark:bg-bark">
-        <Pressable onPress={() => router.back()} className="p-1">
-          <Ionicons name="chevron-back" size={24} color={ic.muted} />
-        </Pressable>
+        {inTab ? <View className="w-6" /> : (
+          <Pressable onPress={() => router.back()} className="p-1">
+            <Ionicons name="chevron-back" size={24} color={ic.muted} />
+          </Pressable>
+        )}
         <Text className="text-lg font-bold text-bark dark:text-cream">Schedule</Text>
         <View className="w-6" />
       </View>

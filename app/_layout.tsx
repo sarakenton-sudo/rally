@@ -140,7 +140,7 @@ function RootLayoutNav() {
     } else if (isCoach) {
       // Coach account — lives in /coach. Only pull them off the "wrong home"
       // screens (auth/onboarding/tabs), never out of legit stack routes (settings).
-      if (inAuthFlow || inOnboarding || segments[0] === '(tabs)') target = '/coach';
+      if (inAuthFlow || inOnboarding || segments[0] === '(tabs)') target = '/today';
     } else if (isCoParent) {
       if (inAuthFlow || inOnboarding) target = '/(tabs)';
     } else if (userProfile?.role === 'admin' && !adminConfig && !isCoParent) {
@@ -178,6 +178,7 @@ function RootLayoutNav() {
     <ThemeProvider value={theme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(coach)" options={{ headerShown: false }} />
         <Stack.Screen name="landing" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ headerShown: false, presentation: 'card', gestureEnabled: false, animation: 'fade' }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
@@ -421,6 +422,10 @@ function RootLayoutNav() {
         <Stack.Screen
           name="coaching/[coachId]"
           options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="coach/unpaid"
+          options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
           name="lessons/index"

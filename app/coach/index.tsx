@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, Image, ActivityIndicator, Platform, Alert, Share } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
 import * as Clipboard from 'expo-clipboard';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { tapLight } from '@/lib/haptics';
 import { useAuth } from '@/providers/AuthProvider';
@@ -10,8 +10,11 @@ import { useCoachStore } from '@/stores/useCoachStore';
 import { fetchMyCoach, fetchFacilities, fetchPendingRequests, fetchSessionTypes, fetchUpcomingSlots, fetchSchedule, fetchWeekSlots, weekSummary, fmtMoney, fetchCoachPolicies, isSupabaseConfigured, type WeekSummary, type CoachPolicies } from '@/lib/coach';
 import { useIconColors } from '@/lib/colors';
 import Avatar from '@/components/Avatar';
+import SetupChecklist from '@/components/coach/SetupChecklist';
 
 export default function CoachDashboardScreen() {
+  // Rendered as the Business tab (app/(coach)) → tab title, no back arrow, no pending banner (Today has it).
+  const inTab = useSegments()[0] === '(coach)';
   const { user, signOut } = useAuth();
   const ic = useIconColors();
   const coachProfile = useCoachStore((s) => s.coachProfile);
@@ -70,15 +73,15 @@ export default function CoachDashboardScreen() {
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-parchment dark:border-bark-light">
         {/* Coach accounts land here as their home — nothing to go back to */}
-        {router.canGoBack() ? (
+        {!inTab && router.canGoBack() ? (
           <Pressable onPress={() => router.back()} className="p-1">
             <Ionicons name="chevron-back" size={24} color={ic.muted} />
           </Pressable>
         ) : (
           <View className="w-6" />
         )}
-        <Text className="text-lg font-bold text-bark dark:text-cream">Coaching</Text>
-        {router.canGoBack() ? (
+        <Text className="text-lg font-bold text-bark dark:text-cream">{inTab ? 'Business' : 'Coaching'}</Text>
+        {!inTab && router.canGoBack() ? (
           <View className="w-6" />
         ) : (
           <Pressable onPress={() => signOut()} className="p-1" accessibilityLabel="Sign out">
@@ -117,45 +120,10 @@ export default function CoachDashboardScreen() {
         // ---- Coach dashboard ----
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
           {/* Setup checklist — until the coach can take bookings */}
-          {typeCount !== null && slotCount !== null && (() => {
-            const steps = [
-              { done: !!(coachProfile.photo_url && coachProfile.bio), label: 'Photo and bio', onPress: () => router.push('/coach/listing-edit') },
-              { done: typeCount > 0, label: 'Session types and prices', onPress: () => router.push('/coach/session-types') },
-              { done: slotCount > 0, label: 'Your first week of availability', onPress: () => router.push('/coach/availability-add') },
-              { done: !!(policies?.reviewed && policies?.platform_agreement_accepted_at), label: 'Terms, release & platform agreement', onPress: () => router.push('/coach/policies') },
-              { done: !!(coachProfile as any).stripe_charges_enabled, label: 'Get paid in the app (Stripe)', onPress: () => router.push('/coach/payments') },
-              { done: !!(coachProfile as any).booking_page_published, label: 'Publish your booking page', onPress: () => router.push('/coach/booking-page') },
-            ];
-            const core = steps.slice(0, 4);
-            if (core.every((x) => x.done)) return null;
-            const doneCount = steps.filter((x) => x.done).length;
-            return (
-              <View className="bg-warm-white dark:bg-bark-light rounded-2xl p-4 border border-parchment dark:border-rally-900 mb-4">
-                <View className="flex-row items-center justify-between mb-1">
-                  <Text className="text-base font-bold text-bark dark:text-cream">Get set up</Text>
-                  <Text className="text-xs font-semibold text-stone">{doneCount} of {steps.length}</Text>
-                </View>
-                <Text className="text-xs text-stone dark:text-parchment mb-3">About 10 minutes. You can take requests as soon as the first four are done.</Text>
-                {steps.map((st) => (
-                  <Pressable
-                    key={st.label}
-                    disabled={!st.onPress || st.done}
-                    onPress={() => { tapLight(); st.onPress?.(); }}
-                    className="flex-row items-center py-2 active:opacity-70"
-                  >
-                    <Ionicons name={st.done ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={st.done ? '#16a34a' : '#8FA8BF'} />
-                    <Text className={`text-sm ml-2.5 flex-1 ${st.done ? 'text-stone line-through' : 'text-bark dark:text-cream font-semibold'}`}>{st.label}</Text>
-                    {!st.done ? (
-                      <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
-                    ) : null}
-                  </Pressable>
-                ))}
-              </View>
-            );
-          })()}
+          <SetupChecklist coach={coachProfile} typeCount={typeCount} slotCount={slotCount} policies={policies} />
 
           {/* Pending requests alert */}
-          {pendingCount > 0 && (
+          {!inTab && pendingCount > 0 && (
             <Pressable
               onPress={() => { tapLight(); router.push('/coach/requests'); }}
               className="rounded-2xl p-4 mb-4 flex-row items-center active:opacity-80"

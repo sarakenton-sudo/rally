@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useCoachStore } from '@/stores/useCoachStore';
 import {
@@ -16,6 +16,8 @@ import Avatar from '@/components/Avatar';
 const fmtShort = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
 export default function CoachClientsScreen() {
+  // Rendered as a coach tab (app/(coach)) → no back arrow.
+  const inTab = useSegments()[0] === '(coach)';
   const ic = useIconColors();
   const coachProfile = useCoachStore((s) => s.coachProfile);
   const [clients, setClients] = useState<RosterClient[]>([]);
@@ -49,9 +51,11 @@ export default function CoachClientsScreen() {
   return (
     <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['top', 'bottom']}>
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-parchment dark:border-bark-light bg-warm-white dark:bg-bark">
-        <Pressable onPress={() => router.back()} className="p-1">
-          <Ionicons name="chevron-back" size={24} color={ic.muted} />
-        </Pressable>
+        {inTab ? <View className="w-6" /> : (
+          <Pressable onPress={() => router.back()} className="p-1">
+            <Ionicons name="chevron-back" size={24} color={ic.muted} />
+          </Pressable>
+        )}
         <Text className="text-lg font-bold text-bark dark:text-cream">Clients</Text>
         <Pressable onPress={() => router.push('/coach/segments')} className="p-1" accessibilityLabel="Manage groups">
           <Ionicons name="people-circle-outline" size={24} color="#0d9488" />
