@@ -25,7 +25,7 @@ function GlobalHeader() {
         <Pressable
           className="w-10 h-10 rounded-xl items-center justify-center active:opacity-70 absolute left-4"
           style={{
-            top: 6 + insets.top,
+            top: 6, // inside the row, which already sits below the safe-area padding
             backgroundColor: 'rgba(255,255,255,0.08)',
           }}
           onPress={() => router.push('/notifications')}
@@ -52,7 +52,7 @@ function GlobalHeader() {
         <Pressable
           className="w-10 h-10 rounded-xl items-center justify-center active:opacity-70 absolute right-4"
           style={{
-            top: 6 + insets.top,
+            top: 6, // inside the row, which already sits below the safe-area padding
             backgroundColor: 'rgba(255,255,255,0.08)',
           }}
           onPress={() => router.push('/hub')}

@@ -4,4 +4,4 @@ tags: [coadmin]
 env: { EMAIL: "${QA_COADMIN_EMAIL}", PASSWORD: "${QA_COADMIN_PASSWORD}" }
 ---
 - runFlow: _signin.yaml
-- extendedWaitUntil: { visible: "Coming up", timeout: 30000 }
+- extendedWaitUntil: { visible: ".*Coming up.*", timeout: 30000 }

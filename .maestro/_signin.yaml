@@ -3,11 +3,13 @@ appId: com.rallyhub.app
 ---
 - launchApp:
     clearState: true
+    clearKeychain: true     # the saved login lives in the keychain and survives clearState
     permissions: { notifications: allow }
-- extendedWaitUntil: { visible: "Sign In", timeout: 20000 }
-- tapOn: "you@example.com"
+- extendedWaitUntil: { visible: ".*Sign In.*", timeout: 20000 }
+- tapOn: '.*you@example\.com.*'
 - inputText: ${EMAIL}
-- tapOn: "••••••••"
+- tapOn: ".*••••••••.*"
 - inputText: ${PASSWORD}
-- hideKeyboard
-- tapOn: "Sign In"
+- pressKey: Enter          # Return closes the keyboard (Maestro hideKeyboard fails on RN inputs)
+- tapOn: ".*Sign In.*"
+- tapOn: { text: ".*Not Now.*", optional: true }   # iOS "Save password?" sheet

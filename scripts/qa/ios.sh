@@ -2,7 +2,7 @@
 # Run the iPhone app flows (.maestro/) on a simulator.
 #   npm run test:ios            run flows (builds the app first if it isn't installed)
 #   npm run test:ios -- --build rebuild the app from current code first
-#   npm run test:ios -- --tags parent   only some flows (public, parent, coach, coadmin, athlete)
+#   npm run test:ios -- --include-tags parent   only some flows (public, parent, coach, coadmin, athlete)
 cd "$(dirname "$0")/../.." || exit 1
 set -a; [ -f .env.qa ] && . ./.env.qa; set +a
 
