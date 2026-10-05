@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable, TextInput, ActivityIndicator, Alert, Platform } from 'react-native';
 import {
-  markBookingPaid, markBookingUnpaid, coachCancelBooking, coachRescheduleBooking, fetchUpcomingSlots,
+  markBookingPaid, markBookingUnpaid, coachCancelBooking, coachProposeReschedule, coachWithdrawReschedule, fetchUpcomingSlots,
   paymentBadge, PAYMENT_BADGE_STYLE, fmtMoney, type ScheduleAttendee, type SlotWithRefs,
 } from '@/lib/coach';
 import { notifySuccess, notifyError, tapLight } from '@/lib/haptics';
@@ -96,11 +96,23 @@ export default function LessonActions({ attendee, slotId, startsAt, coachId, onC
         {busy && <ActivityIndicator size="small" color="#3B82B0" className="ml-1" />}
       </View>
 
+      {/* Waiting on the family to accept a new time */}
+      {attendee.proposed_starts_at ? (
+        <View className="flex-row items-center flex-wrap mt-1.5 rounded-lg px-2.5 py-1.5" style={{ backgroundColor: '#d977061a' }}>
+          <Text className="text-xs font-semibold flex-1" style={{ color: '#b45309' }}>
+            Asked to move to {fmtSlot(attendee.proposed_starts_at)} · waiting for the family
+          </Text>
+          <Pressable disabled={busy} onPress={() => run(() => coachWithdrawReschedule(attendee.id), "Couldn't withdraw")} className="ml-2">
+            <Text className="text-xs font-semibold text-stone underline">Withdraw</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       {/* Reschedule / cancel */}
       {mode === 'none' && (
         <View className="flex-row mt-1.5">
           <Pressable onPress={openReschedule} className="rounded-lg px-3 py-1.5 mr-2 bg-rally-50 dark:bg-rally-900/30 active:opacity-70">
-            <Text className="text-xs font-semibold text-rally-600">Reschedule</Text>
+            <Text className="text-xs font-semibold text-rally-600">{attendee.proposed_starts_at ? 'Offer a different time' : 'Reschedule'}</Text>
           </Pressable>
           <Pressable onPress={() => { tapLight(); setMode('cancel'); }} className="rounded-lg px-3 py-1.5 bg-red-50 dark:bg-red-900/20 active:opacity-70">
             <Text className="text-xs font-semibold text-red-600">Cancel lesson</Text>
@@ -112,7 +124,7 @@ export default function LessonActions({ attendee, slotId, startsAt, coachId, onC
         <View className="mt-2 rounded-xl p-3 border border-parchment dark:border-rally-900 bg-cream dark:bg-bark">
           {mode === 'reschedule' && (
             <>
-              <Text className="text-xs font-semibold text-bark dark:text-cream mb-1.5">Move to one of your open times:</Text>
+              <Text className="text-xs font-semibold text-bark dark:text-cream mb-1.5">Offer one of your open times:</Text>
               {options === null ? (
                 <ActivityIndicator size="small" color="#3B82B0" />
               ) : options.length === 0 ? (
@@ -142,7 +154,11 @@ export default function LessonActions({ attendee, slotId, startsAt, coachId, onC
             placeholderTextColor="#8FA8BF"
             className="bg-warm-white dark:bg-bark-light rounded-lg px-3 py-2 text-sm text-bark dark:text-cream border border-parchment dark:border-rally-900"
           />
-          <Text className="text-[11px] text-stone mt-1">The family gets a push and an email.</Text>
+          <Text className="text-[11px] text-stone mt-1">
+            {mode === 'reschedule'
+              ? 'The family gets a push, email and in-app request to accept. The lesson stays at its current time until they do; the new time is held for them.'
+              : 'The family gets a push, an email and an in-app notice.'}
+          </Text>
           <View className="flex-row mt-2">
             {mode === 'cancel' ? (
               <Pressable
@@ -155,10 +171,10 @@ export default function LessonActions({ attendee, slotId, startsAt, coachId, onC
             ) : (
               <Pressable
                 disabled={busy || !target}
-                onPress={() => target && run(() => coachRescheduleBooking(attendee.id, target, reason), "Couldn't reschedule")}
+                onPress={() => target && run(() => coachProposeReschedule(attendee.id, target, reason), "Couldn't send the new time")}
                 className={`rounded-lg px-3 py-2 mr-2 ${target ? 'bg-rally-600 active:opacity-80' : 'bg-parchment'}`}
               >
-                <Text className="text-xs font-bold text-white">{busy ? 'Moving…' : 'Move lesson'}</Text>
+                <Text className="text-xs font-bold text-white">{busy ? 'Sending…' : 'Ask the family'}</Text>
               </Pressable>
             )}
             <Pressable onPress={() => { setMode('none'); setReason(''); setTarget(null); }} className="rounded-lg px-3 py-2">

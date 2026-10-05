@@ -104,6 +104,14 @@ if (parent) {
     expectStatus(await call('notify-booking-change', { jwt: parent.jwt, body: { booking_id: FAKE, change: 'cancelled' } }), 404));
   await check("can't announce as a coach → 403", async () =>
     expectStatus(await call('announce-slots', { jwt: parent.jwt, body: { slot_ids: [FAKE], message: 'qa' } }), 403));
+  await check("can't answer a reschedule for someone else's lesson", async () => {
+    const { error } = await parent.c.rpc('respond_to_reschedule', { p_booking_id: FAKE, p_accept: true });
+    return /lesson not found/i.test(error?.message ?? '') || `got: ${error?.message ?? 'no error'}`;
+  });
+  await check("can't propose a new time (coach only)", async () => {
+    const { error } = await parent.c.rpc('coach_propose_reschedule', { p_booking_id: FAKE, p_new_slot_id: FAKE, p_reason: null });
+    return /not your booking/i.test(error?.message ?? '') || `got: ${error?.message ?? 'no error'}`;
+  });
   await check("can't read other users' push tokens", async () => {
     const { data } = await parent.c.from('push_tokens').select('user_id').neq('user_id', parent.user.id).limit(1);
     return !data?.length || 'other users’ tokens visible';

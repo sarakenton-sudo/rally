@@ -6,7 +6,7 @@ import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useAuth } from './AuthProvider';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { acceptRequest, declineRequest } from '@/lib/coach';
+import { acceptRequest, declineRequest, respondToReschedule } from '@/lib/coach';
 
 // Configure how notifications appear when app is in foreground
 if (Platform.OS !== 'web') {
@@ -26,6 +26,23 @@ if (Platform.OS !== 'web') {
     { identifier: 'approve', buttonTitle: 'Approve', options: { opensAppToForeground: true, isAuthenticationRequired: true } },
     { identifier: 'decline', buttonTitle: 'Decline', options: { opensAppToForeground: true, isAuthenticationRequired: true, isDestructive: true } },
   ]).catch(() => {});
+
+  // Coach asked to move a lesson: the family answers from the push.
+  Notifications.setNotificationCategoryAsync('reschedule_proposal', [
+    { identifier: 'accept', buttonTitle: 'Accept new time', options: { opensAppToForeground: true, isAuthenticationRequired: true } },
+    { identifier: 'keep', buttonTitle: 'Keep original', options: { opensAppToForeground: true, isAuthenticationRequired: true } },
+  ]).catch(() => {});
+}
+
+/** Accept / Keep original straight from a "move this lesson?" push, else open Home. */
+async function handleRescheduleResponse(response: Notifications.NotificationResponse) {
+  const bookingId = response.notification.request.content.data?.bookingId as string | undefined;
+  const action = response.actionIdentifier;
+  router.push('/(tabs)');
+  if (!bookingId || (action !== 'accept' && action !== 'keep')) return; // plain tap: answer on Home
+  const { error } = await respondToReschedule(bookingId, action === 'accept');
+  if (error) Alert.alert("Couldn't update the lesson", error.message);
+  else Alert.alert(action === 'accept' ? 'Lesson moved' : 'Original time kept', 'Your coach has been told.');
 }
 
 /** Approve/Decline straight from a lesson-request push, else open Requests. */
@@ -145,6 +162,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           else handledResponses.current.delete(key); // retry once signed in
         } else if (data?.type === 'booking_confirmed') {
           router.push('/coach/schedule');
+        } else if (data?.type === 'reschedule_proposed') {
+          if (user) handleRescheduleResponse(response);
+          else handledResponses.current.delete(key); // retry once signed in
+        } else if (data?.type === 'reschedule_answered') {
+          router.push('/coach-schedule');
         } else if (data?.type === 'lesson_changed') {
           router.push('/coaching');
         } else if (data?.type === 'lesson_reminder') {

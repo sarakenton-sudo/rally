@@ -13,7 +13,8 @@ import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
-import { fetchMyUpcomingLessons, fetchMyCoaches, sessionKindStyle, isSupabaseConfigured as coachingConfigured, type ParentLesson } from '@/lib/coach';
+import { fetchMyUpcomingLessons, fetchMyCoaches, fetchMyRescheduleProposals, respondToReschedule, isSupabaseConfigured as coachingConfigured, type ParentLesson, type RescheduleProposal } from '@/lib/coach';
+import { showToast } from '@/components/Toast';
 import { fetchMyCharges, type ParentCharge } from '@/lib/payments';
 import { fetchMyCoachInvites } from '@/lib/coachInvites';
 import { pickNextUp, showCoachInvitePrompt } from '@/lib/nextUp';
@@ -22,6 +23,10 @@ import NextUpCard from '@/components/home/NextUpCard';
 import LessonCard from '@/components/LessonCard';
 
 const INVITE_DISMISS_KEY = 'rally.coachInvitePromptDismissedAt';
+const fmtWhen = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
+};
 
 const AVATAR_COLORS = [
   '#3B82B0', '#7c3aed', '#6A9E8A', '#d97706', '#dc2626',
@@ -84,13 +89,27 @@ export default function HomeScreen() {
   const [lastInviteAt, setLastInviteAt] = useState<string | null>(null);
   const [inviteDismissedAt, setInviteDismissedAt] = useState<string | null>(null);
   const [failedCharges, setFailedCharges] = useState<ParentCharge[]>([]);
+  const [proposals, setProposals] = useState<RescheduleProposal[]>([]);
+  const [answering, setAnswering] = useState<string | null>(null);
   const loadFamilyExtras = useCallback(() => {
     if (!coachingConfigured) return;
     fetchMyCoaches().then(({ data }) => setHasCoaches(data.some((c) => c.user_id !== user?.id)));
     fetchMyCoachInvites().then((inv) => setLastInviteAt(inv[0]?.last_sent_at ?? null));
     fetchMyCharges().then((rows) => setFailedCharges(rows.filter((r) => r.payment_status === 'failed' && r.status !== 'cancelled')));
     getPref(INVITE_DISMISS_KEY).then(setInviteDismissedAt);
+    fetchMyRescheduleProposals().then(setProposals);
   }, [user?.id]);
+
+  const answerProposal = async (p: RescheduleProposal, accept: boolean) => {
+    tapLight();
+    setAnswering(p.booking_id);
+    const { error } = await respondToReschedule(p.booking_id, accept);
+    setAnswering(null);
+    if (error) { showToast(error.message); return; }
+    showToast(accept ? `Moved to ${fmtWhen(p.proposed_starts_at)} — ${p.coach_name} has been told` : `Kept ${fmtWhen(p.current_starts_at)} — ${p.coach_name} has been told`);
+    setProposals((list) => list.filter((x) => x.booking_id !== p.booking_id));
+    loadLessons();
+  };
 
   // Refresh data when Home tab gains focus (keeps co-admins in sync)
   useFocusEffect(
@@ -407,7 +426,31 @@ export default function HomeScreen() {
         {/* 2. Needs you — hidden when there's nothing to do */}
         <View className="px-4 pt-4 pb-1">
           <SectionHeader icon="flash" iconColor="#d97706" title="Needs you" />
-          {actionCards.length === 0 ? (
+          {proposals.map((p) => (
+            <View key={p.booking_id} className="rounded-xl p-4 mb-2" style={{ backgroundColor: '#FEF3C7' }}>
+              <View className="flex-row items-start">
+                <View className="w-10 h-10 rounded-full items-center justify-center mr-3" style={{ backgroundColor: '#d9770620' }}>
+                  <Ionicons name="swap-horizontal" size={20} color="#d97706" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-semibold text-bark">{p.coach_name} asked to move {p.athlete_name}'s lesson</Text>
+                  <Text className="text-xs text-stone mt-0.5">
+                    From {fmtWhen(p.current_starts_at)} to <Text className="font-bold text-bark">{fmtWhen(p.proposed_starts_at)}</Text>{p.proposed_facility ? ` · ${p.proposed_facility}` : ''}
+                  </Text>
+                  {p.reason ? <Text className="text-xs text-stone mt-0.5 italic">"{p.reason}"</Text> : null}
+                </View>
+              </View>
+              <View className="flex-row mt-3 ml-13" style={{ marginLeft: 52, gap: 8 }}>
+                <Pressable disabled={answering === p.booking_id} onPress={() => answerProposal(p, true)} className="rounded-lg px-3 py-2 bg-rally-600 active:opacity-80" accessibilityLabel="Accept new time">
+                  <Text className="text-xs font-bold text-white">{answering === p.booking_id ? 'One moment…' : 'Accept new time'}</Text>
+                </Pressable>
+                <Pressable disabled={answering === p.booking_id} onPress={() => answerProposal(p, false)} className="rounded-lg px-3 py-2 border border-parchment active:opacity-70" style={{ backgroundColor: '#fff' }} accessibilityLabel="Keep original">
+                  <Text className="text-xs font-bold text-bark">Keep original</Text>
+                </Pressable>
+              </View>
+            </View>
+          ))}
+          {actionCards.length === 0 && proposals.length === 0 ? (
             <View className="flex-row items-center mb-2 px-1">
               <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
               <Text className="text-sm text-stone dark:text-parchment ml-2">You're all caught up.</Text>

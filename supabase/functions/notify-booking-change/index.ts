@@ -1,6 +1,7 @@
-// notify-booking-change: tell the parent their lesson was cancelled or moved by
-// the coach — push to their devices + an email (they may only use the web app).
-//   POST { booking_id, change: 'cancelled' | 'rescheduled' | 'booked' }  (JWT: the booking's coach)
+// notify-booking-change: lesson changes → push + email + in-app (notification_log).
+//   Coach → family:  'cancelled' | 'rescheduled' | 'booked' | 'reschedule_proposed'
+//   Family → coach:  'reschedule_accepted' | 'reschedule_declined'
+//   POST { booking_id, change }  (JWT: the booking's coach, or the family for the replies)
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -31,49 +32,87 @@ serve(async (req: Request) => {
   if (!callerId) return json({ error: 'auth required' }, 401);
 
   const { booking_id, change } = await req.json().catch(() => ({}));
-  if (!booking_id || !['cancelled', 'rescheduled', 'booked'].includes(change)) return json({ error: 'bad request' }, 400);
+  const TO_FAMILY = ['cancelled', 'rescheduled', 'booked', 'reschedule_proposed'];
+  const TO_COACH = ['reschedule_accepted', 'reschedule_declined'];
+  if (!booking_id || ![...TO_FAMILY, ...TO_COACH].includes(change)) return json({ error: 'bad request' }, 400);
 
   const { data: b } = await supabaseAdmin
     .from('bookings')
-    .select('id, parent_user_id, change_reason, coaches(user_id, display_name, default_timezone), athletes(first_name), slots(starts_at, facilities(label, address))')
+    .select('id, parent_user_id, athlete_id, change_reason, proposal_reason, coaches(user_id, display_name, default_timezone), athletes(first_name), slots:slot_id(starts_at, facilities(label, address)), proposed:proposed_slot_id(starts_at, facilities(label, address))')
     .eq('id', booking_id)
     .maybeSingle();
   const bk = b as any;
-  // Only the booking's coach can trigger this.
-  if (!bk || bk.coaches?.user_id !== callerId) return json({ error: 'not found' }, 404);
+  if (!bk) return json({ error: 'not found' }, 404);
+  const toCoach = TO_COACH.includes(change);
+  if (toCoach) {
+    // The family answers: the parent who booked, or a co-parent who manages the athlete.
+    const { data: mgr } = await supabaseAdmin.from('admin_athletes').select('admin_id')
+      .eq('athlete_id', bk.athlete_id).eq('admin_id', callerId).eq('permission', 'manage').maybeSingle();
+    if (bk.parent_user_id !== callerId && !mgr) return json({ error: 'not found' }, 404);
+  } else if (bk.coaches?.user_id !== callerId) {
+    return json({ error: 'not found' }, 404);
+  }
 
   const tz = bk.coaches?.default_timezone || 'America/Chicago';
-  const when = bk.slots?.starts_at
-    ? new Date(bk.slots.starts_at).toLocaleString('en-US', { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+  const fmt = (iso?: string) => iso
+    ? new Date(iso).toLocaleString('en-US', { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
     : '';
+  const when = fmt(bk.slots?.starts_at);
+  const proposedWhen = fmt(bk.proposed?.starts_at);
   const coach = bk.coaches?.display_name ?? 'Your coach';
   const athlete = bk.athletes?.first_name ?? 'your athlete';
-  const where = [bk.slots?.facilities?.label, bk.slots?.facilities?.address].filter(Boolean).join(', ');
+  const placeOf = (s: any) => [s?.facilities?.label, s?.facilities?.address].filter(Boolean).join(', ');
+  const where = placeOf(bk.slots);
   const reason = bk.change_reason ? `\n"${bk.change_reason}"` : '';
 
-  const title = change === 'cancelled' ? `${coach} cancelled ${athlete}'s lesson`
-    : change === 'booked' ? `${coach} booked a lesson for ${athlete}`
-    : `${coach} moved ${athlete}'s lesson`;
-  const body = change === 'cancelled'
-    ? `The lesson on ${when} is cancelled.${reason}`
-    : change === 'booked'
-      ? `${when}${where ? ` · ${where}` : ''}. It's on your RallyHUB calendar.`
-      : `New time: ${when}${where ? ` · ${where}` : ''}.${reason}`;
+  let title: string, body: string, pushType: string, categoryId: string | undefined;
+  switch (change) {
+    case 'cancelled':
+      title = `${coach} cancelled ${athlete}'s lesson`; body = `The lesson on ${when} is cancelled.${reason}`; pushType = 'lesson_changed'; break;
+    case 'booked':
+      title = `${coach} booked a lesson for ${athlete}`; body = `${when}${where ? ` · ${where}` : ''}. It's on your RallyHUB calendar.`; pushType = 'lesson_changed'; break;
+    case 'rescheduled':
+      title = `${coach} moved ${athlete}'s lesson`; body = `New time: ${when}${where ? ` · ${where}` : ''}.${reason}`; pushType = 'lesson_changed'; break;
+    case 'reschedule_proposed': {
+      const why = bk.proposal_reason ? `\n"${bk.proposal_reason}"` : '';
+      const pw = placeOf(bk.proposed);
+      title = `${coach} asked to move ${athlete}'s lesson`;
+      body = `From ${when} to ${proposedWhen}${pw ? ` · ${pw}` : ''}. Accept the new time or keep the original.${why}`;
+      pushType = 'reschedule_proposed'; categoryId = 'reschedule_proposal';
+      break;
+    }
+    case 'reschedule_accepted':
+      title = `${athlete}'s family accepted the new time`; body = `The lesson is now ${when}${where ? ` · ${where}` : ''}.`; pushType = 'reschedule_answered'; break;
+    default:
+      title = `${athlete}'s family kept the original time`; body = `The lesson stays at ${when}. The time you offered is open again.`; pushType = 'reschedule_answered';
+  }
+
+  const recipientId: string = toCoach ? bk.coaches.user_id : bk.parent_user_id;
+
+  // In-app: the notifications screen reads notification_log.
+  await supabaseAdmin.from('notification_log').insert({
+    user_id: recipientId, notification_type: 'schedule_change', channel: 'push',
+    message: `${title}. ${body.replace(/\n/g, ' ')}`, status: 'sent',
+  }).then(({ error }) => { if (error) console.error('[notify-booking-change] log', error.message); });
 
   let pushed = 0;
-  const { data: tokens } = await supabaseAdmin.from('push_tokens').select('token').eq('user_id', bk.parent_user_id);
+  const { data: tokens } = await supabaseAdmin.from('push_tokens').select('token').eq('user_id', recipientId);
   if (tokens?.length) {
     await fetch(EXPO_PUSH_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(tokens.map(({ token }) => ({ to: token, title, body, sound: 'default', data: { type: 'lesson_changed', bookingId: bk.id } }))),
+      body: JSON.stringify(tokens.map(({ token }) => ({
+        to: token, title, body, sound: 'default',
+        ...(categoryId ? { categoryId } : {}),
+        data: { type: pushType, bookingId: bk.id },
+      }))),
     }).catch((e) => console.error('[notify-booking-change] push', e));
     pushed = tokens.length;
   }
 
   let emailed = false;
-  const { data: parent } = await supabaseAdmin.auth.admin.getUserById(bk.parent_user_id);
-  const email = parent?.user?.email;
+  const { data: recipient } = await supabaseAdmin.auth.admin.getUserById(recipientId);
+  const email = recipient?.user?.email;
   if (email && SENDGRID_API_KEY) {
     const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
@@ -84,7 +123,9 @@ serve(async (req: Request) => {
         subject: title,
         content: [{
           type: 'text/html',
-          value: `<p>${esc(body).replace(/\n/g, '<br>')}</p><p>See your lessons in <a href="https://rally-hub.com/app">RallyHUB</a>.</p>`,
+          value: `<p>${esc(body).replace(/\n/g, '<br>')}</p>${change === 'reschedule_proposed'
+            ? `<p><a href="https://rally-hub.com/app" style="display:inline-block;background:#3B82B0;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:bold">Accept or keep the original in RallyHUB</a></p><p style="color:#6B8BA8;font-size:13px">Until you answer, the lesson stays at ${esc(when)}.</p>`
+            : `<p>See your lessons in <a href="https://rally-hub.com/app">RallyHUB</a>.</p>`}`,
         }],
       }),
     });
