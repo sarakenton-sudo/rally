@@ -17,6 +17,7 @@ import ReferFriend from '@/components/ReferFriend';
 import { fetchMyUpcomingLessons, sessionKindStyle, isSupabaseConfigured as coachingConfigured, type ParentLesson } from '@/lib/coach';
 import AthleteCredentialCard from '@/components/AthleteCredentialCard';
 import Avatar from '@/components/Avatar';
+import QuickAddSheet from '@/components/QuickAddSheet';
 
 const AVATAR_COLORS = [
   '#3B82B0', '#7c3aed', '#6A9E8A', '#d97706', '#dc2626',
@@ -125,24 +126,8 @@ export default function HomeScreen() {
   const externalLinks = adminConfig?.external_links ?? [];
   const credentialLinks = externalLinks.filter((l) => l.scope !== 'athlete' && (l.username || l.password || l.url));
 
-  const handlePlusPress = () => {
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['Cancel', 'Tournament', 'Hotel', 'Flight', 'Team Event'],
-          cancelButtonIndex: 0,
-        },
-        (index) => {
-          if (index === 1) router.push('/tournament/add');
-          else if (index === 2) router.push('/booking/add-hotel');
-          else if (index === 3) router.push('/booking/add-flight');
-          else if (index === 4) router.push('/booking/add-team-event');
-        }
-      );
-    } else {
-      setShowAddMenu(true);
-    }
-  };
+  // "Add Manually" opens the same quick-add sheet as the floating "+".
+  const handlePlusPress = () => setShowAddMenu(true);
 
   // Active season tournaments (for action items)
   const seasonTournaments = useMemo(() =>
@@ -789,36 +774,7 @@ export default function HomeScreen() {
         <View className="h-6" />
       </ScrollView>
 
-      {/* Add menu modal (Android/web fallback) */}
-      {showAddMenu && (
-        <Modal transparent animationType="fade" visible={showAddMenu} onRequestClose={() => setShowAddMenu(false)}>
-          <Pressable className="flex-1 bg-black/40 justify-end" onPress={() => setShowAddMenu(false)}>
-            <View className="bg-warm-white dark:bg-bark-light rounded-t-2xl px-4 pb-8 pt-4">
-              <Text className="text-lg font-bold text-bark dark:text-cream mb-4 text-center">Add New Detail Manually</Text>
-              {[
-                { label: 'Tournament', icon: 'trophy-outline' as const, color: '#6A9E8A', onPress: () => { setShowAddMenu(false); router.push('/tournament/add'); } },
-                { label: 'Hotel', icon: 'bed-outline' as const, color: '#3B82B0', onPress: () => { setShowAddMenu(false); router.push('/booking/add-hotel'); } },
-                { label: 'Flight', icon: 'airplane-outline' as const, color: '#7c3aed', onPress: () => { setShowAddMenu(false); router.push('/booking/add-flight'); } },
-                { label: 'Team Event', icon: 'restaurant-outline' as const, color: '#d97706', onPress: () => { setShowAddMenu(false); router.push('/booking/add-team-event'); } },
-              ].map((item) => (
-                <Pressable
-                  key={item.label}
-                  className="flex-row items-center py-3.5 border-b border-parchment dark:border-rally-900 active:opacity-70"
-                  onPress={item.onPress}
-                >
-                  <View className="w-10 h-10 rounded-full items-center justify-center mr-3" style={{ backgroundColor: item.color + '15' }}>
-                    <Ionicons name={item.icon} size={20} color={item.color} />
-                  </View>
-                  <Text className="text-base font-medium text-bark dark:text-cream">{item.label}</Text>
-                </Pressable>
-              ))}
-              <Pressable className="mt-3 py-3 items-center active:opacity-70" onPress={() => setShowAddMenu(false)}>
-                <Text className="text-sm font-semibold text-stone">Cancel</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Modal>
-      )}
+      <QuickAddSheet visible={showAddMenu} onClose={() => setShowAddMenu(false)} />
     </View>
   );
 }

@@ -13,6 +13,7 @@ import { DataProvider } from '@/providers/DataProvider';
 import { NotificationProvider } from '@/providers/NotificationProvider';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { takeNextPath } from '@/lib/bookingPage';
+import { ToastHost } from '@/components/Toast';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -422,6 +423,10 @@ function RootLayoutNav() {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="lessons/index"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="coaching/availability"
           options={{ headerShown: false }}
         />
@@ -430,6 +435,7 @@ function RootLayoutNav() {
           options={{ presentation: 'modal', headerShown: false }}
         />
       </Stack>
+      <ToastHost />
     </ThemeProvider>
   );
 }

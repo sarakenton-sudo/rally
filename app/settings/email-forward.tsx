@@ -7,13 +7,14 @@ import * as Clipboard from 'expo-clipboard';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess, tapLight } from '@/lib/haptics';
+import { PLANS_INBOX_EMAIL } from '@/lib/config';
 
 export default function EmailConnectScreen() {
   const ic = useIconColors();
   const adminConfig = useSeasonStore((s) => s.adminConfig);
   const [copied, setCopied] = useState(false);
 
-  const forwardAddress = adminConfig?.rally_forward_address || 'plans@rally-hub.com';
+  const forwardAddress = adminConfig?.rally_forward_address || PLANS_INBOX_EMAIL;
 
   const handleCopy = async () => {
     if (Platform.OS === 'web') {

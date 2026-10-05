@@ -27,6 +27,7 @@ import { notifySuccess } from '@/lib/haptics';
 import type { AdminConfig, Tournament, Athlete, Season, ExternalLink } from '@/types/database';
 import { smartExtract as smartExtractOnboarding } from '@/lib/schedule-parser';
 import { currentSeasonLabel } from '@/lib/seasons';
+import { PLANS_INBOX_EMAIL } from '@/lib/config';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -295,9 +296,9 @@ export default function OnboardingScreen() {
 
   const handleCopyForwardAddress = () => {
     if (Platform.OS === 'web') {
-      navigator.clipboard.writeText('plans@rally-hub.com');
+      navigator.clipboard.writeText(PLANS_INBOX_EMAIL);
     } else {
-      Clipboard.setStringAsync('plans@rally-hub.com');
+      Clipboard.setStringAsync(PLANS_INBOX_EMAIL);
     }
     setForwardAddressCopied(true);
     setTimeout(() => setForwardAddressCopied(false), 2000);
@@ -383,7 +384,7 @@ export default function OnboardingScreen() {
           id: result.config_id ?? user.id,
           user_id: user.id,
           club_email_domain: null,
-          rally_forward_address: 'plans@rally-hub.com',
+          rally_forward_address: PLANS_INBOX_EMAIL,
           trusted_sender_emails: [],
           vip_sender_emails: [],
           notification_preferences: {
@@ -501,7 +502,7 @@ export default function OnboardingScreen() {
       const mockSeasonId = 'season-dev-001';
       const mockAthleteId = 'athlete-dev-001';
       store.setAdminConfig({
-        id: 'onboarding-dev', user_id: 'dev', club_email_domain: null, rally_forward_address: 'plans@rally-hub.com',
+        id: 'onboarding-dev', user_id: 'dev', club_email_domain: null, rally_forward_address: PLANS_INBOX_EMAIL,
         trusted_sender_emails: [], vip_sender_emails: [], notification_preferences: {
           tournament_reminders: true, cancellation_deadlines: true, email_arrivals: true, rsvp_responses: true, schedule_changes: true,
         }, ical_feed_token: '', youtube_channel_id: null, default_streaming_platform: null,
@@ -836,7 +837,7 @@ export default function OnboardingScreen() {
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Text selectable style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: '#3B82B0', flex: 1 }}>
-                    plans@rally-hub.com
+                    {PLANS_INBOX_EMAIL}
                   </Text>
                   <Pressable
                     style={{ backgroundColor: forwardAddressCopied ? 'rgba(106,158,138,0.2)' : 'rgba(59,130,176,0.2)', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 4 }}
@@ -891,7 +892,7 @@ export default function OnboardingScreen() {
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(219,39,119,0.08)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
                   <Text selectable style={{ fontSize: 15, fontFamily: 'NunitoSans-Bold', color: '#DB2777', flex: 1 }}>
-                    plans@rally-hub.com
+                    {PLANS_INBOX_EMAIL}
                   </Text>
                   <Pressable
                     style={{ backgroundColor: forwardAddressCopied ? 'rgba(106,158,138,0.2)' : 'rgba(219,39,119,0.15)', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 4 }}

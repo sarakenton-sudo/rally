@@ -1,28 +1,78 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Keyboard, Platform } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { extractTournamentDetails } from '@/lib/tournament-detail-parser';
 import { smartExtract } from '@/lib/schedule-parser';
+import { useAuth } from '@/providers/AuthProvider';
+import { trackEvent } from '@/lib/track-event';
+
+/** What the paste turned out to be. New types (credential, lesson_confirmation) slot in here later. */
+export type PasteType = 'schedule' | 'hotel' | 'flight' | 'travel' | 'tournament_details' | 'unknown';
+const SOFT_TIMEOUT_MS = 10_000; // show the manual picker; the parse keeps running (no hard cutoff)
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
 export default function PasteCombinedScreen() {
   const ic = useIconColors();
-  const [text, setText] = useState('');
+  const { user } = useAuth();
+  // From the + sheet: ?text=…&auto=1 starts reading immediately.
+  const params = useLocalSearchParams<{ text?: string; auto?: string }>();
+  const [text, setText] = useState(params.text ?? '');
   const [isExtracting, setIsExtracting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // 'slow' = still reading after 10s (offer picker, keep parsing); 'unknown' = couldn't classify.
+  const [picker, setPicker] = useState<'slow' | 'unknown' | null>(null);
+  const abandoned = useRef(false);   // parent picked manually → don't auto-advance later
+  const startedAt = useRef(0);
 
-  const handleExtract = async () => {
-    const trimmed = text.trim();
+  useEffect(() => {
+    if (params.auto === '1' && params.text) handleExtract(params.text);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const typeOf = (pathname: string, p: Record<string, string>): PasteType => {
+    if (pathname === '/import/review') return 'schedule';
+    if (pathname === '/import/review-tournament-details') return 'tournament_details';
+    try {
+      const kinds = new Set(JSON.parse(p.bookings ?? '[]').map((b: any) => b.type));
+      return kinds.size === 1 ? ([...kinds][0] as PasteType) : 'travel';
+    } catch { return 'travel'; }
+  };
+
+  /** Single exit to a review screen; skipped if the parent already chose manually. */
+  const advance = (route: { pathname: string; params: Record<string, string> }) => {
+    if (abandoned.current) return;
+    if (user) trackEvent(user.id, 'paste_parsed', { type: typeOf(route.pathname, route.params), success: true, latency_ms: Date.now() - startedAt.current });
+    setPicker(null);
+    router.push(route as any);
+  };
+
+  /** Manual choice from the picker — the raw text rides along. */
+  const pickManually = (kind: 'travel' | 'lesson' | 'login') => {
+    abandoned.current = true;
+    const raw = text.trim();
+    if (kind === 'travel') router.push({ pathname: '/booking/add-hotel', params: { notes: raw.slice(0, 2000) } });
+    else if (kind === 'lesson') router.push('/lessons');
+    else router.push({ pathname: '/profile/edit-link', params: { raw: raw.slice(0, 2000) } });
+  };
+
+  const handleExtract = async (override?: string) => {
+    const trimmed = (override ?? text).trim();
+    abandoned.current = false;
+    setPicker(null);
+    startedAt.current = Date.now();
     if (!trimmed) {
       setErrorMsg('Paste something to extract.');
       return;
     }
+    // Pastes from the + sheet are tracked there; typed-here pastes are tracked here.
+    if (override === undefined && user) trackEvent(user.id, 'paste_submitted', { source: 'typed', char_count: trimmed.length });
+    const slowTimer = setTimeout(() => { if (!abandoned.current) setPicker('slow'); }, SOFT_TIMEOUT_MS);
 
     setIsExtracting(true);
     setErrorMsg(null);
@@ -61,7 +111,7 @@ export default function PasteCombinedScreen() {
             // anything, skipped AI entirely — mangling names/dates on real schedules.
             const aiSchedule = data?.schedule?.tournaments;
             if (Array.isArray(aiSchedule) && aiSchedule.length > 0) {
-              router.push({
+              advance({
                 pathname: '/import/review',
                 params: { tournaments: JSON.stringify(aiSchedule) },
               });
@@ -72,7 +122,7 @@ export default function PasteCombinedScreen() {
               Object.values(data.tournament_details.details).some((v: any) => v && v.length > 0);
 
             if (hasTravel && hasDetails) {
-              router.push({
+              advance({
                 pathname: '/import/review-travel',
                 params: {
                   bookings: JSON.stringify(data.travel.bookings),
@@ -81,13 +131,13 @@ export default function PasteCombinedScreen() {
               });
               return;
             } else if (hasTravel) {
-              router.push({
+              advance({
                 pathname: '/import/review-travel',
                 params: { bookings: JSON.stringify(data.travel.bookings) },
               });
               return;
             } else if (hasDetails) {
-              router.push({
+              advance({
                 pathname: '/import/review-tournament-details',
                 params: { details: JSON.stringify(data.tournament_details.details) },
               });
@@ -105,7 +155,7 @@ export default function PasteCombinedScreen() {
       // Local fallback (AI unreachable / found nothing) — schedule list parser first
       const scheduleTournaments = smartExtract(trimmed);
       if (scheduleTournaments.length > 0) {
-        router.push({
+        advance({
           pathname: '/import/review',
           params: { tournaments: JSON.stringify(scheduleTournaments) },
         });
@@ -133,7 +183,7 @@ export default function PasteCombinedScreen() {
         tournamentDetails.schedule_link || tournamentDetails.division_info || tournamentDetails.notes);
 
       if (hasTravel && hasTournament) {
-        router.push({
+        advance({
           pathname: '/import/review-travel',
           params: {
             bookings: JSON.stringify(realTravel),
@@ -141,21 +191,27 @@ export default function PasteCombinedScreen() {
           },
         });
       } else if (hasTravel) {
-        router.push({
+        advance({
           pathname: '/import/review-travel',
           params: { bookings: JSON.stringify(realTravel) },
         });
       } else if (hasTournament) {
-        router.push({
+        advance({
           pathname: '/import/review-tournament-details',
           params: { details: JSON.stringify(tournamentDetails) },
         });
       } else {
-        setErrorMsg('Could not extract any travel or tournament details. Try pasting a different email or message.');
+        // Couldn't classify → manual picker with the text preserved (not a dead end).
+        if (user) {
+          trackEvent(user.id, 'paste_unclassified', { char_count: trimmed.length });
+          trackEvent(user.id, 'paste_parsed', { type: 'unknown', success: false, latency_ms: Date.now() - startedAt.current });
+        }
+        if (!abandoned.current) setPicker('unknown');
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Something went wrong. Please try again.');
     } finally {
+      clearTimeout(slowTimer);
       setIsExtracting(false);
     }
   };
@@ -199,6 +255,29 @@ export default function PasteCombinedScreen() {
             </View>
           </View>
 
+          {/* Slow (still reading) or unclassified → choose manually, text preserved */}
+          {picker && (
+            <View className="bg-warm-white rounded-xl p-4 mb-4 border border-parchment">
+              <View className="flex-row items-center mb-1">
+                {picker === 'slow' ? <ActivityIndicator size="small" color="#3B82B0" /> : <Ionicons name="help-circle" size={18} color="#b45309" />}
+                <Text className="text-sm font-bold text-bark ml-2">
+                  {picker === 'slow' ? 'Still reading… long schedules take a bit' : "Couldn't tell what this is"}
+                </Text>
+              </View>
+              <Text className="text-xs text-stone mb-3">
+                {picker === 'slow' ? "We'll jump ahead as soon as it's done — or pick what it is:" : 'Pick what it is and we\u2019ll bring your text along:'}
+              </Text>
+              <View className="flex-row flex-wrap">
+                {([['travel', 'Travel', 'bed-outline'], ['lesson', 'Lesson', 'person-outline'], ['login', 'Login or code', 'key-outline']] as const).map(([k, label, icon]) => (
+                  <Pressable key={k} onPress={() => pickManually(k)} className="flex-row items-center rounded-lg px-3 py-2 mr-2 mb-2 bg-rally-50 active:opacity-70" accessibilityLabel={label}>
+                    <Ionicons name={icon} size={15} color="#3B82B0" />
+                    <Text className="text-sm font-semibold text-rally-600 ml-1.5">{label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
+
           {/* Error */}
           {errorMsg && (
             <View className="bg-red-50 rounded-xl p-4 mb-4 flex-row items-start">
@@ -228,7 +307,7 @@ export default function PasteCombinedScreen() {
             className={`rounded-xl py-4 items-center mb-6 ${
               isExtracting || !text.trim() ? 'bg-parchment' : 'bg-rally-600 active:opacity-80'
             }`}
-            onPress={handleExtract}
+            onPress={() => handleExtract()}
             disabled={isExtracting || !text.trim()}
           >
             {isExtracting ? (

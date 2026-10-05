@@ -12,6 +12,7 @@ import { notifySuccess } from '@/lib/haptics';
 import { useAuth } from '@/providers/AuthProvider';
 import { insertFlightBooking, updateFlightBooking as updateFlightBookingDB, deleteFlightBooking as deleteFlightBookingDB } from '@/hooks/useSupabaseData';
 import type { FlightBooking } from '@/types/database';
+import { showToast } from '@/components/Toast';
 
 const AIRLINES = [
   'Southwest', 'Delta', 'United', 'American', 'JetBlue',
@@ -199,6 +200,8 @@ export default function AddFlightBookingScreen() {
         }
       }
       router.back();
+      const tid = bookingData.tournament_id;
+      showToast('Flight saved', tid ? { actionLabel: 'View', onAction: () => router.push(`/tournament/${tid}`) } : {});
     } finally {
       setIsSaving(false);
     }

@@ -13,11 +13,13 @@ import { daysUntil } from '@/lib/dates';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess, notifyError } from '@/lib/haptics';
 import type { HotelBooking, BookingPlatform, BookingStatus } from '@/types/database';
+import { showToast } from '@/components/Toast';
 
 const PLATFORMS: BookingPlatform[] = ['Bonvoy', 'Booking.com', 'Travel Source', 'Expedia', 'Direct', 'Other'];
 
 export default function AddHotelBookingScreen() {
-  const params = useLocalSearchParams<{ tournamentId?: string; editId?: string }>();
+  // notes: raw text from an unclassified paste in the + sheet
+  const params = useLocalSearchParams<{ tournamentId?: string; editId?: string; notes?: string }>();
   const editId = params.editId;
   const existing = useSeasonStore((s) => s.hotelBookings.find((h) => h.id === editId));
 
@@ -135,7 +137,7 @@ export default function AddHotelBookingScreen() {
       cost: cost ? parseFloat(cost) : null,
       is_backup: isBackup,
       status: (existing?.status ?? 'confirmed') as BookingStatus,
-      notes: existing?.notes ?? '',
+      notes: existing?.notes ?? params.notes ?? '',
       address: address.trim(),
     };
 
@@ -163,6 +165,8 @@ export default function AddHotelBookingScreen() {
         }
       }
       router.back();
+      const tid = bookingData.tournament_id;
+      showToast('Hotel saved', tid ? { actionLabel: 'View', onAction: () => router.push(`/tournament/${tid}`) } : {});
     } finally {
       setIsSaving(false);
     }

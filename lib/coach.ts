@@ -478,6 +478,24 @@ export async function fetchMyUpcomingLessons(days = 30): Promise<{ data: ParentL
   return { data: rows, error: error ?? null };
 }
 
+/** Parent's lesson history for the "+" sheet's rebook pattern (spec §4.2). */
+export async function fetchMyLessonHistory(): Promise<{
+  coachId: string; coachName: string; startsAt: string; status: string; sessionTypeId: string | null;
+}[]> {
+  const since = new Date(Date.now() - 49 * 86_400_000).toISOString();
+  const { data } = await (supabase.from('booking_requests') as any)
+    .select('coach_id, session_type_id, coaches(display_name), slots!inner(starts_at), bookings(status)')
+    .eq('status', 'accepted')
+    .gte('slots.starts_at', since);
+  return ((data as any[]) ?? []).map((r) => ({
+    coachId: r.coach_id,
+    coachName: r.coaches?.display_name ?? 'Coach',
+    startsAt: r.slots.starts_at,
+    status: (r.bookings ?? [])[0]?.status ?? 'confirmed',
+    sessionTypeId: r.session_type_id ?? null,
+  }));
+}
+
 export interface CoachOpening extends SlotWithRefs {
   coach_name: string;
   coach_photo_url: string | null;
