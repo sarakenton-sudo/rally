@@ -10,6 +10,9 @@ import { updateAdminConfig } from '@/hooks/useSupabaseData';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
+import type { StreamingPlatform } from '@/types/database';
+
+const STREAM_PLATFORMS: StreamingPlatform[] = ['YouTube', 'GameChanger', 'Baller.tv', 'Other'];
 
 export default function TeamDetailsScreen() {
   const ic = useIconColors();
@@ -30,14 +33,18 @@ export default function TeamDetailsScreen() {
   const [athleteName, setAthleteName] = useState(athleteDisplayName);
   const [teamCode, setTeamCode] = useState(activeSeason?.team_code ?? '');
   const [clubDomain, setClubDomain] = useState(adminConfig?.club_email_domain ?? '');
+  // Default live stream (was its own screen, settings/streaming-hub).
+  const [platform, setPlatform] = useState<StreamingPlatform | null>(activeSeason?.default_streaming_platform ?? null);
+  const [streamUrl, setStreamUrl] = useState(activeSeason?.default_stream_url ?? '');
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSave = async () => {
     if (!activeSeason || !adminConfig) return;
-    if (!teamName.trim()) {
-      Alert.alert('Missing field', 'Team name is required.');
-      return;
-    }
+    setError(null);
+    if (!teamName.trim()) { setError('Team name is required.'); return; }
+    const url = streamUrl.trim();
+    if (url && !/^https?:\/\//i.test(url)) { setError('The stream link should start with https://'); return; }
 
     setIsSaving(true);
 
@@ -45,6 +52,8 @@ export default function TeamDetailsScreen() {
       team_name: teamName.trim(),
       season_year: seasonYear.trim(),
       team_code: teamCode.trim() || null,
+      default_streaming_platform: url ? platform ?? 'Other' : null,
+      default_stream_url: url || null,
     };
 
     const adminUpdates = {
@@ -57,16 +66,10 @@ export default function TeamDetailsScreen() {
           .from('seasons')
           .update(seasonUpdates)
           .eq('id', activeSeason.id);
-        if (seasonError) {
-          Alert.alert('Save failed', seasonError.message);
-          return;
-        }
+        if (seasonError) { setError(`Couldn't save: ${seasonError.message}`); return; }
 
         const { error: adminError } = await updateAdminConfig(adminConfig.id, adminUpdates);
-        if (adminError) {
-          Alert.alert('Save failed', adminError.message);
-          return;
-        }
+        if (adminError) { setError(`Couldn't save: ${adminError.message}`); return; }
       }
       setSeasons(seasons.map((s) => s.id === activeSeason.id ? { ...s, ...seasonUpdates } : s));
       setAdminConfig({ ...adminConfig, ...adminUpdates });
@@ -106,6 +109,39 @@ export default function TeamDetailsScreen() {
           <FormField label="Athlete Name" value={athleteName} onChangeText={setAthleteName} placeholder="e.g. Avery Kenton" />
           <FormField label="Team Code" value={teamCode} onChangeText={setTeamCode} placeholder="e.g. AJV14U" autoCapitalize="characters" />
           <FormField label="Club Email Domain" value={clubDomain} onChangeText={setClubDomain} placeholder="e.g. austinjuniors.com" keyboardType="url" autoCapitalize="none" />
+
+          {/* Live stream */}
+          <View className="mt-4 mb-2 flex-row items-center">
+            <Ionicons name="tv-outline" size={16} color="#dc2626" />
+            <Text className="text-sm font-bold text-bark dark:text-cream ml-1.5">Live stream</Text>
+          </View>
+          <Text className="text-xs text-stone dark:text-parchment mb-3">
+            Your team's usual channel. It shows as Watch Live on the Schedule and on any tournament without its own stream link.
+          </Text>
+          <View className="flex-row flex-wrap mb-3" style={{ gap: 8 }}>
+            {STREAM_PLATFORMS.map((p) => {
+              const on = platform === p;
+              return (
+                <Pressable
+                  key={p}
+                  onPress={() => setPlatform(on ? null : p)}
+                  className={`rounded-xl border ${on ? 'bg-rally-600 border-rally-600' : 'bg-cream dark:bg-bark-light border-parchment dark:border-rally-900'}`}
+                  style={{ paddingHorizontal: 14, paddingVertical: 8 }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                >
+                  <Text className={`text-sm font-semibold ${on ? 'text-cream' : 'text-bark dark:text-cream'}`}>{p}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <FormField label="Channel or stream link" value={streamUrl} onChangeText={setStreamUrl} placeholder="https://youtube.com/@yourclub" keyboardType="url" autoCapitalize="none" />
+
+          {error ? (
+            <View className="rounded-xl p-3 mt-2" style={{ backgroundColor: '#fee2e2' }}>
+              <Text className="text-sm text-red-700">{error}</Text>
+            </View>
+          ) : null}
 
           <View className="h-8" />
         </ScrollView>

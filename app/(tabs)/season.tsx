@@ -162,34 +162,39 @@ export default function SeasonScreen() {
                   {seasonYear ? `${seasonYear} · ` : ''}{seasonTournaments.length} tournament{seasonTournaments.length !== 1 ? 's' : ''}
                 </Text>
               </View>
-              {activeSeason ? (
-                <View className="flex-row items-center" style={{ gap: 6 }}>
-                  <Pressable
-                    className="flex-row items-center rounded-lg px-2.5 py-1.5 bg-rally-50 dark:bg-rally-900/30 active:opacity-70"
-                    onPress={() => router.push('/settings/team-details')}
-                    accessibilityLabel="Team details"
-                  >
-                    <Ionicons name="information-circle-outline" size={15} color="#3B82B0" />
-                    <Text className="text-xs font-semibold text-rally-600 ml-1">Details</Text>
-                  </Pressable>
-                  <Pressable
-                    className="flex-row items-center rounded-lg px-2.5 py-1.5 bg-rally-600 active:opacity-80"
-                    onPress={shareTeam}
-                    accessibilityLabel="Share team details"
-                  >
-                    <Ionicons name="share-outline" size={15} color="#FEFEFE" />
-                    <Text className="text-xs font-semibold text-cream ml-1">Share</Text>
-                  </Pressable>
-                </View>
-              ) : null}
             </View>
+
+            {/* Team actions — prominent: details (incl. live stream) and share */}
+            {activeSeason ? (
+              <View className="flex-row mt-3" style={{ gap: 8 }}>
+                <Pressable
+                  className="flex-1 flex-row items-center justify-center rounded-xl py-3 border border-rally-600 bg-warm-white dark:bg-bark-light active:opacity-70"
+                  onPress={() => router.push('/settings/team-details')}
+                  accessibilityLabel="Team details"
+                >
+                  <Ionicons name="create-outline" size={17} color="#3B82B0" />
+                  <Text className="text-sm font-bold text-rally-600 ml-1.5">Team details</Text>
+                </Pressable>
+                <Pressable
+                  className="flex-1 flex-row items-center justify-center rounded-xl py-3 bg-rally-600 active:opacity-80"
+                  onPress={shareTeam}
+                  accessibilityLabel="Share team details"
+                >
+                  <Ionicons name="share-outline" size={17} color="#FEFEFE" />
+                  <Text className="text-sm font-bold text-cream ml-1.5">Share team</Text>
+                </Pressable>
+              </View>
+            ) : null}
             {activeSeason?.default_stream_url ? (
               <Pressable
-                className="flex-row items-center self-start bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg mt-2 active:opacity-70"
+                className="flex-row items-center justify-center rounded-xl py-2.5 mt-2 bg-red-50 dark:bg-red-900/20 active:opacity-70"
                 onPress={() => Linking.openURL(activeSeason.default_stream_url!)}
+                accessibilityLabel="Watch live"
               >
-                <Ionicons name="tv-outline" size={14} color="#dc2626" />
-                <Text className="text-xs font-semibold text-red-600 ml-1">Watch Live</Text>
+                <Ionicons name="tv-outline" size={16} color="#dc2626" />
+                <Text className="text-sm font-bold text-red-600 ml-1.5">
+                  Watch Live{activeSeason.default_streaming_platform ? ` · ${activeSeason.default_streaming_platform}` : ''}
+                </Text>
               </Pressable>
             ) : null}
 
@@ -275,8 +280,8 @@ export default function SeasonScreen() {
               <HubSettingsRow
                 icon="information-circle"
                 iconColor="#3B82B0"
-                title="Team Details"
-                subtitle={`${activeSeason.club_name ? activeSeason.club_name + ' · ' : ''}${activeSeason.season_year}`}
+                title="Team details & live stream"
+                subtitle={[activeSeason.club_name, activeSeason.season_year, activeSeason.default_streaming_platform ? `Stream: ${activeSeason.default_streaming_platform}` : 'No stream set'].filter(Boolean).join(' · ')}
                 onPress={() => router.push('/settings/team-details')}
               />
 
@@ -288,34 +293,6 @@ export default function SeasonScreen() {
                 onPress={() => router.push('/settings/schedule-import')}
               />
 
-              {activeSeason.default_stream_url ? (
-                <Pressable
-                  className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mb-2 border border-parchment dark:border-rally-900 active:opacity-80"
-                  style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
-                  onPress={() => router.push('/settings/streaming-hub')}
-                >
-                  <View className="flex-row items-center">
-                    <Ionicons name="play-circle" size={24} color="#dc2626" />
-                    <View className="ml-3 flex-1">
-                      <Text className="text-sm font-semibold text-bark dark:text-cream">
-                        {activeSeason.default_streaming_platform ?? 'Stream'}
-                      </Text>
-                      <Text className="text-xs text-stone mt-0.5" numberOfLines={1}>
-                        {activeSeason.default_stream_url}
-                      </Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
-                  </View>
-                </Pressable>
-              ) : (
-                <HubSettingsRow
-                  icon="videocam"
-                  iconColor="#dc2626"
-                  title="Default Stream Channel"
-                  subtitle="YouTube, GameChanger, Baller.tv, or other"
-                  onPress={() => router.push('/settings/streaming-hub')}
-                />
-              )}
             </View>
           ) : null}
           <ReferFriend />
