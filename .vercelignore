@@ -1,0 +1,8 @@
+.maestro
+*.log
+android
+e2e/.auth
+e2e/report
+ios
+supabase/.temp
+test-results
