@@ -14,6 +14,7 @@ export default function GlobalAddFAB() {
         onPress={() => setVisible(true)}
         accessibilityRole="button"
         accessibilityLabel="Add"
+        testID="plus-button"
       >
         <Ionicons name="add" size={28} color="#FEFEFE" />
       </Pressable>

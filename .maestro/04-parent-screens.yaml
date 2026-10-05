@@ -1,0 +1,21 @@
+# P-19, P-20, L-*: deep-link sweep; each screen must render content.
+appId: com.rallyhub.app
+tags: [parent]
+env: { EMAIL: "${QA_PARENT_EMAIL}", PASSWORD: "${QA_PARENT_PASSWORD}" }
+---
+- runFlow: _signin.yaml
+- extendedWaitUntil: { visible: "Next 30 Days", timeout: 30000 }
+- openLink: "rally://lessons"
+- assertVisible: "Have a coach link?"
+- openLink: "rally://coaching"
+- assertVisible: "My Coaches"
+- openLink: "rally://settings/payments"
+- assertVisible: "Payment method"
+- openLink: "rally://settings/trusted-emails"
+- assertVisible: "My Email Addresses"
+- openLink: "rally://settings/invite-coparent"
+- assertVisible: "Invite Type"
+- openLink: "rally://email/inbox"
+- assertNotVisible: "Something went wrong"
+- openLink: "rally://import/paste-combined"
+- assertNotVisible: "Something went wrong"

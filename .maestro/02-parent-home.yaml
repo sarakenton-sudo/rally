@@ -1,0 +1,18 @@
+# P-01, P-20, A-09: parent signs in, every tab renders.
+appId: com.rallyhub.app
+tags: [parent]
+env: { EMAIL: "${QA_PARENT_EMAIL}", PASSWORD: "${QA_PARENT_PASSWORD}" }
+---
+- runFlow: _signin.yaml
+- extendedWaitUntil: { visible: "Next 30 Days", timeout: 30000 }
+- assertNotVisible: "Supabase not configured"
+- tapOn: "Tournaments"
+- assertNotVisible: "Something went wrong"
+- tapOn: "Travel"
+- assertNotVisible: "Something went wrong"
+- tapOn: "Athletes"
+- tapOn: "Guests"
+- tapOn: "Settings"
+- assertVisible: "Account & Co-Parent"
+- tapOn: "Account & Co-Parent"
+- assertVisible: ${QA_PARENT_EMAIL}          # A-09: email shows, not a dash

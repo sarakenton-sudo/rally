@@ -41,3 +41,9 @@ yarn-error.*
 /ios
 /android
 .vercel
+
+# QA
+.env.qa
+e2e/.auth/
+e2e/report/
+test-results/

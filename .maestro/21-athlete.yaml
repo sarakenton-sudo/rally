@@ -1,0 +1,9 @@
+# AT-02: athlete view, no parent onboarding, no coach app.
+appId: com.rallyhub.app
+tags: [athlete]
+env: { EMAIL: "${QA_ATHLETE_EMAIL}", PASSWORD: "${QA_ATHLETE_PASSWORD}" }
+---
+- runFlow: _signin.yaml
+- extendedWaitUntil: { notVisible: "Sign In", timeout: 30000 }
+- assertNotVisible: "This week's money"
+- assertNotVisible: "Supabase not configured"

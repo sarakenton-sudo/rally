@@ -8,7 +8,12 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build": "npx expo export --platform web",
-    "test": "jest"
+    "test": "jest",
+    "test:web": "playwright test",
+    "test:api": "node scripts/qa/backend-smoke.mjs",
+    "test:ios": "bash -c \"set -a; . ./.env.qa; set +a; maestro test $(env | grep ^QA_ | sed s/^/-e\\ /) .maestro\"",
+    "qa": "bash scripts/qa/run-all.sh",
+    "qa:audit": "node scripts/qa/audit-web-alerts.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
@@ -48,9 +53,11 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.2.1",
     "@types/jest": "^29.5.14",
     "@types/react": "~19.2.2",
+    "dotenv": "^18.0.5",
     "jest": "^29.7.0",
     "postcss": "^8.5.8",
     "ts-jest": "^29.4.14",

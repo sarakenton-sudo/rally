@@ -1,0 +1,13 @@
+# Subflow: sign in with EMAIL / PASSWORD from the calling flow.
+appId: com.rallyhub.app
+---
+- launchApp:
+    clearState: true
+    permissions: { notifications: allow }
+- extendedWaitUntil: { visible: "Sign In", timeout: 20000 }
+- tapOn: "you@example.com"
+- inputText: ${EMAIL}
+- tapOn: "••••••••"
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn: "Sign In"

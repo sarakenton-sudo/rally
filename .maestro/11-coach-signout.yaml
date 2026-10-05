@@ -1,0 +1,10 @@
+# C-30: coach sign out.
+appId: com.rallyhub.app
+tags: [coach]
+env: { EMAIL: "${QA_COACH_EMAIL}", PASSWORD: "${QA_COACH_PASSWORD}" }
+---
+- runFlow: _signin.yaml
+- extendedWaitUntil: { visible: "This week's money", timeout: 30000 }
+- tapOn: "Business"
+- tapOn: "Sign out"
+- extendedWaitUntil: { visible: "Continue with Google", timeout: 15000 }

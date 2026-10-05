@@ -1,0 +1,23 @@
+# P-02, P-09, P-11, P-20: + sheet options and the screens they open aren't blank.
+appId: com.rallyhub.app
+tags: [parent]
+env: { EMAIL: "${QA_PARENT_EMAIL}", PASSWORD: "${QA_PARENT_PASSWORD}" }
+---
+- runFlow: _signin.yaml
+- extendedWaitUntil: { visible: "Next 30 Days", timeout: 30000 }
+- tapOn: { id: "plus-button" }
+- assertVisible: "Paste anything — hotel, flight, schedule, team code"
+- assertVisible: "Add travel"
+- assertVisible: "Book a lesson"
+- assertVisible: "Save a login or code"
+- assertVisible: "Add a team event"
+- assertVisible: "+ Add an athlete"
+- tapOn: "Add a tournament or season"
+- assertVisible: "Paste a season schedule"
+- tapOn: "Save a login or code"
+- assertVisible: "Whose is it?"
+- tapOn: "Close"
+- tapOn: { id: "plus-button" }
+- tapOn: "Add travel"
+- tapOn: "Hotel"
+- assertVisible: "Cancellation Deadline"    # Add Hotel is not a blank screen

@@ -1,0 +1,32 @@
+# C-01, C-16, C-02…C-27: coach tabs, + sheet, every coach screen.
+appId: com.rallyhub.app
+tags: [coach]
+env: { EMAIL: "${QA_COACH_EMAIL}", PASSWORD: "${QA_COACH_PASSWORD}" }
+---
+- runFlow: _signin.yaml
+- extendedWaitUntil: { visible: "This week's money", timeout: 30000 }
+- tapOn: { id: "plus-button" }
+- assertVisible: "Add open time"
+- assertVisible: "Book a family"
+- assertVisible: "Record a payment"
+- assertVisible: "Share my booking link"
+- assertVisible: "Invite a family"
+- tapOn: "Close"
+- tapOn: "Schedule"
+- assertVisible: "Add to Google Calendar|Sync to your calendar"
+- tapOn: "Clients"
+- assertVisible: "Search athletes, parents, clubs"
+- tapOn: "Business"
+- assertVisible: "Your business"
+- openLink: "rally://coach/booking-page"
+- assertVisible: "Booking Page"
+- openLink: "rally://coach/policies"
+- assertVisible: "Terms & Release"
+- openLink: "rally://coach/payments"
+- assertVisible: "When families are charged"
+- openLink: "rally://coach/unpaid"
+- assertVisible: "Record a payment|All paid up"
+- openLink: "rally://coach/book-family"
+- assertVisible: "Book a family"
+- openLink: "rally://coach/announce"
+- assertVisible: "Announce open times"

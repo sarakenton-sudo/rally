@@ -1,0 +1,63 @@
+import { test, expect } from '@playwright/test';
+import { creds, openPlus, watchErrors } from './helpers';
+
+// Coach D on the website. Read-only.
+test.skip(!creds('coach'), 'Set QA_COACH_EMAIL / QA_COACH_PASSWORD in .env.qa');
+
+test('coach lands on Today with the money strip (C-01)', async ({ page }) => {
+  const done = watchErrors(page);
+  await page.goto('/today');
+  await expect(page).toHaveURL(/\/today/);
+  await expect(page.getByLabel("This week's money")).toBeVisible();
+  for (const t of ['Schedule', 'Clients', 'Business']) await expect(page.getByText(t, { exact: true }).last()).toBeVisible();
+  done();
+});
+
+test('coach-only login has no Family switch (C-01)', async ({ page }) => {
+  test.skip(process.env.QA_COACH_IS_PARENT === '1', 'This coach is also a parent');
+  await page.goto('/today');
+  await expect(page.getByLabel("This week's money")).toBeVisible();
+  await expect(page.getByLabel('Switch to Family')).toHaveCount(0);
+});
+
+test('coach + sheet top tier (C-16)', async ({ page }) => {
+  await page.goto('/today');
+  await openPlus(page);
+  for (const t of ['Add open time', 'Book a family', 'Record a payment', 'Share my booking link', 'Invite a family']) {
+    await expect(page.getByText(t, { exact: true }).first(), t).toBeVisible();
+  }
+  await expect(page.getByText('Announce open times')).toBeVisible();
+});
+
+test('every coach screen opens (C-02…C-27)', async ({ page }) => {
+  const done = watchErrors(page);
+  const screens: [string, RegExp | string][] = [
+    ['/coach-schedule', 'Schedule'], ['/coach-clients', 'Clients'], ['/business', 'Your business'],
+    ['/coach/booking-page', 'Booking Page'], ['/coach/policies', 'Terms & Release'], ['/coach/payments', 'Earnings'],
+    ['/coach/unpaid', /Record a payment|All paid up/], ['/coach/book-family', 'Book a family'],
+    ['/coach/announce', /Announce open times/], ['/coach/facilities', /Facilit/], ['/coach/session-types', /Lesson|lesson/],
+    ['/coach/availability', /Availability|Open/], ['/coach/requests', /Request/],
+  ];
+  for (const [path, text] of screens) {
+    await page.goto(path);
+    await expect(page.getByText(text).first(), path).toBeVisible();
+    await expect(page.getByText(/Unmatched Route|Something went wrong/i), path).toHaveCount(0);
+  }
+  done();
+});
+
+test('schedule offers the Google Calendar feed (C-24)', async ({ page }) => {
+  await page.goto('/coach-schedule');
+  await expect(page.getByText(/Add to Google Calendar|Sync to your calendar/).first()).toBeVisible();
+});
+
+test('payment settings show both choices (C-26)', async ({ page }) => {
+  await page.goto('/coach/payments');
+  await expect(page.getByText('When families are charged')).toBeVisible();
+  await expect(page.getByText('Card processing fees')).toBeVisible();
+});
+
+test('announce shows the daily limit (C-22)', async ({ page }) => {
+  await page.goto('/coach/announce');
+  await expect(page.getByText(/of 3 announcements left today|No open times to announce|sent 3 announcements/)).toBeVisible();
+});
