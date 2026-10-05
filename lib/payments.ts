@@ -1,6 +1,7 @@
 import { Platform, Linking } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '@/lib/supabase';
+import { myFamilyAthleteIds } from '@/lib/coach';
 import type { Booking } from '@/types/database';
 
 // Stripe pages must return to an https URL. On web we come straight back to the
@@ -92,8 +93,12 @@ export interface ParentCharge {
 
 /** The parent's lessons with payment state, newest lesson first. */
 export async function fetchMyCharges(): Promise<ParentCharge[]> {
+  // Family lessons only — an account that also coaches can read its clients' bookings.
+  const athleteIds = await myFamilyAthleteIds();
+  if (!athleteIds.length) return [];
   const { data } = await (supabase.from('bookings') as any)
     .select('id, status, payment_status, payment_method, price_cents, amount_charged_cents, refunded_cents, paid_at, charge_due_at, last_charge_error, coaches(display_name), athletes(first_name), slots(starts_at)')
+    .in('athlete_id', athleteIds)
     .order('created_at', { ascending: false })
     .limit(100);
   return ((data as ParentCharge[]) ?? []).sort((a, b) => (b.slots?.starts_at ?? '').localeCompare(a.slots?.starts_at ?? ''));

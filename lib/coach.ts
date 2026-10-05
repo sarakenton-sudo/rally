@@ -599,12 +599,36 @@ function toParentLesson(r: any): ParentLesson {
 }
 
 /** The parent's requested + confirmed lessons starting in the next `days` days (Home uses 90). */
+/**
+ * Athletes in the signed-in person's FAMILY (managed by them or a co-parent
+ * via admin_athletes, or their own athlete login). Family views filter by
+ * these: an account that also coaches can read its clients' lesson rows,
+ * and those must never show up as the family's own lessons.
+ */
+export async function myFamilyAthleteIds(): Promise<string[]> {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth?.user?.id;
+  if (!uid) return [];
+  const [managed, own] = await Promise.all([
+    (supabase.from('admin_athletes') as any).select('athlete_id').eq('admin_id', uid),
+    (supabase.from('athletes') as any).select('id').eq('user_id', uid),
+  ]);
+  const ids = new Set<string>([
+    ...((managed.data as { athlete_id: string }[] | null) ?? []).map((r) => r.athlete_id),
+    ...((own.data as { id: string }[] | null) ?? []).map((r) => r.id),
+  ]);
+  return [...ids];
+}
+
 export async function fetchMyUpcomingLessons(days = 30): Promise<{ data: ParentLesson[]; error: Error | null }> {
   const now = new Date();
   const until = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+  const athleteIds = await myFamilyAthleteIds();
+  if (!athleteIds.length) return { data: [], error: null };
   const { data, error } = await supabase
     .from('booking_requests')
     .select(PARENT_LESSON_SELECT)
+    .in('athlete_id', athleteIds)
     // Keep cancelled/declined lessons visible (marked) so a parent who missed
     // the push still sees it on Home.
     .in('status', ['requested', 'accepted', 'cancelled', 'declined'])
@@ -637,8 +661,11 @@ export async function fetchMyLessonHistory(): Promise<{
   coachId: string; coachName: string; startsAt: string; status: string; sessionTypeId: string | null;
 }[]> {
   const since = new Date(Date.now() - 49 * 86_400_000).toISOString();
+  const athleteIds = await myFamilyAthleteIds();
+  if (!athleteIds.length) return [];
   const { data } = await (supabase.from('booking_requests') as any)
     .select('coach_id, session_type_id, coaches(display_name), slots!inner(starts_at), bookings(status)')
+    .in('athlete_id', athleteIds)
     .eq('status', 'accepted')
     .gte('slots.starts_at', since);
   return ((data as any[]) ?? []).map((r) => ({
@@ -1057,8 +1084,11 @@ export interface RescheduleProposal {
 
 /** The family's lessons with a pending "move to a new time?" from the coach. */
 export async function fetchMyRescheduleProposals(): Promise<RescheduleProposal[]> {
+  const athleteIds = await myFamilyAthleteIds();
+  if (!athleteIds.length) return [];
   const { data } = await (supabase.from('bookings') as any)
     .select('id, athlete_id, proposal_reason, coaches(display_name), athletes(first_name), slots:slot_id(starts_at), proposed:proposed_slot_id(starts_at, facilities(label))')
+    .in('athlete_id', athleteIds)
     .eq('status', 'confirmed')
     .not('proposed_slot_id', 'is', null)
     .or('proposed_by.is.null,proposed_by.eq.coach');   // the family's own requests wait on the coach
