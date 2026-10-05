@@ -147,6 +147,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           router.push('/coach/schedule');
         } else if (data?.type === 'lesson_changed') {
           router.push('/coaching');
+        } else if (data?.type === 'coach_announcement' && data?.coachId) {
+          router.push({ pathname: '/coaching/[coachId]', params: { coachId: String(data.coachId) } });
         } else if (data?.tournamentId) {
           router.push(`/tournament/${data.tournamentId}`);
         }

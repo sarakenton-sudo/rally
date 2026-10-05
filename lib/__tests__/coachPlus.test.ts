@@ -6,9 +6,9 @@ const base = (o: Partial<CoachPlusContext> = {}): CoachPlusContext => ({
 });
 
 describe('coach + sheet ordering', () => {
-  it('default order: open time, record payment, share link, invite family', () => {
+  it('default order: open time, book a family, record payment, share link, invite family', () => {
     const o = getCoachPlusOrder(base());
-    expect(o.topItems).toEqual(['open_time', 'record_payment', 'share_link', 'invite_family']);
+    expect(o.topItems).toEqual(['open_time', 'book_family', 'record_payment', 'share_link', 'invite_family']);
     expect(o.rule).toBe('default');
   });
 

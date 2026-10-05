@@ -66,6 +66,11 @@ export default function CoachQuickAddSheet({ visible, onClose }: { visible: bool
       subtitle: order.rule === 'no_open_time' ? 'Nothing open in the next 7 days' : 'One-off or recurring',
       run: () => go('/coach/availability-add'),
     },
+    book_family: {
+      icon: 'person-outline', color: '#be185d', title: 'Book a family',
+      subtitle: 'Schedule a lesson for one of your athletes',
+      run: () => go('/coach/book-family'),
+    },
     record_payment: {
       icon: 'cash-outline', color: '#16a34a', title: 'Record a payment',
       subtitle: unpaidCount ? `${unpaidCount} lesson${unpaidCount === 1 ? '' : 's'} unpaid` : 'Cash, Venmo, Zelle',
@@ -134,11 +139,12 @@ export default function CoachQuickAddSheet({ visible, onClose }: { visible: bool
 
           <View className="mx-4 mt-5 flex-row items-center">
             <View className="flex-1 h-px bg-parchment dark:bg-rally-900" />
-            <Text className="text-[11px] font-semibold uppercase tracking-wider text-stone mx-2">Setup</Text>
+            <Text className="text-[11px] font-semibold uppercase tracking-wider text-stone mx-2">More</Text>
             <View className="flex-1 h-px bg-parchment dark:bg-rally-900" />
           </View>
           <View className="mx-4 mt-2">
             {([
+              ['megaphone-outline', 'Announce open times', '/coach/announce'],
               ['pricetags-outline', 'Add a lesson type', '/coach/session-type-edit'],
               ['business-outline', 'Add a facility', '/coach/facilities'],
             ] as const).map(([icon, label, path]) => (

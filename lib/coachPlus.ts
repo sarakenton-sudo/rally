@@ -2,14 +2,14 @@
  * Ordering for the coach "+" sheet. PURE — unit-tested in lib/__tests__/coachPlus.test.ts.
  *
  * Top tier default order (by how often coaches do it):
- *   open_time → record_payment → share_link → invite_family
+ *   open_time → book_family → record_payment → share_link → invite_family
  * Context (first match wins the #1 slot; the rest keep default order):
  *   1. a lesson ended today and is unpaid       → record_payment
  *   2. nothing open in the next 7 days           → open_time
  * Pending requests never reorder the list; they show as a "Review N requests"
  * prompt above it (the action is review, not create).
  */
-export type CoachTopItem = 'open_time' | 'record_payment' | 'share_link' | 'invite_family';
+export type CoachTopItem = 'open_time' | 'book_family' | 'record_payment' | 'share_link' | 'invite_family';
 export type CoachRule = 'unpaid_today' | 'no_open_time' | 'default';
 
 export interface CoachPlusContext {
@@ -26,7 +26,7 @@ export interface CoachPlusOrder {
   reviewPrompt: number;   // pending requests to show above the list (0 = none)
 }
 
-const DEFAULT: CoachTopItem[] = ['open_time', 'record_payment', 'share_link', 'invite_family'];
+const DEFAULT: CoachTopItem[] = ['open_time', 'book_family', 'record_payment', 'share_link', 'invite_family'];
 
 const sameDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();

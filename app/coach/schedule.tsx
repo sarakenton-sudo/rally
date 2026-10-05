@@ -242,6 +242,12 @@ export default function CoachScheduleScreen() {
                               {left} spot{left === 1 ? '' : 's'}{rev.open ? ` · ${fmtMoney(rev.open)} open` : ''}
                             </Text>
                           </View>
+                          {slot.visibility === 'all' && new Date(slot.starts_at) > new Date() && (
+                            <Pressable onPress={() => router.push({ pathname: '/coach/announce', params: { slot: slot.id } })} className="flex-row items-center rounded-full px-2.5 py-1 bg-rally-50 dark:bg-rally-900/30 active:opacity-70" accessibilityLabel="Announce this time">
+                              <Ionicons name="megaphone-outline" size={12} color="#3B82B0" />
+                              <Text className="text-[11px] font-semibold text-rally-600 ml-1">Announce</Text>
+                            </Pressable>
+                          )}
                         </View>
                         {gymChip}
                       </View>

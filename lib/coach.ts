@@ -688,6 +688,63 @@ export async function countOpenSlotsNext7Days(coachId: string): Promise<number> 
   return ((data as any[]) ?? []).filter((s) => s.seats_taken < s.seats_total).length;
 }
 
+// ---- Coach Phase 2: book a family, announce open times (00077) ----
+
+export interface BookableAthlete {
+  athlete_id: string; athlete_name: string; photo_url: string | null;
+  parent_user_id: string; parent_name: string | null; connection_id: string | null;
+  last_session_type_id: string | null;
+}
+
+/** Athletes this coach can book for (already booked with them → family has signed). */
+export async function fetchBookableAthletes(): Promise<BookableAthlete[]> {
+  const { data } = await (supabase.rpc as any)('coach_book_athletes');
+  return ((data as BookableAthlete[]) ?? []).sort((a, b) => a.athlete_name.localeCompare(b.athlete_name));
+}
+
+export async function coachCreateBooking(args: {
+  athleteId: string; sessionTypeId: string; slotId?: string | null;
+  startsAt?: Date | null; endsAt?: Date | null; facilityId?: string | null;
+  notes?: string; chargeInApp: boolean;
+}): Promise<{ bookingId: string | null; error: Error | null }> {
+  const { data, error } = await (supabase.rpc as any)('coach_create_booking', {
+    p_athlete_id: args.athleteId,
+    p_session_type_id: args.sessionTypeId,
+    p_slot_id: args.slotId ?? null,
+    p_starts_at: args.startsAt?.toISOString() ?? null,
+    p_ends_at: args.endsAt?.toISOString() ?? null,
+    p_facility_id: args.facilityId ?? null,
+    p_notes: args.notes ?? null,
+    p_charge_in_app: args.chargeInApp,
+  });
+  const bookingId = (data as any)?.booking_id ?? null;
+  if (bookingId) notifyParentOfChange(bookingId, 'booked');
+  return { bookingId, error: error ?? null };
+}
+
+export async function announceSlots(args: {
+  slotIds: string[]; audience: 'all' | 'group' | 'families'; groupId?: string; connectionIds?: string[]; message: string;
+}): Promise<{ data: { recipients: number; pushed: number; emailed: number } | null; error: Error | null }> {
+  const { data, error } = await supabase.functions.invoke('announce-slots', {
+    body: { slot_ids: args.slotIds, audience: args.audience, group_id: args.groupId, connection_ids: args.connectionIds, message: args.message },
+  });
+  if (error) {
+    // Surface the function's own message (e.g. daily cap) instead of a generic non-2xx error.
+    let msg = error.message;
+    try { const b = await (error as any).context?.json?.(); if (b?.error) msg = b.error; } catch {}
+    return { data: null, error: new Error(msg) };
+  }
+  return { data: data as any, error: null };
+}
+
+export async function countAnnouncementsToday(coachId: string): Promise<number> {
+  const { count } = await (supabase.from('announcements') as any)
+    .select('id', { count: 'exact', head: true })
+    .eq('coach_id', coachId)
+    .gte('sent_at', new Date(Date.now() - 24 * 3_600_000).toISOString());
+  return count ?? 0;
+}
+
 // ---- Phase A: week revenue, payments, cancel / reschedule (00067) ----
 
 export const FACILITY_STATUS_STYLE: Record<FacilityStatus, { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }> = {
@@ -810,7 +867,7 @@ export async function coachRescheduleBooking(bookingId: string, newSlotId: strin
 }
 
 /** Push + email the parent about a coach cancel/reschedule (notify-booking-change). Fire-and-forget. */
-function notifyParentOfChange(bookingId: string, change: 'cancelled' | 'rescheduled') {
+function notifyParentOfChange(bookingId: string, change: 'cancelled' | 'rescheduled' | 'booked') {
   supabase.functions.invoke('notify-booking-change', { body: { booking_id: bookingId, change } })
     .then(({ error }) => { if (error) console.warn('[coach] parent notify failed:', error.message); });
 }

@@ -424,6 +424,14 @@ function RootLayoutNav() {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="coach/book-family"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
+          name="coach/announce"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
           name="coach/unpaid"
           options={{ presentation: 'modal', headerShown: false }}
         />

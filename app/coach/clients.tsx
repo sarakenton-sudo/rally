@@ -57,9 +57,14 @@ export default function CoachClientsScreen() {
           </Pressable>
         )}
         <Text className="text-lg font-bold text-bark dark:text-cream">Clients</Text>
+        <View className="flex-row items-center">
+        <Pressable onPress={() => router.push('/coach/announce')} className="p-1 mr-2" accessibilityLabel="Announce open times">
+          <Ionicons name="megaphone-outline" size={22} color="#3B82B0" />
+        </Pressable>
         <Pressable onPress={() => router.push('/coach/segments')} className="p-1" accessibilityLabel="Manage groups">
           <Ionicons name="people-circle-outline" size={24} color="#0d9488" />
         </Pressable>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">

@@ -1,6 +1,6 @@
 // notify-booking-change: tell the parent their lesson was cancelled or moved by
 // the coach — push to their devices + an email (they may only use the web app).
-//   POST { booking_id, change: 'cancelled' | 'rescheduled' }  (JWT: the booking's coach)
+//   POST { booking_id, change: 'cancelled' | 'rescheduled' | 'booked' }  (JWT: the booking's coach)
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -31,7 +31,7 @@ serve(async (req: Request) => {
   if (!callerId) return json({ error: 'auth required' }, 401);
 
   const { booking_id, change } = await req.json().catch(() => ({}));
-  if (!booking_id || !['cancelled', 'rescheduled'].includes(change)) return json({ error: 'bad request' }, 400);
+  if (!booking_id || !['cancelled', 'rescheduled', 'booked'].includes(change)) return json({ error: 'bad request' }, 400);
 
   const { data: b } = await supabaseAdmin
     .from('bookings')
@@ -51,10 +51,14 @@ serve(async (req: Request) => {
   const where = [bk.slots?.facilities?.label, bk.slots?.facilities?.address].filter(Boolean).join(', ');
   const reason = bk.change_reason ? `\n"${bk.change_reason}"` : '';
 
-  const title = change === 'cancelled' ? `${coach} cancelled ${athlete}'s lesson` : `${coach} moved ${athlete}'s lesson`;
+  const title = change === 'cancelled' ? `${coach} cancelled ${athlete}'s lesson`
+    : change === 'booked' ? `${coach} booked a lesson for ${athlete}`
+    : `${coach} moved ${athlete}'s lesson`;
   const body = change === 'cancelled'
     ? `The lesson on ${when} is cancelled.${reason}`
-    : `New time: ${when}${where ? ` · ${where}` : ''}.${reason}`;
+    : change === 'booked'
+      ? `${when}${where ? ` · ${where}` : ''}. It's on your RallyHUB calendar.`
+      : `New time: ${when}${where ? ` · ${where}` : ''}.${reason}`;
 
   let pushed = 0;
   const { data: tokens } = await supabaseAdmin.from('push_tokens').select('token').eq('user_id', bk.parent_user_id);
