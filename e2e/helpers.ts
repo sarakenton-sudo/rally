@@ -2,6 +2,13 @@ import { expect, type Page } from '@playwright/test';
 
 export type Role = 'parent' | 'coadmin' | 'athlete' | 'coach';
 
+import fs from 'fs';
+
+/** Signed in during setup? (false when the account is missing or its login failed) */
+export const ready = (role: Role) => {
+  try { return JSON.parse(fs.readFileSync(`e2e/.auth/${role}.json`, 'utf8')).origins?.length > 0; } catch { return false; }
+};
+
 export const creds = (role: Role) => {
   const k = role.toUpperCase();
   const email = process.env[`QA_${k}_EMAIL`];
@@ -25,7 +32,7 @@ export async function signIn(page: Page, role: Role) {
 }
 
 /** The floating + (parent) or center tab + (coach). */
-export const openPlus = (page: Page) => page.getByLabel('Add', { exact: true }).first().click();
+export const openPlus = (page: Page) => page.getByLabel('Add', { exact: true }).locator('visible=true').first().click();
 
 /** Fail on uncaught page errors (e.g. "Promise constructor's argument is not a function"). */
 export function watchErrors(page: Page) {

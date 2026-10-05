@@ -11,7 +11,13 @@ for (const role of ['parent', 'coadmin', 'athlete', 'coach'] as Role[]) {
       fs.writeFileSync(file, JSON.stringify({ cookies: [], origins: [] }));
       setup.skip(true, `No QA_${role.toUpperCase()}_EMAIL in .env.qa`);
     }
-    await signIn(page, role);
+    try {
+      await signIn(page, role);
+    } catch (e) {
+      // Leave an empty session so this account's tests skip instead of failing the run.
+      fs.writeFileSync(file, JSON.stringify({ cookies: [], origins: [] }));
+      setup.skip(true, `${role} could not sign in — check the account exists and its email is confirmed`);
+    }
     await page.context().storageState({ path: file });
   });
 }

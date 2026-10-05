@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { creds, openPlus, watchErrors } from './helpers';
+import { ready, openPlus, watchErrors } from './helpers';
 
 // Coach D on the website. Read-only.
-test.skip(!creds('coach'), 'Set QA_COACH_EMAIL / QA_COACH_PASSWORD in .env.qa');
+test.beforeEach(() => test.skip(!ready('coach'), 'Set QA_COACH_EMAIL / QA_COACH_PASSWORD in .env.qa'));
 
 test('coach lands on Today with the money strip (C-01)', async ({ page }) => {
   const done = watchErrors(page);
@@ -35,12 +35,12 @@ test('every coach screen opens (C-02…C-27)', async ({ page }) => {
     ['/coach-schedule', 'Schedule'], ['/coach-clients', 'Clients'], ['/business', 'Your business'],
     ['/coach/booking-page', 'Booking Page'], ['/coach/policies', 'Terms & Release'], ['/coach/payments', 'Earnings'],
     ['/coach/unpaid', /Record a payment|All paid up/], ['/coach/book-family', 'Book a family'],
-    ['/coach/announce', /Announce open times/], ['/coach/facilities', /Facilit/], ['/coach/session-types', /Lesson|lesson/],
+    ['/coach/announce', /Announce open times/], ['/coach/facilities', /Facilit/], ['/coach/session-types', /Session Types|session types/],
     ['/coach/availability', /Availability|Open/], ['/coach/requests', /Request/],
   ];
   for (const [path, text] of screens) {
     await page.goto(path);
-    await expect(page.getByText(text).first(), path).toBeVisible();
+    await expect(page.getByText(text).locator('visible=true').first(), path).toBeVisible();
     await expect(page.getByText(/Unmatched Route|Something went wrong/i), path).toHaveCount(0);
   }
   done();

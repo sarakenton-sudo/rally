@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test';
-import { creds, openPlus, watchErrors, writesOn, aiOn } from './helpers';
+import { ready, openPlus, watchErrors, writesOn, aiOn } from './helpers';
 
 // Parent A on the website. Read-only unless QA_WRITES=1.
-test.skip(!creds('parent'), 'Set QA_PARENT_EMAIL / QA_PARENT_PASSWORD in .env.qa');
+test.beforeEach(() => test.skip(!ready('parent'), 'Set QA_PARENT_EMAIL / QA_PARENT_PASSWORD in .env.qa'));
 
 test('Home shows Next 30 Days and the app is connected (P-01, A-09)', async ({ page }) => {
   const done = watchErrors(page);
   await page.goto('/(tabs)');
-  await expect(page.getByText('Next 30 Days')).toBeVisible();
+  await expect(page.getByText('Next 30 Days').first()).toBeVisible();
   await expect(page.getByText(/Supabase not configured/i)).toHaveCount(0);
   done();
 });
@@ -19,7 +19,7 @@ test('every tab opens without errors (P-20)', async ({ page }) => {
     ['/guests', /Guests|Invite/], ['/hub', /Settings|Account/],
   ] as const) {
     await page.goto(path);
-    await expect(page.getByText(text).first(), path).toBeVisible();
+    await expect(page.getByText(text).locator('visible=true').first(), path).toBeVisible();
     await expect(page.getByText(/Unmatched Route|Something went wrong/i), path).toHaveCount(0);
   }
   done();
@@ -93,8 +93,8 @@ test('connect via the booking-page link (L-02)', async ({ page }) => {
 test('payments settings page (L-12)', async ({ page }) => {
   const done = watchErrors(page);
   await page.goto('/settings/payments');
-  await expect(page.getByText('Payment method')).toBeVisible();
-  await expect(page.getByText('Lesson payments')).toBeVisible();
+  await expect(page.getByText('Payment method').first()).toBeVisible();
+  await expect(page.getByText('Lesson payments').first()).toBeVisible();
   done();
 });
 

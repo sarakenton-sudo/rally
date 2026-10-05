@@ -89,6 +89,7 @@ if (process.env.QA_COACH_SLUG) {
 
 // ── 3. Signed-in accounts ───────────────────────────────────────────────────
 const parent = await signIn('PARENT').catch((e) => (bad('parent sign-in', e.message), null));
+const viewer = await signIn('VIEWER').catch((e) => (bad('view-only co-parent sign-in', e.message), null));
 const coadmin = await signIn('COADMIN').catch((e) => (bad('co-admin sign-in', e.message), null));
 const athlete = await signIn('ATHLETE').catch((e) => (bad('athlete sign-in', e.message), null));
 const coach = await signIn('COACH').catch((e) => (bad('coach sign-in', e.message), null));
@@ -116,6 +117,19 @@ if (parent) {
     const [t1, t2] = [await ids(parent, 'tournaments'), await ids(coadmin, 'tournaments')];
     await check("sees Parent A's tournaments", () => t1.every((t) => t2.includes(t)) || `missing ${t1.filter((t) => !t2.includes(t)).length}`);
   } else skipped('co-parent checks', 'set QA_COADMIN_EMAIL');
+
+  // Saving a tournament with its own name changes nothing, so this is safe on
+  // real data; it only reveals whether the account is allowed to edit.
+  const { data: tour } = await parent.c.from('tournaments').select('id, name').limit(1).maybeSingle();
+  const canEdit = async (s) => ((await s.c.from('tournaments').update({ name: tour.name }).eq('id', tour.id).select('id')).data ?? []).length > 0;
+
+  section('View-only co-parent (CO-05)');
+  if (viewer && tour) {
+    const seen = await ids(viewer, 'athletes');
+    await check("sees Parent A's athletes", () => athletes.every((a) => seen.includes(a)) || `missing ${athletes.filter((a) => !seen.includes(a)).length}`);
+    await check("can't edit the family's tournaments", async () => !(await canEdit(viewer)) || 'view-only co-parent was allowed to edit a tournament');
+    if (coadmin) await check('full-access co-parent can edit them', async () => (await canEdit(coadmin)) || 'full-access co-parent was blocked');
+  } else skipped('view-only checks', viewer ? 'parent has no tournaments' : 'set QA_VIEWER_EMAIL');
 
   section('Athlete C (AT-02)');
   if (athlete) {
