@@ -8,7 +8,7 @@ set -a; [ -f .env.qa ] && . ./.env.qa; set +a
 
 JH=$(ls -d "$HOME"/.local/jdk/*/Contents/Home 2>/dev/null | head -1)
 [ -n "$JH" ] && export JAVA_HOME="$JH" && export PATH="$JH/bin:$PATH"
-export PATH="$HOME/.maestro/bin:$PATH"
+export PATH="$HOME/.maestro/bin:$HOME/.gem/ruby/2.6.0/bin:$PATH"   # Maestro + user-installed CocoaPods
 command -v maestro >/dev/null || { echo "Maestro isn't installed: curl -fsSL https://get.maestro.mobile.dev | bash"; exit 1; }
 
 # Use a booted iPhone simulator, or boot the newest one.
@@ -26,6 +26,9 @@ if [ $BUILD = 1 ] || ! xcrun simctl get_app_container "$UDID" com.rallyhub.app >
   # Release build: the JS is bundled in, so no dev server is needed. This is a
   # local simulator build only, nothing goes to TestFlight.
   echo "Building RallyHUB for the simulator (first time takes 10–20 min)…"
+  # Regenerate ios/ from app.json (it's gitignored and goes stale; e.g. a
+  # missing calendar permission crashes the app at launch). Same as EAS does.
+  npx expo prebuild --platform ios --clean --no-install >/dev/null || exit 1
   npx expo run:ios --configuration Release --device "$UDID" --no-bundler || exit 1
 fi
 
