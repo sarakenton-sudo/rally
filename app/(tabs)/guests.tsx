@@ -8,7 +8,6 @@ import { useIconColors } from '@/lib/colors';
 import GuestCard, { type GuestWithFan } from '@/components/GuestCard';
 import { showToast } from '@/components/Toast';
 import { useSeasonStore } from '@/stores/useSeasonStore';
-import { createFanInvite, emailFanInvite, fanInviteMessage } from '@/lib/fan';
 import { useGuestStore } from '@/stores/useGuestStore';
 import { useDataRefresh } from '@/providers/DataProvider';
 import ReferFriend from '@/components/ReferFriend';

@@ -130,20 +130,7 @@ serve(async (req: Request) => {
       results.push({ channel: 'email', status: emailResult.ok ? 'sent' : 'failed', error: emailResult.error });
     }
 
-    // Send SMS via Twilio
-    if (referredPhone && TWILIO_ACCOUNT_SID) {
-      let smsBody: string;
-      if (inviteType === 'athlete' && inviteCode) {
-        smsBody = `${referrerName} added you to RALLY! Tap to join (your code is filled in): https://rally-hub.com/auth?signup=true&invite=${encodeURIComponent(inviteCode ?? '')}`;
-      } else if (inviteType === 'coparent' && inviteCode) {
-        smsBody = `${referrerName} invited you to RALLY — the volleyball family hub. Tap to join (your code ${inviteCode} is filled in): https://rally-hub.com/auth?signup=true&invite=${encodeURIComponent(inviteCode ?? '')}`;
-      } else {
-        smsBody = `${referrerName} invited you to RALLY — the volleyball family hub. Download at rally-hub.com`;
-      }
-
-      const smsResult = await sendTwilioSMS(referredPhone, smsBody);
-      results.push({ channel: 'sms', status: smsResult.ok ? 'sent' : 'failed', error: smsResult.error });
-    }
+    // No SMS: RallyHUB never texts invites (parents copy and send from their own phone).
 
     // Update referral status if we have a referral_id
     if (referralId) {
