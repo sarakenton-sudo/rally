@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ready, openPlus, watchErrors, writesOn, aiOn } from './helpers';
+import { ready, openPlus, watchErrors, writesOn, aiOn, creds } from './helpers';
 
 // Parent A on the website. Read-only unless QA_WRITES=1.
 test.beforeEach(() => test.skip(!ready('parent'), 'Set QA_PARENT_EMAIL / QA_PARENT_PASSWORD in .env.qa'));
@@ -168,3 +168,92 @@ test.describe('writes', () => {
     await expect(page.getByText(email), 'remove did nothing on web (Alert.alert no-op)').toHaveCount(0);
   });
 });
+
+// ── Guests are app-based (no SMS) ──
+test('tournament Guests card: app followers + update box, no SMS', async ({ page }) => {
+  const db = await parentDb();
+  const { data: t } = await db.from('tournaments').select('id').order('start_date', { ascending: false }).limit(1).maybeSingle();
+  test.skip(!t, 'No tournaments');
+  await page.goto(`/tournament/${t.id}`);
+  await expect(page.getByText('Guests & fans').first()).toBeVisible();
+  await expect(page.getByLabel('Update for guests').first()).toBeVisible();
+  await expect(page.getByText(/Send In-Person Details|Send Streaming Details/)).toHaveCount(0);
+});
+
+test('referral box copies an invite instead of texting', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'clipboard permission is Chromium-only');
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/guests');
+  await page.getByText('Copy invite to text').locator('visible=true').first().click();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain('RallyHUB');
+  await expect(page.getByPlaceholder('Email or phone number')).toHaveCount(0);
+});
+
+test.describe('signed out', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+  test('Google sign-in asks which account', async ({ page }) => {
+    await page.goto('/auth');
+    const req = page.waitForRequest((r) => r.url().includes('accounts.google.com'), { timeout: 20_000 });
+    await page.getByText(/Continue with Google/i).locator('visible=true').first().click();
+    expect(decodeURIComponent((await req).url())).toContain('prompt=select_account');
+  });
+});
+
+test.describe('writes: games, lessons, seasons', () => {
+  test.skip(!writesOn, 'Set QA_WRITES=1 to run tests that add and remove data');
+
+  test('game detail, Directions only with an address, delete; swipe delete on Schedule', async ({ page }) => {
+    const db = await parentDb();
+    const { data: season } = await db.from('seasons').select('id').limit(1).single();
+    const add = (o: Record<string, unknown>) => db.from('team_events').insert({ season_id: season.id, date: '2030-03-14', event_type: 'game', home_away: 'away', ...o }).select('id').single();
+    const withAddr = (await add({ name: 'QA test', opponent: 'QA Westlake', venue_name: 'Westlake HS', address: '4100 Westbank Dr, Austin, TX 78746', time: '18:30' })).data!;
+    const noAddr = (await add({ name: 'QA test', opponent: 'QA Bowie', venue_name: 'Main Gym', address: '' })).data!;
+    try {
+      await page.goto(`/game/${withAddr.id}`);
+      await expect(page.getByText('@ QA Westlake').first()).toBeVisible();
+      await expect(page.getByText('Directions', { exact: true }).locator('visible=true')).toHaveCount(1);
+      await page.goto(`/game/${noAddr.id}`);
+      await expect(page.getByText('Main Gym').first()).toBeVisible();
+      await expect(page.getByText('Directions', { exact: true }).locator('visible=true')).toHaveCount(0);
+      await page.getByLabel('Delete game').locator('visible=true').first().click();
+      await page.getByLabel('Confirm delete').locator('visible=true').first().click();
+      await expect.poll(async () => (await db.from('team_events').select('id').eq('id', noAddr.id)).data?.length).toBe(0);
+
+      // Schedule: swipe left (scroll the row open), then tap Delete.
+      await page.goto('/season');
+      const row = page.locator('[aria-label^="@ QA Westlake"]').locator('visible=true').first();
+      await row.waitFor();
+      await row.evaluate((el) => { let n: HTMLElement | null = el as HTMLElement; while (n && !(n.scrollWidth > n.clientWidth + 40 && getComputedStyle(n).overflowX !== 'visible')) n = n.parentElement; if (n) n.scrollLeft = 88; });
+      await page.getByLabel('Delete game').locator('visible=true').first().click();
+      await expect.poll(async () => (await db.from('team_events').select('id').eq('id', withAddr.id)).data?.length).toBe(0);
+    } finally {
+      await db.from('team_events').delete().in('id', [withAddr.id, noAddr.id]);
+    }
+  });
+
+  test('delete a season from the athlete page warns what goes with it', async ({ page }) => {
+    const db = await parentDb();
+    const { data: ath } = await db.from('athletes').select('id').limit(1).single();
+    const s = (await db.from('seasons').insert({ athlete_id: ath.id, team_name: 'QA test season', season_year: '2030-2031' }).select('id').single()).data!;
+    try {
+      let msg = '';
+      page.on('dialog', (d) => { msg = d.message(); d.accept(); });
+      await page.goto(`/athlete/${ath.id}`);
+      const name = page.getByText('QA test season').locator('visible=true').first();
+      await name.waitFor();
+      await name.locator('xpath=ancestor::div[@tabindex="0"][1]').locator('div[tabindex="0"]').first().click({ force: true });
+      await expect.poll(async () => (await db.from('seasons').select('id').eq('id', s.id)).data?.length).toBe(0);
+      expect(msg).toContain("can't be undone");
+    } finally {
+      await db.from('seasons').delete().eq('id', s.id);
+    }
+  });
+});
+
+async function parentDb() {
+  const { createClient } = await import('@supabase/supabase-js');
+  const db = createClient(process.env.EXPO_PUBLIC_SUPABASE_URL!, process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false } });
+  const c = creds('parent')!;
+  await db.auth.signInWithPassword(c);
+  return db as any;
+}
