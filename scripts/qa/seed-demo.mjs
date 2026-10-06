@@ -35,7 +35,7 @@ const { data: existing } = await parent.from('athletes').select('id').limit(1);
 const t1 = nextSat(1), t2 = nextSat(3), t3 = nextSat(6);
 if (!existing?.length) {
   const r = await parent.rpc('setup_onboarding', {
-    p_athlete_name: 'Maya Carter', p_team_name: 'Austin Juniors 14 Black', p_club_name: 'Austin Juniors',
+    p_athlete_name: 'Drue Carter', p_team_name: 'Austin Juniors 14 Black', p_club_name: 'Austin Juniors',
     p_season_year: seasonYear, p_team_code: null, p_streaming_url: null,
     p_gmail_connected: false, p_gmail_email: null, p_trusted_sender_emails: [],
     p_tournaments: [
