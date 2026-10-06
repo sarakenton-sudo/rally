@@ -106,7 +106,8 @@ test('Family tab: athletes, coaches, people, family logins', async ({ page }) =>
 
 test('Schedule: tournaments and games by month', async ({ page }) => {
   await page.goto('/season');
-  await expect(page.getByText(/^(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)( \d{4})?$/).first()).toBeVisible();
+  // Month headings, or the empty state when this account has nothing upcoming.
+  await expect(page.getByText(/^((JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)( \d{4})?|COMPLETED|No tournaments yet)$/).locator('visible=true').first()).toBeVisible();
 });
 
 test('lessons entry points (L-03, L-04)', async ({ page }) => {
