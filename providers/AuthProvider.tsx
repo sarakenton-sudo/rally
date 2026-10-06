@@ -234,6 +234,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         provider: 'google',
         options: {
           redirectTo: redirectUrl,
+          // Always show Google's account chooser. Otherwise, after signing out,
+          // Google silently signs back into the last account (e.g. the coach
+          // one) with no way to pick a different one.
+          queryParams: { prompt: 'select_account' },
         },
       });
       if (error) return { error: error.message };
