@@ -11,7 +11,9 @@ import SignedDocumentsList from '@/components/SignedDocumentsList';
 import { fetchAcceptances, latestAcceptances, saveAthletePhoto, type PolicyAcceptance } from '@/lib/coach';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
-import { updateAdminConfig, deleteSeason as deleteSeasonDB } from '@/hooks/useSupabaseData';
+import { updateAdminConfig } from '@/hooks/useSupabaseData';
+import { deleteSeasonAndData, seasonDeleteWarning } from '@/lib/seasonDelete';
+import { showToast } from '@/components/Toast';
 import { useAuth } from '@/providers/AuthProvider';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
@@ -82,23 +84,15 @@ export default function AthleteProfileScreen() {
   };
 
   const handleDeleteSeason = (seasonId: string, seasonName: string) => {
+    const count = tournaments.filter((t) => t.season_id === seasonId).length;
     const doDelete = async () => {
-      if (isSupabaseConfigured && user) {
-        await deleteSeasonDB(seasonId);
-      }
-      removeSeason(seasonId);
-      if (activeSeasonId === seasonId) {
-        const remaining = seasons.filter((s) => s.id !== seasonId);
-        setActiveSeasonId(remaining.length > 0 ? remaining[0].id : null);
-      }
+      const { error } = await deleteSeasonAndData(seasonId);
+      if (error) showToast(error); else showToast(`${seasonName} deleted`);
     };
-
     if (Platform.OS === 'web') {
-      if (window.confirm(`Delete "${seasonName}"? All tournaments in this season will remain but the season will be removed.`)) {
-        doDelete();
-      }
+      if (window.confirm(`Delete "${seasonName}"? ${seasonDeleteWarning(count)}`)) doDelete();
     } else {
-      Alert.alert('Delete Season', `Delete "${seasonName}"? All tournaments in this season will remain but the season will be removed.`, [
+      Alert.alert('Delete season?', `${seasonName}\n\n${seasonDeleteWarning(count)}`, [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete', style: 'destructive', onPress: doDelete },
       ]);

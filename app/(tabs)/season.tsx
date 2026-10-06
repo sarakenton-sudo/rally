@@ -18,7 +18,8 @@ import { addAllDayEventsToCalendar } from '@/lib/calendar';
 import LessonCard from '@/components/LessonCard';
 import { groupByMonth } from '@/lib/nextUp';
 import GameCard from '@/components/GameCard';
-import { fetchUpcomingGames, type ScheduleGame } from '@/lib/teamEvents';
+import SwipeToDelete from '@/components/SwipeToDelete';
+import { fetchUpcomingGames, deleteTeamEvent, type ScheduleGame } from '@/lib/teamEvents';
 import { fetchMyUpcomingLessons, isSupabaseConfigured as coachingConfigured, type ParentLesson } from '@/lib/coach';
 
 type ListItem =
@@ -43,6 +44,13 @@ export default function SeasonScreen() {
 
   const [lessons, setLessons] = useState<ParentLesson[]>([]);
   const [games, setGames] = useState<ScheduleGame[]>([]);
+  // Swipe left on a game → Delete.
+  const removeGame = async (id: string) => {
+    const { error } = await deleteTeamEvent(id);
+    if (error) { showToast(error.message); return; }
+    setGames((gs) => gs.filter((g) => g.id !== id));
+    showToast('Game deleted');
+  };
   useFocusEffect(useCallback(() => {
     fetchUpcomingGames().then(setGames);
   }, []));
@@ -146,7 +154,11 @@ export default function SeasonScreen() {
     }
     if (item.type === 'game') {
       const season = seasons.find((x) => x.id === item.data.season_id);
-      return <GameCard game={item.data} athleteName={nameCards ? athleteName(season?.athlete_id) : undefined} teamName={nameCards ? season?.team_name : undefined} />;
+      return (
+        <SwipeToDelete onDelete={() => removeGame(item.data.id)} accessibilityLabel="Delete game">
+          <GameCard game={item.data} athleteName={nameCards ? athleteName(season?.athlete_id) : undefined} teamName={nameCards ? season?.team_name : undefined} />
+        </SwipeToDelete>
+      );
     }
     if (item.type === 'divider') {
       return (

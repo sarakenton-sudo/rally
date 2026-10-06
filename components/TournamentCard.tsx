@@ -1,3 +1,4 @@
+import { hasStreetAddress } from '@/lib/teamEvents';
 import { View, Text, Pressable, Linking, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Tournament, Athlete } from '@/types/database';
@@ -62,7 +63,8 @@ export default function TournamentCard({ tournament, hotelCount = 0, flightCount
   const days = daysUntil(tournament.start_date);
   const countdown = countdownText(tournament.start_date, tournament.end_date);
   const confirmedVenue = tournament.venues.find((v) => v.is_confirmed);
-  const venueAddress = confirmedVenue?.address ?? tournament.venues[0]?.address ?? tournament.location_city;
+  // Directions only with a real street address, not just the city.
+  const venueAddress = [confirmedVenue?.address, ...tournament.venues.map((v) => v.address)].find((a) => hasStreetAddress(a)) ?? null;
   const venueLabel = confirmedVenue?.label ?? (tournament.venues.length > 1 ? `${tournament.venues.length} possible venues` : null);
 
   return (
@@ -199,7 +201,7 @@ export default function TournamentCard({ tournament, hotelCount = 0, flightCount
           </View>
 
           {/* Directions button */}
-          <Pressable
+          {venueAddress ? <Pressable
             className="flex-row items-center bg-rally-50 dark:bg-rally-900/30 px-3 py-1.5 rounded-lg active:opacity-70"
             onPress={() => openDirections(venueAddress)}
           >
@@ -207,7 +209,7 @@ export default function TournamentCard({ tournament, hotelCount = 0, flightCount
             <Text className="text-xs font-semibold text-rally-600 ml-1">
               Directions
             </Text>
-          </Pressable>
+          </Pressable> : null}
         </View>
       </View>
     </Pressable>

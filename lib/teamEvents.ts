@@ -48,3 +48,16 @@ export async function deleteTeamEvent(id: string): Promise<{ error: Error | null
   if (error) return { error };
   return { error: data?.length ? null : new Error("Couldn't delete this game. Only parents who manage the team can.") };
 }
+
+/** One game/team event with its team, for the game detail screen. */
+export async function fetchTeamEvent(id: string): Promise<(ScheduleGame & { team_name: string | null; athlete_first_name: string | null }) | null> {
+  const { data } = await (supabase.from('team_events') as any)
+    .select('id, season_id, name, date, time, venue_name, address, event_type, opponent, home_away, notes, seasons(team_name, athletes(first_name))')
+    .eq('id', id).maybeSingle();
+  if (!data) return null;
+  const { seasons, ...g } = data;
+  return { ...g, team_name: seasons?.team_name ?? null, athlete_first_name: seasons?.athletes?.first_name ?? null };
+}
+
+/** A real street address (not just a gym name or city), worth opening in Maps. */
+export const hasStreetAddress = (a?: string | null) => !!a && /\d/.test(a) && a.trim().length > 6;

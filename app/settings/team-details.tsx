@@ -10,6 +10,8 @@ import { updateAdminConfig } from '@/hooks/useSupabaseData';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
+import { showToast } from '@/components/Toast';
+import { deleteSeasonAndData, seasonDeleteWarning } from '@/lib/seasonDelete';
 import type { StreamingPlatform } from '@/types/database';
 
 const STREAM_PLATFORMS: StreamingPlatform[] = ['YouTube', 'GameChanger', 'Baller.tv', 'Other'];
@@ -38,6 +40,19 @@ export default function TeamDetailsScreen() {
   const [streamUrl, setStreamUrl] = useState(activeSeason?.default_stream_url ?? '');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const tournamentCount = useSeasonStore((s) => s.tournaments.filter((t) => t.season_id === activeSeason?.id).length);
+
+  const removeSeason = async () => {
+    if (!activeSeason) return;
+    setDeleting(true);
+    const { error: e } = await deleteSeasonAndData(activeSeason.id);
+    setDeleting(false);
+    if (e) { setError(e); setConfirmDelete(false); return; }
+    showToast(`${activeSeason.team_name} deleted`);
+    router.back();
+  };
 
   const handleSave = async () => {
     if (!activeSeason || !adminConfig) return;
@@ -140,6 +155,31 @@ export default function TeamDetailsScreen() {
           {error ? (
             <View className="rounded-xl p-3 mt-2" style={{ backgroundColor: '#fee2e2' }}>
               <Text className="text-sm text-red-700">{error}</Text>
+            </View>
+          ) : null}
+
+          {/* Delete season: second tap confirms */}
+          {activeSeason ? (
+            <View className="mt-8 pt-4 border-t border-parchment dark:border-rally-900">
+              {confirmDelete ? (
+                <View className="rounded-xl p-3" style={{ backgroundColor: '#fee2e2' }}>
+                  <Text className="text-sm font-semibold text-red-800">Delete {activeSeason.team_name} ({activeSeason.season_year})?</Text>
+                  <Text className="text-xs text-red-700 mt-1">{seasonDeleteWarning(tournamentCount)}</Text>
+                  <View className="flex-row mt-3" style={{ gap: 8 }}>
+                    <Pressable onPress={() => setConfirmDelete(false)} className="flex-1 rounded-lg py-2.5 items-center bg-white active:opacity-70">
+                      <Text className="text-sm font-semibold text-bark">Keep it</Text>
+                    </Pressable>
+                    <Pressable onPress={removeSeason} disabled={deleting} className="flex-1 rounded-lg py-2.5 items-center active:opacity-80" style={{ backgroundColor: '#DC2626' }} accessibilityLabel="Confirm delete season">
+                      <Text className="text-sm font-bold text-white">{deleting ? 'Deleting…' : 'Delete season'}</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : (
+                <Pressable onPress={() => setConfirmDelete(true)} className="flex-row items-center justify-center py-3 active:opacity-70" accessibilityLabel="Delete this season">
+                  <Ionicons name="trash-outline" size={16} color="#DC2626" />
+                  <Text className="text-sm font-semibold text-red-600 ml-1.5">Delete this season</Text>
+                </Pressable>
+              )}
             </View>
           ) : null}
 
