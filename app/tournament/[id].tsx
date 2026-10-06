@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { View, Text, ScrollView, RefreshControl, Pressable, Linking, Platform, Share, Alert, Switch } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, Pressable, Linking, Platform, Share, Alert, Switch, ImageBackground } from 'react-native';
+import { tournamentHero } from '@/lib/tournamentHero';
 import { SafeAreaView } from '@/components/SafeAreaView';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -250,12 +251,9 @@ export default function TournamentDetailScreen() {
         contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor="#3B82B0" />}
       >
-        {/* Hero header */}
-        <View className={`px-5 pt-4 pb-5 ${
-          tournament.status === 'booked' ? 'bg-green-600' :
-          tournament.status === 'travel_needed' ? 'bg-amber-500' :
-          tournament.status === 'complete' ? 'bg-rally-500' : 'bg-rally-700'
-        }`}>
+        {/* Hero header: a painting per tournament, darkened so the text reads */}
+        <ImageBackground source={tournamentHero(tournament.id, tournaments)} resizeMode="cover" style={{ overflow: 'hidden' }} accessibilityIgnoresInvertColors>
+        <View className="px-5 pt-4 pb-6" style={{ backgroundColor: 'rgba(22,32,52,0.42)' }}>
           <View className="flex-row items-center justify-between mb-3">
             <Pressable onPress={() => router.back()} className="flex-row items-center">
               <Ionicons name="chevron-back" size={20} color="white" />
@@ -269,14 +267,17 @@ export default function TournamentDetailScreen() {
             </Pressable>
           </View>
 
-          <Text className="text-2xl font-bold text-white">{tournament.name}</Text>
+          <Text className="text-2xl font-bold text-white" style={{ textShadowColor: 'rgba(0,0,0,0.45)', textShadowRadius: 8 }}>{tournament.name}</Text>
           <Text className="text-base text-white/80 mt-1">
             {formatDateRange(tournament.start_date, tournament.end_date)}
           </Text>
 
           <View className="flex-row items-center mt-3">
-            <View className="bg-white/20 px-3 py-1 rounded-full flex-row items-center">
-              <View className="w-2 h-2 rounded-full bg-white mr-1.5" />
+            <View className="bg-black/30 px-3 py-1 rounded-full flex-row items-center">
+              <View className={`w-2 h-2 rounded-full mr-1.5 ${
+                tournament.status === 'booked' ? 'bg-green-400' :
+                tournament.status === 'travel_needed' ? 'bg-amber-400' : 'bg-white'
+              }`} />
               <Text className="text-xs font-semibold text-white">{status.label}</Text>
             </View>
             <Text className="text-sm text-white/80 ml-3">{countdown}</Text>
@@ -288,6 +289,7 @@ export default function TournamentDetailScreen() {
             )}
           </View>
         </View>
+        </ImageBackground>
 
         <View className="px-4">
           {/* ── Tournament Info (Green) — Venue, Schedule, Tickets ── */}

@@ -14,6 +14,26 @@
       "destination": "/fan/[code]"
     },
     {
+      "source": "/coaching/:coachId",
+      "destination": "/coaching/[coachId]"
+    },
+    {
+      "source": "/documents/:id",
+      "destination": "/documents/[id]"
+    },
+    {
+      "source": "/lesson/:id",
+      "destination": "/lesson/[id]"
+    },
+    {
+      "source": "/athlete/:id",
+      "destination": "/athlete/[id]"
+    },
+    {
+      "source": "/tournament/:id",
+      "destination": "/tournament/[id]"
+    },
+    {
       "source": "/auth-callback",
       "destination": "/app.html"
     },
