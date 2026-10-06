@@ -78,6 +78,11 @@ export default function FanInvite() {
             <Text className="text-xs mt-5" style={{ color: 'rgba(255,255,255,0.55)' }}>
               Already downloaded the app? Sign up there and enter fan code <Text style={{ fontWeight: '700', color: '#fff' }}>{code}</Text>.
             </Text>
+            <Text className="text-xs mt-6" style={{ color: 'rgba(255,255,255,0.55)' }}>
+              <Text onPress={() => Linking.openURL('https://rally-hub.com/terms')} style={{ textDecorationLine: 'underline' }}>Terms of Use</Text>
+              {'  ·  '}
+              <Text onPress={() => Linking.openURL('https://rally-hub.com/privacy')} style={{ textDecorationLine: 'underline' }}>Privacy Policy</Text>
+            </Text>
           </>
         )}
       </View>

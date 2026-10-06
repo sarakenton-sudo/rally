@@ -215,6 +215,11 @@ export default function PublicBookingPage() {
         <Text style={{ color: muted, fontSize: 12, textAlign: 'center', marginTop: 16 }}>
           {c.accepts_payments ? 'Pay securely in the app · ' : ''}Booked through <Text style={{ fontWeight: '800', color: ink }}>RallyHUB</Text>
         </Text>
+        <Text style={{ color: muted, fontSize: 12, textAlign: 'center', marginTop: 6 }}>
+          <Text onPress={() => Linking.openURL('https://rally-hub.com/terms')} style={{ textDecorationLine: 'underline' }}>Terms of Use</Text>
+          {'  ·  '}
+          <Text onPress={() => Linking.openURL('https://rally-hub.com/privacy')} style={{ textDecorationLine: 'underline' }}>Privacy Policy</Text>
+        </Text>
       </ScrollView>
 
       {/* Request bar */}
