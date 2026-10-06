@@ -13,7 +13,7 @@ import { useIconColors, CORAL } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
-import { fetchMyUpcomingLessons, fetchMyCoaches, fetchMyRescheduleProposals, respondToReschedule, isSupabaseConfigured as coachingConfigured, type ParentLesson, type RescheduleProposal } from '@/lib/coach';
+import { fetchMyUpcomingLessons, hideFamilyLesson, fetchMyCoaches, fetchMyRescheduleProposals, respondToReschedule, isSupabaseConfigured as coachingConfigured, type ParentLesson, type RescheduleProposal } from '@/lib/coach';
 import { showToast } from '@/components/Toast';
 import { fetchMyCharges, type ParentCharge } from '@/lib/payments';
 import { fetchMyCoachInvites } from '@/lib/coachInvites';
@@ -24,7 +24,8 @@ import { getPref, setPref } from '@/lib/prefs';
 import NextUpCard from '@/components/home/NextUpCard';
 import LessonCard from '@/components/LessonCard';
 import GameCard from '@/components/GameCard';
-import { fetchUpcomingGames, type ScheduleGame } from '@/lib/teamEvents';
+import SwipeToDelete from '@/components/SwipeToDelete';
+import { fetchUpcomingGames, deleteTeamEvent, type ScheduleGame } from '@/lib/teamEvents';
 
 const INVITE_DISMISS_KEY = 'rally.coachInvitePromptDismissedAt';
 const HORIZON_DAYS = 90;
@@ -85,6 +86,19 @@ export default function HomeScreen() {
     if (!coachingConfigured) return;
     fetchMyUpcomingLessons(HORIZON_DAYS).then(({ data }) => setLessons(data));
   }, []);
+
+  // Swipe left on Home: delete a game, or clear a cancelled lesson.
+  const removeGame = async (id: string) => {
+    const { error } = await deleteTeamEvent(id);
+    if (error) { showToast(error.message); return; }
+    setGames((gs) => gs.filter((g) => g.id !== id));
+    showToast('Game deleted');
+  };
+  const clearLesson = async (id: string) => {
+    const { error } = await hideFamilyLesson(id);
+    if (error) { showToast(error.message); return; }
+    setLessons((ls) => ls.filter((l) => l.id !== id));
+  };
 
   const [athleteFilter, setAthleteFilter] = useState<string>('all');
 
@@ -565,18 +579,25 @@ export default function HomeScreen() {
               <View key={section.key}>
                 <Text className="text-xs font-bold uppercase tracking-wider text-stone mt-2 mb-2 ml-1" accessibilityRole="header">{section.label}</Text>
                 {section.items.map((item) => item.kind === 'lesson' ? (
-                  <LessonCard
-                    key={`l-${item.l.id}`}
-                    lesson={item.l}
-                    athleteName={nameCards ? athleteName(item.l.athlete_id) : undefined}
-                  />
+                  item.l.status === 'cancelled' || item.l.status === 'declined' ? (
+                    <SwipeToDelete key={`l-${item.l.id}`} onDelete={() => clearLesson(item.l.id)} accessibilityLabel="Remove cancelled lesson">
+                      <LessonCard lesson={item.l} athleteName={nameCards ? athleteName(item.l.athlete_id) : undefined} />
+                    </SwipeToDelete>
+                  ) : (
+                    <LessonCard
+                      key={`l-${item.l.id}`}
+                      lesson={item.l}
+                      athleteName={nameCards ? athleteName(item.l.athlete_id) : undefined}
+                    />
+                  )
                 ) : item.kind === 'game' ? (
-                  <GameCard
-                    key={`g-${item.g.id}`}
-                    game={item.g}
-                    athleteName={nameCards ? athleteName(seasons.find((x) => x.id === item.g.season_id)?.athlete_id) : undefined}
-                    teamName={nameCards ? seasons.find((x) => x.id === item.g.season_id)?.team_name : undefined}
-                  />
+                  <SwipeToDelete key={`g-${item.g.id}`} onDelete={() => removeGame(item.g.id)} accessibilityLabel="Delete game">
+                    <GameCard
+                      game={item.g}
+                      athleteName={nameCards ? athleteName(seasons.find((x) => x.id === item.g.season_id)?.athlete_id) : undefined}
+                      teamName={nameCards ? seasons.find((x) => x.id === item.g.season_id)?.team_name : undefined}
+                    />
+                  </SwipeToDelete>
                 ) : (
                   <TournamentCard
                     key={`t-${item.t.id}`}

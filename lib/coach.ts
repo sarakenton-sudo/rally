@@ -632,10 +632,17 @@ export async function fetchMyUpcomingLessons(days = 30): Promise<{ data: ParentL
     // Keep cancelled/declined lessons visible (marked) so a parent who missed
     // the push still sees it on Home.
     .in('status', ['requested', 'accepted', 'cancelled', 'declined'])
+    .is('hidden_by_family_at', null) // cleared from Home with a swipe (00094)
     .gte('slots.starts_at', now.toISOString())
     .lte('slots.starts_at', until.toISOString());
   const rows = ((data as any[]) ?? []).map(toParentLesson).sort((a, b) => a.starts_at.localeCompare(b.starts_at));
   return { data: rows, error: error ?? null };
+}
+
+/** Clear a cancelled/declined lesson from the family's Home (the coach keeps the record). */
+export async function hideFamilyLesson(requestId: string): Promise<{ error: Error | null }> {
+  const { error } = await (supabase.rpc as any)('hide_family_lesson', { p_request_id: requestId });
+  return { error: error ?? null };
 }
 
 /** One lesson for the parent's lesson detail screen (by booking_request id). */

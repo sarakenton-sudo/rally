@@ -41,3 +41,10 @@ export function formatGameTime(t: string | null): string | null {
   const hour = ((h + 11) % 12) + 1;
   return `${hour}:${String(m || 0).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
 }
+
+/** Delete a game or team event (swipe left on Home). */
+export async function deleteTeamEvent(id: string): Promise<{ error: Error | null }> {
+  const { data, error } = await (supabase.from('team_events') as any).delete().eq('id', id).select('id');
+  if (error) return { error };
+  return { error: data?.length ? null : new Error("Couldn't delete this game. Only parents who manage the team can.") };
+}
