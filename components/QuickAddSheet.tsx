@@ -8,7 +8,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { usePlusSheetOrder } from '@/lib/usePlusContext';
 import { PLANS_INBOX_EMAIL } from '@/lib/config';
-import { createCoachInvite, coachInviteMessage } from '@/lib/coachInvites';
+import { useCoachInvite } from '@/lib/useCoachInvite';
 import { showToast } from '@/components/Toast';
 import { trackEvent } from '@/lib/track-event';
 import { tapLight } from '@/lib/haptics';
@@ -84,23 +84,14 @@ export default function QuickAddSheet({ visible, onClose }: { visible: boolean; 
 
   const tapItem = (item: string, position: number) => track('plus_item_tapped', { item, position });
 
+  const sendCoachInvite = useCoachInvite(athletes, visible); // re-check each time the sheet opens
   const inviteCoach = async () => {
     tapLight();
     tapItem('invite_coach', 0);
-    const code = await createCoachInvite(athletes.length === 1 ? athletes[0].id : null);
-    const who = athletes.length === 1 ? athletes[0].first_name : athletes.length > 1 ? athletes.map((a) => a.first_name).join(' and ') : 'our athlete';
-    const message = coachInviteMessage(who, code);
-    if (Platform.OS === 'web') {
-      await Clipboard.setStringAsync(message);
-      showToast('Invite copied — paste it into a text to your coach');
-    } else {
-      // Open the share sheet while the + sheet is still up (iOS drops a share
-      // sheet opened during the + sheet's closing animation), then close it.
-      await Share.share({ message });
-      onClose();
-    }
-    track('coach_invite_sent', { channel: 'plus_sheet', has_code: !!code });
+    const how = await sendCoachInvite();
+    if (how !== 'cancelled') { track('coach_invite_sent', { channel: `plus_sheet_${how}` }); if (Platform.OS !== 'web') onClose(); }
   };
+
 
   const rebookLabel = order.rebook
     ? `Rebook ${order.rebook.coachName} · ${WEEKDAY[order.rebook.weekday]} ${fmtHour(order.rebook.hour, order.rebook.minute)}`

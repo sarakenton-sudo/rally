@@ -15,7 +15,7 @@ import {
 import OpenTimesList from '@/components/OpenTimesList';
 import { connectViaBookingPage } from '@/lib/bookingPage';
 import { findLessonPattern, type RebookSuggestion } from '@/lib/plusSheet';
-import { createCoachInvite, coachInviteMessage } from '@/lib/coachInvites';
+import { useCoachInvite } from '@/lib/useCoachInvite';
 import { trackEvent } from '@/lib/track-event';
 import { useIconColors } from '@/lib/colors';
 import { tapLight, notifyError, notifySuccess } from '@/lib/haptics';
@@ -58,20 +58,13 @@ export default function LessonsEntryScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const athleteFirst = athletes.length === 1 ? athletes[0].first_name : athletes.length > 1 ? athletes.map((a) => a.first_name).join(' and ') : 'our athlete';
+  const sendCoachInvite = useCoachInvite(athletes);
   const inviteCoach = async () => {
     tapLight();
-    // A personal code: the coach page greets them by name and connects this family on sign-up.
-    const code = await createCoachInvite(athletes.length === 1 ? athletes[0].id : null);
-    const inviteMessage = coachInviteMessage(athleteFirst, code);
-    if (Platform.OS === 'web') {
-      await Clipboard.setStringAsync(inviteMessage);
-      showToast('Invite copied — paste it into a text to your coach');
-      track('coach_invite_sent', { channel: 'copy' });
-      return;
-    }
-    const r = await Share.share({ message: inviteMessage });
-    if (r.action === Share.sharedAction) track('coach_invite_sent', { channel: r.activityType ?? 'share' });
+    const how = await sendCoachInvite();
+    if (how !== 'cancelled') track('coach_invite_sent', { channel: how });
   };
+
 
   // Accepts a booking-page URL (…/book/<slug>) or a coach's client code.
   const enterLink = async () => {

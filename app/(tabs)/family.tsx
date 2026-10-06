@@ -17,6 +17,7 @@ import { vaultRefFor } from '@/lib/credentials';
 import ReferFriend from '@/components/ReferFriend';
 import { fetchMyCoaches, isSupabaseConfigured } from '@/lib/coach';
 import { createCoachInvite, coachInviteMessage } from '@/lib/coachInvites';
+import { useCoachInvite } from '@/lib/useCoachInvite';
 import type { Coach } from '@/types/database';
 
 const AVATAR_COLORS = ['#3B82B0', '#7c3aed', '#6A9E8A', '#d97706', '#dc2626', '#0d9488', '#be185d', '#4f46e5', '#ca8a04', '#0891b2'];
@@ -103,11 +104,11 @@ export default function FamilyScreen() {
     if (user) trackEvent(user.id, event, { has_code: !!code });
   };
 
+  const sendCoachInvite = useCoachInvite(athletes);
   const inviteCoach = async () => {
     tapLight();
-    const code = await createCoachInvite(athletes.length === 1 ? athletes[0].id : null);
-    await sendInvite(code, 'coach_invite_sent');
-    load();
+    const how = await sendCoachInvite();
+    if (how !== 'cancelled' && user) trackEvent(user.id, 'coach_invite_sent', { channel: `family_${how}` });
   };
 
 
