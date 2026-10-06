@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { ScrollView, Pressable, Text, View } from 'react-native';
+import { usePathname } from 'expo-router';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { updateAdminConfig } from '@/hooks/useSupabaseData';
 import { tapLight } from '@/lib/haptics';
@@ -18,6 +19,11 @@ export default function SeasonSwitcher() {
   const setAdminConfig = useSeasonStore((s) => s.setAdminConfig);
 
   const hasMultipleAthletes = athletes.length > 1;
+  // On Schedule the switcher is the list filter, with "All" options.
+  const onSchedule = usePathname() === '/season';
+  const scheduleAthlete = useSeasonStore((s) => s.scheduleAthlete);
+  const scheduleTeam = useSeasonStore((s) => s.scheduleTeam);
+  const setScheduleFilter = useSeasonStore((s) => s.setScheduleFilter);
 
   // Figure out which athlete is currently active
   const activeSeason = seasons.find((s) => s.id === activeSeasonId);
@@ -63,6 +69,47 @@ export default function SeasonSwitcher() {
       }
     }
   };
+
+  // Schedule: Row 1 = All · each athlete; Row 2 = All teams · each team of the selected athlete.
+  if (onSchedule) {
+    const chip = (on: boolean, label: string, onPress: () => void, color = '#3B82B0', small = false) => (
+      <Pressable
+        key={label}
+        onPress={() => { tapLight(); onPress(); }}
+        accessibilityRole="button"
+        accessibilityState={{ selected: on }}
+        style={{
+          backgroundColor: on ? (small ? 'rgba(59,130,176,0.3)' : color) : (small ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.08)'),
+          borderColor: on ? (small ? 'rgba(59,130,176,0.5)' : color) : 'rgba(255,255,255,0.15)',
+          borderWidth: 1, paddingHorizontal: small ? 10 : 12, paddingVertical: small ? 4 : 6, borderRadius: 9999,
+        }}
+      >
+        <Text style={{ fontSize: small ? 11 : 12, fontFamily: 'NunitoSans-SemiBold', color: on ? (small ? '#7DBDD9' : '#FEFEFE') : 'rgba(255,255,255,0.6)' }}>{label}</Text>
+      </Pressable>
+    );
+    const pickedAthlete = hasMultipleAthletes ? scheduleAthlete : (athletes[0]?.id ?? 'all');
+    const teams = pickedAthlete === 'all' ? [] : [...(athleteSeasonsMap[pickedAthlete] || [])].sort((a, b) => b.season_year.localeCompare(a.season_year));
+    return (
+      <View>
+        {hasMultipleAthletes && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 6, gap: 8 }}>
+            {chip(scheduleAthlete === 'all', 'All', () => setScheduleFilter({ athlete: 'all', team: 'all' }))}
+            {athletes.map((a) => chip(scheduleAthlete === a.id, a.first_name, () => {
+              setScheduleFilter({ athlete: a.id, team: 'all' });
+              const theirs = [...(athleteSeasonsMap[a.id] || [])].sort((x, y) => y.season_year.localeCompare(x.season_year));
+              if (theirs[0] && activeAthleteId !== a.id) handleSwitch(theirs[0].id); // team card follows
+            }, a.avatar_color || AVATAR_COLORS[a.first_name.charCodeAt(0) % AVATAR_COLORS.length]))}
+          </ScrollView>
+        )}
+        {teams.length > 1 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 6, paddingTop: hasMultipleAthletes ? 0 : 6, gap: 8 }}>
+            {chip(scheduleTeam === 'all', 'All teams', () => setScheduleFilter({ team: 'all' }), undefined, true)}
+            {teams.map((t) => chip(scheduleTeam === t.id, `${t.team_name} · ${t.season_year}`, () => { setScheduleFilter({ team: t.id }); handleSwitch(t.id); }, undefined, true))}
+          </ScrollView>
+        )}
+      </View>
+    );
+  }
 
   // Case 1: Single athlete, multiple seasons → season chips only
   if (!hasMultipleAthletes) {

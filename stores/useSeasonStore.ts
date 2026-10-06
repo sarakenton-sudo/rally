@@ -47,6 +47,10 @@ interface SeasonState {
   removeSeason: (id: string) => void;
   setAdminAthletes: (adminAthletes: AdminAthlete[]) => void;
   setActiveSeasonId: (id: string | null) => void;
+  /** Schedule tab filter (header switcher): 'all' or an athlete id / a team (season) id. */
+  scheduleAthlete: string;
+  scheduleTeam: string;
+  setScheduleFilter: (f: { athlete?: string; team?: string }) => void;
   setLoading: (loading: boolean) => void;
   setHideTravelCosts: (hide: boolean) => void;
 }
@@ -133,6 +137,9 @@ export const useSeasonStore = create<SeasonState>((set) => ({
     set((state) => ({ seasons: state.seasons.filter((s) => s.id !== id) })),
   setAdminAthletes: (adminAthletes) => set({ adminAthletes }),
   setActiveSeasonId: (activeSeasonId) => set({ activeSeasonId }),
+  scheduleAthlete: 'all',
+  scheduleTeam: 'all',
+  setScheduleFilter: (f) => set((st) => ({ scheduleAthlete: f.athlete ?? st.scheduleAthlete, scheduleTeam: f.team ?? st.scheduleTeam })),
   setLoading: (isLoading) => set({ isLoading }),
   setHideTravelCosts: (hideTravelCosts) => set({ hideTravelCosts }),
 }));

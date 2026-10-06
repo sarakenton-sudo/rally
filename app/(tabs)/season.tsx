@@ -88,19 +88,9 @@ export default function SeasonScreen() {
     }
   };
 
-  // Athlete filter: All, or one athlete (their tournaments and games across every team).
-  const [athleteFilter, setAthleteFilter] = useState<string>('all');
-  const setActiveSeasonId = useSeasonStore((s) => s.setActiveSeasonId);
-  const chooseAthlete = (id: string) => {
-    tapLight();
-    setAthleteFilter(id);
-    // Keep the team header in step with the athlete shown.
-    if (id !== 'all' && activeSeason?.athlete_id !== id) {
-      const theirs = seasons.filter((x) => x.athlete_id === id).sort((x, y) => y.season_year.localeCompare(x.season_year));
-      const pick = theirs.find((x) => x.is_active) ?? theirs[0];
-      if (pick) setActiveSeasonId(pick.id);
-    }
-  };
+  // Filter = the header switcher (store): All / an athlete, and All teams / one team.
+  const athleteFilter = useSeasonStore((st) => st.scheduleAthlete);
+  const teamFilter = useSeasonStore((st) => st.scheduleTeam);
   const chipAthletes = useMemo(() => {
     const list = athletes.map((a) => ({ id: a.id, name: a.first_name }));
     for (const l of lessons) {
@@ -111,7 +101,9 @@ export default function SeasonScreen() {
 
   const listItems = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
-    const seasonIds = athleteFilter === 'all' ? null : new Set(seasons.filter((x) => x.athlete_id === athleteFilter).map((x) => x.id));
+    const seasonIds = teamFilter !== 'all'
+      ? new Set([teamFilter])
+      : athleteFilter === 'all' ? null : new Set(seasons.filter((x) => x.athlete_id === athleteFilter).map((x) => x.id));
     const tours = seasonIds ? tournaments.filter((t) => seasonIds.has(t.season_id)) : tournaments;
     const gms = seasonIds ? games.filter((g) => seasonIds.has(g.season_id)) : games;
 
@@ -132,11 +124,14 @@ export default function SeasonScreen() {
       past.forEach((t) => items.push({ type: 'tournament', data: t }));
     }
     return items;
-  }, [tournaments, lessons, games, seasons, athleteFilter]);
+  }, [tournaments, lessons, games, seasons, athleteFilter, teamFilter]);
 
   const athleteName = (id: string | null | undefined) => chipAthletes.find((a) => a.id === id)?.name;
   // All Athletes view (more than one athlete): every card says whose it is.
   const nameCards = chipAthletes.length > 1 && athleteFilter === 'all';
+  // "All" with more than one athlete: no single team's details in the header.
+  const allView = athletes.length > 1 && athleteFilter === 'all';
+  const upcomingCount = listItems.filter((i) => i.type !== 'divider' && !(i.type === 'tournament' && daysUntil(i.data.end_date) < 0)).length;
   const athleteForTournament = (t: Tournament) => {
     const season = seasons.find((x) => x.id === t.season_id);
     return athletes.find((a) => a.id === season?.athlete_id) ?? null;
@@ -210,16 +205,18 @@ export default function SeasonScreen() {
             <View className="flex-row items-center justify-between">
               <View className="flex-1 mr-3">
                 <Text className="text-lg font-bold text-rally-700 dark:text-rally-300 font-nunito-extrabold" numberOfLines={1}>
-                  {teamName}
+                  {allView ? 'All athletes' : teamName}
                 </Text>
                 <Text className="text-xs text-stone dark:text-parchment mt-0.5">
-                  {seasonYear ? `${seasonYear} · ` : ''}{seasonTournaments.length} tournament{seasonTournaments.length !== 1 ? 's' : ''}
+                  {allView
+                    ? `${upcomingCount} upcoming tournament${upcomingCount === 1 ? '' : 's'} and game${upcomingCount === 1 ? '' : 's'} · pick an athlete for team details`
+                    : `${seasonYear ? `${seasonYear} · ` : ''}${seasonTournaments.length} tournament${seasonTournaments.length !== 1 ? 's' : ''}`}
                 </Text>
               </View>
             </View>
 
             {/* Team actions — prominent: details (incl. live stream) and share */}
-            {activeSeason ? (
+            {activeSeason && !allView ? (
               <View className="flex-row mt-3" style={{ gap: 8 }}>
                 <Pressable
                   className="flex-1 flex-row items-center justify-center rounded-xl py-3 border border-rally-600 bg-warm-white dark:bg-bark-light active:opacity-70"
@@ -239,7 +236,7 @@ export default function SeasonScreen() {
                 </Pressable>
               </View>
             ) : null}
-            {activeSeason?.default_stream_url ? (
+            {activeSeason?.default_stream_url && !allView ? (
               <Pressable
                 className="flex-row items-center justify-center rounded-xl py-2.5 mt-2 bg-red-50 dark:bg-red-900/20 active:opacity-70"
                 onPress={() => Linking.openURL(activeSeason.default_stream_url!)}
@@ -253,7 +250,7 @@ export default function SeasonScreen() {
             ) : null}
 
             {/* Team Code Block */}
-            {teamCode ? (
+            {teamCode && !allView ? (
               <Pressable
                 className="bg-rally-600 rounded-xl p-4 mt-3 flex-row items-center active:opacity-90"
                 style={{ shadowColor: '#3B82B0', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3 }}
@@ -302,27 +299,6 @@ export default function SeasonScreen() {
               </Pressable>
             )}
 
-            {/* Filter by athlete — the list below is tournaments and games by month */}
-            <View className="flex-row items-center mt-5">
-              {chipAthletes.length > 1 ? (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-1 mr-2" contentContainerStyle={{ gap: 8 }}>
-                  {[{ id: 'all', name: 'All Athletes' }, ...chipAthletes].map((a) => {
-                    const on = athleteFilter === a.id;
-                    return (
-                      <Pressable
-                        key={a.id}
-                        onPress={() => chooseAthlete(a.id)}
-                        className={`px-3 py-1.5 rounded-full border ${on ? 'bg-rally-600 border-rally-600' : 'bg-warm-white dark:bg-bark-light border-parchment dark:border-rally-900'}`}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: on }}
-                      >
-                        <Text className={`text-xs font-semibold ${on ? 'text-cream' : 'text-bark dark:text-parchment'}`}>{a.name}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              ) : <View className="flex-1" />}
-            </View>
           </View>
         }
         ListFooterComponent={
