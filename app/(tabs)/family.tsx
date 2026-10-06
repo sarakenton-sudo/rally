@@ -178,7 +178,7 @@ export default function FamilyScreen() {
           <Row
             icon="person-add"
             title={coaches.length ? 'Invite another coach' : 'Invite your coach'}
-            subtitle="Setting, hitting, strength — book and pay for lessons here, free for coaches"
+            subtitle="Setting, hitting, strength — book lessons here, free for coaches"
             onPress={inviteCoach}
           />
           <Row icon="link" color="#6A9E8A" title="Have a coach's link or code?" onPress={() => router.push('/lessons')} />

@@ -226,7 +226,7 @@ export default function HomeScreen() {
         cards.push({
           priority: ticketPriority,
           text: `Buy Tickets for ${t.name}`,
-          subtitle: teamCode ? `Code copied: ${teamCode}` : 'Tickets available now',
+          subtitle: teamCode ? `Tap to copy team code ${teamCode} and open tickets` : 'Tickets available now',
           icon: 'ticket-outline',
           color: '#7c3aed',
           bgColor: '#EDE9FE',
@@ -340,7 +340,7 @@ export default function HomeScreen() {
       cards.push({
         priority: 7,
         text: `Does ${who} take lessons? Invite the coach`,
-        subtitle: 'Book and pay for lessons right here — free for coaches',
+        subtitle: 'Book lessons right here — free for coaches',
         icon: 'person-add',
         color: '#3B82B0',
         bgColor: '#DBEAFE',

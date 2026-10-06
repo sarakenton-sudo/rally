@@ -274,7 +274,7 @@ export default function QuickAddSheet({ visible, onClose }: { visible: boolean; 
             </View>
             <View className="flex-1">
               <Text className="text-base font-bold text-white">Invite a coach</Text>
-              <Text className="text-[11px] text-white/85">Book and pay for lessons here — free for coaches</Text>
+              <Text className="text-[11px] text-white/85">Book lessons here — free for coaches</Text>
             </View>
             <Ionicons name="share-outline" size={18} color="#fff" />
           </Pressable>

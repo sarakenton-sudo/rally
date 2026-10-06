@@ -48,7 +48,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(30,58,95,0.9
 .hero-right{display:flex;justify-content:center;align-items:center;position:relative;animation:fadeUp 0.6s 0.15s ease both;}
 .phone-float{position:relative;}
 .phone-badge{position:absolute;background:white;border-radius:14px;padding:10px 14px;box-shadow:0 8px 32px rgba(0,0,0,0.22);white-space:nowrap;z-index:10;}
-.phone-badge-1{left:-115px;top:85px;animation:float 3s ease-in-out infinite;}
+.phone-badge-1{left:-150px;top:330px;animation:float 3s ease-in-out infinite;}
 .phone-badge-2{right:-120px;bottom:120px;animation:float 3.5s 1.2s ease-in-out infinite;}
 .pb-icon{font-size:18px;margin-bottom:2px;}
 .pb-label{font-family:'Nunito',sans-serif;font-weight:800;font-size:11px;color:var(--navy);}
@@ -61,6 +61,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(30,58,95,0.9
 .pn-brand span{font-weight:700;opacity:0.45;}
 .pn-tag{margin-left:auto;font-size:7px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--steel);border:1px solid rgba(59,130,176,0.4);padding:2px 7px;border-radius:9999px;}
 .phone-body{padding:14px 13px 20px;background:var(--ice);}
+.phone-shot{padding:0;background:#1E3A5F;}
+.phone-shot img{display:block;width:100%;height:auto;}
+.feat-right-shot{align-items:center;}
+.phone-shot-feature{width:260px;border-radius:30px;box-shadow:0 24px 60px rgba(15,35,60,0.28);}
+@media (max-width:760px){.phone-shot-feature{width:220px;}}
+
 .pg{font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;color:var(--navy);margin-bottom:10px;}
 .pg small{display:block;font-weight:400;font-size:10px;color:var(--mist);margin-top:2px;}
 .p-stats{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px;}
@@ -391,66 +397,19 @@ footer{padding:30px 20px;}
         <div class="phone-badge phone-badge-1">
           <div class="pb-icon">&#9888;&#65039;</div>
           <div class="pb-label">BACKUP HOTEL REMINDER</div>
-          <div class="pb-sub">You have two hotels booked for Lone Star Classic</div>
+          <div class="pb-sub">Cancel the extra room by Thursday, 6pm</div>
         </div>
         <div class="phone-badge phone-badge-2">
           <div class="pb-icon">&#128117;&#127869;</div>
-          <div class="pb-label">Grandma's all set</div>
-          <div class="pb-sub">Stream link + ticket sent &#10003;</div>
+          <div class="pb-label">Grandma's following along</div>
+          <div class="pb-sub">Stream + tickets in her app &#10003;</div>
         </div>
         <div class="phone-badge phone-badge-3">
           <div class="pb-icon">&#127952;</div>
-          <div class="pb-label">Lesson booked &middot; Coach Maya</div>
-          <div class="pb-sub">Tue 6:00pm &middot; Paid &#10003;</div>
+          <div class="pb-label">Lesson tomorrow &middot; Coach Ben</div>
+          <div class="pb-sub">Tue 4:00pm &middot; Reminder sent &#10003;</div>
         </div>
-        <div class="phone">
-          <div class="phone-notch"><div class="phone-pill"></div></div>
-          <div class="phone-nav">
-            <div class="pn-brand">Rally<span>HUB</span></div>
-            <div class="pn-tag">Season 2025-26</div>
-          </div>
-          <div class="phone-body">
-            <div class="pg">AJV 14U National <small>Drue Kenton · Season 2025-26</small></div>
-            <div class="p-stats">
-              <div class="ps"><div class="ps-lbl">Next Tournament</div><div class="ps-val">2</div><div class="ps-sub">days away</div></div>
-              <div class="ps"><div class="ps-lbl">Season</div><div class="ps-val">7/11</div><div class="ps-sub">tournaments</div></div>
-            </div>
-            <div class="p-lbl" style="display:flex;align-items:center;gap:4px;"><span style="font-size:8px;">&#9889;</span> Actions</div>
-            <div class="action-list">
-              <div class="action-card" style="background:#FEE2E2;">
-                <div class="ac-icon" style="background:rgba(220,38,38,0.15);"><span style="color:#dc2626;font-size:10px;">&#9888;</span></div>
-                <div class="ac-text"><div class="ac-title">Pick your hotel for Northern Lights</div><div class="ac-sub">2 hotels booked — cancellation deadline in 3 days</div></div>
-                <div class="ac-chev">&#8250;</div>
-              </div>
-              <div class="action-card" style="background:#EDE9FE;">
-                <div class="ac-icon" style="background:rgba(124,58,237,0.15);"><span style="color:#7c3aed;font-size:10px;">&#127915;</span></div>
-                <div class="ac-text"><div class="ac-title">Buy Tickets for Northern Lights</div><div class="ac-sub">Tickets available now</div></div>
-                <div class="ac-chev">&#8250;</div>
-              </div>
-              <div class="action-card" style="background:#FEF3C7;">
-                <div class="ac-icon" style="background:rgba(217,119,6,0.15);"><span style="color:#d97706;font-size:10px;">&#127976;</span></div>
-                <div class="ac-text"><div class="ac-title">Book Hotel for Lone Star Classic</div><div class="ac-sub">30 days away</div></div>
-                <div class="ac-chev">&#8250;</div>
-              </div>
-              <div class="action-card" style="background:#DBEAFE;">
-                <div class="ac-icon" style="background:rgba(59,130,176,0.15);"><span style="color:#3B82B0;font-size:10px;">&#128198;</span></div>
-                <div class="ac-text"><div class="ac-title">Serving lesson Tuesday &middot; Coach Maya</div><div class="ac-sub">6:00pm &middot; reminder sent to Drue</div></div>
-                <div class="ac-chev">&#8250;</div>
-              </div>
-              <div class="action-card" style="background:#E8F5EE;">
-                <div class="ac-icon" style="background:rgba(106,158,138,0.15);"><span style="color:#6A9E8A;font-size:10px;">&#9992;</span></div>
-                <div class="ac-text"><div class="ac-title">Book Air for Lone Star Classic</div><div class="ac-sub">30 days away</div></div>
-                <div class="ac-chev">&#8250;</div>
-              </div>
-            </div>
-            <div class="p-lbl" style="margin-top:8px;">Upcoming</div>
-            <div class="p-events">
-              <div class="pe"><div class="pe-bar" style="background:var(--teal);"></div><div><div class="pe-name">Northern Lights</div><div class="pe-detail">Minneapolis, MN · Mar 20-22</div></div><div class="pe-badge booked">&#10003; Ready</div></div>
-              <div class="pe"><div class="pe-bar" style="background:var(--steel);"></div><div><div class="pe-name">Lone Star Classic</div><div class="pe-detail">Houston, TX · Apr 3-5</div></div><div class="pe-badge needs">Needs Booking</div></div>
-              <div class="pe"><div class="pe-bar" style="background:var(--mist);"></div><div><div class="pe-name">Show Me Qualifier</div><div class="pe-detail">Kansas City, MO · Apr 17-19</div></div><div class="pe-badge needs">Needs Booking</div></div>
-            </div>
-          </div>
-        </div>
+        <div class="phone phone-shot"><img src="/img/app-home.png" alt="RallyHUB Home on game day: team code, pool schedule, live stream, tickets, hotel and event login, each one tap away" loading="lazy" width="393" height="660"></div>
       </div>
     </div>
   </div>
@@ -564,50 +523,9 @@ footer{padding:30px 20px;}
       <div class="feat-subtitle">You shouldn't need a spreadsheet to be a sports parent.</div>
       <div class="feat-body">Every game, tournament, travel day, and private lesson for every athlete, every season — color-coded, and synced to your calendar. Two kids, two clubs, a hitting coach, and a defense clinic? One hub. Done. You already have a job.</div>
     </div>
-    <div class="feat-right">
+    <div class="feat-right feat-right-shot">
       <div class="feat-right-label">Your season at a glance</div>
-      <div class="sched-card">
-        <div class="sched-month">March 2026</div>
-        <div class="sched-event">
-          <div class="sched-bar" style="background:var(--teal);"></div>
-          <div>
-            <div class="sched-name">Northern Lights</div>
-            <div class="sched-detail">Minneapolis, MN &middot; Drue &middot; AJV 14U</div>
-            <div class="sched-badge" style="background:rgba(59,130,176,0.15);color:var(--steel);">&#128681; Stay &amp; Play opens soon</div>
-          </div>
-          <div class="sched-date">Mar 20-22</div>
-        </div>
-      </div>
-      <div class="sched-card">
-        <div class="sched-month">April 2026</div>
-        <div class="sched-event">
-          <div class="sched-bar" style="background:var(--steel);"></div>
-          <div>
-            <div class="sched-name">Lone Star Classic</div>
-            <div class="sched-detail">Houston, TX &middot; Drue &middot; AJV 14U</div>
-            <div class="sched-badge" style="background:rgba(106,158,138,0.15);color:var(--teal);">&#10003; Hotel booked</div>
-          </div>
-          <div class="sched-date">Apr 3-5</div>
-        </div>
-        <div class="sched-event">
-          <div class="sched-bar" style="background:var(--steel);"></div>
-          <div>
-            <div class="sched-name">Private Lesson &middot; Coach Maya</div>
-            <div class="sched-detail">Drue &middot; Tue 6:00pm</div>
-            <div class="sched-badge" style="background:rgba(106,158,138,0.15);color:var(--teal);">&#10003; PAID</div>
-          </div>
-          <div class="sched-date">Apr 8</div>
-        </div>
-        <div class="sched-event">
-          <div class="sched-bar" style="background:var(--mist);"></div>
-          <div>
-            <div class="sched-name">Show Me Qualifier</div>
-            <div class="sched-detail">Kansas City, MO &middot; Drue &middot; AJV 14U</div>
-            <div class="sched-badge" style="background:rgba(251,146,60,0.15);color:#FB923C;">&#9888; Hotel needed</div>
-          </div>
-          <div class="sched-date">Apr 17-19</div>
-        </div>
-      </div>
+      <div class="phone phone-shot phone-shot-feature"><img src="/img/app-schedule.png" alt="RallyHUB Schedule: every athlete's tournaments and games by month, with All / Maya / Leo filters" loading="lazy" width="393" height="660"></div>
     </div>
   </div>
 </div>
@@ -619,42 +537,15 @@ footer{padding:30px 20px;}
       <div class="feat-icon">&#127952;</div>
       <div class="feat-title">Private Lessons, Same Hub</div>
       <div class="feat-subtitle">Her lessons shouldn't live in a different universe than her tournaments.</div>
-      <div class="feat-body">Book your athlete's private lessons right inside RallyHUB. See your coach's real availability, pick a time, pay in the app — no Venmo archaeology, no "did we pay for last week?" Lessons land on the same calendar as tournaments, so you'll never book a serving session on the Saturday you're in Kansas City.</div>
+      <div class="feat-body">Book your athlete's private lessons right inside RallyHUB. See every open time from all your coaches, pick one, and you're booked — no more back-and-forth texts, and no "did we pay for last week?" because your coach marks each lesson paid. Lessons land on the same calendar as tournaments, so you'll never book a serving session on the Saturday you're in Kansas City.</div>
       <div class="feat-body2">Reminders go to everyone who needs them — you, your athlete, and the coach — before anyone has to ask. Your athlete's profile goes with every request, so the coach already knows her position, her age group, and her club.</div>
       <div class="feat-body2" style="margin-top:6px;">Your coach isn't on RallyHUB yet? Send them an invite. They'll thank you. Probably with a free extra rep.</div>
       <button type="button" class="invite-coach-btn" onclick="copyCoachInvite(this)">&#128203; Invite your coach</button>
       <div class="invite-coach-note" aria-live="polite"></div>
     </div>
-    <div class="feat-right">
-      <div class="feat-right-label">This week</div>
-
-      <div class="alert-notif teal-alert">
-        <div class="an-icon" style="background:rgba(255,255,255,0.15);">&#127952;</div>
-        <div>
-          <div class="an-app">Tue 6:00pm &middot; Private Lesson</div>
-          <div class="an-title">Coach Maya</div>
-          <div class="an-body">Paid &#10003; &middot; Reminder sent</div>
-        </div>
-      </div>
-
-      <div class="alert-notif teal-alert">
-        <div class="an-icon" style="background:rgba(255,255,255,0.15);">&#127952;</div>
-        <div>
-          <div class="an-app">Thu 7:00pm &middot; Semi-Private</div>
-          <div class="an-title">Coach Maya &middot; Drue + Ava</div>
-          <div class="an-body">Paid &#10003;</div>
-        </div>
-      </div>
-
-      <div class="alert-notif warn-alert">
-        <div class="an-icon" style="background:rgba(251,146,60,0.15);">&#127942;</div>
-        <div>
-          <div class="an-app">Sat&ndash;Sun &middot; Tournament</div>
-          <div class="an-title">Show Me Qualifier &middot; Kansas City</div>
-          <div class="an-body">&#9888; Hotel needed</div>
-        </div>
-      </div>
-
+    <div class="feat-right feat-right-shot">
+      <div class="feat-right-label">Your coaches, one tap to book</div>
+      <div class="phone phone-shot phone-shot-feature"><img src="/img/app-family.png" alt="RallyHUB Family tab: athletes, coaches with a Book button, and Invite your coach" loading="lazy" width="393" height="660"></div>
     </div>
   </div>
 </div>
@@ -670,36 +561,9 @@ footer{padding:30px 20px;}
       <div class="feat-body2">Booked two hotels "just in case"? Mark one as a backup and we'll keep it front and center so you don't accidentally eat a non-refundable charge on a room you never needed. One-tap directions from the app to your hotel, the venue, or that team dinner restaurant everyone's trying to find at 7pm in an unfamiliar city. Or add details manually — however you work, RallyHUB works with you.</div>
       <div class="feat-tag">Every tournament. Every detail. One place.</div>
     </div>
-    <div class="feat-right">
-      <div class="feat-right-label">Your tournament hotels</div>
-
-      <div class="hotel-item ok">
-        <div class="hi-hotel">&#127976; Marriott Marquis — Stay &amp; Play</div>
-        <div class="hi-dates">Apr 3–5 &middot; Lone Star Classic &middot; Houston, TX &middot; 0.1 mi &#10003;</div>
-        <div class="hi-row">
-          <div class="hi-badge ok">&#10003; BOOKED — CONFIRMED</div>
-          <div class="hi-cancel">Cancel by Mar 20</div>
-        </div>
-      </div>
-
-      <div class="hotel-item warn">
-        <div class="hi-hotel">&#127976; Hampton Inn Galleria — Backup</div>
-        <div class="hi-dates">Apr 3–5 &middot; Lone Star Classic &middot; Houston, TX &middot; 4.2 mi</div>
-        <div class="hi-row">
-          <div class="hi-badge warn">&#9888; CANCELS TONIGHT 11PM</div>
-          <div class="hi-action">Cancel or Keep &rarr;</div>
-        </div>
-      </div>
-
-      <div class="hotel-item" style="border-color:rgba(59,130,176,0.4);background:rgba(59,130,176,0.06);">
-        <div class="hi-hotel">&#9992;&#65039; Southwest — DAL &rarr; IAH</div>
-        <div class="hi-dates">Apr 3 &middot; Departs 6:15am &middot; Conf: ABC123</div>
-        <div class="hi-row">
-          <div class="hi-badge" style="background:rgba(59,130,176,0.2);color:var(--steel);border:1px solid rgba(59,130,176,0.4);">&#10003; FLIGHT BOOKED</div>
-          <div class="hi-cancel">No cancellation fee</div>
-        </div>
-      </div>
-
+    <div class="feat-right feat-right-shot">
+      <div class="feat-right-label">Paste it or forward it</div>
+      <div class="phone phone-shot phone-shot-feature"><img src="/img/app-plus.png" alt="RallyHUB + sheet: Paste + AI, and forward confirmations to plans@rally-hub.com" loading="lazy" width="393" height="660"></div>
     </div>
   </div>
 </div>
