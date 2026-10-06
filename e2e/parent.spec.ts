@@ -104,10 +104,9 @@ test('Family tab: athletes, coaches, people, family logins', async ({ page }) =>
   done();
 });
 
-test('Schedule: tournaments and lessons by month, with a Book button', async ({ page }) => {
+test('Schedule: tournaments and games by month', async ({ page }) => {
   await page.goto('/season');
   await expect(page.getByText(/^(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)( \d{4})?$/).first()).toBeVisible();
-  await expect(page.getByLabel('Book a lesson').first()).toBeVisible();
 });
 
 test('lessons entry points (L-03, L-04)', async ({ page }) => {

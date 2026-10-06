@@ -1,3 +1,4 @@
+import { supabase } from '@/lib/supabase';
 import { Alert, Linking, Platform } from 'react-native';
 import * as Calendar from 'expo-calendar';
 import { chooseCalendarTarget, showCalendarNotice } from '@/components/CalendarChooser';
@@ -46,12 +47,33 @@ export async function addEventsToCalendar(events: CalEvent[], noun = 'event'): P
   }
 }
 
+/** Google "add by URL" link for the family's live calendar feed (00092), or null. */
+async function familyFeedGoogleUrl(): Promise<string | null> {
+  try {
+    const { data, error } = await (supabase.rpc as any)('get_my_family_calendar_token');
+    if (error || !data) return null;
+    const https = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/family-calendar-feed?token=${data}`;
+    return `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(https.replace(/^https:/, 'webcal:'))}`;
+  } catch { return null; }
+}
+
 async function addTo(target: CalendarTarget, events: CalEvent[], noun: string) {
   const many = events.length > 1;
   const what = many ? `${events.length} ${noun}s` : `1 ${noun}`;
 
   if (target === 'google') {
     if (!many) { await Linking.openURL(googleTemplateUrl(events[0])); return; }
+    // Many: subscribe Google Calendar to the family's live feed (tournaments + games).
+    // One tap, works with the Google Calendar app or a browser, and stays up to date.
+    const feed = await familyFeedGoogleUrl();
+    if (feed) {
+      await Linking.openURL(feed);
+      showCalendarNotice({
+        title: 'Adding your RallyHUB calendar to Google',
+        body: 'Tap "Add" in Google Calendar. Every tournament and game shows up and stays up to date as your schedule changes. It can take a few hours for Google to show updates.',
+      });
+      return;
+    }
     if (Platform.OS === 'web') {
       // Google has no "add many" link: import one file instead.
       downloadIcs(events);

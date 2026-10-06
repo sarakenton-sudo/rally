@@ -94,8 +94,10 @@ export default function QuickAddSheet({ visible, onClose }: { visible: boolean; 
       await Clipboard.setStringAsync(message);
       showToast('Invite copied — paste it into a text to your coach');
     } else {
-      onClose();
+      // Open the share sheet while the + sheet is still up (iOS drops a share
+      // sheet opened during the + sheet's closing animation), then close it.
       await Share.share({ message });
+      onClose();
     }
     track('coach_invite_sent', { channel: 'plus_sheet', has_code: !!code });
   };

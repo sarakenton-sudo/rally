@@ -44,7 +44,6 @@ export default function SeasonScreen() {
   const [lessons, setLessons] = useState<ParentLesson[]>([]);
   const [games, setGames] = useState<ScheduleGame[]>([]);
   useFocusEffect(useCallback(() => {
-    if (coachingConfigured) fetchMyUpcomingLessons(365).then(({ data }) => setLessons(data));
     fetchUpcomingGames().then(setGames);
   }, []));
 
@@ -89,7 +88,7 @@ export default function SeasonScreen() {
     }
   };
 
-  // Athlete filter: All, or one athlete (their tournaments across every team, and their lessons).
+  // Athlete filter: All, or one athlete (their tournaments and games across every team).
   const [athleteFilter, setAthleteFilter] = useState<string>('all');
   const setActiveSeasonId = useSeasonStore((s) => s.setActiveSeasonId);
   const chooseAthlete = (id: string) => {
@@ -114,13 +113,11 @@ export default function SeasonScreen() {
     const today = new Date().toISOString().slice(0, 10);
     const seasonIds = athleteFilter === 'all' ? null : new Set(seasons.filter((x) => x.athlete_id === athleteFilter).map((x) => x.id));
     const tours = seasonIds ? tournaments.filter((t) => seasonIds.has(t.season_id)) : tournaments;
-    const less = athleteFilter === 'all' ? lessons : lessons.filter((l) => l.athlete_id === athleteFilter);
     const gms = seasonIds ? games.filter((g) => seasonIds.has(g.season_id)) : games;
 
-    // Upcoming: tournaments (in progress ones under today) and lessons, by date, grouped by month.
+    // Upcoming: tournaments (in progress ones under today) and games, by date, grouped by month. Lessons live on Home.
     const upcoming = [
       ...tours.filter((t) => daysUntil(t.end_date) >= 0).map((t) => ({ date: t.start_date < today ? today : t.start_date, item: { type: 'tournament' as const, data: t } })),
-      ...less.map((l) => ({ date: l.starts_at.slice(0, 10), item: { type: 'lesson' as const, data: l } })),
       ...gms.map((g) => ({ date: g.date, item: { type: 'game' as const, data: g } })),
     ].sort((x, y) => x.date.localeCompare(y.date) || (x.item.type === 'tournament' ? -1 : y.item.type === 'tournament' ? 1 : 0));
 
@@ -305,7 +302,7 @@ export default function SeasonScreen() {
               </Pressable>
             )}
 
-            {/* Filter by athlete + book — the list below is tournaments and lessons by month */}
+            {/* Filter by athlete — the list below is tournaments and games by month */}
             <View className="flex-row items-center mt-5">
               {chipAthletes.length > 1 ? (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-1 mr-2" contentContainerStyle={{ gap: 8 }}>
@@ -325,10 +322,6 @@ export default function SeasonScreen() {
                   })}
                 </ScrollView>
               ) : <View className="flex-1" />}
-              <Pressable onPress={() => { tapLight(); router.push('/lessons'); }} className="flex-row items-center rounded-full px-3 py-1.5 active:opacity-80" style={{ backgroundColor: CORAL }} accessibilityLabel="Book a lesson">
-                <Ionicons name="add" size={14} color="#fff" />
-                <Text className="text-xs font-bold text-white ml-0.5">Book a lesson</Text>
-              </Pressable>
             </View>
           </View>
         }
