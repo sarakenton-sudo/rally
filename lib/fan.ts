@@ -2,14 +2,17 @@ import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { SITE_URL } from '@/lib/config';
 
-// Fan accounts (00086): guests invited into the app, read-only.
+// Fans (00095): friends and family who follow a family's athletes in the app.
+// Read-only: tournaments and games. Each invite has its own one-time code.
 
 export const APP_STORE_URL = 'https://apps.apple.com/app/id6762097230';
 export const fanInviteUrl = (code: string) => `${SITE_URL}/fan/${code}`;
 
-export function fanInviteMessage(guestFirst: string, athleteFirst: string, code: string) {
-  const hi = guestFirst ? `Hi ${guestFirst}! ` : '';
-  return `${hi}Follow ${athleteFirst}'s volleyball season on RallyHUB — tournament dates, locations, live streams and tickets, with alerts on game day. It's free: ${fanInviteUrl(code)}`;
+/** The text the parent pastes into Messages: what it is, the app link, and their code. */
+export function fanInviteMessage(fanFirst: string, athleteNames: string, code: string) {
+  const hi = fanFirst ? `Hi ${fanFirst}! ` : '';
+  return `${hi}Follow ${athleteNames}'s volleyball season on RallyHUB: tournament and game dates, locations and live streams, with alerts on game day. It's free.\n\n` +
+    `1. Get the app: ${APP_STORE_URL}\n2. Sign up as a Fan and enter code ${code}\n\nOr tap ${fanInviteUrl(code)}`;
 }
 
 /** Normalizes a pasted code or link (…/fan/ABCD2345) to the bare code. */
@@ -40,15 +43,33 @@ export function groupByMonth<T extends { start_date: string }>(rows: T[]): { mon
   return out;
 }
 
-export async function createFanInvite(guestId: string): Promise<{ code: string | null; error: Error | null }> {
-  const { data, error } = await (supabase.rpc as any)('create_fan_invite', { p_guest_id: guestId });
-  return { code: (data as string | null) ?? null, error: error ?? null };
+export interface Fan { id: string; name: string; invite_code: string; fan_user_id: string | null; joined_at: string | null; created_at: string }
+
+/** Create an invite for a new fan; returns their one-time code. */
+export async function createFanInvite(name: string): Promise<{ fan: { id: string; code: string } | null; error: string | null }> {
+  const { data, error } = await (supabase.rpc as any)('create_fan_invite', { p_name: name });
+  if (error) return { fan: null, error: error.message };
+  return { fan: data as { id: string; code: string }, error: null };
 }
 
-/** Email the guest their invite (only when they have an email). Fire-and-forget. */
-export function emailFanInvite(guestId: string) {
-  supabase.functions.invoke('send-fan-invite', { body: { guest_id: guestId } })
-    .then(({ error }) => { if (error) console.warn('[fan] invite email failed:', error.message); });
+/** The family's fans (co-parents see each other's), newest first. */
+export async function fetchFans(): Promise<Fan[]> {
+  const { data } = await (supabase.from('fans') as any)
+    .select('id, name, invite_code, fan_user_id, joined_at, created_at').order('created_at', { ascending: false });
+  return (data as Fan[] | null) ?? [];
+}
+
+/** Remove a fan: they stop seeing the family right away. */
+export async function removeFan(id: string): Promise<{ error: string | null }> {
+  const { error } = await (supabase.from('fans') as any).delete().eq('id', id);
+  return { error: error?.message ?? null };
+}
+
+/** Is this a real, unused code? (sign-up checks before creating the account) */
+export async function checkFanCode(code: string): Promise<{ ok: boolean; athletes: string | null }> {
+  const { data } = await (supabase.rpc as any)('get_fan_invite', { p_code: parseFanCode(code) });
+  const d = data as { athlete_first_name: string | null; joined: boolean } | null;
+  return { ok: !!d && !d.joined, athletes: d?.athlete_first_name ?? null };
 }
 
 export async function acceptFanInvite(code: string): Promise<{ athleteFirst: string | null; error: string | null }> {
@@ -61,6 +82,16 @@ export async function acceptFanInvite(code: string): Promise<{ athleteFirst: str
 export async function fetchFanFamily(): Promise<FanTournament[]> {
   const { data } = await (supabase.rpc as any)('my_fan_family');
   return (data as FanTournament[] | null) ?? [];
+}
+
+export interface FanGame {
+  id: string; name: string; date: string; time: string | null; venue_name: string; address: string;
+  event_type: 'game' | 'event' | 'practice'; opponent: string | null; home_away: 'home' | 'away' | null;
+  team_name: string; athlete_id: string; athlete_first_name: string;
+}
+export async function fetchFanGames(): Promise<FanGame[]> {
+  const { data } = await (supabase.rpc as any)('my_fan_games');
+  return (data as FanGame[] | null) ?? [];
 }
 
 export async function fetchFollowedAthletes(): Promise<{ athlete_id: string; first_name: string }[]> {

@@ -152,10 +152,10 @@ export default function ScheduleImportScreen() {
             <Pressable
               className="bg-pink-50 rounded-xl py-3 items-center active:opacity-80 border border-pink-200"
               style={{ width: '30%' }}
-              onPress={() => router.push('/guest/add')}
+              onPress={() => router.push('/fans')}
             >
               <Ionicons name="person-add-outline" size={20} color="#ec4899" />
-              <Text className="text-xs font-semibold text-pink-700 mt-1">Guest</Text>
+              <Text className="text-xs font-semibold text-pink-700 mt-1">Fan</Text>
             </Pressable>
           </View>
         </View>

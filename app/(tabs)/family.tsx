@@ -4,7 +4,6 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useSeasonStore } from '@/stores/useSeasonStore';
-import { useGuestStore } from '@/stores/useGuestStore';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { useAuth } from '@/providers/AuthProvider';
 import { useIconColors, CORAL } from '@/lib/colors';
@@ -64,7 +63,7 @@ function Row({ icon, color, title, subtitle, right, onPress, a11y, leading }: {
   );
 }
 
-/** Family tab: athletes, coaches, co-parents & guests, and family logins. */
+/** Family tab: athletes, coaches, co-parents & fans, and family logins. */
 export default function FamilyScreen() {
   const ic = useIconColors();
   const { user } = useAuth();
@@ -72,7 +71,6 @@ export default function FamilyScreen() {
   const athletes = useSeasonStore((s) => s.athletes);
   const seasons = useSeasonStore((s) => s.seasons);
   const adminConfig = useSeasonStore((s) => s.adminConfig);
-  const guests = useGuestStore((s) => s.guests);
 
   const { focus } = useLocalSearchParams<{ focus?: string }>();
   const scrollRef = useRef<ScrollView>(null);
@@ -185,14 +183,14 @@ export default function FamilyScreen() {
         </Section>
 
         {/* People */}
-        <Section title="Co-parents & guests">
-          <Row icon="people" color="#0d9488" title="Co-parents" subtitle="Share the family calendar and travel" onPress={() => router.push('/settings/invite-coparent')} />
+        <Section title="Co-parents & fans">
+          <Row icon="people" color="#0d9488" title="Co-parents" subtitle="Full or view-only access, including lessons and travel" onPress={() => router.push('/settings/invite-coparent')} />
           <Row
             icon="heart"
-            color="#7c3aed"
-            title="Guests"
-            subtitle={guests.length ? `${guests.length} guest${guests.length === 1 ? '' : 's'} · grandparents, family & friends` : 'Grandparents, family & friends'}
-            onPress={() => router.push('/guests')}
+            color="#DB2777"
+            title="Fans"
+            subtitle="Grandparents, family & friends follow tournaments and games"
+            onPress={() => router.push('/fans')}
           />
         </Section>
 

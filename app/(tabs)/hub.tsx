@@ -162,7 +162,7 @@ export default function HubScreen() {
           icon="add-circle"
           iconColor="#6A9E8A"
           title="Add Tournament & Travel Details"
-          subtitle="Add tournaments, hotels, flights, events, and guests"
+          subtitle="Add tournaments, hotels, flights and events"
           onPress={() => router.push('/settings/schedule-import')}
         />
 
@@ -225,15 +225,15 @@ export default function HubScreen() {
         {/* GUEST MANAGEMENT */}
         {/* ============================================================ */}
         <View className="mt-6">
-          <HubSectionHeader icon="people" title="Guests" iconColor={ic.muted} />
+          <HubSectionHeader icon="people" title="Fans" iconColor={ic.muted} />
         </View>
 
         <HubSettingsRow
           icon="people"
           iconColor="#6A9E8A"
-          title="Guest Management"
-          subtitle="Manage grandparents, family, and other guests"
-          onPress={() => router.push('/(tabs)/guests')}
+          title="Fans"
+          subtitle="Invite grandparents, family and friends to follow along"
+          onPress={() => router.push('/fans')}
         />
 
         {/* Logins moved to the Family tab (family) and athlete pages (1:1). */}

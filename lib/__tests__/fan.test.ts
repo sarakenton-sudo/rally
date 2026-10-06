@@ -11,6 +11,8 @@ describe('fan invites', () => {
     const m = fanInviteMessage('Grandma', 'Drue', 'AB23CD45');
     expect(m.startsWith('Hi Grandma!')).toBe(true);
     expect(m).toContain("Drue's volleyball season");
+    expect(m).toContain('enter code AB23CD45');
+    expect(m).toContain('https://apps.apple.com/');
     expect(m.endsWith('https://rally-hub.com/fan/AB23CD45')).toBe(true);
   });
 });

@@ -181,7 +181,7 @@ export default function EditAthleteScreen() {
               <Text className="text-sm font-bold text-red-700 dark:text-red-300">Delete {athlete.first_name}?</Text>
               <Text className="text-xs text-red-700/90 dark:text-red-300 mt-1.5 leading-5">
                 This removes {athlete.first_name} for everyone in your family: their teams, tournaments, hotels,
-                flights and tickets, their saved logins, guests tied to them, and any pending invites. It can't be undone.
+                flights and tickets, their saved logins and any pending invites. It can't be undone.
                 Coaches keep records of past lessons.
               </Text>
               <View className="flex-row mt-3" style={{ gap: 8 }}>

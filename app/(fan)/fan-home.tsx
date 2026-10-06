@@ -8,8 +8,12 @@ import { formatDateRange } from '@/lib/dates';
 import { TOURNAMENT_COLOR } from '@/lib/colors';
 import { openDirections } from '@/lib/maps';
 import {
-  fetchFanFamily, fetchFollowedAthletes, groupByMonth, acceptFanInvite, takeFanCode, type FanTournament,
+  fetchFanFamily, fetchFanGames, fetchFollowedAthletes, groupByMonth, acceptFanInvite, takeFanCode, type FanTournament, type FanGame,
 } from '@/lib/fan';
+import { gameTitle, formatGameTime, hasStreetAddress } from '@/lib/teamEvents';
+
+const GAME_COLOR = '#0f766e';
+type Item = { start_date: string; t?: FanTournament; g?: FanGame };
 
 function Action({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }) {
   return (
@@ -20,9 +24,10 @@ function Action({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap
   );
 }
 
-/** Fan home: every upcoming tournament for the athletes they follow, by month. */
+/** Fan home: upcoming tournaments and games for the athletes they follow, by month. */
 export default function FanHome() {
   const [rows, setRows] = useState<FanTournament[]>([]);
+  const [games, setGames] = useState<FanGame[]>([]);
   const [athletes, setAthletes] = useState<{ athlete_id: string; first_name: string }[]>([]);
   const [filter, setFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
@@ -37,8 +42,9 @@ export default function FanHome() {
       const { athleteFirst, error } = await acceptFanInvite(pending);
       if (error) showToast(error); else if (athleteFirst) showToast(`You're following ${athleteFirst}'s season`);
     }
-    const [t, a] = await Promise.all([fetchFanFamily(), fetchFollowedAthletes()]);
+    const [t, gm, a] = await Promise.all([fetchFanFamily(), fetchFanGames(), fetchFollowedAthletes()]);
     setRows(t);
+    setGames(gm);
     setAthletes(a);
     setLoading(false);
   }, []);
@@ -55,8 +61,12 @@ export default function FanHome() {
     load();
   };
 
-  const shown = filter === 'all' ? rows : rows.filter((r) => r.athlete_id === filter);
-  const months = groupByMonth(shown);
+  const pick = <T extends { athlete_id: string }>(xs: T[]) => (filter === 'all' ? xs : xs.filter((x) => x.athlete_id === filter));
+  const items: Item[] = [
+    ...pick(rows).map((t) => ({ start_date: t.start_date, t })),
+    ...pick(games).map((g) => ({ start_date: g.date, g })),
+  ];
+  const months = groupByMonth(items);
   const names = athletes.map((a) => a.first_name);
 
   return (
@@ -68,7 +78,7 @@ export default function FanHome() {
         <Text className="text-2xl font-bold text-bark dark:text-cream font-nunito-extrabold">
           {names.length ? `${names.join(' & ')}'s season` : 'Your season'}
         </Text>
-        <Text className="text-sm text-stone dark:text-parchment mt-1">Tournaments, locations, live streams and tickets.</Text>
+        <Text className="text-sm text-stone dark:text-parchment mt-1">Tournaments and games: locations, live streams and tickets.</Text>
 
         {athletes.length > 1 && (
           <View className="flex-row flex-wrap mt-3">
@@ -86,15 +96,32 @@ export default function FanHome() {
         {loading ? <ActivityIndicator color="#3B82B0" className="mt-10" /> : months.length === 0 ? (
           <View className="items-center mt-12 px-6">
             <Ionicons name="calendar-outline" size={40} color="#8FA8BF" />
-            <Text className="text-base font-bold text-bark dark:text-cream mt-3">No upcoming tournaments yet</Text>
+            <Text className="text-base font-bold text-bark dark:text-cream mt-3">Nothing coming up yet</Text>
             <Text className="text-sm text-stone dark:text-parchment text-center mt-1">
-              {athletes.length ? "When the family adds tournaments, they'll show up here." : 'Enter the fan code from your invite below to follow an athlete.'}
+              {athletes.length ? "When the family adds tournaments or games, they'll show up here." : 'Enter the fan code from your invite below to follow an athlete.'}
             </Text>
           </View>
         ) : months.map((m) => (
           <View key={m.month} className="mt-5">
             <Text className="text-xs font-bold uppercase tracking-wider text-stone mb-2 ml-1">{m.month}</Text>
-            {m.items.map((t) => {
+            {m.items.map(({ t, g }) => {
+              if (g) {
+                const d = new Date(`${g.date}T12:00:00`);
+                const time = formatGameTime(g.time);
+                return (
+                  <View key={`g-${g.id}`} className="bg-warm-white dark:bg-bark-light rounded-2xl p-4 mb-3 border border-parchment dark:border-rally-900" style={{ borderLeftWidth: 4, borderLeftColor: GAME_COLOR }}>
+                    <Text className="text-base font-bold text-bark dark:text-cream">{gameTitle(g)}</Text>
+                    <Text className="text-xs text-stone dark:text-parchment mt-0.5">
+                      {d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}{time ? ` · ${time}` : ''}{g.venue_name ? ` · ${g.venue_name}` : ''}{athletes.length > 1 ? ` · ${g.athlete_first_name}` : ''}
+                    </Text>
+                    <Text className="text-xs text-stone dark:text-parchment">{g.team_name}</Text>
+                    {hasStreetAddress(g.address) ? (
+                      <View className="flex-row flex-wrap"><Action icon="navigate" label="Directions" onPress={() => openDirections(g.address)} /></View>
+                    ) : null}
+                  </View>
+                );
+              }
+              if (!t) return null;
               const venue = t.venues?.find((v) => v.is_confirmed) ?? t.venues?.[0];
               const stream = t.streaming_links?.[0]?.url ?? t.default_stream_url;
               return (
@@ -114,7 +141,7 @@ export default function FanHome() {
                     </View>
                   ) : null}
                   <View className="flex-row flex-wrap">
-                    {venue?.address ? <Action icon="navigate" label="Directions" onPress={() => openDirections(venue.address)} /> : null}
+                    {hasStreetAddress(venue?.address) ? <Action icon="navigate" label="Directions" onPress={() => openDirections(venue!.address)} /> : null}
                     {stream ? <Action icon="videocam" label="Watch live" onPress={() => Linking.openURL(stream)} /> : null}
                     {t.ticket_link ? <Action icon="ticket" label="Tickets" onPress={() => Linking.openURL(t.ticket_link!)} /> : null}
                     {t.schedule_link ? <Action icon="list" label="Schedule" onPress={() => Linking.openURL(t.schedule_link!)} /> : null}
@@ -127,8 +154,8 @@ export default function FanHome() {
 
         {/* Follow another family */}
         <View className="mt-8 rounded-2xl p-4 bg-warm-white dark:bg-bark-light border border-parchment dark:border-rally-900">
-          <Text className="text-sm font-bold text-bark dark:text-cream">Have another fan code?</Text>
-          <Text className="text-xs text-stone dark:text-parchment mt-0.5">Paste the code or link from an invite to follow another athlete.</Text>
+          <Text className="text-sm font-bold text-bark dark:text-cream">{athletes.length ? 'Have another fan code?' : 'Enter your fan code'}</Text>
+          <Text className="text-xs text-stone dark:text-parchment mt-0.5">The 8 letters and numbers from your invite text (or paste the whole link).</Text>
           <View className="flex-row mt-2">
             <TextInput
               value={code}

@@ -972,8 +972,8 @@ export default function TournamentDetailScreen() {
             </>
           )}
 
-          {/* ── Guests (Pink) ── */}
-          <SectionHeader icon="people" title="Guests & fans" iconColor="#ec4899" />
+          {/* ── Fans (Pink) ── */}
+          <SectionHeader icon="people" title="Fans" iconColor="#ec4899" />
           <View className="rounded-xl overflow-hidden mb-3">
             <View className="h-1.5 bg-pink-400" />
             <View className="bg-pink-50 dark:bg-pink-900/10 px-3 py-3">

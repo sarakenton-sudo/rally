@@ -7,7 +7,8 @@ import { useAuth } from '@/providers/AuthProvider';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import type { AccountType } from '@/types/database';
 import { rememberCoachInvite } from '@/lib/coachInvites';
-import { rememberFanCode } from '@/lib/fan';
+import { rememberFanCode, checkFanCode } from '@/lib/fan';
+import { useLocalSearchParams } from 'expo-router';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { savePendingMarketing, MARKETING_CONSENT_LABEL } from '@/lib/marketing';
 
@@ -42,6 +43,14 @@ if (Platform.OS === 'web' && typeof window !== 'undefined') {
   if (fan) rememberFanCode(fan);
 }
 
+/** rally-hub.com/fan/CODE → /auth?signup=true&fan=CODE: start as a Fan with the code filled in. */
+function getInitialFanCode(): string {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    return (new URLSearchParams(window.location.search).get('fan') ?? '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8);
+  }
+  return '';
+}
+
 /** Homepage "Set up your coach page" links here with ?signup=true&role=coach. */
 function getInitialAccountType(): AccountType {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -60,7 +69,7 @@ export default function AuthScreen() {
   const handleAppleSignIn = async () => {
     setMessage(null);
     if (isSignUp) savePendingMarketing(marketing, 'signup_apple');
-    rememberTypedFanCode();
+    if (!(await fanCodeOk())) return;
     const { error } = await signInWithApple(isSignUp ? accountType : undefined);
     if (error) setMessage({ text: error, type: 'error' });
   };
@@ -72,10 +81,27 @@ export default function AuthScreen() {
   const [inviteCode, setInviteCode] = useState(getInitialInvite);
   const [marketing, setMarketing] = useState(true);
   const [hasInviteCode, setHasInviteCode] = useState(() => !!getInitialInvite());
-  const [hasFanCode, setHasFanCode] = useState(false);
-  const [fanCode, setFanCode] = useState('');
+  // Fans sign up with the code from their invite text (rally-hub.com/fan/CODE pre-fills it).
+  const [isFan, setIsFan] = useState(() => !!getInitialFanCode());
+  const [fanCode, setFanCode] = useState(getInitialFanCode);
+  const hasFanCode = isSignUp && isFan;
+  // In the app, the fan invite page passes ?fan=CODE as a route param.
+  const params = useLocalSearchParams<{ fan?: string }>();
+  useEffect(() => {
+    const c = String(params.fan ?? '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8);
+    if (c) { setIsFan(true); setFanCode(c); setIsSignUp(true); }
+  }, [params.fan]);
   // Accepted after sign-up (AuthProvider), which routes the new account to the fan view.
-  const rememberTypedFanCode = () => { if (isSignUp && hasFanCode && fanCode.trim()) rememberFanCode(fanCode.trim()); };
+  const rememberTypedFanCode = () => { if (hasFanCode && fanCode.trim()) rememberFanCode(fanCode.trim()); };
+  /** Fans: check the code before creating the account, so a typo gets a clear message. */
+  const fanCodeOk = async (): Promise<boolean> => {
+    if (!hasFanCode) return true;
+    if (!fanCode.trim()) { setMessage({ text: 'Enter the fan code from your invite text.', type: 'error' }); return false; }
+    const { ok } = await checkFanCode(fanCode);
+    if (!ok) { setMessage({ text: "That fan code isn't valid or was already used. Check the 8 letters and numbers in your invite, or ask the family for a new one.", type: 'error' }); return false; }
+    rememberTypedFanCode();
+    return true;
+  };
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -93,10 +119,10 @@ export default function AuthScreen() {
     try {
       if (isSignUp) {
         savePendingMarketing(marketing, 'signup_email'); // recorded once the new profile loads
-        rememberTypedFanCode();
-        const { error } = await signUp(email.trim(), password, accountType);
+        if (!(await fanCodeOk())) { setLoading(false); return; }
+        const { error } = await signUp(email.trim(), password, accountType, hasFanCode ? fanCode.trim() : undefined);
         if (error) { setLoading(false); setMessage({ text: `Sign up error: ${error}`, type: 'error' }); return; }
-        if (hasInviteCode && inviteCode.trim()) {
+        if (hasInviteCode && !hasFanCode && inviteCode.trim()) {
           const { error: inviteError } = await acceptInvite(inviteCode.trim());
           if (inviteError) { setLoading(false); setMessage({ text: `Account created but invite failed: ${inviteError}`, type: 'error' }); return; }
         }
@@ -120,7 +146,7 @@ export default function AuthScreen() {
     setGoogleLoading(true);
     // Google can't carry the Coach choice itself — pass it so it's applied after sign-in.
     if (isSignUp) savePendingMarketing(marketing, 'signup_google');
-    rememberTypedFanCode();
+    if (!(await fanCodeOk())) { setGoogleLoading(false); return; }
     const { error } = await signInWithGoogle(isSignUp ? accountType : undefined);
     setGoogleLoading(false);
     if (error) setMessage({ text: error, type: 'error' });
@@ -195,22 +221,28 @@ export default function AuthScreen() {
             <View style={{ marginBottom: 16 }}>
               <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', fontFamily: 'NunitoSans-SemiBold', marginBottom: 8 }}>I am a...</Text>
               <View style={{ flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: 4 }}>
-                {(['parent', 'coach'] as const).map((t) => {
-                  const on = accountType === t;
+                {(['parent', 'fan', 'coach'] as const).map((t) => {
+                  const on = t === 'fan' ? isFan : !isFan && accountType === t;
                   return (
                     <Pressable
                       key={t}
-                      onPress={() => setAccountType(t)}
+                      onPress={() => { setIsFan(t === 'fan'); setAccountType(t === 'coach' ? 'coach' : 'parent'); }}
+                      accessibilityLabel={t === 'fan' ? 'Fan' : t === 'parent' ? 'Parent' : 'Coach'}
                       style={{ flex: 1, paddingVertical: 11, borderRadius: 9, alignItems: 'center', backgroundColor: on ? '#3B82B0' : 'transparent' }}
                     >
                       <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: on ? '#FEFEFE' : 'rgba(255,255,255,0.6)' }}>
-                        {t === 'parent' ? 'Parent / Guardian' : 'Coach'}
+                        {t === 'parent' ? 'Parent' : t === 'fan' ? 'Fan' : 'Coach'}
                       </Text>
                     </Pressable>
                   );
                 })}
               </View>
-              {accountType === 'coach' && (
+              {isFan && (
+                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', fontFamily: 'NunitoSans-Regular', marginTop: 8 }}>
+                  Following a grandkid, niece or friend? Use the fan code from the family's invite text.
+                </Text>
+              )}
+              {!isFan && accountType === 'coach' && (
                 <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', fontFamily: 'NunitoSans-Regular', marginTop: 8 }}>
                   Set up your private-lesson business — listing, availability, and bookings.
                 </Text>
@@ -319,13 +351,15 @@ export default function AuthScreen() {
             </Text>
           )}
 
-          {/* Invite code toggle */}
-          <Pressable className="mb-3 active:opacity-70" onPress={() => setHasInviteCode(!hasInviteCode)}>
-            <Text style={{ fontSize: 13, color: '#7DBDD9', fontFamily: 'NunitoSans-SemiBold' }}>
-              {hasInviteCode ? 'Remove invite code' : 'Have an invite code?'}
-            </Text>
-          </Pressable>
-          {hasInviteCode && (
+          {/* Co-parent / athlete invite code (not for fans) */}
+          {!hasFanCode && (
+            <Pressable className="mb-3 active:opacity-70" onPress={() => setHasInviteCode(!hasInviteCode)}>
+              <Text style={{ fontSize: 13, color: '#7DBDD9', fontFamily: 'NunitoSans-SemiBold' }}>
+                {hasInviteCode ? 'Remove invite code' : 'Joining as a co-parent? Enter your invite code'}
+              </Text>
+            </Pressable>
+          )}
+          {hasInviteCode && !hasFanCode && (
             <FormField
               label="Invite Code"
               value={inviteCode}
@@ -340,29 +374,20 @@ export default function AuthScreen() {
             />
           )}
 
-          {/* Fan code (sign-up): grandparents/fans who installed the app before opening their link */}
-          {isSignUp && (
-            <>
-              <Pressable className="mb-3 active:opacity-70" onPress={() => setHasFanCode(!hasFanCode)} accessibilityLabel="Have a fan code?">
-                <Text style={{ fontSize: 13, color: '#7DBDD9', fontFamily: 'NunitoSans-SemiBold' }}>
-                  {hasFanCode ? 'Remove fan code' : 'Following a family? Enter your fan code'}
-                </Text>
-              </Pressable>
-              {hasFanCode && (
-                <FormField
-                  label="Fan Code"
-                  value={fanCode}
-                  onChangeText={(t) => setFanCode(t.replace(/[^a-zA-Z0-9]/g, '').toUpperCase())}
-                  placeholder="e.g. 6C2DR3TA"
-                  autoCapitalize="characters"
-                  autoCorrect={false}
-                  spellCheck={false}
-                  autoComplete="off"
-                  keyboardType="ascii-capable"
-                  darkBg
-                />
-              )}
-            </>
+          {/* Fan code (sign-up as Fan): required, checked before the account is created */}
+          {hasFanCode && (
+            <FormField
+              label="Fan Code"
+              value={fanCode}
+              onChangeText={(t) => setFanCode(t.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8))}
+              placeholder="8 letters and numbers, e.g. 6C2DR3TA"
+              autoCapitalize="characters"
+              autoCorrect={false}
+              spellCheck={false}
+              autoComplete="off"
+              keyboardType="ascii-capable"
+              darkBg
+            />
           )}
 
           {/* Forgot password (sign-in only) */}

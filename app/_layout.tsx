@@ -151,7 +151,7 @@ function RootLayoutNav() {
       // screens (auth/onboarding/tabs), never out of legit stack routes (settings).
       if (inAuthFlow || inOnboarding || segments[0] === '(tabs)') target = '/today';
     } else if (isFan) {
-      // Fan (guest with the app): read-only family view.
+      // Fan: read-only family view (tournaments and games).
       if (inAuthFlow || inOnboarding || segments[0] === '(tabs)' || segments[0] === '(coach)') target = '/fan-home';
     } else if (isCoParent) {
       if (inAuthFlow || inOnboarding) target = '/(tabs)';
@@ -225,10 +225,6 @@ function RootLayoutNav() {
         <Stack.Screen
           name="athlete/[id]"
           options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="guest/add"
-          options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
           name="import/paste"

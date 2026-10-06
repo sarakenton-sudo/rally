@@ -181,7 +181,7 @@ export default function HomeScreen() {
     for (const t of shareSoon) {
       cards.push({
         priority: 2,
-        text: `Share Tourney Details with Guests`,
+        text: `Send your fans a game-day update`,
         subtitle: t.name,
         icon: 'share-social',
         color: '#3B82B0',

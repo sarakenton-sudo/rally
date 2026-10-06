@@ -191,6 +191,15 @@ test('referral box copies an invite instead of texting', async ({ page, browserN
 
 test.describe('signed out', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
+  test('sign up as a Fan with a wrong code is refused before the account is made', async ({ page }) => {
+    await page.goto('/auth?signup=true');
+    await page.getByLabel('Fan', { exact: true }).locator('visible=true').first().click();
+    await page.getByPlaceholder(/8 letters and numbers/).fill('RALLY');
+    await page.getByPlaceholder('you@example.com').fill(`qa.fan.${Date.now()}@example.com`);
+    await page.getByPlaceholder('••••••••').fill('Test123!x');
+    await page.getByText(/^Create Account$|^Sign Up$/).locator('visible=true').first().click();
+    await expect(page.getByText(/isn't valid or was already used/)).toBeVisible();
+  });
   test('Google sign-in asks which account', async ({ page }) => {
     await page.goto('/auth');
     const req = page.waitForRequest((r) => r.url().includes('accounts.google.com'), { timeout: 20_000 });
@@ -201,6 +210,21 @@ test.describe('signed out', () => {
 
 test.describe('writes: games, lessons, seasons', () => {
   test.skip(!writesOn, 'Set QA_WRITES=1 to run tests that add and remove data');
+
+  test('Fans: invite copies a text with a one-time code; remove', async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'clipboard permission is Chromium-only');
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    const db = await parentDb();
+    await page.goto('/fans');
+    await page.getByLabel("Fan's name").fill('QA test fan');
+    await page.getByLabel('Copy invite text').click();
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toMatch(/enter code [A-Z0-9]{8}/);
+    const text = await page.evaluate(() => navigator.clipboard.readText());
+    expect(text).toContain('Hi QA test fan!');
+    expect(text).toContain('apps.apple.com');
+    await expect(page.getByText('QA test fan').first()).toBeVisible();
+    await db.from('fans').delete().eq('name', 'QA test fan');
+  });
 
   test('game detail, Directions only with an address, delete; swipe delete on Schedule', async ({ page }) => {
     const db = await parentDb();

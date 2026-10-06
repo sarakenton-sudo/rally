@@ -18,7 +18,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, accountType?: AccountType) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, accountType?: AccountType, fanCode?: string) => Promise<{ error: string | null }>;
   signInWithGoogle: (accountType?: AccountType) => Promise<{ error: string | null }>;
   signInWithApple: (accountType?: AccountType) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -97,7 +97,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearPendingAccountType();
     // Signed up from a fan invite (rally-hub.com/fan/CODE): link it before routing,
     // so a new fan lands in the fan view instead of parent onboarding.
-    const fanCode = takeFanCode();
+    const metaCode = (profile.role as string) !== 'fan' ? ((await supabase.auth.getSession()).data.session?.user.user_metadata?.fan_code as string | undefined) : undefined;
+    const fanCode = takeFanCode() ?? metaCode ?? null;
     if (fanCode) {
       const r = await acceptFanInvite(fanCode);
       if (!r.error) {
@@ -181,11 +182,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   };
 
-  const signUp = async (email: string, password: string, accountType: AccountType = 'parent') => {
+  const signUp = async (email: string, password: string, accountType: AccountType = 'parent', fanCode?: string) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { account_type: accountType } },
+      // A fan's code rides on the account, so it's applied at first sign-in
+      // even after the email confirmation round-trip.
+      options: { data: { account_type: accountType, ...(fanCode ? { fan_code: fanCode } : {}) } },
     });
     return { error: error?.message ?? null };
   };

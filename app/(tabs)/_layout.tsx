@@ -95,7 +95,6 @@ export default function TabLayout() {
         <Tabs.Screen name="travel" options={{ title: 'Travel', tabBarIcon: icon('airplane') }} />
         <Tabs.Screen name="family" options={{ title: 'Family', tabBarIcon: icon('people') }} />
         <Tabs.Screen name="athlete" options={{ title: 'Athletes', ...hidden }} />
-        <Tabs.Screen name="guests" options={{ title: 'Guests', ...hidden }} />
         <Tabs.Screen name="hub" options={{ title: 'Settings', ...hidden }} />
       </Tabs>
       <QuickAddSheet visible={addOpen} onClose={() => setAddOpen(false)} />

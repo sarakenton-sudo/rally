@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 /**
  * Fan app (00086): grandparents, family and friends a parent invited from
- * Guests. Read-only — the season's tournaments, locations, streams, tickets.
+ * Fans. Read-only — the season's tournaments, locations, streams, tickets.
  */
 export default function FanTabsLayout() {
   return (

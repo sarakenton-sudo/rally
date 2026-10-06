@@ -17,8 +17,8 @@ const FEATURES = [
   },
   {
     icon: 'people' as const,
-    title: 'Guest Manager',
-    desc: 'Invite grandparents and family, track RSVPs, and share a read-only view — no app needed.',
+    title: 'Fans',
+    desc: 'Grandparents, family and friends follow tournaments and games in the free app, with game-day alerts.',
   },
   {
     icon: 'mail' as const,
@@ -69,7 +69,7 @@ export default function LandingScreen() {
             Your volleyball season,{'\n'}sorted.
           </Text>
           <Text className="text-base text-stone dark:text-parchment text-center mt-4 max-w-md">
-            RALLY is the family hub for travel volleyball. Tournaments, hotels, flights, guests, streaming — everything in one place so you can focus on the game.
+            RALLY is the family hub for travel volleyball. Tournaments, hotels, flights, fans, streaming — everything in one place so you can focus on the game.
           </Text>
 
           {/* CTA buttons */}

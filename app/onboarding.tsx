@@ -355,9 +355,7 @@ export default function OnboardingScreen() {
           venues: t.venue_name ? [{ label: t.venue_name, address: t.venue_address || '', is_confirmed: false }] : [],
         }));
 
-        const guestPayload = guests.filter((g) => g.name.trim()).map((g) => ({
-          name: g.name.trim(), relationship: g.relation, phone: g.phone.trim() || null,
-        }));
+        const guestPayload: never[] = []; // fans are invited from Family → Fans after setup
 
         const { data: rpcResult, error: rpcError } = await supabase.rpc('setup_onboarding', {
           p_athlete_name: [athleteFirstName.trim(), athleteLastName.trim()].filter(Boolean).join(' '),
@@ -1107,70 +1105,36 @@ export default function OnboardingScreen() {
           </View>
         )}
 
-        {/* ========== Step 6: Invite Guests ========== */}
+        {/* ========== Step 6: Fans ========== */}
         {step === 6 && (
           <View className="flex-1 px-6 pt-4">
-            <ScrollView className="flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              <StepHeader icon="heart" title="Invite Guests" subtitle="Keep family in the loop" />
-
-              <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-Regular', color: '#4A6E8A', marginBottom: 16, lineHeight: 20 }}>
-                Add people who need regular updates — grandparents, extended family, anyone who wants to know when and where the next tournament is.
+            <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+              <StepHeader icon="heart" title="Fans" subtitle="Grandparents, family & friends" />
+              <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Regular', color: '#4A6E8A', marginBottom: 16, lineHeight: 21 }}>
+                Fans follow your athletes' tournaments and games in the free RallyHUB app, with alerts on game day. They don't see lessons, travel or logins.
               </Text>
-
-              {guests.map((guest, i) => (
-                <View key={i} style={{ backgroundColor: '#FEFEFE', borderWidth: 1.5, borderColor: '#D8E2EC', borderRadius: 20, padding: 16, marginBottom: 12 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-Bold', color: '#4A6E8A', letterSpacing: 1, textTransform: 'uppercase' }}>Guest {i + 1}</Text>
-                    {guests.length > 1 && (
-                      <Pressable onPress={() => setGuests(guests.filter((_, j) => j !== i))} className="active:opacity-70">
-                        <Ionicons name="close-circle" size={20} color="#8FA8BF" />
-                      </Pressable>
-                    )}
+              {[
+                ['person-add', 'After setup, go to Family → Fans and add their name.'],
+                ['copy', "We copy a text with their own code. Send it from Messages."],
+                ['phone-portrait', 'They get the app, sign up as a Fan and enter the code.'],
+              ].map(([icon, text]) => (
+                <View key={text} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                  <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#FCE7F3', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                    <Ionicons name={icon as any} size={17} color="#DB2777" />
                   </View>
-
-                  <TextInput value={guest.name} onChangeText={(v) => { const u = [...guests]; u[i] = { ...u[i], name: v }; setGuests(u); }}
-                    placeholder="Name (e.g. Grandma Sue)" placeholderTextColor="#8FA8BF" style={{ ...INPUT_STYLE, marginBottom: 8 }} />
-
-                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-                    {RELATIONSHIP_OPTIONS.map((rel) => (
-                      <Pressable key={rel} style={{
-                        paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10,
-                        backgroundColor: guest.relation === rel ? 'rgba(59,130,176,0.1)' : 'transparent',
-                        borderWidth: 1.5, borderColor: guest.relation === rel ? '#3B82B0' : '#D8E2EC',
-                      }} onPress={() => { const u = [...guests]; u[i] = { ...u[i], relation: rel }; setGuests(u); }}>
-                        <Text style={{ fontSize: 12, fontFamily: 'NunitoSans-SemiBold', color: guest.relation === rel ? '#3B82B0' : '#8FA8BF' }}>{rel}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-
-                  <TextInput value={guest.phone} onChangeText={(v) => { const u = [...guests]; u[i] = { ...u[i], phone: v }; setGuests(u); }}
-                    placeholder="Phone number (required for SMS updates)" placeholderTextColor="#8FA8BF" keyboardType="phone-pad"
-                    style={{ ...INPUT_STYLE, borderColor: guest.name.trim() && !guest.phone.trim() ? '#ef4444' : '#D8E2EC' }} />
-                  {guest.name.trim() && !guest.phone.trim() && (
-                    <Text style={{ fontSize: 11, fontFamily: 'NunitoSans-SemiBold', color: '#fca5a5', marginTop: 4 }}>Phone required to send updates</Text>
-                  )}
+                  <Text style={{ flex: 1, fontSize: 14, fontFamily: 'NunitoSans-SemiBold', color: '#1E3A5F' }}>{text}</Text>
                 </View>
               ))}
-
-              <Pressable
-                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#D8E2EC', borderRadius: 20, marginBottom: 16 }}
-                className="active:opacity-70"
-                onPress={addGuest}
-              >
-                <Ionicons name="add-circle" size={20} color="#3B82B0" />
-                <Text style={{ fontSize: 13, fontFamily: 'NunitoSans-SemiBold', color: '#4A6E8A' }}>Add another guest</Text>
-              </Pressable>
             </ScrollView>
 
             <View style={{ marginTop: 'auto', paddingBottom: 16, gap: 8 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16 }}>
-                <DashboardButton onPress={() => { if (validateGuests()) handleFinish(); }} saving={saving} />
-                <SkipButton onPress={() => { setGuests([{ name: '', relation: 'Grandparent', phone: '' }]); goTo(7); }} />
+                <DashboardButton onPress={handleFinish} saving={saving} />
               </View>
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <BackButton onPress={() => goTo(5)} />
                 <View style={{ flex: 1 }}>
-                  <ContinueButton onPress={() => { if (validateGuests()) goTo(7); }} />
+                  <ContinueButton onPress={() => goTo(7)} />
                 </View>
               </View>
             </View>

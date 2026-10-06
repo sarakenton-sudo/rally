@@ -1,24 +1,24 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { View, Text, Pressable, TextInput, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useGuestStore } from '@/stores/useGuestStore';
+import { router, useFocusEffect } from 'expo-router';
+import { fetchFans } from '@/lib/fan';
 import { supabase } from '@/lib/supabase';
 import { showToast } from '@/components/Toast';
 import { notifySuccess } from '@/lib/haptics';
 import type { Tournament } from '@/types/database';
-import type { GuestWithFan } from '@/components/GuestCard';
 
 /**
- * Tournament page → Guests. Guests follow the whole family in the free
+ * Tournament page → Fans. Fans follow the whole family in the free
  * RallyHUB app, so there's nothing to set up per tournament: they see it
  * automatically and get pushes on game day, when the stream goes up, and
  * when new tournaments are added. The parent can also send a quick update.
  */
 export default function TournamentGuestList({ tournament }: { tournament: Tournament }) {
-  const guests = useGuestStore((s) => s.guests) as GuestWithFan[];
-  const following = guests.filter((g) => g.invite_status === 'joined').length;
-  const notYet = guests.length - following;
+  const [fans, setFans] = useState<{ fan_user_id: string | null }[]>([]);
+  useFocusEffect(useCallback(() => { fetchFans().then(setFans); }, []));
+  const following = fans.filter((f) => f.fan_user_id).length;
+  const notYet = fans.length - following;
   const [update, setUpdate] = useState('');
   const [sending, setSending] = useState(false);
   const [sentNote, setSentNote] = useState<string | null>(null);
@@ -33,18 +33,18 @@ export default function TournamentGuestList({ tournament }: { tournament: Tourna
     setSending(false);
     notifySuccess();
     setUpdate('');
-    const fans = (res.data as any)?.fans ?? data.fans ?? 0;
-    setSentNote(fans ? `Sent to ${fans} guest${fans === 1 ? '' : 's'}.` : 'Posted. Guests see it once they join the app.');
+    const n = (res.data as any)?.fans ?? data.fans ?? 0;
+    setSentNote(n ? `Sent to ${n} fan${n === 1 ? '' : 's'}.` : 'Posted. Fans see it once they join the app.');
   };
 
   return (
     <View>
-      <Pressable onPress={() => router.push('/guests')} className="flex-row items-center active:opacity-70" accessibilityLabel="Manage guests">
+      <Pressable onPress={() => router.push('/fans')} className="flex-row items-center active:opacity-70" accessibilityLabel="Manage fans">
         <Ionicons name={following ? 'checkmark-circle' : 'people-outline'} size={16} color={following ? '#15803d' : '#ec4899'} />
         <Text className="text-sm font-semibold text-bark dark:text-cream ml-1.5 flex-1">
-          {following ? `${following} guest${following === 1 ? '' : 's'} following on the app` : 'No guests on the app yet'}
+          {following ? `${following} fan${following === 1 ? '' : 's'} following on the app` : 'No fans on the app yet'}
         </Text>
-        <Text className="text-xs font-semibold text-pink-700 dark:text-pink-300">{notYet > 0 ? `Invite ${notYet} more ›` : guests.length ? 'Guests ›' : 'Invite guests ›'}</Text>
+        <Text className="text-xs font-semibold text-pink-700 dark:text-pink-300">{notYet > 0 ? `${notYet} invited ›` : fans.length ? 'Fans ›' : 'Invite fans ›'}</Text>
       </Pressable>
       <Text className="text-xs text-stone dark:text-parchment mt-1 mb-3 leading-4">
         They see this tournament automatically and get a push on game day, when the stream is up, and for anything you send below.
@@ -63,7 +63,7 @@ export default function TournamentGuestList({ tournament }: { tournament: Tourna
           accessibilityLabel="Update for guests"
         />
         <View className="flex-row items-center mt-2">
-          <Text className="text-[11px] text-stone flex-1">{sentNote ?? 'Free push to everyone following.'}</Text>
+          <Text className="text-[11px] text-stone flex-1">{sentNote ?? 'Free push to every fan following.'}</Text>
           <Pressable onPress={sendUpdate} disabled={sending || !update.trim()} className="rounded-lg px-3 py-2 active:opacity-80" style={{ backgroundColor: update.trim() ? '#ec4899' : '#f9c6dd' }} accessibilityLabel="Send update">
             {sending ? <ActivityIndicator size="small" color="#fff" /> : <Text className="text-xs font-bold text-white">Send update</Text>}
           </Pressable>
