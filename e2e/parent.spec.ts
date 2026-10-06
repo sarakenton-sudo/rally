@@ -183,7 +183,7 @@ test('tournament Guests card: app followers + update box, no SMS', async ({ page
 test('referral box copies an invite instead of texting', async ({ page, browserName }) => {
   test.skip(browserName !== 'chromium', 'clipboard permission is Chromium-only');
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
-  await page.goto('/guests');
+  await page.goto('/family');
   await page.getByText('Copy invite to text').locator('visible=true').first().click();
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain('RallyHUB');
   await expect(page.getByPlaceholder('Email or phone number')).toHaveCount(0);
