@@ -104,6 +104,15 @@ export default function FanHome() {
                     {formatDateRange(t.start_date, t.end_date)} · {venue?.label || t.location_city}{athletes.length > 1 ? ` · ${t.athlete_first_name}` : ''}
                   </Text>
                   <Text className="text-xs text-stone dark:text-parchment">{t.team_name}</Text>
+                  {t.latest_update ? (
+                    <View className="flex-row items-start rounded-lg px-2.5 py-2 mt-2" style={{ backgroundColor: '#FFF1EC' }}>
+                      <Ionicons name="megaphone-outline" size={13} color="#E85F3D" style={{ marginTop: 1 }} />
+                      <Text className="text-xs ml-1.5 flex-1" style={{ color: '#7a2e1a' }}>
+                        {t.latest_update}
+                        {t.latest_update_at ? <Text style={{ color: '#a5644f' }}>{`  ·  ${new Date(t.latest_update_at).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' })}`}</Text> : null}
+                      </Text>
+                    </View>
+                  ) : null}
                   <View className="flex-row flex-wrap">
                     {venue?.address ? <Action icon="navigate" label="Directions" onPress={() => openDirections(venue.address)} /> : null}
                     {stream ? <Action icon="videocam" label="Watch live" onPress={() => Linking.openURL(stream)} /> : null}

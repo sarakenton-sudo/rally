@@ -1,3 +1,4 @@
+import { inviteGuestToApp } from '@/lib/fanInvite';
 import { useState } from 'react';
 import { View, Text, FlatList, Pressable, Platform, Share } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -24,18 +25,8 @@ export default function GuestsScreen() {
   // Guests become fans in the app (00086): share the link; email it too if we have an address.
   const invite = async (g: GuestWithFan) => {
     setInviting(g.id);
-    const { code, error } = await createFanInvite(g.id);
+    await inviteGuestToApp(g, athletes.find((a) => a.id === g.athlete_id)?.first_name ?? 'our athlete');
     setInviting(null);
-    if (error || !code) { showToast("Couldn't create the invite. Try again."); return; }
-    const athlete = athletes.find((a) => a.id === g.athlete_id)?.first_name ?? 'our athlete';
-    const message = fanInviteMessage(g.name.trim().split(' ')[0], athlete, code);
-    if (g.email) emailFanInvite(g.id);
-    if (Platform.OS === 'web') {
-      await Clipboard.setStringAsync(message);
-      showToast(g.email ? `Invite emailed to ${g.email} and copied` : 'Invite copied — paste it into a text');
-    } else {
-      await Share.share({ message });
-    }
     refresh();
   };
 

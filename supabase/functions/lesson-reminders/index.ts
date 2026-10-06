@@ -17,6 +17,7 @@ import {
   settingOn, athleteReminderAction, athleteDayBeforeText, weekAheadDue, tomorrowScheduleDue, tomorrowYmd,
   tomorrowScheduleText, weekAheadText, scheduleLine, type SlotSummary,
 } from '../_shared/reminders.ts';
+import { gameDayDue, gameDayText, streamDue, streamText, newTournamentsText, dayNumber } from '../_shared/fanAlerts.ts';
 import { renderNotification, emailHtml, sendEmail, type Fallback, type Vars } from '../_shared/templates.ts';
 
 const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? '';
@@ -98,6 +99,57 @@ async function coachSettings(coachIds: string[]): Promise<Map<string, CoachSetti
   if (!coachIds.length) return new Map();
   const { data } = await db.from('coach_notification_settings').select('coach_id, self, clients').in('coach_id', coachIds);
   return new Map(((data ?? []) as any[]).map((r) => [r.coach_id, { self: r.self, clients: r.clients }]));
+}
+
+// ── Guests on the app (fans): game day, live stream, new tournaments ──
+async function fanAlerts(now: Date, pushes: Push[]) {
+  const out = { fanGameDay: 0, fanStream: 0, fanNew: 0 };
+  const { ymd: today, hour } = localParts(now, DEFAULT_TZ);
+  const fansOf = async (rpc: string, args: Record<string, string>) =>
+    (((await db.rpc(rpc, args)).data as string[] | null) ?? []).filter(Boolean);
+  const cols = 'id, name, start_date, end_date, venues, streaming_links, created_at, fan_gameday_sent_on, fan_stream_sent_url, fan_new_sent_at, seasons!inner(athlete_id, default_stream_url, athletes(first_name))';
+
+  const { data: live } = await db.from('tournaments').select(cols).lte('start_date', today).gte('end_date', today).limit(500);
+  for (const t of (live ?? []) as any[]) {
+    const athlete = t.seasons?.athletes?.first_name ?? 'Your athlete';
+    const link = t.streaming_links?.[0];
+    const stream = link?.url ?? t.seasons?.default_stream_url ?? null;
+    const label = link?.label || (stream ? 'the stream' : null);
+    const data = { type: 'fan_update', tournamentId: t.id };
+    if (gameDayDue(today, hour, t)) {
+      const { data: claimed } = await db.from('tournaments').update({ fan_gameday_sent_on: today, fan_stream_sent_url: stream })
+        .eq('id', t.id).or(`fan_gameday_sent_on.is.null,fan_gameday_sent_on.neq.${today}`).select('id');
+      if (!claimed?.length) continue;
+      const venue = (t.venues ?? []).find((v: any) => v.is_confirmed) ?? t.venues?.[0];
+      const fb = gameDayText({ athlete, name: t.name, dayNum: dayNumber(t.start_date, today), days: dayNumber(t.start_date, t.end_date || t.start_date), venue: venue?.label, stream: label });
+      for (const u of await fansOf('tournament_fan_user_ids', { p_tournament_id: t.id })) pushes.push({ userId: u, ...fb, data });
+      out.fanGameDay++;
+    } else if (streamDue(today, t, stream)) {
+      const q = db.from('tournaments').update({ fan_stream_sent_url: stream }).eq('id', t.id);
+      const { data: claimed } = await (t.fan_stream_sent_url == null ? q.is('fan_stream_sent_url', null) : q.eq('fan_stream_sent_url', t.fan_stream_sent_url)).select('id');
+      if (!claimed?.length) continue;
+      const fb = streamText({ athlete, name: t.name, label: label! });
+      for (const u of await fansOf('tournament_fan_user_ids', { p_tournament_id: t.id })) pushes.push({ userId: u, ...fb, data });
+      out.fanStream++;
+    }
+  }
+
+  // New tournaments: wait 30 min so an import or a few quick adds become one push per athlete.
+  const { data: added } = await db.from('tournaments').select(cols).is('fan_new_sent_at', null)
+    .lt('created_at', new Date(now.getTime() - 0.5 * H).toISOString()).limit(500);
+  const byAthlete = new Map<string, any[]>();
+  for (const t of (added ?? []) as any[]) byAthlete.set(t.seasons.athlete_id, [...(byAthlete.get(t.seasons.athlete_id) ?? []), t]);
+  for (const [athleteId, ts] of byAthlete) {
+    const { data: claimed } = await db.from('tournaments').update({ fan_new_sent_at: now.toISOString() })
+      .in('id', ts.map((t) => t.id)).is('fan_new_sent_at', null).select('id, name, start_date, end_date');
+    const upcoming = ((claimed ?? []) as any[]).filter((t) => (t.end_date || t.start_date) >= today);
+    if (!upcoming.length) continue;
+    const fb = newTournamentsText(ts[0].seasons?.athletes?.first_name ?? 'your athlete', upcoming);
+    const data = upcoming.length === 1 ? { type: 'fan_update', tournamentId: upcoming[0].id } : { type: 'fan_update' };
+    for (const u of await fansOf('athlete_fan_user_ids', { p_athlete_id: athleteId })) pushes.push({ userId: u, ...fb, data });
+    out.fanNew++;
+  }
+  return out;
 }
 
 serve(async (req: Request) => {
@@ -322,6 +374,7 @@ serve(async (req: Request) => {
     }
   }
 
+  const fans = await fanAlerts(now, pushes);
   const delivered = await sendPushes(pushes);
-  return json({ ...counts, pushes: pushes.length, delivered });
+  return json({ ...counts, ...fans, pushes: pushes.length, delivered });
 });

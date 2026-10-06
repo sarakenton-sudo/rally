@@ -24,6 +24,8 @@ export interface FanTournament {
   streaming_links: { label: string; url: string }[] | null;
   ticket_link: string | null; schedule_link: string | null; default_stream_url: string | null;
   team_name: string; athlete_id: string; athlete_first_name: string;
+  /** Latest update the parent sent guests (push), for anyone who missed it. */
+  latest_update?: string | null; latest_update_at?: string | null;
 }
 
 /** Group a fan's tournaments by month label ("November 2026"), in date order. */
