@@ -83,7 +83,7 @@ export default function ReferFriend() {
             <Ionicons name="heart" size={18} color="#DB2777" />
           </View>
           <View className="flex-1">
-            <Text className="text-sm font-bold text-bark dark:text-cream">Know someone who'd love RALLY?</Text>
+            <Text className="text-sm font-bold text-bark dark:text-cream">Know someone who'd love RallyHUB?</Text>
             <Text className="text-xs text-stone dark:text-parchment mt-0.5">Send them an invite — email or phone</Text>
           </View>
         </View>
