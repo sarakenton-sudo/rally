@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { PAYMENTS_ENABLED } from '@/lib/config';
 import { SafeAreaView } from '@/components/SafeAreaView';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -147,7 +148,7 @@ export default function BookScreen() {
     if (!allergies.trim()) return fail('Allergies are required — list any, or type "None".');
     if (!ecName.trim()) return fail('Add an emergency contact name.');
     if (ecPhone.replace(/\D/g, '').length < 10) return fail("Add the emergency contact's phone number (10 digits).");
-    if (coachPay?.enabled && !pm) return fail("Add a card or bank account. You won't be charged until the coach confirms.");
+    if ((PAYMENTS_ENABLED && coachPay?.enabled) && !pm) return fail("Add a card or bank account. You won't be charged until the coach confirms.");
     if (!accepted) {
       if (!agreeTerms || !agreeRelease) return fail('Accept the lesson terms and the release to continue.');
       if (signer.trim().length < 2) return fail('Type your full name to sign.');

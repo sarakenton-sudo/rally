@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Image, ActivityIndicator, Platform, Linking } from 'react-native';
+import { PAYMENTS_ENABLED } from '@/lib/config';
 import { APP_STORE_URL } from '@/lib/fan';
 import { SafeAreaView } from '@/components/SafeAreaView';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -213,7 +214,7 @@ export default function PublicBookingPage() {
         ))}
 
         <Text style={{ color: muted, fontSize: 12, textAlign: 'center', marginTop: 16 }}>
-          {c.accepts_payments ? 'Pay securely in the app · ' : ''}Booked through <Text style={{ fontWeight: '800', color: ink }}>RallyHUB</Text>
+          {PAYMENTS_ENABLED && c.accepts_payments ? 'Pay securely in the app · ' : ''}Booked through <Text style={{ fontWeight: '800', color: ink }}>RallyHUB</Text>
         </Text>
         <Text style={{ color: muted, fontSize: 12, textAlign: 'center', marginTop: 6 }}>
           <Text onPress={() => Linking.openURL('https://rally-hub.com/terms')} style={{ textDecorationLine: 'underline' }}>Terms of Use</Text>

@@ -1,4 +1,5 @@
 import { View, Text, Pressable } from 'react-native';
+import { PAYMENTS_ENABLED } from '@/lib/config';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { tapLight } from '@/lib/haptics';
@@ -19,7 +20,7 @@ export default function SetupChecklist({ coach, typeCount, slotCount, policies }
     { done: typeCount > 0, label: 'Session types and prices', path: '/coach/session-types' },
     { done: slotCount > 0, label: 'Your first week of availability', path: '/coach/availability-add' },
     { done: !!(policies?.reviewed && policies?.platform_agreement_accepted_at), label: 'Terms, release & platform agreement', path: '/coach/policies' },
-    { done: !!c.stripe_charges_enabled, label: 'Get paid in the app (Stripe)', path: '/coach/payments' },
+    ...(PAYMENTS_ENABLED ? [{ done: !!c.stripe_charges_enabled, label: 'Get paid in the app (Stripe)', path: '/coach/payments' }] : []),
     { done: !!c.booking_page_published, label: 'Publish your booking page', path: '/coach/booking-page' },
   ];
   if (steps.slice(0, 4).every((x) => x.done)) return null;

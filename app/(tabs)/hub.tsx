@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import HubSectionHeader from '@/components/HubSectionHeader';
 import HubSettingsRow from '@/components/HubSettingsRow';
 import FeatureRequest from '@/components/FeatureRequest';
+import { PAYMENTS_ENABLED } from '@/lib/config';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { useIconColors } from '@/lib/colors';
@@ -61,6 +62,7 @@ export default function HubScreen() {
           onPress={() => router.push('/settings/account')}
         />
 
+        {PAYMENTS_ENABLED && (
         <HubSettingsRow
           icon="card"
           iconColor="#16a34a"
@@ -68,6 +70,7 @@ export default function HubScreen() {
           subtitle="Bank account or card for lessons, and payment history"
           onPress={() => router.push('/settings/payments')}
         />
+        )}
 
         {/* ============================================================ */}
         {/* COACHING */}

@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Switch, KeyboardAvoidingView, Platform } from 'react-native';
+import { PAYMENTS_ENABLED } from '@/lib/config';
 import { SafeAreaView } from '@/components/SafeAreaView';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -70,7 +71,7 @@ export default function BookFamilyScreen() {
     const ids = s.eligible_session_type_ids ?? [];
     return !typeId || ids.length === 0 || ids.includes(typeId);
   }), [openSlots, typeId]);
-  const paysInApp = !!(coach as any)?.stripe_charges_enabled;
+  const paysInApp = PAYMENTS_ENABLED && !!(coach as any)?.stripe_charges_enabled;
 
   const book = async () => {
     if (!athleteId) return showToast('Pick an athlete');

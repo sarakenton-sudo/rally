@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, Image, ActivityIndicator, Platform, Alert, Share } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
+import { PAYMENTS_ENABLED } from '@/lib/config';
 import * as Clipboard from 'expo-clipboard';
 import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -319,13 +320,13 @@ export default function CoachDashboardScreen() {
             subtitle="Choose what you and your families get"
             onPress={() => router.push('/coach/notifications')}
           />
-          <DashRow
+          {PAYMENTS_ENABLED ? (<DashRow
             icon="cash-outline"
             color="#16a34a"
             title="Payments & earnings"
             subtitle={(coachProfile as any).stripe_charges_enabled ? 'Earnings, payouts, and payment settings' : 'Set up Stripe to get paid in the app'}
             onPress={() => router.push('/coach/payments')}
-          />
+          />) : null}
         </ScrollView>
       )}
     </SafeAreaView>
