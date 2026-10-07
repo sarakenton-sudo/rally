@@ -77,3 +77,10 @@ test('setup checklist includes where you coach', async ({ page }) => {
   test.skip(!(await card.waitFor({ timeout: 8000 }).then(() => true).catch(() => false)), 'Setup already complete for this coach');
   await expect(page.getByText('Where you coach (gym or facility)').first()).toBeVisible();
 });
+
+test('Schedule loads when opened directly (refresh or link), not empty', async ({ page }) => {
+  await page.goto('/coach-schedule');
+  await expect(page.getByLabel('Next week').first()).toBeVisible();
+  // The week loads for the coach (not stuck on "0 lessons" with nothing scheduled forever).
+  await expect.poll(async () => (await page.locator('body').innerText()).match(/\d{1,2}:\d\d [AP]M – /) !== null || (await page.getByText('Nothing scheduled').count()) < 7, { timeout: 15_000 }).toBe(true);
+});

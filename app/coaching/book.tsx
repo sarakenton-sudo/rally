@@ -1,3 +1,4 @@
+import { showToast } from '@/components/Toast';
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { PAYMENTS_ENABLED } from '@/lib/config';
@@ -175,7 +176,11 @@ export default function BookScreen() {
       }
       if (data?.request_id) notifyCoachOfRequest(data.request_id);
       notifySuccess();
-      showAlert('Request sent', "The coach gets your athlete's info and film — you'll hear back soon.", () => router.back());
+      // Show the new lesson (status: waiting for the coach) instead of going
+      // back, which from a booking-page sign-up meant the booking page again.
+      showToast(data?.booking_mode === 'instant' ? 'Lesson booked' : "Request sent. You'll hear back from the coach soon.");
+      if (data?.request_id) router.replace({ pathname: '/lesson/[id]', params: { id: data.request_id } });
+      else router.replace('/(tabs)');
     } finally {
       setSubmitting(false);
     }
