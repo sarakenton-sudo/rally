@@ -82,8 +82,7 @@ serve(async (req: Request) => {
       const forwarderEmail = email.envelopeFrom.toLowerCase().trim();
       console.log(`[process-email] Trying envelope-based routing for: ${forwarderEmail}`);
 
-      const { data: authUsers } = await supabase.auth.admin.listUsers();
-      const matchingUser = authUsers?.users?.find((u: any) => u.email?.toLowerCase() === forwarderEmail);
+      const matchingUser = await findAuthUserByEmail(supabase, forwarderEmail);
       if (matchingUser) {
         const { data: userConfig } = await supabase
           .from('admin_config')
@@ -132,8 +131,7 @@ serve(async (req: Request) => {
 
     // Priority 3: Match the "from" header email to an auth user (works when user forwards from their own email client)
     const fromAddress = extractAddress(email.from).toLowerCase().trim();
-    const { data: authUsersP3 } = await supabase.auth.admin.listUsers();
-    const fromMatch = authUsersP3?.users?.find((u: any) => u.email?.toLowerCase() === fromAddress);
+    const fromMatch = await findAuthUserByEmail(supabase, fromAddress);
     if (fromMatch) {
       const { data: fromConfig } = await supabase
         .from('admin_config')
@@ -572,6 +570,25 @@ function findNearestTournament(
 function extractAddress(to: string): string {
   const match = to.match(/<([^>]+)>/);
   return match ? match[1] : to.trim();
+}
+
+/**
+ * Find an account by email. listUsers() returns one page (50 accounts) by
+ * default, so once there were more than 50 accounts, forwarders past the first
+ * page weren't found and their emails were dropped. Search every page.
+ */
+async function findAuthUserByEmail(supabase: any, email: string): Promise<any | null> {
+  const target = email.toLowerCase().trim();
+  if (!target) return null;
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) { console.error('[process-email] listUsers', error.message); return null; }
+    const users = data?.users ?? [];
+    const hit = users.find((u: any) => u.email?.toLowerCase() === target);
+    if (hit) return hit;
+    if (users.length < 1000) return null;
+  }
+  return null;
 }
 
 function jsonResponse(data: unknown, status = 200) {
