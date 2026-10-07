@@ -11,6 +11,9 @@ import { useAuth } from '@/providers/AuthProvider';
 import { deleteHotelBooking as deleteHotelBookingDB, deleteFlightBooking as deleteFlightBookingDB } from '@/hooks/useSupabaseData';
 import { formatDateRange } from '@/lib/dates';
 import ReferFriend from '@/components/ReferFriend';
+import * as Clipboard from 'expo-clipboard';
+import { showToast } from '@/components/Toast';
+import { PLANS_INBOX_EMAIL } from '@/lib/config';
 import type { HotelBooking, FlightBooking } from '@/types/database';
 
 type BookingItem =
@@ -314,14 +317,42 @@ export default function TravelScreen() {
         }}
         ListFooterComponent={() => <ReferFriend />}
         ListEmptyComponent={
-          <View className="items-center justify-center py-16">
-            <Ionicons name="airplane-outline" size={48} color={ic.placeholder} />
-            <Text className="text-lg font-semibold text-bark dark:text-cream mt-4">
-              No travel bookings yet
-            </Text>
-            <Text className="text-sm text-stone dark:text-parchment mt-1 text-center px-8">
-              Add hotel and flight bookings to track reservations and cancellation deadlines.
-            </Text>
+          <View className="pt-6">
+            <View className="items-center mb-5">
+              <Ionicons name="airplane-outline" size={40} color={ic.placeholder} />
+              <Text className="text-lg font-semibold text-bark dark:text-cream mt-3">No travel yet</Text>
+              <Text className="text-sm text-stone dark:text-parchment mt-1 text-center px-6">
+                Hotels and flights show up here with confirmation numbers and cancellation deadlines. Add them any of these ways:
+              </Text>
+            </View>
+            {([
+              ['mail-outline', 'Forward a confirmation email', `Send it to ${PLANS_INBOX_EMAIL}. Tap to copy the address.`, async () => { await Clipboard.setStringAsync(PLANS_INBOX_EMAIL); showToast(`${PLANS_INBOX_EMAIL} copied`); }],
+              ['logo-google', 'Connect Gmail', 'We find hotel and flight confirmations for you.', () => router.push('/settings/email-forward')],
+              ['document-text-outline', 'Paste a confirmation', 'Copy the text of any booking email or page.', () => router.push('/import/paste-combined')],
+              ['bed-outline', 'Add a hotel', 'Type it in yourself.', () => router.push('/booking/add-hotel')],
+              ['airplane-outline', 'Add a flight', 'Type it in yourself.', () => router.push('/booking/add-flight')],
+            ] as const).map(([icon, title, sub, onPress]) => (
+              <Pressable
+                key={title}
+                onPress={onPress}
+                className="flex-row items-center bg-warm-white dark:bg-bark-light rounded-2xl px-4 py-3 mb-2 border border-parchment dark:border-rally-900 active:opacity-80"
+                accessibilityLabel={title}
+              >
+                <View className="w-9 h-9 rounded-full items-center justify-center mr-3" style={{ backgroundColor: '#FFF1EC' }}>
+                  <Ionicons name={icon} size={18} color="#E85F3D" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-semibold text-bark dark:text-cream">{title}</Text>
+                  <Text className="text-xs text-stone dark:text-parchment mt-0.5">{sub}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={ic.placeholder} />
+              </Pressable>
+            ))}
+            <Pressable onPress={() => router.push('/settings/trusted-emails')} className="mt-2 px-2 py-2 active:opacity-70" accessibilityLabel="Add your other email addresses">
+              <Text className="text-xs text-stone dark:text-parchment text-center">
+                Book travel from more than one email? <Text className="font-semibold text-rally-600">Add your other addresses</Text> so we match them to your account.
+              </Text>
+            </Pressable>
           </View>
         }
       />

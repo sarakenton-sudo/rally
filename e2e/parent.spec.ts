@@ -47,11 +47,11 @@ test('Home: 90 days by month, family logins', async ({ page }) => {
   await expect(page.getByText('Family logins', { exact: true }).first()).toBeVisible();
 });
 
-test('Schedule header: team details and share', async ({ page }) => {
+test('Schedule header: team details (no Share team)', async ({ page }) => {
   await page.goto('/season');
   const details = page.getByLabel('Team details').first();
   test.skip(!(await details.waitFor({ timeout: 8000 }).then(() => true).catch(() => false)), 'No active team for this account');
-  await expect(page.getByLabel('Share team details').first()).toBeVisible();
+  await expect(page.getByLabel('Share team details')).toHaveCount(0);
 });
 
 test('pushed screens have no extra "(tabs)" back bar', async ({ page }) => {

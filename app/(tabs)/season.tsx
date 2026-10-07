@@ -64,38 +64,6 @@ export default function SeasonScreen() {
     [tournaments, activeSeasonId]
   );
 
-  // Share: team, season, code and the upcoming tournaments — for co-parents, grandparents, carpools.
-  const shareTeam = async () => {
-    if (!activeSeason) return;
-    tapLight();
-    const upcoming = seasonTournaments
-      .filter((t) => daysUntil(t.end_date) >= 0)
-      .sort((a, b) => a.start_date.localeCompare(b.start_date));
-    const lines = [
-      `${activeSeason.team_name}${activeAthlete ? ` (${activeAthlete.first_name})` : ''} · ${activeSeason.season_year}`,
-      activeSeason.club_name ? activeSeason.club_name : null,
-      activeSeason.team_code ? `Team code: ${activeSeason.team_code}` : null,
-      activeSeason.default_stream_url ? `Watch live: ${activeSeason.default_stream_url}` : null,
-      upcoming.length ? '' : null,
-      upcoming.length ? 'Upcoming tournaments:' : null,
-      ...upcoming.map((t) => {
-        const venue = t.venues?.find((v) => v.is_confirmed) ?? t.venues?.[0];
-        const where = [venue?.label, venue?.address || t.location_city].filter(Boolean).join(', ');
-        const stream = t.streaming_links?.[0]?.url;
-        return `• ${t.name} — ${formatDateRange(t.start_date, t.end_date)}${where ? ` · ${where}` : ''}${stream ? `\n  Watch: ${stream}` : ''}`;
-      }),
-      '',
-      'Shared from RallyHUB · rally-hub.com',
-    ].filter((l) => l !== null) as string[];
-    const message = lines.join('\n');
-    if (Platform.OS === 'web') {
-      await Clipboard.setStringAsync(message);
-      showToast('Team details copied');
-    } else {
-      await Share.share({ message });
-    }
-  };
-
   // Filter = the header switcher (store): All / an athlete, and All teams / one team.
   const athleteFilter = useSeasonStore((st) => st.scheduleAthlete);
   const teamFilter = useSeasonStore((st) => st.scheduleTeam);
@@ -227,26 +195,16 @@ export default function SeasonScreen() {
               </View>
             </View>
 
-            {/* Team actions — prominent: details (incl. live stream) and share */}
+            {/* Team details (incl. live stream) */}
             {activeSeason && !allView ? (
-              <View className="flex-row mt-3" style={{ gap: 8 }}>
-                <Pressable
-                  className="flex-1 flex-row items-center justify-center rounded-xl py-3 border border-rally-600 bg-warm-white dark:bg-bark-light active:opacity-70"
-                  onPress={() => router.push('/settings/team-details')}
-                  accessibilityLabel="Team details"
-                >
-                  <Ionicons name="create-outline" size={17} color="#3B82B0" />
-                  <Text className="text-sm font-bold text-rally-600 ml-1.5">Team details</Text>
-                </Pressable>
-                <Pressable
-                  className="flex-1 flex-row items-center justify-center rounded-xl py-3 bg-rally-600 active:opacity-80"
-                  onPress={shareTeam}
-                  accessibilityLabel="Share team details"
-                >
-                  <Ionicons name="share-outline" size={17} color="#FEFEFE" />
-                  <Text className="text-sm font-bold text-cream ml-1.5">Share team</Text>
-                </Pressable>
-              </View>
+              <Pressable
+                className="flex-row items-center justify-center rounded-xl py-3 mt-3 border border-rally-600 bg-warm-white dark:bg-bark-light active:opacity-70"
+                onPress={() => router.push('/settings/team-details')}
+                accessibilityLabel="Team details"
+              >
+                <Ionicons name="create-outline" size={17} color="#3B82B0" />
+                <Text className="text-sm font-bold text-rally-600 ml-1.5">Team details</Text>
+              </Pressable>
             ) : null}
             {activeSeason?.default_stream_url && !allView ? (
               <Pressable

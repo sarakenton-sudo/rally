@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, ImageBackground } from 'react-native';
+import { tournamentHero } from '@/lib/tournamentHero';
 import { SafeAreaView } from '@/components/SafeAreaView';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -51,22 +52,32 @@ export default function GameDetailScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-cream dark:bg-bark" edges={['top', 'bottom']}>
-      <Header ic={ic} />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 }}>
-        <View className="bg-warm-white dark:bg-bark-light rounded-2xl p-4 border border-parchment dark:border-rally-900" style={{ borderLeftWidth: 4, borderLeftColor: GAME_COLOR }}>
-          <Text className="text-xs font-bold uppercase tracking-wider" style={{ color: GAME_COLOR }}>
-            {kind}{game.home_away ? ` · ${game.home_away === 'home' ? 'Home' : 'Away'}` : ''}
-          </Text>
-          <Text className="text-xl font-bold text-bark dark:text-cream mt-1">{gameTitle(game)}</Text>
-          {game.event_type === 'game' && game.opponent && game.name && game.name !== gameTitle(game) ? (
-            <Text className="text-xs text-stone dark:text-parchment mt-0.5">{game.name}</Text>
-          ) : null}
-          <Text className="text-sm text-bark dark:text-cream mt-2">{d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
-          {time ? <Text className="text-sm text-stone dark:text-parchment">{time}</Text> : null}
-          {game.team_name ? (
-            <Text className="text-xs text-stone dark:text-parchment mt-2">{game.athlete_first_name ? `${game.athlete_first_name} · ` : ''}{game.team_name}</Text>
-          ) : null}
-        </View>
+      <Stack.Screen options={{ headerShown: false }} />
+      <ScrollView contentContainerStyle={{ paddingBottom: 48 }}>
+        {/* Hero: a painting (same set as tournaments), darkened so the text reads */}
+        <ImageBackground source={tournamentHero(game.id)} resizeMode="cover" style={{ overflow: 'hidden' }} imageStyle={{ width: '100%', height: '100%' }} accessibilityIgnoresInvertColors>
+          <View className="px-5 pt-4 pb-6" style={{ backgroundColor: 'rgba(22,32,52,0.45)' }}>
+            <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/season'))} className="flex-row items-center mb-3 self-start" accessibilityLabel="Back">
+              <Ionicons name="chevron-back" size={20} color="white" />
+              <Text className="text-white text-sm ml-0.5">Back</Text>
+            </Pressable>
+            <Text className="text-xs font-bold uppercase tracking-wider text-white/90">
+              {kind}{game.home_away ? ` · ${game.home_away === 'home' ? 'Home' : 'Away'}` : ''}
+            </Text>
+            <Text className="text-2xl font-bold text-white mt-1" style={{ textShadowColor: 'rgba(0,0,0,0.45)', textShadowRadius: 8 }}>{gameTitle(game)}</Text>
+            <Text className="text-base text-white/90 mt-1">
+              {d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}{time ? ` · ${time}` : ''}
+            </Text>
+            {game.team_name ? (
+              <Text className="text-sm text-white/80 mt-1">{game.athlete_first_name ? `${game.athlete_first_name} · ` : ''}{game.team_name}</Text>
+            ) : null}
+          </View>
+        </ImageBackground>
+
+        <View className="px-4 pt-1">
+        {game.event_type === 'game' && game.opponent && game.name && game.name !== gameTitle(game) ? (
+          <Text className="text-xs text-stone dark:text-parchment mt-3 ml-1">{game.name}</Text>
+        ) : null}
 
         {/* Where */}
         <Pressable
@@ -110,6 +121,7 @@ export default function GameDetailScreen() {
             <Text className="text-sm font-semibold text-red-600">Delete {kind.toLowerCase()}</Text>
           </Pressable>
         )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

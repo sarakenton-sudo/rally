@@ -30,5 +30,7 @@ describe('coach invites', () => {
     const m = coachInviteMessage('Drue', 'AB23CD45');
     expect(m).toContain("Drue's season");
     expect(m.endsWith('https://rally-hub.com/coaches?i=AB23CD45')).toBe(true);
+    expect(m).toContain('testflight.apple.com');
+    expect(m).not.toMatch(/payments/i);
   });
 });

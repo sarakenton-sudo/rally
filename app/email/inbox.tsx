@@ -27,6 +27,7 @@ const ACTION_LABELS: Record<string, string> = {
 export default function EmailInboxScreen() {
   const ic = useIconColors();
   const emails = useSeasonStore((s) => s.forwardedEmails);
+  const otherCount = useSeasonStore((s) => s.adminConfig?.trusted_sender_emails?.length ?? 0);
   const removeForwardedEmail = useSeasonStore((s) => s.removeForwardedEmail);
   const adminConfig = useSeasonStore((s) => s.adminConfig);
 
@@ -139,6 +140,25 @@ export default function EmailInboxScreen() {
           </View>
         </View>
       )}
+
+      {/* Other addresses: travel booked from a work or second email still lands here */}
+      <Pressable
+        onPress={() => router.push('/settings/trusted-emails')}
+        className="mx-4 mt-3 rounded-xl p-3 flex-row items-center active:opacity-80"
+        style={{ backgroundColor: '#FFF1EC' }}
+        accessibilityLabel="Add your other email addresses"
+      >
+        <Ionicons name="at" size={18} color="#E85F3D" />
+        <View className="ml-2 flex-1">
+          <Text className="text-sm font-semibold text-bark">Book travel from more than one email?</Text>
+          <Text className="text-xs text-stone mt-0.5">
+            {otherCount
+              ? `${otherCount} address${otherCount === 1 ? '' : 'es'} added. Add any others you book hotels and flights with so we match them to your account.`
+              : 'Add them here so hotel and flight confirmations from any of your addresses match to your account.'}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color="#E85F3D" />
+      </Pressable>
 
       <FlatList
         data={emails}

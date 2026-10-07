@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { SITE_URL } from '@/lib/config';
+import { APP_STORE_URL } from '@/lib/fan';
 
 // Parent → coach invites (growth loop). See migration 00078.
 
@@ -12,7 +13,8 @@ export interface CoachInvite {
 export const coachInviteUrl = (code?: string | null) => `${SITE_URL}/coaches${code ? `?i=${code}` : ''}`;
 
 export function coachInviteMessage(athleteFirst: string, code?: string | null) {
-  return `Hey Coach! We use RallyHUB to manage ${athleteFirst}'s season. You can take lesson bookings and payments there, and we'd book with you through it. Set up your free coach page here: ${coachInviteUrl(code)}`;
+  return `Hey Coach! We use RallyHUB to manage ${athleteFirst}'s season. It's a free place to post your lesson times, take bookings and keep track of who's paid, and we'd book with you through it.\n\n` +
+    `1. Get the app: ${APP_STORE_URL}\n2. Sign up as a Coach\n\nMore about it: ${coachInviteUrl(code)}`;
 }
 
 /** New invite code for the signed-in parent (null if offline / not migrated yet). */
