@@ -42,6 +42,8 @@ export default function RootLayout() {
   useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
+      // Web: remove the instant loading screen from +html.tsx.
+      if (Platform.OS === 'web' && typeof document !== 'undefined') document.getElementById('rally-boot')?.remove();
     }
   }, [loaded]);
 

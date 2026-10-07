@@ -24,7 +24,13 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <style dangerouslySetInnerHTML={{ __html: responsiveBackground }} />
         {/* Add any additional <head> elements that you want globally available on web... */}
       </head>
-      <body>{children}</body>
+      <body>
+        {/* Shown instantly while the app and its fonts download (the app renders
+            nothing until then, which looked like a blank page). Removed by the
+            root layout once fonts are loaded. */}
+        <div id="rally-boot" dangerouslySetInnerHTML={{ __html: bootSplash }} />
+        {children}
+      </body>
     </html>
   );
 }
@@ -38,3 +44,15 @@ body {
     background-color: #1E3A5F;
   }
 }`;
+
+const bootSplash = `
+<style>
+#rally-boot{position:fixed;inset:0;z-index:9999;background:#1E3A5F;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+#rally-boot .w{color:#fff;font-weight:800;font-size:30px;letter-spacing:-0.5px}
+#rally-boot .w span{color:rgba(255,255,255,0.55);font-weight:600}
+#rally-boot .d{width:28px;height:28px;border-radius:50%;border:3px solid rgba(255,255,255,0.2);border-top-color:#FF7A59;animation:rb 0.8s linear infinite}
+@keyframes rb{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#rally-boot .d{animation:none}}
+</style>
+<div class="w">Rally<span>HUB</span></div>
+<div class="d" role="progressbar" aria-label="Loading"></div>`;
