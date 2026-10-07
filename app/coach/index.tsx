@@ -1,3 +1,5 @@
+import { bookingPageUrl } from '@/lib/bookingPage';
+import { APP_STORE_URL } from '@/lib/fan';
 import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, Image, ActivityIndicator, Platform, Alert, Share } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
@@ -216,12 +218,12 @@ export default function CoachDashboardScreen() {
                 className="flex-row items-center justify-center bg-rally-600 rounded-xl py-2.5 mt-3 active:opacity-80"
                 onPress={async () => {
                   const code = coachProfile.invite_code!;
-                  const link = 'https://rally-hub.com';
                   const message =
-                    `${coachProfile.display_name} invited you to book volleyball lessons on RALLY! 🏐\n\n` +
-                    `1) Sign up: ${link}\n` +
-                    `2) Open the Hub tab → "My Coaches"\n` +
-                    `3) Enter code: ${code}`;
+                    `${coachProfile.display_name} invited you to book volleyball lessons on RallyHUB.\n\n` +
+                    `1. Get the free app: ${APP_STORE_URL}\n` +
+                    `2. Sign up as a Parent\n` +
+                    `3. Family tab → "Have a coach's link or code?" → enter ${code}` +
+                    (coachProfile.slug && (coachProfile as any).booking_page_published ? `\n\nOr see my open times: ${bookingPageUrl(coachProfile.slug)}` : '');
                   tapLight();
                   try {
                     if (Platform.OS === 'web') {

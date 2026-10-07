@@ -421,6 +421,10 @@ function RootLayoutNav() {
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
+          name="coach/slot-hold"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
           name="coach/segments"
           options={{ headerShown: false }}
         />

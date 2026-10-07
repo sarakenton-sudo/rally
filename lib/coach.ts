@@ -411,7 +411,7 @@ export type AddClientResult =
  * RallyHUB are connected now; others become pending and are invited by email
  * (attached automatically when they sign up with that email).
  */
-export async function coachAddClient(v: NewClientInput): Promise<{ data: AddClientResult | null; emailStatus: string | number | null; error: Error | null }> {
+export async function coachAddClient(v: NewClientInput): Promise<{ data: AddClientResult | null; email: Promise<string | number | null>; error: Error | null }> {
   const { data, error } = await (supabase.rpc as any)('coach_add_client', {
     p_parent_email: v.parentEmail.trim(),
     p_athlete_first: v.athleteFirst.trim(),
@@ -425,12 +425,15 @@ export async function coachAddClient(v: NewClientInput): Promise<{ data: AddClie
     p_club: v.club?.trim() || null,
     p_group_ids: v.groupIds ?? [],
   });
-  if (error || !data) return { data: null, emailStatus: null, error: error ?? new Error('Could not add client') };
+  if (error || !data) return { data: null, email: Promise.resolve(null), error: error ?? new Error('Could not add client') };
   const res = data as AddClientResult;
-  // Invite (pending) or a heads-up (already on RallyHUB). Email may be down — the client is saved regardless.
+  // Invite (pending) or a heads-up (already on RallyHUB). Sent in the
+  // background so saving is instant; the client is saved regardless.
   const body = res.status === 'pending' ? { action: 'invite', pending_id: res.pending_id } : { action: 'welcome', connection_id: res.connection_id };
-  const { data: mail } = await supabase.functions.invoke('coach-add-client', { body });
-  return { data: res, emailStatus: (mail as any)?.email_status ?? null, error: null };
+  const email = supabase.functions.invoke('coach-add-client', { body })
+    .then(({ data: mail }) => ((mail as any)?.email_status ?? null) as string | number | null)
+    .catch(() => null);
+  return { data: res, email, error: null };
 }
 
 export async function fetchPendingClients(coachId: string): Promise<PendingClient[]> {

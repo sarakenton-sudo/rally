@@ -237,6 +237,7 @@ export default function CoachScheduleScreen() {
                   if (!item) {
                     const left = slot.seats_total - slot.seats_taken;
                     const past = new Date(slot.ends_at) < new Date();
+                    const held = !!(slot as any).held_for;
                     return (
                       <Pressable
                         key={slot.id}
@@ -248,7 +249,7 @@ export default function CoachScheduleScreen() {
                         <View className="flex-row items-center">
                           <View className="flex-1">
                             <Text className="text-sm font-semibold text-bark dark:text-cream">
-                              {fmtTime(slot.starts_at)} – {fmtTime(slot.ends_at)} · <Text style={{ color: '#15803d' }}>Open</Text>
+                              {fmtTime(slot.starts_at)} – {fmtTime(slot.ends_at)} · {held ? <Text style={{ color: '#b45309' }}>Held</Text> : <Text style={{ color: '#15803d' }}>Open</Text>}
                             </Text>
                             <Text className="text-xs text-stone dark:text-parchment mt-0.5">
                               {left} spot{left === 1 ? '' : 's'}{rev.open ? ` · ${fmtMoney(rev.open)} open` : ''}
@@ -262,10 +263,29 @@ export default function CoachScheduleScreen() {
                           )}
                         </View>
                         {gymChip}
+                        {held ? (
+                          <View className="rounded-lg px-2.5 py-1.5 mt-2" style={{ backgroundColor: '#FEF3C7' }}>
+                            <Text className="text-xs font-bold" style={{ color: '#92400e' }}>
+                              Held for {(slot as any).held_for}
+                            </Text>
+                            {(slot as any).hold_note ? <Text className="text-xs mt-0.5" style={{ color: '#92400e' }}>{(slot as any).hold_note}</Text> : null}
+                          </View>
+                        ) : null}
                         {!past && (
-                          <View className="flex-row items-center self-start rounded-full px-3 py-1.5 mt-2" style={{ backgroundColor: CORAL }}>
-                            <Ionicons name="person-add" size={13} color="#fff" />
-                            <Text className="text-xs font-bold text-white ml-1">Assign athlete</Text>
+                          <View className="flex-row mt-2" style={{ gap: 8 }}>
+                            <View className="flex-row items-center rounded-full px-3 py-1.5" style={{ backgroundColor: CORAL }}>
+                              <Ionicons name="person-add" size={13} color="#fff" />
+                              <Text className="text-xs font-bold text-white ml-1">Assign athlete</Text>
+                            </View>
+                            <Pressable
+                              onPress={() => { tapLight(); router.push({ pathname: '/coach/slot-hold', params: { slotId: slot.id } }); }}
+                              className="flex-row items-center rounded-full px-3 py-1.5 border active:opacity-70"
+                              style={{ borderColor: '#d97706', backgroundColor: held ? '#FEF3C7' : '#fff' }}
+                              accessibilityLabel={held ? 'Change or release hold' : 'Hold for a client'}
+                            >
+                              <Ionicons name="lock-closed-outline" size={13} color="#b45309" />
+                              <Text className="text-xs font-bold ml-1" style={{ color: '#b45309' }}>{held ? 'Edit hold' : 'Hold for client'}</Text>
+                            </Pressable>
                           </View>
                         )}
                       </Pressable>

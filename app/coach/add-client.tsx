@@ -75,7 +75,7 @@ export default function AddClientScreen() {
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<{ result: AddClientResult; name: string; email: string; emailOk: boolean } | null>(null);
+  const [done, setDone] = useState<{ result: AddClientResult; name: string; email: string; emailOk: boolean | null } | null>(null);
 
   useFocusEffect(useCallback(() => {
     if (coach) fetchClientGroups(coach.id).then(({ data }) => setGroups(data));
@@ -104,7 +104,7 @@ export default function AddClientScreen() {
     if (problem) { setError(problem); notifyError(); return; }
     setError(null);
     setSaving(true);
-    const { data, emailStatus, error: e } = await coachAddClient({
+    const { data, email, error: e } = await coachAddClient({
       parentEmail, athleteFirst, athleteLast, parentName, parentPhone,
       sport: sport === 'Other' ? '' : sport.toLowerCase(), primary, secondary, gradYear, club, groupIds,
     });
@@ -112,7 +112,9 @@ export default function AddClientScreen() {
     if (e || !data) { setError(e?.message ?? "Couldn't add the client. Try again."); notifyError(); return; }
     notifySuccess();
     if (user) trackEvent(user.id, 'coach_client_added', { status: data.status, has_groups: groupIds.length > 0 });
-    setDone({ result: data, name: athleteFirst.trim(), email: parentEmail.trim().toLowerCase(), emailOk: emailStatus === 202 || emailStatus === '202' });
+    setDone({ result: data, name: athleteFirst.trim(), email: parentEmail.trim().toLowerCase(), emailOk: null });
+    // The email goes out in the background; update the message when it's sent.
+    email.then((st) => setDone((d) => (d ? { ...d, emailOk: st === 202 || st === '202' } : d)));
   };
 
   const shareLink = async () => {
@@ -147,11 +149,13 @@ export default function AddClientScreen() {
             <Text className="text-sm text-stone dark:text-parchment text-center mt-2 leading-5">
               {done.result.status === 'connected'
                 ? `${done.email} is already on RallyHUB, so they're connected now. They'll sign your terms and release for ${done.name} before the first lesson.`
-                : done.emailOk
+                : done.emailOk === null
+                  ? `Saved. Sending ${done.email} an invite now. When they sign up with that email, ${done.name} attaches to their account automatically.`
+                  : done.emailOk
                   ? `We emailed ${done.email} an invite. When they sign up with that email, ${done.name} attaches to their account automatically.`
                   : `Saved. We couldn't send the invite email just now — send them your booking link instead. When they sign up with ${done.email}, ${done.name} attaches automatically.`}
             </Text>
-            {done.result.status === 'pending' && !done.emailOk && coach?.slug ? (
+            {done.result.status === 'pending' && done.emailOk === false && coach?.slug ? (
               <Pressable onPress={shareLink} className="flex-row items-center rounded-xl px-4 py-3 mt-5 bg-rally-600 active:opacity-80">
                 <Ionicons name="share-outline" size={16} color="#fff" />
                 <Text className="text-sm font-bold text-white ml-1.5">Send my booking link</Text>

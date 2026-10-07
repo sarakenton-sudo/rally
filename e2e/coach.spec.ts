@@ -96,5 +96,5 @@ test('tapping an open time on Schedule opens booking with that time picked', asy
   test.skip(!(await btn.count()), 'No open times in the next month for this coach');
   await btn.click();
   await expect(page).toHaveURL(/book-family\?slotId=/);
-  await expect(page.getByText('Book a lesson').first()).toBeVisible();
+  await expect(page.getByText('Book a lesson').locator('visible=true').first()).toBeVisible();
 });
