@@ -12,6 +12,7 @@ import { fetchMyCoach, fetchFacilities, fetchPendingRequests, fetchSessionTypes,
 import { useIconColors } from '@/lib/colors';
 import Avatar from '@/components/Avatar';
 import SetupChecklist from '@/components/coach/SetupChecklist';
+import SectionHeader from '@/components/SectionHeader';
 
 export default function CoachDashboardScreen() {
   // Rendered as the Business tab (app/(coach)) → tab title, no back arrow, no pending banner (Today has it).
@@ -248,7 +249,7 @@ export default function CoachDashboardScreen() {
           )}
 
           {/* Next-step tiles */}
-          <Text className="text-xs font-semibold uppercase tracking-wider text-stone mb-2 ml-1">Your business</Text>
+          <SectionHeader icon="briefcase" iconColor="#3B82B0" title="Your business" subtitle="Your page, lessons, places and families" />
           <DashRow
             icon="today-outline"
             color="#3B82B0"

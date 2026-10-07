@@ -22,6 +22,7 @@ import AthleteCredentialCard from '@/components/AthleteCredentialCard';
 import { vaultRefFor } from '@/lib/credentials';
 import { getPref, setPref } from '@/lib/prefs';
 import NextUpCard from '@/components/home/NextUpCard';
+import SectionHeader from '@/components/SectionHeader';
 import LessonCard from '@/components/LessonCard';
 import GameCard from '@/components/GameCard';
 import SwipeToDelete from '@/components/SwipeToDelete';
@@ -39,29 +40,6 @@ const AVATAR_COLORS = [
   '#0d9488', '#be185d', '#4f46e5', '#ca8a04', '#0891b2',
 ];
 
-function SectionHeader({ icon, iconColor, title, subtitle, right }: {
-  icon: keyof typeof Ionicons.glyphMap;
-  iconColor: string;
-  title: string;
-  subtitle?: string;
-  right?: React.ReactNode;
-}) {
-  return (
-    <View className="flex-row items-start mb-3">
-      <View className="w-1 self-stretch rounded-full mr-3 mt-0.5" style={{ backgroundColor: iconColor }} />
-      <View className="flex-row items-center mr-2 mt-0.5">
-        <Ionicons name={icon} size={16} color={iconColor} />
-      </View>
-      <View className="flex-1">
-        <Text className="text-base font-bold text-bark dark:text-cream">{title}</Text>
-        {subtitle && (
-          <Text className="text-xs text-stone dark:text-parchment mt-0.5">{subtitle}</Text>
-        )}
-      </View>
-      {right}
-    </View>
-  );
-}
 
 
 export default function HomeScreen() {
@@ -594,6 +572,7 @@ export default function HomeScreen() {
                   <SwipeToDelete key={`g-${item.g.id}`} onDelete={() => removeGame(item.g.id)} accessibilityLabel="Delete game">
                     <GameCard
                       game={item.g}
+                      athlete={athletes.find((a) => a.id === seasons.find((x) => x.id === item.g.season_id)?.athlete_id)}
                       athleteName={nameCards ? athleteName(seasons.find((x) => x.id === item.g.season_id)?.athlete_id) : undefined}
                       teamName={nameCards ? seasons.find((x) => x.id === item.g.season_id)?.team_name : undefined}
                     />

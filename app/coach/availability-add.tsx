@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Switch, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import FormField from '@/components/FormField';
 import DropdownField from '@/components/DropdownField';
@@ -77,6 +77,15 @@ export default function AvailabilityAddScreen() {
       setLoaded(true);
     })();
   }, [coachProfile]);
+
+  // Back from adding a facility: pick it up without resetting the form.
+  useFocusEffect(useCallback(() => {
+    if (!coachProfile || !isSupabaseConfigured) return;
+    fetchFacilities(coachProfile.id).then(({ data }) => {
+      setFacilities(data);
+      setFacilityId((cur) => cur ?? data[0]?.id ?? null);
+    });
+  }, [coachProfile]));
 
   const showAlert = (t: string, m: string) => {
     if (Platform.OS === 'web') window.alert(`${t}: ${m}`);

@@ -124,7 +124,7 @@ export default function SeasonScreen() {
       const season = seasons.find((x) => x.id === item.data.season_id);
       return (
         <SwipeToDelete onDelete={() => removeGame(item.data.id)} accessibilityLabel="Delete game">
-          <GameCard game={item.data} athleteName={nameCards ? athleteName(season?.athlete_id) : undefined} teamName={nameCards ? season?.team_name : undefined} />
+          <GameCard game={item.data} athlete={athletes.find((a) => a.id === season?.athlete_id)} athleteName={nameCards ? athleteName(season?.athlete_id) : undefined} teamName={nameCards ? season?.team_name : undefined} />
         </SwipeToDelete>
       );
     }

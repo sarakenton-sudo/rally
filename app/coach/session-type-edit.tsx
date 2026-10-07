@@ -166,8 +166,8 @@ export default function SessionTypeEditScreen() {
             <Ionicons name="information-circle" size={15} color="#3B82B0" style={{ marginTop: 1 }} />
             <Text className="text-xs text-rally-600 ml-1.5 flex-1">
               {bookingMode === 'request'
-                ? 'You review each request before the parent is charged.'
-                : "Parents are charged immediately when they book — no approval step."}
+                ? 'You approve each request before it\'s confirmed.'
+                : 'Bookings are confirmed right away, with no approval step.'}
             </Text>
           </View>
 

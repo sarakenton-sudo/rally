@@ -8,6 +8,8 @@ import { useCoachStore } from '@/stores/useCoachStore';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import Avatar from '@/components/Avatar';
 import SetupChecklist from '@/components/coach/SetupChecklist';
+import SectionHeader from '@/components/SectionHeader';
+import { CORAL, CORAL_DARK } from '@/lib/colors';
 import { showToast } from '@/components/Toast';
 import { claimPendingCoachInvite } from '@/lib/coachInvites';
 import {
@@ -262,7 +264,7 @@ export default function CoachTodayScreen() {
         {/* Needs you */}
         {needsCount > 0 && (
           <>
-            <Text className="text-xs font-semibold uppercase tracking-wider text-stone mb-2 ml-1">Needs you</Text>
+            <SectionHeader icon="flash" iconColor="#d97706" title="Needs you" subtitle={`${needsCount} thing${needsCount === 1 ? '' : 's'} waiting on you`} />
             {moveRequests.map((r) => (
               <View key={r.booking_id} className="bg-warm-white dark:bg-bark-light rounded-xl p-3.5 mb-2 border border-amber-300 dark:border-amber-700">
                 <Text className="text-[10px] font-bold text-amber-700 mb-0.5">MOVE REQUEST</Text>
@@ -274,7 +276,7 @@ export default function CoachTodayScreen() {
                 </View>
                 {r.reason ? <Text className="text-xs text-stone italic mt-0.5">"{r.reason}"</Text> : null}
                 <View className="flex-row mt-2" style={{ gap: 8 }}>
-                  <Pressable disabled={busy === r.booking_id} onPress={() => answerMove(r, true)} className="rounded-lg px-3 py-2 bg-rally-600 active:opacity-80" accessibilityLabel="Accept new time">
+                  <Pressable disabled={busy === r.booking_id} onPress={() => answerMove(r, true)} className="rounded-lg px-3 py-2 active:opacity-80" style={{ backgroundColor: CORAL }} accessibilityLabel="Accept new time">
                     <Text className="text-xs font-bold text-white">Accept new time</Text>
                   </Pressable>
                   <Pressable disabled={busy === r.booking_id} onPress={() => answerMove(r, false)} className="rounded-lg px-3 py-2 border border-parchment dark:border-rally-900 active:opacity-70" accessibilityLabel="Keep original">
@@ -297,8 +299,8 @@ export default function CoachTodayScreen() {
                   </Text>
                   {hasRealAllergies(a?.allergies) && <Text className="text-xs text-stone dark:text-parchment mt-0.5">Allergy: {a?.allergies}</Text>}
                   <View className="flex-row mt-2.5">
-                    <Pressable disabled={busy === p.id} onPress={() => respond(p.id, 'accept')} className="flex-1 bg-rally-600 rounded-lg py-2 items-center mr-2 active:opacity-80" accessibilityLabel="Approve">
-                      <Text className="text-sm font-bold text-cream">{busy === p.id ? '…' : 'Approve'}</Text>
+                    <Pressable disabled={busy === p.id} onPress={() => respond(p.id, 'accept')} className="flex-1 rounded-lg py-2 items-center mr-2 active:opacity-80" style={{ backgroundColor: CORAL }} accessibilityLabel="Approve">
+                      <Text className="text-sm font-bold text-white">{busy === p.id ? '…' : 'Approve'}</Text>
                     </Pressable>
                     <Pressable disabled={busy === p.id} onPress={() => respond(p.id, 'decline')} className="flex-1 rounded-lg py-2 items-center border border-parchment dark:border-rally-900 active:opacity-70" accessibilityLabel="Decline">
                       <Text className="text-sm font-semibold text-stone">Decline</Text>
@@ -334,14 +336,17 @@ export default function CoachTodayScreen() {
         )}
 
         {/* Coming up — next 30 days, by month (same format as the parent Home) */}
-        <View className="flex-row items-center justify-between mb-2 ml-1">
-          <Text className="text-xs font-semibold uppercase tracking-wider text-stone">Coming up · next 30 days</Text>
-          <Pressable onPress={() => router.push('/coach-schedule')}><Text className="text-xs font-semibold text-rally-600">Full schedule →</Text></Pressable>
-        </View>
+        <SectionHeader
+          icon="calendar"
+          iconColor={CORAL}
+          title="Coming up"
+          subtitle="Next 30 days"
+          right={<Pressable onPress={() => router.push('/coach-schedule')} className="mt-1"><Text className="text-xs font-semibold" style={{ color: CORAL_DARK }}>Full schedule →</Text></Pressable>}
+        />
         {months.length === 0 ? (
           <Pressable onPress={() => router.push('/coach/availability-add')} className="rounded-xl p-4 border border-dashed border-parchment dark:border-rally-900 items-center">
             <Text className="text-sm text-stone dark:text-parchment">Nothing booked in the next 30 days.</Text>
-            <Text className="text-sm font-semibold text-rally-600 mt-1">Add open time</Text>
+            <Text className="text-sm font-semibold mt-1" style={{ color: CORAL_DARK }}>Add open time</Text>
           </Pressable>
         ) : months.map((m) => (
           <View key={m.key}>

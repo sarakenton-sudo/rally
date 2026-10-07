@@ -104,7 +104,7 @@ export default function BookScreen() {
     if (coachId && isSupabaseConfigured) {
       fetchCoachById(coachId).then(({ data }) => {
         const c = data as any;
-        setCoachPay(c ? { enabled: !!c.stripe_charges_enabled, feeHandling: c.fee_handling, timing: c.payment_timing ?? 'on_accept', hoursBefore: c.payment_hours_before ?? 24 } : null);
+        setCoachPay(c ? { enabled: PAYMENTS_ENABLED && !!c.stripe_charges_enabled, feeHandling: c.fee_handling, timing: c.payment_timing ?? 'on_accept', hoursBefore: c.payment_hours_before ?? 24 } : null);
       });
       getPlatformFeeBps().then(setFeeBps);
       // Back from Stripe Checkout on web → save the new method; otherwise load the saved one.

@@ -4,6 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as Linking from 'expo-linking';
 import { Platform } from 'react-native';
 import type { Database } from '@/types/database';
+import { fetchWithRetry } from '@/lib/fetchRetry';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -65,6 +66,7 @@ export const supabase: SupabaseClient<Database> = isSupabaseConfigured
         persistSession: true,
         detectSessionInUrl: Platform.OS === 'web',
       },
+      global: { fetch: fetchWithRetry },
     })
   : createSupabaseStub();
 

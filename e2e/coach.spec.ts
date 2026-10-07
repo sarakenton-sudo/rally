@@ -61,3 +61,19 @@ test('announce shows the daily limit (C-22)', async ({ page }) => {
   await page.goto('/coach/announce');
   await expect(page.getByText(/of 3 announcements left today|No open times to announce|sent 3 announcements/)).toBeVisible();
 });
+
+test('session type dropdowns open inline (no pop-up over the form)', async ({ page }) => {
+  await page.goto('/coach/session-type-edit');
+  await page.getByLabel(/^Booking:/).first().click();
+  await expect(page.getByText('Instant book').first()).toBeVisible();
+  await page.getByText('Instant book').first().click();
+  await expect(page.getByText('Bookings are confirmed right away, with no approval step.')).toBeVisible();
+  await expect(page.getByText(/charged/i)).toHaveCount(0);
+});
+
+test('setup checklist includes where you coach', async ({ page }) => {
+  await page.goto('/today');
+  const card = page.getByText('Get set up').first();
+  test.skip(!(await card.waitFor({ timeout: 8000 }).then(() => true).catch(() => false)), 'Setup already complete for this coach');
+  await expect(page.getByText('Where you coach (gym or facility)').first()).toBeVisible();
+});
