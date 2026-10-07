@@ -187,25 +187,33 @@ export default function PublicBookingPage() {
         ) : days.map((d) => (
           <View key={d.key} style={{ marginBottom: 12 }}>
             <Text style={{ color: ink, fontSize: 13, fontWeight: '700', marginBottom: 6, marginLeft: 4 }}>{d.label}</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+            <View>
               {d.slots.map((s) => {
                 const on = selected === s.id;
                 const types = slotTypes(s);
                 const from = types.length ? Math.min(...types.map((t) => t.price_cents)) : null;
                 const fac = s.facility_id ? facilityById.get(s.facility_id) : null;
+                // Same color as the lesson type and its filter chip (mixed types: the page accent).
+                const kinds = [...new Set(types.map((t) => t.kind))];
+                const kc = kinds.length === 1 ? sessionKindStyle(kinds[0]).color : accent;
                 return (
                   <Pressable
                     key={s.id}
                     onPress={() => setSelected(on ? null : s.id)}
-                    style={{ backgroundColor: on ? accent : card, borderColor: on ? accent : line, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, marginRight: 8, marginBottom: 8, minWidth: 150 }}
+                    style={{ backgroundColor: on ? kc : card, borderColor: on ? kc : kc + '55', borderWidth: 1, borderLeftWidth: 5, borderLeftColor: kc, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, marginBottom: 8, width: '100%', flexDirection: 'row', alignItems: 'center' }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: on }}
                   >
-                    <Text style={{ color: on ? '#fff' : ink, fontSize: 15, fontWeight: '800' }}>{fmtTime(s.starts_at)} – {fmtTime(s.ends_at)}</Text>
-                    <Text style={{ color: on ? '#ffffffCC' : muted, fontSize: 12, marginTop: 1 }}>
-                      {[types.map((t) => t.name).join(' / '), fac?.city || fac?.label].filter(Boolean).join(' · ')}
-                    </Text>
-                    <Text style={{ color: on ? '#fff' : accent, fontSize: 12, fontWeight: '700', marginTop: 2 }}>
-                      {from !== null ? `${types.length > 1 ? 'from ' : ''}${fmtMoney(from)}` : ''}{s.seats_total > 1 ? ` · ${s.seats_left} spot${s.seats_left === 1 ? '' : 's'} left` : ''}
-                    </Text>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ color: on ? '#fff' : ink, fontSize: 15, fontWeight: '800' }}>{fmtTime(s.starts_at)} – {fmtTime(s.ends_at)}</Text>
+                      <Text style={{ color: on ? '#ffffffCC' : muted, fontSize: 13, marginTop: 2, flexShrink: 1 }}>
+                        {[types.map((t) => t.name).join(' / '), fac?.label || fac?.city].filter(Boolean).join(' · ')}
+                      </Text>
+                      <Text style={{ color: on ? '#fff' : kc, fontSize: 13, fontWeight: '700', marginTop: 2 }}>
+                        {from !== null ? `${types.length > 1 ? 'from ' : ''}${fmtMoney(from)}` : ''}{s.seats_total > 1 ? ` · ${s.seats_left} spot${s.seats_left === 1 ? '' : 's'} left` : ''}
+                      </Text>
+                    </View>
+                    <Ionicons name={on ? 'checkmark-circle' : 'ellipse-outline'} size={22} color={on ? '#fff' : kc + '99'} style={{ marginLeft: 10 }} />
                   </Pressable>
                 );
               })}

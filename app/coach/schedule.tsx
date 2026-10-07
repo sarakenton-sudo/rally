@@ -158,7 +158,7 @@ export default function CoachScheduleScreen() {
 
       {/* Week navigator */}
       <View className="flex-row items-center justify-between px-4 py-3">
-        <Pressable onPress={() => setWeekStart(addDays(weekStart, -7))} className="p-2 active:opacity-60">
+        <Pressable onPress={() => setWeekStart(addDays(weekStart, -7))} className="p-2 active:opacity-60" accessibilityLabel="Previous week">
           <Ionicons name="chevron-back-circle-outline" size={26} color="#3B82B0" />
         </Pressable>
         <Pressable onPress={() => setWeekStart(startOfWeek(new Date()))} className="items-center">
@@ -170,7 +170,7 @@ export default function CoachScheduleScreen() {
             {!loading && ` · ${summaryNums.lessons} lesson${summaryNums.lessons === 1 ? '' : 's'}`}
           </Text>
         </Pressable>
-        <Pressable onPress={() => setWeekStart(addDays(weekStart, 7))} className="p-2 active:opacity-60">
+        <Pressable onPress={() => setWeekStart(addDays(weekStart, 7))} className="p-2 active:opacity-60" accessibilityLabel="Next week">
           <Ionicons name="chevron-forward-circle-outline" size={26} color="#3B82B0" />
         </Pressable>
       </View>
@@ -238,12 +238,13 @@ export default function CoachScheduleScreen() {
                     return (
                       <View
                         key={slot.id}
-                        className="rounded-xl p-3 mb-2 border border-dashed border-parchment dark:border-rally-900"
+                        className="bg-white dark:bg-bark-light rounded-xl p-3 mb-2 border border-dashed"
+                        style={{ borderColor: '#16a34a66', borderLeftWidth: 4, borderLeftColor: '#16a34a', borderStyle: 'dashed', shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 }}
                       >
                         <View className="flex-row items-center">
                           <View className="flex-1">
-                            <Text className="text-sm font-semibold text-stone dark:text-parchment">
-                              {fmtTime(slot.starts_at)} – {fmtTime(slot.ends_at)} · Open
+                            <Text className="text-sm font-semibold text-bark dark:text-cream">
+                              {fmtTime(slot.starts_at)} – {fmtTime(slot.ends_at)} · <Text style={{ color: '#15803d' }}>Open</Text>
                             </Text>
                             <Text className="text-xs text-stone dark:text-parchment mt-0.5">
                               {left} spot{left === 1 ? '' : 's'}{rev.open ? ` · ${fmtMoney(rev.open)} open` : ''}
@@ -272,7 +273,7 @@ export default function CoachScheduleScreen() {
                     // Pressable, tapping the note box (cancel/reschedule) collapsed it.
                     <View
                       key={slot.id}
-                      className="bg-warm-white dark:bg-bark-light rounded-xl p-3.5 border border-parchment dark:border-rally-900 mb-2"
+                      className="bg-white dark:bg-bark-light rounded-xl p-3.5 border border-parchment dark:border-rally-900 mb-2"
                       style={{ borderLeftWidth: 4, borderLeftColor: kindStyle.color, shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
                     >
                       <Pressable onPress={() => { tapLight(); setExpanded(open ? null : slot.id); }} className="flex-row items-center active:opacity-80">
