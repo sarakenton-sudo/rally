@@ -64,7 +64,7 @@ serve(async (req) => {
     const text = `You're connected with ${c.display_name} on RallyHUB. See open times and book lessons from the app.`;
     await admin.from('notification_log').insert({ user_id: parentId, notification_type: 'schedule_change', channel: 'push', message: `${title}. ${text}`, status: 'sent' });
     const pushed = await pushTo(parentId, title, text, { type: 'coach_announcement', coachId: c.id });
-    const r = email ? await sendEmail(SENDGRID_API_KEY, email, title, emailHtml(text, { label: 'See open times', url: `${SITE}/app` })) : 'no email';
+    const r = email ? await sendEmail(SENDGRID_API_KEY, email, title, emailHtml(text, { label: 'See open times', url: `${SITE}/coaching/${c.id}` })) : 'no email';
     return json({ emailed: r === true, email_status: r === true ? 202 : r, pushed });
   }
 

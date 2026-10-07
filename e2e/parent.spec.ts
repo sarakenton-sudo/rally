@@ -169,6 +169,12 @@ test.describe('writes', () => {
   });
 });
 
+test('rally-hub.com/app (old email links) opens Home, not "screen doesn\'t exist"', async ({ page }) => {
+  await page.goto('/app');
+  await expect(page.getByText("This screen doesn't exist")).toHaveCount(0, { timeout: 10_000 });
+  await expect(page.getByText('Coming up').first()).toBeVisible();
+});
+
 // ── Guests are app-based (no SMS) ──
 test('tournament Guests card: app followers + update box, no SMS', async ({ page }) => {
   const db = await parentDb();

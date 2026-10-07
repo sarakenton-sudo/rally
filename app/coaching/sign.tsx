@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/providers/AuthProvider';
 import { useSeasonStore } from '@/stores/useSeasonStore';
+import { useDataRefresh } from '@/providers/DataProvider';
 import { fetchCoachPolicies, acceptCoachPolicies, acceptPoliciesAsAthlete, fetchCoachById, type CoachPolicies } from '@/lib/coach';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess, notifyError } from '@/lib/haptics';
@@ -20,7 +21,11 @@ export default function SignReleaseScreen() {
   const { userProfile } = useAuth();
   const athletes = useSeasonStore((s) => s.athletes);
   const isAthlete = userProfile?.role === 'athlete';
+  const isAthleteRole = isAthlete;
   const athlete = athletes.find((a) => a.id === athleteId);
+  // Opened from a coach's email right after they added this athlete: load it.
+  const { refresh } = useDataRefresh();
+  useEffect(() => { if (athleteId && !athlete && !isAthleteRole) refresh(); }, [athleteId]);
 
   const [policies, setPolicies] = useState<CoachPolicies | null>(null);
   const [coachName, setCoachName] = useState('your coach');

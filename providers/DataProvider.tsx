@@ -1,4 +1,5 @@
-import { useEffect, createContext, useContext, useCallback, useState, type ReactNode } from 'react';
+import { useEffect, useRef, createContext, useContext, useCallback, useState, type ReactNode } from 'react';
+import { AppState } from 'react-native';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useGuestStore } from '@/stores/useGuestStore';
@@ -101,6 +102,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
       await new Promise((r) => setTimeout(r, 500));
     }
     setIsRefreshing(false);
+  }, [isConfigured, supabaseRefresh]);
+
+  // Back in the app after a while (or opened from a link / notification):
+  // reload, so things added elsewhere meanwhile (e.g. a coach adding your
+  // athlete) show up without restarting the app.
+  const lastLoad = useRef(Date.now());
+  useEffect(() => {
+    if (!isConfigured) return;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active' || Date.now() - lastLoad.current < 30_000) return;
+      lastLoad.current = Date.now();
+      supabaseRefresh().catch(() => {});
+    });
+    return () => sub.remove();
   }, [isConfigured, supabaseRefresh]);
 
   return (
