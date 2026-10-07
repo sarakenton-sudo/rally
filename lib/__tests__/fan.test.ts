@@ -1,4 +1,4 @@
-import { parseFanCode, fanInviteUrl, fanInviteMessage, groupByMonth } from '@/lib/fan';
+import { parseFanCode, fanInviteUrl, fanInviteMessage, groupByMonth, APP_STORE_URL } from '@/lib/fan';
 
 describe('fan invites', () => {
   it('accepts a bare code, lowercase, spaces or the full link', () => {
@@ -12,7 +12,7 @@ describe('fan invites', () => {
     expect(m.startsWith('Hi Grandma!')).toBe(true);
     expect(m).toContain("Drue's volleyball season");
     expect(m).toContain('enter code AB23CD45');
-    expect(m).toContain('https://apps.apple.com/');
+    expect(m).toContain(APP_STORE_URL);
     expect(m.endsWith('https://rally-hub.com/fan/AB23CD45')).toBe(true);
   });
 });

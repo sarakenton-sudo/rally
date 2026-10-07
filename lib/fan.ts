@@ -5,7 +5,10 @@ import { SITE_URL } from '@/lib/config';
 // Fans (00095): friends and family who follow a family's athletes in the app.
 // Read-only: tournaments and games. Each invite has its own one-time code.
 
-export const APP_STORE_URL = 'https://apps.apple.com/app/id6762097230';
+// Where "get the app" links go. While RallyHUB is in TestFlight this is the
+// public TestFlight link; switch back to the App Store link at launch:
+//   https://apps.apple.com/app/id6762097230
+export const APP_STORE_URL = 'https://testflight.apple.com/join/cfEYHwkd';
 export const fanInviteUrl = (code: string) => `${SITE_URL}/fan/${code}`;
 
 /** The text the parent pastes into Messages: what it is, the app link, and their code. */

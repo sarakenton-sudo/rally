@@ -221,7 +221,7 @@ test.describe('writes: games, lessons, seasons', () => {
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toMatch(/enter code [A-Z0-9]{8}/);
     const text = await page.evaluate(() => navigator.clipboard.readText());
     expect(text).toContain('Hi QA test fan!');
-    expect(text).toContain('apps.apple.com');
+    expect(text).toMatch(/apps\.apple\.com|testflight\.apple\.com/);
     await expect(page.getByText('QA test fan').first()).toBeVisible();
     await db.from('fans').delete().eq('name', 'QA test fan');
   });
