@@ -7,8 +7,8 @@ export const TAB_BAR_STYLE = {
   backgroundColor: '#1E3A5F',
   borderTopColor: 'rgba(255,255,255,0.07)',
   ...(Platform.OS === 'web'
-    ? { height: 'calc(64px + env(safe-area-inset-bottom, 0px))', paddingTop: 6, paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))' }
+    ? { height: 'calc(68px + env(safe-area-inset-bottom, 0px))', paddingTop: 6, paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))' }
     : {}),
 } as any;
 
-export const TAB_BAR_LABEL_STYLE = Platform.OS === 'web' ? { fontSize: 11, lineHeight: 15 } : undefined;
+export const TAB_BAR_LABEL_STYLE = Platform.OS === 'web' ? { fontSize: 11, lineHeight: 16, paddingBottom: 2, overflow: 'visible' as const } : undefined;

@@ -40,6 +40,7 @@ const SECTION_ACCENTS = [
 ];
 
 export default function TravelScreen() {
+  const otherEmails = useSeasonStore((st) => st.adminConfig?.trusted_sender_emails?.length ?? 0);
   const ic = useIconColors();
   const allTournaments = useSeasonStore((s) => s.tournaments);
   const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
@@ -195,6 +196,32 @@ export default function TravelScreen() {
               </View>
             </View>
 
+            {/* Forwarding: the fastest way in, plus the inbox and other addresses */}
+            <View className="rounded-2xl p-4 mt-4" style={{ backgroundColor: '#FFF1EC', borderWidth: 1, borderColor: '#FF7A5955' }}>
+              <View className="flex-row items-center">
+                <Ionicons name="mail" size={18} color="#E85F3D" />
+                <Text className="text-sm font-bold text-bark ml-2 flex-1">Forward confirmations to {PLANS_INBOX_EMAIL}</Text>
+              </View>
+              <Text className="text-xs text-stone mt-1">
+                Hotels and flights land here, matched to your tournaments.
+                {otherEmails ? ` Watching ${otherEmails + 1} of your addresses.` : ' Book from another email too? Add it so we know it\'s you.'}
+              </Text>
+              <View className="flex-row flex-wrap mt-3" style={{ gap: 8 }}>
+                <Pressable onPress={async () => { await Clipboard.setStringAsync(PLANS_INBOX_EMAIL); showToast(`${PLANS_INBOX_EMAIL} copied`); }} className="flex-row items-center rounded-full px-3 py-2 active:opacity-80" style={{ backgroundColor: '#FF7A59' }} accessibilityLabel="Copy forwarding address">
+                  <Ionicons name="copy-outline" size={14} color="#fff" />
+                  <Text className="text-xs font-bold text-white ml-1">Copy address</Text>
+                </Pressable>
+                <Pressable onPress={() => router.push('/settings/trusted-emails')} className="flex-row items-center rounded-full px-3 py-2 bg-white border active:opacity-80" style={{ borderColor: '#FF7A59' }} accessibilityLabel="Add my other email addresses">
+                  <Ionicons name="at" size={14} color="#E85F3D" />
+                  <Text className="text-xs font-bold ml-1" style={{ color: '#E85F3D' }}>{otherEmails ? 'My email addresses' : 'Add my other emails'}</Text>
+                </Pressable>
+                <Pressable onPress={() => router.push('/email/inbox')} className="flex-row items-center rounded-full px-3 py-2 bg-white border active:opacity-80" style={{ borderColor: '#FF7A5955' }} accessibilityLabel="View inbox">
+                  <Ionicons name="file-tray-outline" size={14} color="#E85F3D" />
+                  <Text className="text-xs font-bold ml-1" style={{ color: '#E85F3D' }}>View inbox</Text>
+                </Pressable>
+              </View>
+            </View>
+
             {(totalHotelCost > 0 || totalFlightCost > 0) && !hideTravelCosts && (
               <View
                 className="bg-warm-white dark:bg-bark-light rounded-xl p-4 mt-4 flex-row items-center justify-between border border-parchment dark:border-rally-900"
@@ -347,11 +374,6 @@ export default function TravelScreen() {
                 <Ionicons name="chevron-forward" size={16} color={ic.placeholder} />
               </Pressable>
             ))}
-            <Pressable onPress={() => router.push('/settings/trusted-emails')} className="mt-2 px-2 py-2 active:opacity-70" accessibilityLabel="Add your other email addresses">
-              <Text className="text-xs text-stone dark:text-parchment text-center">
-                Book travel from more than one email? <Text className="font-semibold text-rally-600">Add your other addresses</Text> so we match them to your account.
-              </Text>
-            </Pressable>
           </View>
         }
       />
