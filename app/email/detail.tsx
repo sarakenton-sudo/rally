@@ -1,3 +1,4 @@
+import { useDataRefresh } from '@/providers/DataProvider';
 import { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, Alert, Linking, Platform } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
@@ -323,6 +324,7 @@ function getSuggestedUpdates(tournament: Tournament, extracted: Record<string, u
 }
 
 export default function EmailDetailScreen() {
+  const { refresh } = useDataRefresh(); // Travel/Schedule show a saved booking right away
   const { id } = useLocalSearchParams<{ id: string }>();
   const ic = useIconColors();
   const storeEmail = useSeasonStore((s) => s.forwardedEmails.find((e) => e.id === id));
@@ -530,6 +532,7 @@ export default function EmailDetailScreen() {
           if (error) throw error;
         }
         setSavedBooking('flight');
+        refresh();
         // Mark email as imported
         await markEmailImported('travel_import_queued');
         const msg = Object.keys(updates).length > 0
@@ -554,6 +557,7 @@ export default function EmailDetailScreen() {
         } as any);
         if (error) throw error;
         setSavedBooking('flight');
+        refresh();
         // Mark email as imported
         await markEmailImported('travel_import_queued');
         if (user?.id) trackEvent(user.id, 'import_completed', { type: 'email_flight', email_id: email.id, tournament_id: activeMatch.id });
@@ -591,9 +595,13 @@ export default function EmailDetailScreen() {
 
       // Check if hotel booking already exists
       const hotelBookings = useSeasonStore.getState().hotelBookings;
+      // Same booking = same confirmation number, or same hotel and check-in.
+      // (It used to match any hotel on the tournament, so a second hotel was
+      // "merged" into the first and never saved.)
+      const sameName = (a?: string | null, b?: string | null) => !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
       const existing = hotelBookings.find((h) =>
         (confNum && h.reservation_number === confNum) ||
-        h.tournament_id === activeMatch.id
+        (h.tournament_id === activeMatch.id && sameName(h.hotel_name, cleanData.hotel_name as string) && !!cleanData.check_in && h.check_in === cleanData.check_in)
       );
 
       if (existing) {
@@ -610,6 +618,7 @@ export default function EmailDetailScreen() {
           if (error) throw error;
         }
         setSavedBooking('hotel');
+        refresh();
         await markEmailImported('booking_alert_sent');
         const msg = Object.keys(updates).length > 0
           ? `Updated ${Object.keys(updates).length} fields on existing hotel booking.`
@@ -636,6 +645,7 @@ export default function EmailDetailScreen() {
         } as any);
         if (error) throw error;
         setSavedBooking('hotel');
+        refresh();
         await markEmailImported('booking_alert_sent');
         if (user?.id) trackEvent(user.id, 'import_completed', { type: 'email_hotel', email_id: email.id, tournament_id: activeMatch.id });
         if (Platform.OS === 'web') window.alert('Hotel booking saved!');
