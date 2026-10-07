@@ -1,3 +1,5 @@
+import { useCoachStore } from '@/stores/useCoachStore';
+import { fetchMyCoach } from '@/lib/coach';
 import "../global.css";
 import { ThemeProvider, type Theme } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
@@ -117,6 +119,14 @@ function RootLayoutNav() {
   const isCoParent = userProfile?.role === 'admin' && !adminConfig && adminAthletes.length > 0;
   // Coach accounts live in the /coach section (the dashboard handles listing setup)
   const isCoach = userProfile?.account_type === 'coach';
+  // Load the coach profile once for every coach screen (tabs or not), so a
+  // screen opened directly (refresh, link) isn't empty.
+  const coachProfile = useCoachStore((s) => s.coachProfile);
+  const setCoachProfile = useCoachStore((s) => s.setCoachProfile);
+  useEffect(() => {
+    if (!isCoach || coachProfile || !session?.user) return;
+    fetchMyCoach(session.user.id).then(({ data }) => { if (data) setCoachProfile(data); });
+  }, [isCoach, coachProfile, session?.user?.id]);
 
   // Guard against re-issuing the same redirect before navigation settles (which
   // races the heavy (tabs) screen mount and causes a "max update depth" loop).

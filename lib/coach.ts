@@ -914,7 +914,7 @@ export async function coachCreateBooking(args: {
   athleteId: string; sessionTypeId: string; slotId?: string | null;
   startsAt?: Date | null; endsAt?: Date | null; facilityId?: string | null;
   notes?: string; chargeInApp: boolean;
-}): Promise<{ bookingId: string | null; error: Error | null }> {
+}): Promise<{ bookingId: string | null; slotId?: string | null; error: Error | null }> {
   const { data, error } = await (supabase.rpc as any)('coach_create_booking', {
     p_athlete_id: args.athleteId,
     p_session_type_id: args.sessionTypeId,
@@ -927,7 +927,7 @@ export async function coachCreateBooking(args: {
   });
   const bookingId = (data as any)?.booking_id ?? null;
   if (bookingId) notifyParentOfChange(bookingId, 'booked');
-  return { bookingId, error: error ?? null };
+  return { bookingId, slotId: (data as any)?.slot_id ?? null, error: error ?? null };
 }
 
 export async function announceSlots(args: {

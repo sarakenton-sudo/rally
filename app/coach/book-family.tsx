@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Switch, KeyboardAvoidingView, Platform } from 'react-native';
 import { PAYMENTS_ENABLED } from '@/lib/config';
 import { SafeAreaView } from '@/components/SafeAreaView';
@@ -34,7 +34,8 @@ export default function BookFamilyScreen() {
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [openSlots, setOpenSlots] = useState<SlotWithRefs[]>([]);
 
-  const [athleteId, setAthleteId] = useState<string | null>(null);
+  // Several athletes when the time or lesson type has room (semi-private, group, clinic).
+  const [athleteIds, setAthleteIds] = useState<string[]>([]);
   const [typeId, setTypeId] = useState<string | null>(null);
   const [mode, setMode] = useState<'open' | 'new'>('open');
   // From Schedule: tapping an open time → assign an athlete to that slot.
@@ -67,8 +68,13 @@ export default function BookFamilyScreen() {
 
   const pickAthlete = (a: BookableAthlete) => {
     tapLight();
-    setAthleteId(a.athlete_id);
-    // Their usual lesson type, unless the chosen open time doesn't allow it.
+    const on = athleteIds.includes(a.athlete_id);
+    if (on) { setAthleteIds(athleteIds.filter((x) => x !== a.athlete_id)); return; }
+    if (maxAthletes <= 1) setAthleteIds([a.athlete_id]);
+    else if (athleteIds.length >= maxAthletes) { showToast(`This time has room for ${maxAthletes}`); return; }
+    else setAthleteIds([...athleteIds, a.athlete_id]);
+    // First pick: their usual lesson type, unless the chosen open time doesn't allow it.
+    if (athleteIds.length) return;
     const preset = openSlots.find((x) => x.id === presetSlot);
     const allowed = !preset || !(preset.eligible_session_type_ids?.length) || preset.eligible_session_type_ids.includes(a.last_session_type_id ?? '');
     if (a.last_session_type_id && allowed && types.some((t) => t.id === a.last_session_type_id)) setTypeId(a.last_session_type_id);
@@ -81,9 +87,13 @@ export default function BookFamilyScreen() {
     return !typeId || ids.length === 0 || ids.includes(typeId);
   }), [openSlots, typeId]);
   const paysInApp = PAYMENTS_ENABLED && !!(coach as any)?.stripe_charges_enabled;
+  const chosenSlot = openSlots.find((x) => x.id === slotId) ?? null;
+  // How many athletes fit: the open time's spots left, or the lesson type's size for a new time.
+  const maxAthletes = mode === 'open' && chosenSlot ? Math.max(1, chosenSlot.seats_total - chosenSlot.seats_taken) : Math.max(1, type?.capacity ?? 1);
+  useEffect(() => { if (athleteIds.length > maxAthletes) setAthleteIds((ids) => ids.slice(0, maxAthletes)); }, [maxAthletes]);
 
   const book = async () => {
-    if (!athleteId) return showToast('Pick an athlete');
+    if (!athleteIds.length) return showToast('Pick an athlete');
     if (!typeId || !type) return showToast('Pick a lesson type');
     let startsAt: Date | null = null, endsAt: Date | null = null;
     if (mode === 'open') {
@@ -96,20 +106,36 @@ export default function BookFamilyScreen() {
       endsAt = new Date(startsAt.getTime() + type.duration_min * 60_000);
       if (startsAt.getTime() < Date.now()) return showToast('That time has already passed');
     }
+    if (athleteIds.length > maxAthletes) return showToast(`This time has room for ${maxAthletes}`);
     setSaving(true);
-    const { bookingId, error } = await coachCreateBooking({
-      athleteId, sessionTypeId: typeId, slotId: mode === 'open' ? slotId : null,
-      startsAt, endsAt, facilityId: mode === 'new' ? facilityId : null, notes, chargeInApp: paysInApp && charge,
-    });
-    setSaving(false);
-    if (error || !bookingId) {
-      notifyError();
-      const msg = (error?.message ?? 'Could not book').replace(/^[A-Z_]+: /, '');
-      return showToast(msg.includes('POLICIES_NOT_ACCEPTED') || msg.includes('terms') ? "This family needs to sign your terms first — ask them to request a lesson once." : msg);
+    // Book each athlete. For a new time, the first booking creates it; the rest join that time.
+    let targetSlot: string | null = mode === 'open' ? slotId : null;
+    const booked: string[] = [];
+    let failure: string | null = null;
+    for (const id of athleteIds) {
+      const { bookingId, slotId: madeSlot, error } = await coachCreateBooking({
+        athleteId: id, sessionTypeId: typeId, slotId: targetSlot,
+        startsAt: targetSlot ? null : startsAt, endsAt: targetSlot ? null : endsAt,
+        facilityId: targetSlot ? null : facilityId, notes, chargeInApp: paysInApp && charge,
+      });
+      if (error || !bookingId) {
+        const msg = (error?.message ?? 'Could not book').replace(/^[A-Z_]+: /, '');
+        const who = athletes.find((a) => a.athlete_id === id)?.athlete_name ?? 'One athlete';
+        failure = `${who}: ${msg.includes('POLICIES_NOT_ACCEPTED') || msg.includes('terms') ? 'their family needs to sign your terms first' : msg}`;
+        break;
+      }
+      booked.push(id);
+      targetSlot = targetSlot ?? madeSlot ?? null;
     }
+    setSaving(false);
+    if (!booked.length) { notifyError(); return showToast(failure ?? 'Could not book'); }
     notifySuccess();
     router.back();
-    showToast('Lesson booked — the family was notified', { actionLabel: 'View', onAction: () => router.push('/coach-schedule') });
+    const n = booked.length;
+    showToast(
+      failure ? `Booked ${n} of ${athleteIds.length}. ${failure}` : n > 1 ? `${n} athletes booked — families notified` : 'Lesson booked — the family was notified',
+      { actionLabel: 'View', onAction: () => router.push('/coach-schedule') },
+    );
   };
 
   return (
@@ -138,10 +164,12 @@ export default function BookFamilyScreen() {
         ) : (
           <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
             {/* Athlete */}
-            <Text className="text-xs font-semibold uppercase tracking-wider text-stone mb-2 ml-1">Athlete</Text>
+            <Text className="text-xs font-semibold uppercase tracking-wider text-stone mb-2 ml-1">
+              {maxAthletes > 1 ? `Athletes · up to ${maxAthletes}${athleteIds.length ? ` (${athleteIds.length} picked)` : ''}` : 'Athlete'}
+            </Text>
             <View className="flex-row flex-wrap mb-4">
               {athletes.map((a) => {
-                const on = athleteId === a.athlete_id;
+                const on = athleteIds.includes(a.athlete_id);
                 return (
                   <Pressable key={a.athlete_id} onPress={() => pickAthlete(a)} className={`flex-row items-center rounded-full pl-1 pr-3 py-1 mr-2 mb-2 border ${on ? 'bg-rally-600 border-rally-600' : 'border-parchment dark:border-rally-900 bg-warm-white dark:bg-bark-light'}`}>
                     <Avatar uri={a.photo_url} name={a.athlete_name} size={26} colorKey={a.athlete_id} />
