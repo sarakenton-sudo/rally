@@ -1,3 +1,4 @@
+import { CORAL } from '@/lib/colors';
 import { useState, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, Linking, Alert, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
@@ -235,10 +236,13 @@ export default function CoachScheduleScreen() {
                   // ---- Open block (nobody booked or requested) ----
                   if (!item) {
                     const left = slot.seats_total - slot.seats_taken;
+                    const past = new Date(slot.ends_at) < new Date();
                     return (
-                      <View
+                      <Pressable
                         key={slot.id}
-                        className="bg-white dark:bg-bark-light rounded-xl p-3 mb-2 border border-dashed"
+                        onPress={() => { if (!past) { tapLight(); router.push({ pathname: '/coach/book-family', params: { slotId: slot.id } }); } }}
+                        accessibilityLabel={`Open time ${fmtTime(slot.starts_at)}. Assign an athlete`}
+                        className="bg-white dark:bg-bark-light rounded-xl p-3 mb-2 border border-dashed active:opacity-80"
                         style={{ borderColor: '#16a34a66', borderLeftWidth: 4, borderLeftColor: '#16a34a', borderStyle: 'dashed', shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 }}
                       >
                         <View className="flex-row items-center">
@@ -258,7 +262,13 @@ export default function CoachScheduleScreen() {
                           )}
                         </View>
                         {gymChip}
-                      </View>
+                        {!past && (
+                          <View className="flex-row items-center self-start rounded-full px-3 py-1.5 mt-2" style={{ backgroundColor: CORAL }}>
+                            <Ionicons name="person-add" size={13} color="#fff" />
+                            <Text className="text-xs font-bold text-white ml-1">Assign athlete</Text>
+                          </View>
+                        )}
+                      </Pressable>
                     );
                   }
 
@@ -318,6 +328,18 @@ export default function CoachScheduleScreen() {
                           </Text>
                         )}
                       </View>
+
+                      {item.seats_total - item.attendees.length > 0 && new Date(slot.starts_at) > new Date() && (
+                        <Pressable
+                          onPress={() => { tapLight(); router.push({ pathname: '/coach/book-family', params: { slotId: slot.id } }); }}
+                          className="flex-row items-center self-start rounded-full px-3 py-1.5 mt-2 active:opacity-80"
+                          style={{ backgroundColor: CORAL }}
+                          accessibilityLabel="Add an athlete to this lesson"
+                        >
+                          <Ionicons name="person-add" size={13} color="#fff" />
+                          <Text className="text-xs font-bold text-white ml-1">Add athlete</Text>
+                        </Pressable>
+                      )}
 
                       {open && (
                         <View className="mt-3 pt-3 border-t border-parchment dark:border-rally-900">

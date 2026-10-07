@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Switch, KeyboardAvoidingView, Platform } from 'react-native';
 import { PAYMENTS_ENABLED } from '@/lib/config';
 import { SafeAreaView } from '@/components/SafeAreaView';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useCoachStore } from '@/stores/useCoachStore';
 import Avatar from '@/components/Avatar';
@@ -37,7 +37,9 @@ export default function BookFamilyScreen() {
   const [athleteId, setAthleteId] = useState<string | null>(null);
   const [typeId, setTypeId] = useState<string | null>(null);
   const [mode, setMode] = useState<'open' | 'new'>('open');
-  const [slotId, setSlotId] = useState<string | null>(null);
+  // From Schedule: tapping an open time → assign an athlete to that slot.
+  const { slotId: presetSlot } = useLocalSearchParams<{ slotId?: string }>();
+  const [slotId, setSlotId] = useState<string | null>(presetSlot ?? null);
   const [date, setDate] = useState<Date | null>(null);
   const [timeLabel, setTimeLabel] = useState('');
   const [facilityId, setFacilityId] = useState<string | null>(null);
@@ -53,7 +55,11 @@ export default function BookFamilyScreen() {
     setFacilities(f.data);
     setFacilityId((cur) => cur ?? f.data[0]?.id ?? null);
     const in30 = Date.now() + 30 * 86_400_000;
-    setOpenSlots(s.data.filter((x) => x.status === 'open' && x.seats_taken < x.seats_total && new Date(x.starts_at).getTime() < in30));
+    setOpenSlots(s.data.filter((x) => (x.status === 'open' || x.id === presetSlot) && x.seats_taken < x.seats_total && (new Date(x.starts_at).getTime() < in30 || x.id === presetSlot)));
+    // Preset slot with a single lesson type: pick that type too.
+    const preset = s.data.find((x) => x.id === presetSlot);
+    const only = preset?.eligible_session_type_ids?.length === 1 ? preset.eligible_session_type_ids[0] : null;
+    if (only) setTypeId((cur) => cur ?? only);
     setLoading(false);
   }, [coach?.id]);
 
@@ -62,7 +68,10 @@ export default function BookFamilyScreen() {
   const pickAthlete = (a: BookableAthlete) => {
     tapLight();
     setAthleteId(a.athlete_id);
-    if (a.last_session_type_id && types.some((t) => t.id === a.last_session_type_id)) setTypeId(a.last_session_type_id);
+    // Their usual lesson type, unless the chosen open time doesn't allow it.
+    const preset = openSlots.find((x) => x.id === presetSlot);
+    const allowed = !preset || !(preset.eligible_session_type_ids?.length) || preset.eligible_session_type_ids.includes(a.last_session_type_id ?? '');
+    if (a.last_session_type_id && allowed && types.some((t) => t.id === a.last_session_type_id)) setTypeId(a.last_session_type_id);
   };
 
   const type = types.find((t) => t.id === typeId) ?? null;
@@ -206,7 +215,7 @@ export default function BookFamilyScreen() {
                   <Switch value={charge} onValueChange={setCharge} />
                 </View>
               ) : (
-                <Text className="text-sm text-stone dark:text-parchment">Collect directly — set up Stripe in Business → Payments to charge in the app.</Text>
+                <Text className="text-sm text-stone dark:text-parchment">{PAYMENTS_ENABLED ? 'Collect directly — set up Stripe in Business → Payments to charge in the app.' : 'Collect directly (cash, Venmo, Zelle) and mark it paid in RallyHUB.'}</Text>
               )}
             </View>
 

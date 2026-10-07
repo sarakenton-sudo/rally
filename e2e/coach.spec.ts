@@ -84,3 +84,17 @@ test('Schedule loads when opened directly (refresh or link), not empty', async (
   // The week loads for the coach (not stuck on "0 lessons" with nothing scheduled forever).
   await expect.poll(async () => (await page.locator('body').innerText()).match(/\d{1,2}:\d\d [AP]M – /) !== null || (await page.getByText('Nothing scheduled').count()) < 7, { timeout: 15_000 }).toBe(true);
 });
+
+test('tapping an open time on Schedule opens booking with that time picked', async ({ page }) => {
+  await page.goto('/coach-schedule');
+  for (let i = 0; i < 4; i++) {
+    if (await page.getByLabel(/Assign an athlete|Add an athlete to this lesson/).locator('visible=true').count()) break;
+    await page.getByLabel('Next week').first().click();
+    await page.waitForTimeout(2500);
+  }
+  const btn = page.getByLabel(/Assign an athlete|Add an athlete to this lesson/).locator('visible=true').first();
+  test.skip(!(await btn.count()), 'No open times in the next month for this coach');
+  await btn.click();
+  await expect(page).toHaveURL(/book-family\?slotId=/);
+  await expect(page.getByText('Book a lesson').first()).toBeVisible();
+});
