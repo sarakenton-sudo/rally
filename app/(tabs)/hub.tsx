@@ -171,7 +171,7 @@ export default function HubScreen() {
           icon="mail-unread"
           iconColor="#3B82B0"
           title="Email Inbox"
-          subtitle="Emails synced from Gmail & forwarded to Rally"
+          subtitle="Confirmations you forward to plans@rally-hub.com"
           badge={forwardedEmails.length}
           onPress={() => router.push('/email/inbox')}
         />

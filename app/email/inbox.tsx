@@ -125,7 +125,7 @@ export default function EmailInboxScreen() {
             Email Inbox
           </Text>
           <Text className="text-xs text-stone">
-            {emails.length} email{emails.length !== 1 ? 's' : ''} synced
+            {emails.length} email{emails.length !== 1 ? 's' : ''} received
           </Text>
         </View>
       </View>
@@ -170,7 +170,7 @@ export default function EmailInboxScreen() {
             <Ionicons name="mail-unread-outline" size={48} color={ic.placeholder} />
             <Text className="text-lg font-semibold text-stone mt-4">No emails yet</Text>
             <Text className="text-sm text-stone mt-1 text-center px-8">
-              Rally automatically syncs booking confirmations, coach messages, and schedule updates from your Gmail. You can also forward emails to your Rally address.
+              Forward hotel and flight confirmations and schedule emails to plans@rally-hub.com and they'll show up here, matched to your tournaments.
             </Text>
           </View>
         }

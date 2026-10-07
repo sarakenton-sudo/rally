@@ -327,7 +327,6 @@ export default function TravelScreen() {
             </View>
             {([
               ['mail-outline', 'Forward a confirmation email', `Send it to ${PLANS_INBOX_EMAIL}. Tap to copy the address.`, async () => { await Clipboard.setStringAsync(PLANS_INBOX_EMAIL); showToast(`${PLANS_INBOX_EMAIL} copied`); }],
-              ['logo-google', 'Connect Gmail', 'We find hotel and flight confirmations for you.', () => router.push('/settings/email-forward')],
               ['document-text-outline', 'Paste a confirmation', 'Copy the text of any booking email or page.', () => router.push('/import/paste-combined')],
               ['bed-outline', 'Add a hotel', 'Type it in yourself.', () => router.push('/booking/add-hotel')],
               ['airplane-outline', 'Add a flight', 'Type it in yourself.', () => router.push('/booking/add-flight')],
