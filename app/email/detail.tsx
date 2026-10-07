@@ -527,6 +527,10 @@ export default function EmailDetailScreen() {
             updates[key] = val;
           }
         }
+        // Saved earlier (e.g. automatically when the email arrived) to a different
+        // tournament: move it to the one picked here.
+        const moved = existing.tournament_id !== activeMatch.id;
+        if (moved) updates.tournament_id = activeMatch.id;
         if (Object.keys(updates).length > 0) {
           const { error } = await updateFlightBooking(existing.id, updates as any);
           if (error) throw error;
@@ -535,9 +539,11 @@ export default function EmailDetailScreen() {
         refresh();
         // Mark email as imported
         await markEmailImported('travel_import_queued');
-        const msg = Object.keys(updates).length > 0
-          ? `Updated ${Object.keys(updates).length} fields on existing flight booking.`
-          : 'Flight booking already has all this data.';
+        const msg = moved
+          ? `Flight saved to ${activeMatch.name}. It's on the Travel tab.`
+          : Object.keys(updates).length > 0
+            ? `Flight updated on ${activeMatch.name}. It's on the Travel tab.`
+            : `This flight is already saved to ${activeMatch.name}. It's on the Travel tab.`;
         if (Platform.OS === 'web') window.alert(msg);
         else Alert.alert('Updated', msg);
       } else {
@@ -613,6 +619,8 @@ export default function EmailDetailScreen() {
             updates[key] = val;
           }
         }
+        const moved = existing.tournament_id !== activeMatch.id;
+        if (moved) updates.tournament_id = activeMatch.id;
         if (Object.keys(updates).length > 0) {
           const { error } = await updateHotelBooking(existing.id, updates as any);
           if (error) throw error;
@@ -620,9 +628,11 @@ export default function EmailDetailScreen() {
         setSavedBooking('hotel');
         refresh();
         await markEmailImported('booking_alert_sent');
-        const msg = Object.keys(updates).length > 0
-          ? `Updated ${Object.keys(updates).length} fields on existing hotel booking.`
-          : 'Hotel booking already has all this data.';
+        const msg = moved
+          ? `Hotel saved to ${activeMatch.name}. It's on the Travel tab.`
+          : Object.keys(updates).length > 0
+            ? `Hotel updated on ${activeMatch.name}. It's on the Travel tab.`
+            : `This hotel is already saved to ${activeMatch.name}. It's on the Travel tab.`;
         if (Platform.OS === 'web') window.alert(msg);
         else Alert.alert('Updated', msg);
       } else {
