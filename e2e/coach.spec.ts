@@ -98,3 +98,11 @@ test('tapping an open time on Schedule opens booking with that time picked', asy
   await expect(page).toHaveURL(/book-family\?slotId=/);
   await expect(page.getByText('Book a lesson').locator('visible=true').first()).toBeVisible();
 });
+
+test('share RallyHUB with another coach (links to the coaches page)', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'clipboard permission is Chromium-only');
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/business');
+  await page.getByLabel('Share RallyHUB with another coach').locator('visible=true').first().click();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain('https://rally-hub.com/coaches');
+});

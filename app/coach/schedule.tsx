@@ -1,3 +1,4 @@
+import ShareWithCoaches from '@/components/coach/ShareWithCoaches';
 import { CORAL } from '@/lib/colors';
 import { useState, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, Linking, Alert, ActivityIndicator, Platform } from 'react-native';
@@ -457,6 +458,7 @@ export default function CoachScheduleScreen() {
             </Pressable>
           </View>
         </View>
+        <ShareWithCoaches fromName={coachProfile?.display_name} />
       </ScrollView>
     </SafeAreaView>
   );

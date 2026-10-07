@@ -1,3 +1,4 @@
+import ShareWithCoaches from '@/components/coach/ShareWithCoaches';
 import { useCallback, useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
@@ -354,6 +355,7 @@ export default function CoachTodayScreen() {
             {m.items.map((i) => <LessonRow key={i.slot_id} item={i} />)}
           </View>
         ))}
+        <ShareWithCoaches fromName={coach?.display_name} />
       </ScrollView>
     </SafeAreaView>
   );

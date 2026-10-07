@@ -1,3 +1,4 @@
+import ShareWithCoaches from '@/components/coach/ShareWithCoaches';
 import { useState, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert, Platform } from 'react-native';
 import { showToast } from '@/components/Toast';
@@ -228,6 +229,7 @@ export default function CoachClientsScreen() {
         )}
           </>
         )}
+        <ShareWithCoaches />
       </ScrollView>
     </SafeAreaView>
   );

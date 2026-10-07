@@ -1,3 +1,4 @@
+import ShareWithCoaches from '@/components/coach/ShareWithCoaches';
 import { bookingPageUrl } from '@/lib/bookingPage';
 import { APP_STORE_URL } from '@/lib/fan';
 import { useEffect, useState, useCallback } from 'react';
@@ -330,6 +331,7 @@ export default function CoachDashboardScreen() {
             subtitle={(coachProfile as any).stripe_charges_enabled ? 'Earnings, payouts, and payment settings' : 'Set up Stripe to get paid in the app'}
             onPress={() => router.push('/coach/payments')}
           />) : null}
+          <ShareWithCoaches fromName={coachProfile?.display_name} />
         </ScrollView>
       )}
     </SafeAreaView>
