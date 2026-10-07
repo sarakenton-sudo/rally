@@ -1,3 +1,4 @@
+import { TAB_BAR_STYLE, TAB_BAR_LABEL_STYLE } from '@/lib/tabBar';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -12,7 +13,8 @@ export default function FanTabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: '#FEFEFE',
         tabBarInactiveTintColor: 'rgba(255,255,255,0.45)',
-        tabBarStyle: { backgroundColor: '#1E3A5F', borderTopColor: 'rgba(255,255,255,0.07)' },
+        tabBarStyle: TAB_BAR_STYLE,
+          tabBarLabelStyle: TAB_BAR_LABEL_STYLE,
       }}
     >
       <Tabs.Screen name="fan-home" options={{ title: 'Season', tabBarIcon: ({ color, size }) => <Ionicons name="calendar" size={size} color={color} /> }} />

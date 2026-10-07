@@ -1,3 +1,4 @@
+import { TAB_BAR_STYLE, TAB_BAR_LABEL_STYLE } from '@/lib/tabBar';
 import React, { useState } from 'react';
 import { View, Image, Pressable, Platform, Linking } from 'react-native';
 import { Tabs, router, usePathname } from 'expo-router';
@@ -71,7 +72,8 @@ export default function TabLayout() {
         screenOptions={{
           tabBarActiveTintColor: '#FEFEFE',
           tabBarInactiveTintColor: 'rgba(255,255,255,0.45)',
-          tabBarStyle: { backgroundColor: '#1E3A5F', borderTopColor: 'rgba(255,255,255,0.07)' },
+          tabBarStyle: TAB_BAR_STYLE,
+          tabBarLabelStyle: TAB_BAR_LABEL_STYLE,
           header: () => <GlobalHeader />,
         }}
       >
