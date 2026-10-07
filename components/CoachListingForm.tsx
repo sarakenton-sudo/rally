@@ -1,3 +1,4 @@
+import { PAYMENTS_ENABLED } from '@/lib/config';
 import { useState } from 'react';
 import { View, Text, ScrollView, Pressable, Image, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
@@ -186,12 +187,15 @@ export default function CoachListingForm({ title, submitLabel, existing, onSubmi
             onChange={(v) => setCostTier(COST_TO_VALUE[v])}
           />
 
-          <DropdownField
-            label="Processing Fees"
-            value={VALUE_TO_FEE[feeHandling]}
-            options={FEE_OPTIONS}
-            onChange={(v) => setFeeHandling(FEE_TO_VALUE[v])}
-          />
+          {/* Processing fees: only with in-app card payments (Business → Payments). */}
+          {PAYMENTS_ENABLED && (
+            <DropdownField
+              label="Processing Fees"
+              value={VALUE_TO_FEE[feeHandling]}
+              options={FEE_OPTIONS}
+              onChange={(v) => setFeeHandling(FEE_TO_VALUE[v])}
+            />
+          )}
 
           <View className="bg-cream dark:bg-bark-light rounded-xl px-3 py-2.5 mb-4 flex-row items-start">
             <Ionicons name="business" size={15} color={ic.muted} style={{ marginTop: 1 }} />
