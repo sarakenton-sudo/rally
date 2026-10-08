@@ -98,7 +98,7 @@ export default function AuthScreen() {
     if (!hasFanCode) return true;
     if (!fanCode.trim()) { setMessage({ text: 'Enter the fan code from your invite text.', type: 'error' }); return false; }
     const { ok } = await checkFanCode(fanCode);
-    if (!ok) { setMessage({ text: "That fan code isn't valid or was already used. Check the 8 letters and numbers in your invite, or ask the family for a new one.", type: 'error' }); return false; }
+    if (!ok) { setMessage({ text: "That fan code isn't valid or was already used. If you already joined with it, tap Sign In instead. Otherwise check the 8 letters and numbers in your invite, or ask the family for a new one.", type: 'error' }); return false; }
     rememberTypedFanCode();
     return true;
   };
