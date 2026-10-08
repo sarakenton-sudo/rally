@@ -1,3 +1,4 @@
+import { track } from '@/lib/track-event';
 import { supabase } from '@/lib/supabase';
 
 /** A game or team event (team_events; games come from the AI schedule import). */
@@ -46,6 +47,7 @@ export function formatGameTime(t: string | null): string | null {
 export async function deleteTeamEvent(id: string): Promise<{ error: Error | null }> {
   const { data, error } = await (supabase.from('team_events') as any).delete().eq('id', id).select('id');
   if (error) return { error };
+  if (!error && data?.length) track('team_event_deleted');
   return { error: data?.length ? null : new Error("Couldn't delete this game. Only parents who manage the team can.") };
 }
 

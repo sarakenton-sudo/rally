@@ -1,3 +1,4 @@
+import { track } from '@/lib/track-event';
 import { useState } from 'react';
 import {
   View,
@@ -375,6 +376,7 @@ export default function OnboardingScreen() {
         if (rpcError) throw new Error(rpcError.message);
         const result = rpcResult as { success: boolean; error?: string; athlete_id?: string; season_id?: string; config_id?: string };
         if (!result.success) throw new Error(result.error ?? 'Onboarding setup failed');
+        track('onboarding_completed', { tournaments: tournamentPayload.length, extra_athletes: 0 });
 
         // 2. Populate Zustand store
         const store = useSeasonStore.getState();

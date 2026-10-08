@@ -111,7 +111,6 @@ export default function AddClientScreen() {
     setSaving(false);
     if (e || !data) { setError(e?.message ?? "Couldn't add the client. Try again."); notifyError(); return; }
     notifySuccess();
-    if (user) trackEvent(user.id, 'coach_client_added', { status: data.status, has_groups: groupIds.length > 0 });
     setDone({ result: data, name: athleteFirst.trim(), email: parentEmail.trim().toLowerCase(), emailOk: null });
     // The email goes out in the background; update the message when it's sent.
     email.then((st) => setDone((d) => (d ? { ...d, emailOk: st === 202 || st === '202' } : d)));

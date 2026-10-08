@@ -28,7 +28,7 @@ export function Dashboard() {
       ) : stats ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard label="Total Users" value={stats.totalUsers} />
-          <StatCard label="Active Sessions (7d)" value={stats.activeSessionsWeek} />
+          <StatCard label="Active people (7d)" value={stats.activeSessionsWeek} sublabel="opened the app or website" />
           <StatCard label="Pending Errors" value={stats.pendingErrors} />
           <StatCard label="Feature Requests" value={stats.pendingFeatureRequests} sublabel="new / unreviewed" />
           <StatCard label="Referrals Sent" value={stats.totalReferrals} />

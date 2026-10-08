@@ -3,6 +3,7 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Layout } from '@/components/Layout';
 import { Login } from '@/pages/Login';
 import { Dashboard } from '@/pages/Dashboard';
+import { Activity } from '@/pages/Activity';
 import { Accounts } from '@/pages/Accounts';
 import { AccountDetail } from '@/pages/AccountDetail';
 import { Usage } from '@/pages/Usage';
@@ -53,6 +54,7 @@ export function App() {
           <Route index element={<Dashboard />} />
           <Route path="accounts" element={<Accounts />} />
           <Route path="accounts/:userId" element={<AccountDetail />} />
+          <Route path="activity" element={<Activity />} />
           <Route path="usage" element={<Usage />} />
           <Route path="errors" element={<Errors />} />
           <Route path="feature-requests" element={<FeatureRequests />} />

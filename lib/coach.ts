@@ -1,3 +1,4 @@
+import { track } from '@/lib/track-event';
 import * as ImagePicker from 'expo-image-picker';
 import type { NewClientInput } from '@/lib/clientForm';
 import { supabase } from '@/lib/supabase';
@@ -86,6 +87,7 @@ export async function createCoach(
     invite_code: generateInviteCode(), // every coach gets a shareable connect code
   };
   const { data, error } = await supabase.from('coaches').insert(insert as any).select().single();
+  if (!error && data) track('coach_signup', { coach_id: (data as any).id });
   return { data: (data as Coach | null) ?? null, error: error ?? null };
 }
 
@@ -125,6 +127,7 @@ export async function createFacility(
     .insert({ coach_id: coachId, sort_order: sortOrder, ...values } as any)
     .select()
     .single();
+  if (!error) track('coach_facility_added');
   return { data: (data as Facility | null) ?? null, error: error ?? null };
 }
 
@@ -167,6 +170,7 @@ export async function createSessionType(
     .insert({ coach_id: coachId, ...values } as any)
     .select()
     .single();
+  if (!error && data) track('coach_session_type_added', { kind: (data as any).kind });
   return { data: (data as SessionType | null) ?? null, error: error ?? null };
 }
 
@@ -244,6 +248,7 @@ export async function createSlots(rows: NewSlotInput[]): Promise<{ data: SlotWit
     .from('slots')
     .insert(payload as any)
     .select('*, facilities(label), session_types(name)');
+  if (!error) track('coach_availability_added', { slots: rows.length });
   return { data: (data as SlotWithRefs[]) ?? [], error: error ?? null };
 }
 
@@ -300,6 +305,7 @@ export async function createClientGroup(coachId: string, name: string): Promise<
     .insert({ coach_id: coachId, name } as any)
     .select()
     .single();
+  if (!error) track('coach_group_added');
   return { data: (data as ClientGroup | null) ?? null, error: error ?? null };
 }
 
@@ -433,6 +439,7 @@ export async function coachAddClient(v: NewClientInput): Promise<{ data: AddClie
   const email = supabase.functions.invoke('coach-add-client', { body })
     .then(({ data: mail }) => ((mail as any)?.email_status ?? null) as string | number | null)
     .catch(() => null);
+  if (!error && data) track('coach_client_added', { status: (data as any).status });
   return { data: res, email, error: null };
 }
 
@@ -645,6 +652,7 @@ export async function fetchMyUpcomingLessons(days = 30): Promise<{ data: ParentL
 /** Clear a cancelled/declined lesson from the family's Home (the coach keeps the record). */
 export async function hideFamilyLesson(requestId: string): Promise<{ error: Error | null }> {
   const { error } = await (supabase.rpc as any)('hide_family_lesson', { p_request_id: requestId });
+  if (!error) track('lesson_cleared_from_home');
   return { error: error ?? null };
 }
 
@@ -725,6 +733,7 @@ export async function requestBooking(args: {
     p_notes: args.notes ?? null,
     p_film_links: args.filmLinks ?? [],
   });
+  if (!error && data) track('lesson_requested', { booking_mode: (data as any).booking_mode });
   return { data: (data as { request_id: string; booking_mode: string } | null) ?? null, error: error ?? null };
 }
 
@@ -783,11 +792,13 @@ export async function getRequestDetail(requestId: string): Promise<{ data: Reque
 
 export async function acceptRequest(requestId: string): Promise<{ error: Error | null }> {
   const { error } = await (supabase.rpc as any)('accept_booking_request', { p_request_id: requestId });
+  if (!error) track('lesson_request_approved');
   return { error: error ?? null };
 }
 
 export async function declineRequest(requestId: string): Promise<{ error: Error | null }> {
   const { error } = await (supabase.rpc as any)('decline_booking_request', { p_request_id: requestId, p_reason: 'declined' });
+  if (!error) track('lesson_request_declined');
   return { error: error ?? null };
 }
 
@@ -927,6 +938,7 @@ export async function coachCreateBooking(args: {
   });
   const bookingId = (data as any)?.booking_id ?? null;
   if (bookingId) notifyParentOfChange(bookingId, 'booked');
+  if (!error && bookingId) track('lesson_booked_by_coach', { new_time: !args.slotId });
   return { bookingId, slotId: (data as any)?.slot_id ?? null, error: error ?? null };
 }
 
@@ -1049,6 +1061,7 @@ export const fmtMoney = (cents: number) => `$${Math.round(cents / 100).toLocaleS
 
 export async function markBookingPaid(bookingId: string, method: 'cash' | 'venmo' | 'zelle' | 'other'): Promise<{ error: Error | null }> {
   const { error } = await (supabase.rpc as any)('mark_booking_paid', { p_booking_id: bookingId, p_method: method });
+  if (!error) track('lesson_marked_paid', { method });
   return { error: error ?? null };
 }
 
@@ -1065,6 +1078,7 @@ export async function coachCancelBooking(bookingId: string, reason: string): Pro
     supabase.functions.invoke('refund-booking', { body: { booking_id: bookingId } })
       .then(({ error: e }) => { if (e) console.warn('[coach] refund failed:', e.message); });
   }
+  if (!error) track('lesson_cancelled', { by: 'coach' });
   return { error: error ?? null };
 }
 
@@ -1072,6 +1086,7 @@ export async function coachCancelBooking(bookingId: string, reason: string): Pro
 export async function coachProposeReschedule(bookingId: string, newSlotId: string, reason: string): Promise<{ error: Error | null }> {
   const { error } = await (supabase.rpc as any)('coach_propose_reschedule', { p_booking_id: bookingId, p_new_slot_id: newSlotId, p_reason: reason });
   if (!error) notifyParentOfChange(bookingId, 'reschedule_proposed');
+  if (!error) track('lesson_move_proposed', { by: 'coach' });
   return { error: error ?? null };
 }
 
@@ -1084,6 +1099,7 @@ export async function coachWithdrawReschedule(bookingId: string): Promise<{ erro
 export async function respondToReschedule(bookingId: string, accept: boolean): Promise<{ error: Error | null }> {
   const { error } = await (supabase.rpc as any)('respond_to_reschedule', { p_booking_id: bookingId, p_accept: accept });
   if (!error) notifyParentOfChange(bookingId, accept ? 'reschedule_accepted' : 'reschedule_declined');
+  if (!error) track('lesson_move_answered');
   return { error: error ?? null };
 }
 
@@ -1125,6 +1141,7 @@ export async function parentCancelBooking(bookingId: string, reason: string): Pr
     supabase.functions.invoke('refund-booking', { body: { booking_id: bookingId } })
       .then(({ error: e }) => { if (e) console.warn('[parent] refund failed:', e.message); });
   }
+  if (!error) track('lesson_cancelled', { by: 'family' });
   return { error: cutoffMessage(error ?? null) };
 }
 
@@ -1132,6 +1149,7 @@ export async function parentCancelBooking(bookingId: string, reason: string): Pr
 export async function parentProposeReschedule(bookingId: string, newSlotId: string, reason: string): Promise<{ error: Error | null }> {
   const { error } = await (supabase.rpc as any)('parent_propose_reschedule', { p_booking_id: bookingId, p_new_slot_id: newSlotId, p_reason: reason });
   if (!error) notifyParentOfChange(bookingId, 'parent_reschedule_proposed');
+  if (!error) track('lesson_move_proposed', { by: 'family' });
   return { error: cutoffMessage(error ?? null) };
 }
 
@@ -1222,6 +1240,7 @@ export async function hasAcceptedCoachPolicies(coachId: string, athleteId: strin
 
 export async function acceptCoachPolicies(coachId: string, athleteId: string, signerName: string): Promise<{ error: Error | null }> {
   const { error } = await (supabase.rpc as any)('accept_coach_policies', { p_coach_id: coachId, p_athlete_id: athleteId, p_signer_name: signerName });
+  if (!error) track('coach_terms_signed');
   return { error: error ?? null };
 }
 

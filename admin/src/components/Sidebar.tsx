@@ -4,6 +4,7 @@ import { Bell, Send, Mail, Menu, X, UserPlus, Shield, Settings as SettingsIcon }
 
 const links = [
   { to: '/admin', label: 'Dashboard', end: true },
+  { to: '/admin/activity', label: 'Activity' },
   { to: '/admin/leads', label: 'Leads', icon: UserPlus },
   { to: '/admin/accounts', label: 'Accounts' },
   { to: '/admin/usage', label: 'Usage' },

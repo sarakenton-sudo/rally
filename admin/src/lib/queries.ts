@@ -397,3 +397,23 @@ export async function logAdminAction(
     metadata: metadata ?? {},
   });
 }
+
+/** Admin → Activity: people, content, coaching, daily trend, tracked actions, funnels. */
+export interface ActivityReport {
+  days: number;
+  generated_at: string;
+  people: Record<string, any>;
+  content: Record<string, [number, number]>;
+  coaching: Record<string, any>;
+  daily: { day: string; signups: number; active_users: number; tournaments: number; travel: number; lessons: number }[];
+  events: { event_type: string; total: number; users: number; ios: number; android: number; web: number; unknown: number }[];
+  parent_funnel: Record<string, number>;
+  coach_funnel: Record<string, number>;
+  top_users: { email: string; account_type: string | null; actions: number; last_seen: string; platform: string | null }[];
+}
+
+export async function fetchActivityReport(days: number): Promise<ActivityReport> {
+  const { data, error } = await supabase.rpc('admin_activity_report', { p_days: days });
+  if (error) throw error;
+  return data as ActivityReport;
+}

@@ -1,3 +1,4 @@
+import { track } from '@/lib/track-event';
 import { useEffect, useRef, createContext, useContext, useCallback, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
@@ -110,9 +111,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const lastLoad = useRef(Date.now());
   useEffect(() => {
     if (!isConfigured) return;
+    track('app_open', { trigger: 'launch' });
     const sub = AppState.addEventListener('change', (state) => {
       if (state !== 'active' || Date.now() - lastLoad.current < 30_000) return;
       lastLoad.current = Date.now();
+      track('app_open', { trigger: 'resume' });
       supabaseRefresh().catch(() => {});
     });
     return () => sub.remove();

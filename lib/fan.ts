@@ -1,3 +1,4 @@
+import { track } from '@/lib/track-event';
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { SITE_URL } from '@/lib/config';
@@ -52,6 +53,7 @@ export interface Fan { id: string; name: string; invite_code: string; fan_user_i
 export async function createFanInvite(name: string): Promise<{ fan: { id: string; code: string } | null; error: string | null }> {
   const { data, error } = await (supabase.rpc as any)('create_fan_invite', { p_name: name });
   if (error) return { fan: null, error: error.message };
+  if (!error) track('fan_invited');
   return { fan: data as { id: string; code: string }, error: null };
 }
 
@@ -65,6 +67,7 @@ export async function fetchFans(): Promise<Fan[]> {
 /** Remove a fan: they stop seeing the family right away. */
 export async function removeFan(id: string): Promise<{ error: string | null }> {
   const { error } = await (supabase.from('fans') as any).delete().eq('id', id);
+  if (!error) track('fan_removed');
   return { error: error?.message ?? null };
 }
 
@@ -79,6 +82,7 @@ export async function acceptFanInvite(code: string): Promise<{ athleteFirst: str
   const { data, error } = await (supabase.rpc as any)('accept_fan_invite', { p_code: parseFanCode(code) });
   if (error) return { athleteFirst: null, error: error.message };
   const r = data as { success: boolean; error?: string; athlete_first_name?: string };
+  if (r.success) track('fan_joined');
   return r.success ? { athleteFirst: r.athlete_first_name ?? null, error: null } : { athleteFirst: null, error: r.error ?? 'Could not accept the invite' };
 }
 

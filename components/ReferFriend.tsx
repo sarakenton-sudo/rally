@@ -1,3 +1,4 @@
+import { track } from '@/lib/track-event';
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, Platform } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -22,6 +23,7 @@ export default function ReferFriend() {
   // Messages, WhatsApp or GroupMe. Email addresses get an invite email.
   async function copyInvite() {
     tapLight();
+    track('referral_copied');
     const msg = `I've been using RallyHUB for our volleyball season: tournaments, hotels, team codes and stream links all in one place. It's free: ${APP_STORE_URL}`;
     try {
       if (Platform.OS === 'web') await navigator.clipboard.writeText(msg);
@@ -50,6 +52,7 @@ export default function ReferFriend() {
           referred_email: email,
         }).select().single();
 
+        track('referral_emailed');
         if (referral) {
           supabase.functions.invoke('send-referral', {
             body: { referral_id: referral.id, referrer_user_id: user.id, referred_email: email, invite_type: 'referral' },

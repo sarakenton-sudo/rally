@@ -1,3 +1,4 @@
+import { track } from '@/lib/track-event';
 import { useEffect, useCallback, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
@@ -238,6 +239,7 @@ export async function insertTournament(tournament: Omit<Tournament, 'id' | 'crea
     .insert(tournament as any)
     .select()
     .single();
+  if (data && !error) track('tournament_added', { tournament_id: (data as any).id });
   return { data: data as Tournament | null, error };
 }
 
@@ -257,6 +259,7 @@ export async function insertHotelBooking(booking: Omit<HotelBooking, 'id' | 'cre
     .insert(booking as any)
     .select()
     .single();
+  if (data && !error) track('hotel_added', { tournament_id: (data as any).tournament_id });
   return { data: data as HotelBooking | null, error };
 }
 
@@ -275,6 +278,7 @@ export async function deleteHotelBooking(id: string) {
 }
 
 export async function deleteTournament(id: string) {
+  track('tournament_deleted');
   return supabase.from('tournaments').delete().eq('id', id);
 }
 
@@ -302,6 +306,7 @@ export async function insertFlightBooking(booking: Omit<FlightBooking, 'id' | 'c
     .insert(booking as any)
     .select()
     .single();
+  if (data && !error) track('flight_added', { tournament_id: (data as any).tournament_id });
   return { data: data as FlightBooking | null, error };
 }
 
@@ -373,6 +378,7 @@ export async function insertTeamEvent(event: Omit<TeamEvent, 'id' | 'created_at'
     .insert(event as any)
     .select()
     .single();
+  if (data && !error) track('team_event_added', { event_type: (data as any).event_type });
   return { data: data as TeamEvent | null, error };
 }
 

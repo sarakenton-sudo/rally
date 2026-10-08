@@ -1,3 +1,4 @@
+import { track } from '@/lib/track-event';
 import { useState, useCallback } from 'react';
 import { View, Text, Pressable, TextInput, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,6 +30,7 @@ export default function TournamentGuestList({ tournament }: { tournament: Tourna
     setSending(true);
     const { data, error } = await (supabase.rpc as any)('post_tournament_update', { p_tournament_id: tournament.id, p_message: msg });
     if (error) { setSending(false); showToast(error.message); return; }
+    track('fan_update_sent', { fans: data?.fans ?? 0 });
     const res = await supabase.functions.invoke('notify-fans', { body: { update_id: data.update_id } });
     setSending(false);
     notifySuccess();

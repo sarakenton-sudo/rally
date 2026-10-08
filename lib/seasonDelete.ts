@@ -1,3 +1,4 @@
+import { track } from '@/lib/track-event';
 import { supabase } from '@/lib/supabase';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { updateAdminConfig } from '@/hooks/useSupabaseData';
@@ -12,6 +13,7 @@ export async function deleteSeasonAndData(seasonId: string): Promise<{ error: st
   const { data, error } = await supabase.from('seasons').delete().eq('id', seasonId).select('id');
   if (error) return { error: error.message };
   if (!data?.length) return { error: "Couldn't delete this season. Only parents who manage the athlete can." };
+  track('season_deleted');
   const st = useSeasonStore.getState();
   const remaining = st.seasons.filter((s) => s.id !== seasonId);
   st.removeSeason(seasonId);
