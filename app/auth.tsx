@@ -184,6 +184,25 @@ export default function AuthScreen() {
             </Text>
           </View>
 
+          {/* Sign in | Create account — up top so new people find sign-up (and the Parent/Fan/Coach choice) */}
+          <View style={{ flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: 4, marginBottom: 18 }}>
+            {([[false, 'Sign in'], [true, 'Create account']] as const).map(([up, label]) => {
+              const on = isSignUp === up;
+              return (
+                <Pressable
+                  key={label}
+                  onPress={() => { setIsSignUp(up); setMessage(null); }}
+                  style={{ flex: 1, paddingVertical: 11, borderRadius: 9, alignItems: 'center', backgroundColor: on ? '#FEFEFE' : 'transparent' }}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: on }}
+                  accessibilityLabel={label}
+                >
+                  <Text style={{ fontSize: 14, fontFamily: 'NunitoSans-Bold', color: on ? '#1E3A5F' : 'rgba(255,255,255,0.7)' }}>{label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
           {/* Status message */}
           {message && (
             <View
