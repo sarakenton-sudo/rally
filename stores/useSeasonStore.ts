@@ -10,6 +10,9 @@ interface SeasonState {
   forwardedEmails: ForwardedEmail[];
   athletes: Athlete[];
   seasons: Season[];
+  /** Archived seasons (hidden from Home, Schedule, Travel). */
+  archivedSeasons: Season[];
+  setArchivedSeasons: (seasons: Season[]) => void;
   adminAthletes: AdminAthlete[];
   tournamentTickets: TournamentTicket[];
   activeSeasonId: string | null;
@@ -64,6 +67,7 @@ export const useSeasonStore = create<SeasonState>((set) => ({
   forwardedEmails: [],
   athletes: [],
   seasons: [],
+  archivedSeasons: [],
   adminAthletes: [],
   tournamentTickets: [],
   activeSeasonId: null,
@@ -133,6 +137,7 @@ export const useSeasonStore = create<SeasonState>((set) => ({
     set((state) => ({ forwardedEmails: state.forwardedEmails.filter((e) => e.id !== id) })),
   setAthletes: (athletes) => set({ athletes }),
   setSeasons: (seasons) => set({ seasons }),
+  setArchivedSeasons: (archivedSeasons) => set({ archivedSeasons }),
   removeSeason: (id) =>
     set((state) => ({ seasons: state.seasons.filter((s) => s.id !== id) })),
   setAdminAthletes: (adminAthletes) => set({ adminAthletes }),

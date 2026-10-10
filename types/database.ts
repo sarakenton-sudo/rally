@@ -122,6 +122,8 @@ export interface AdminAthlete {
 
 export interface Season {
   id: string;
+  /** Archived seasons are hidden everywhere except the athlete page (00103). */
+  archived_at?: string | null;
   athlete_id: string;
   team_name: string;
   club_name: string | null;

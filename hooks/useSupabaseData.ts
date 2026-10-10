@@ -130,7 +130,10 @@ export function useSupabaseData() {
       if (tgRes.error) throw tgRes.error;
       // configRes might be null (no config yet) — that's ok
 
-      setTournaments(tournamentsRes.data as Tournament[]);
+      // Archived seasons (00103) and their tournaments stay out of the app's lists.
+      const allSeasons = (seasonsRes.data as Season[] | null) ?? [];
+      const archivedIds = new Set(allSeasons.filter((x) => x.archived_at).map((x) => x.id));
+      setTournaments((tournamentsRes.data as Tournament[]).filter((t) => !archivedIds.has(t.season_id)));
       setHotelBookings(hotelsRes.data as HotelBooking[]);
       setFlightBookings(flightsRes.data as FlightBooking[]);
       if (!ticketsRes.error && ticketsRes.data) {
@@ -151,7 +154,8 @@ export function useSupabaseData() {
         setAthletes(athletesRes.data as Athlete[]);
       }
       if (!seasonsRes.error && seasonsRes.data) {
-        setSeasons(seasonsRes.data as Season[]);
+        setSeasons(allSeasons.filter((x) => !x.archived_at));
+        useSeasonStore.getState().setArchivedSeasons(allSeasons.filter((x) => !!x.archived_at));
       }
       if (!adminAthletesRes.error && adminAthletesRes.data) {
         setAdminAthletes(adminAthletesRes.data as AdminAthlete[]);

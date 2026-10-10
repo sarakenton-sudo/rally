@@ -11,7 +11,8 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 import { showToast } from '@/components/Toast';
-import { deleteSeasonAndData, seasonDeleteWarning } from '@/lib/seasonDelete';
+import { deleteSeasonAndData, seasonDeleteWarning, setSeasonArchived } from '@/lib/seasonDelete';
+import { useDataRefresh } from '@/providers/DataProvider';
 import type { StreamingPlatform } from '@/types/database';
 
 const STREAM_PLATFORMS: StreamingPlatform[] = ['YouTube', 'GameChanger', 'Baller.tv', 'Other'];
@@ -44,6 +45,15 @@ export default function TeamDetailsScreen() {
   const [deleting, setDeleting] = useState(false);
   const tournamentCount = useSeasonStore((s) => s.tournaments.filter((t) => t.season_id === activeSeason?.id).length);
 
+  const { refresh: refreshData } = useDataRefresh();
+  const archiveSeason = async () => {
+    if (!activeSeason) return;
+    const { error: e } = await setSeasonArchived(activeSeason.id, true);
+    if (e) { setError(e); return; }
+    showToast(`${activeSeason.team_name} archived. Find it on the athlete's page under Archived.`);
+    refreshData();
+    router.back();
+  };
   const removeSeason = async () => {
     if (!activeSeason) return;
     setDeleting(true);
@@ -175,6 +185,12 @@ export default function TeamDetailsScreen() {
                   </View>
                 </View>
               ) : (
+                <Pressable onPress={archiveSeason} className="flex-row items-center justify-center py-3 active:opacity-70" accessibilityLabel="Archive this season">
+                  <Ionicons name="archive-outline" size={16} color="#4A6E8A" />
+                  <Text className="text-sm font-semibold text-stone ml-1.5">Archive this season (hide it, keep everything)</Text>
+                </Pressable>
+              )}
+              {!confirmDelete && (
                 <Pressable onPress={() => setConfirmDelete(true)} className="flex-row items-center justify-center py-3 active:opacity-70" accessibilityLabel="Delete this season">
                   <Ionicons name="trash-outline" size={16} color="#DC2626" />
                   <Text className="text-sm font-semibold text-red-600 ml-1.5">Delete this season</Text>

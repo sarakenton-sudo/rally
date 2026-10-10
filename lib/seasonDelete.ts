@@ -28,3 +28,22 @@ export async function deleteSeasonAndData(seasonId: string): Promise<{ error: st
   }
   return { error: null };
 }
+
+/** Archive (or unarchive) a season: hidden from Home, Schedule, Travel; nothing deleted (00103). */
+export async function setSeasonArchived(seasonId: string, archived: boolean): Promise<{ error: string | null }> {
+  const { data, error } = await (supabase.from('seasons') as any)
+    .update({ archived_at: archived ? new Date().toISOString() : null }).eq('id', seasonId).select('id');
+  if (error) return { error: error.message.includes('archived_at') ? 'Archiving needs a quick database update first.' : error.message };
+  if (!data?.length) return { error: "Couldn't change this season. Only parents who manage the athlete can." };
+  track(archived ? 'season_archived' : 'season_unarchived');
+  const st = useSeasonStore.getState();
+  if (archived && st.activeSeasonId === seasonId) {
+    const next = st.seasons.find((x) => x.id !== seasonId)?.id ?? null;
+    st.setActiveSeasonId(next);
+    if (st.adminConfig) {
+      st.setAdminConfig({ ...st.adminConfig, active_season_id: next });
+      await updateAdminConfig(st.adminConfig.id, { active_season_id: next });
+    }
+  }
+  return { error: null };
+}

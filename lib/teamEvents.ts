@@ -1,5 +1,6 @@
 import { track } from '@/lib/track-event';
 import { supabase } from '@/lib/supabase';
+import { useSeasonStore } from '@/stores/useSeasonStore';
 
 /** A game or team event (team_events; games come from the AI schedule import). */
 export interface ScheduleGame {
@@ -25,7 +26,9 @@ export async function fetchUpcomingGames(): Promise<ScheduleGame[]> {
     .gte('date', ymd)
     .order('date')
     .order('time', { nullsFirst: false });
-  return (data as ScheduleGame[] | null) ?? [];
+  // Leave out archived seasons' games (00103).
+  const archived = new Set(useSeasonStore.getState().archivedSeasons.map((x) => x.id));
+  return ((data as ScheduleGame[] | null) ?? []).filter((g) => !archived.has(g.season_id));
 }
 
 /** "vs Rouse" / "@ Bowie" / the event's own name. */

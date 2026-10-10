@@ -12,7 +12,7 @@ import { fetchAcceptances, latestAcceptances, saveAthletePhoto, type PolicyAccep
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { updateAdminConfig } from '@/hooks/useSupabaseData';
-import { deleteSeasonAndData, seasonDeleteWarning } from '@/lib/seasonDelete';
+import { deleteSeasonAndData, seasonDeleteWarning, setSeasonArchived } from '@/lib/seasonDelete';
 import { showToast } from '@/components/Toast';
 import { useAuth } from '@/providers/AuthProvider';
 import { useIconColors } from '@/lib/colors';
@@ -43,6 +43,14 @@ export default function AthleteProfileScreen() {
   useEffect(() => {
     if (id) fetchAcceptances({ athleteId: id }).then(({ data }) => setSignedDocs(latestAcceptances(data)));
   }, [id]);
+  const archivedHere = useSeasonStore((st) => st.archivedSeasons).filter((x) => x.athlete_id === id);
+  const { refresh: refreshData } = useDataRefresh();
+  const archive = async (seasonId: string, on: boolean, name: string) => {
+    const { error } = await setSeasonArchived(seasonId, on);
+    if (error) { showToast(error); return; }
+    showToast(on ? `${name} archived. Find it under Archived on this page.` : `${name} is back`);
+    refreshData();
+  };
   const athleteSeasons = seasons
     .filter((s) => s.athlete_id === id)
     .sort((a, b) => {
@@ -198,6 +206,13 @@ export default function AthleteProfileScreen() {
                   >
                     <Ionicons name="trash-outline" size={14} color="#ef4444" />
                   </Pressable>
+                  <Pressable
+                    className="p-1.5 mr-1 active:opacity-60"
+                    onPress={(e) => { e.stopPropagation?.(); archive(season.id, true, season.team_name); }}
+                    accessibilityLabel={`Archive ${season.team_name}`}
+                  >
+                    <Ionicons name="archive-outline" size={15} color="#8FA8BF" />
+                  </Pressable>
                   <Ionicons name="chevron-forward" size={16} color="#8FA8BF" />
                 </View>
               </View>
@@ -225,6 +240,25 @@ export default function AthleteProfileScreen() {
             </Pressable>
           );
         })}
+
+        {/* Archived seasons: hidden elsewhere; bring one back anytime */}
+        {archivedHere.length > 0 && (
+          <View className="mt-2 mb-2">
+            <Text className="text-xs font-bold uppercase tracking-wider text-stone mb-2 ml-1">Archived</Text>
+            {archivedHere.map((season) => (
+              <View key={season.id} className="flex-row items-center rounded-xl px-4 py-3 mb-2 border border-dashed border-parchment dark:border-rally-900">
+                <Ionicons name="archive" size={15} color="#8FA8BF" />
+                <View className="flex-1 ml-2">
+                  <Text className="text-sm font-semibold text-stone">{season.team_name}</Text>
+                  <Text className="text-xs text-stone">{season.season_year}</Text>
+                </View>
+                <Pressable onPress={() => archive(season.id, false, season.team_name)} className="rounded-full px-3 py-1.5 bg-rally-50 dark:bg-rally-900/30 active:opacity-70" accessibilityLabel={`Unarchive ${season.team_name}`}>
+                  <Text className="text-xs font-semibold text-rally-600">Unarchive</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Add Season */}
         <Pressable
