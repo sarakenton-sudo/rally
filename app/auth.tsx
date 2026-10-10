@@ -374,7 +374,7 @@ export default function AuthScreen() {
           {!hasFanCode && (
             <Pressable className="mb-3 active:opacity-70" onPress={() => setHasInviteCode(!hasInviteCode)}>
               <Text style={{ fontSize: 13, color: '#7DBDD9', fontFamily: 'NunitoSans-SemiBold' }}>
-                {hasInviteCode ? 'Remove invite code' : 'Joining as a co-parent? Enter your invite code'}
+                {hasInviteCode ? 'Remove invite code' : 'Have an invite code? (co-parent or athlete)'}
               </Text>
             </Pressable>
           )}

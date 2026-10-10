@@ -1,3 +1,5 @@
+import { familyInviteMessage } from '@/lib/inviteText';
+import { showToast } from '@/components/Toast';
 import { useState } from 'react';
 import { View, Text, Pressable, Alert, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
@@ -94,11 +96,21 @@ export default function InviteCoParentScreen() {
     }
   };
 
-  const handleCopyCode = async () => {
-    if (!inviteCode) return;
-    await Clipboard.setStringAsync(inviteCode);
+  const copy = async (text: string, done: string) => {
     tapLight();
-    Alert.alert('Copied', 'Invite code copied to clipboard. Share it with the invitee.');
+    try {
+      if (Platform.OS === 'web') await navigator.clipboard.writeText(text);
+      else await Clipboard.setStringAsync(text);
+      showToast(done);
+    } catch {
+      if (Platform.OS === 'web') window.prompt('Copy this:', text);
+    }
+  };
+  const handleCopyCode = () => { if (inviteCode) copy(inviteCode, 'Code copied'); };
+  const copyInviteText = () => {
+    if (!inviteCode) return;
+    const who = isAll ? athletes.map((a) => a.first_name).join(' & ') : (selectedAthlete?.first_name ?? 'our athlete');
+    copy(familyInviteMessage(inviteType === 'athlete' ? 'athlete' : 'coparent', who, inviteCode), 'Invite copied. Paste it into a text.');
   };
 
   return (
@@ -248,7 +260,7 @@ export default function InviteCoParentScreen() {
                   Invite Created
                 </Text>
                 <Text className="text-sm text-stone dark:text-parchment mt-2 text-center">
-                  Share this code with the invitee. They'll enter it when creating their account.
+                  Send them the invite text. They get the app, create an account and enter this code.
                 </Text>
               </View>
 
@@ -260,27 +272,22 @@ export default function InviteCoParentScreen() {
               </View>
 
               <Pressable
-                className="bg-rally-600 rounded-xl py-4 flex-row items-center justify-center mt-4 active:opacity-80"
-                onPress={() => {
-                  const roleLabel = inviteType === 'athlete' ? 'athlete' : 'co-parent';
-                  const body = encodeURIComponent(
-                    `You've been invited to Rally!\n\nYour invite code:\n\n${inviteCode}\n\nGo to rally-hub.com, sign in with Google, and enter the code above to join as a ${roleLabel}.`
-                  );
-                  const smsUrl = Platform.OS === 'ios'
-                    ? `sms:&body=${body}`
-                    : `sms:?body=${body}`;
-                  Linking.openURL(smsUrl);
-                }}
+                className="rounded-xl py-4 flex-row items-center justify-center mt-4 active:opacity-80"
+                style={{ backgroundColor: '#FF7A59' }}
+                onPress={copyInviteText}
+                accessibilityLabel="Copy invite text"
               >
-                <Ionicons name="chatbubble-outline" size={18} color="#FEFEFE" />
-                <Text className="text-base font-semibold text-cream ml-2">Text Invite</Text>
+                <Ionicons name="copy-outline" size={18} color="#FEFEFE" />
+                <Text className="text-base font-semibold text-white ml-2">Copy invite text</Text>
               </Pressable>
+              <Text className="text-xs text-stone text-center mt-2">Paste it into a text. It links to the app and has the code on its own line.</Text>
 
               <Pressable
                 className="border border-rally-600 rounded-xl py-4 items-center mt-3 active:opacity-80"
                 onPress={handleCopyCode}
+                accessibilityLabel="Copy code only"
               >
-                <Text className="text-base font-semibold text-rally-600">Copy Code</Text>
+                <Text className="text-base font-semibold text-rally-600">Copy code only</Text>
               </Pressable>
 
               <Pressable

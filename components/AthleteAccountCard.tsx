@@ -1,7 +1,9 @@
+import * as Clipboard from 'expo-clipboard';
+import { familyInviteMessage } from '@/lib/inviteText';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { track } from '@/lib/track-event';
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Pressable, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
@@ -79,6 +81,18 @@ export default function AthleteAccountCard({ athleteId, firstName, hasLogin }: {
   if (loading) return <ActivityIndicator color="#3B82B0" className="my-3" />;
 
   const [confirmRemove, setConfirmRemove] = useState(false);
+  // Text it instead of (or as well as) email: same invite, app link first.
+  const copyText = async () => {
+    if (!invite) return;
+    const text = familyInviteMessage('athlete', firstName, invite.invite_code);
+    try {
+      if (Platform.OS === 'web') await navigator.clipboard.writeText(text);
+      else await Clipboard.setStringAsync(text);
+      showToast(`Invite copied. Text it to ${firstName}.`);
+    } catch {
+      if (Platform.OS === 'web') window.prompt('Copy this:', text);
+    }
+  };
   const removeLogin = async () => {
     setBusy(true);
     const { data, error: e } = await (supabase.rpc as any)('remove_athlete_login', { p_athlete_id: athleteId });
@@ -160,8 +174,11 @@ export default function AthleteAccountCard({ athleteId, firstName, hasLogin }: {
 
       {!hasLogin && invite && !editing && (
         <View className="flex-row mt-3" style={{ gap: 8 }}>
+          <Pressable onPress={copyText} className="rounded-lg px-3 py-2 active:opacity-80" style={{ backgroundColor: '#FF7A59' }} accessibilityLabel="Copy invite text">
+            <Text className="text-xs font-bold text-white">Copy invite text</Text>
+          </Pressable>
           <Pressable onPress={resend} disabled={busy} className="rounded-lg px-3 py-2 bg-rally-50 dark:bg-rally-900/30 active:opacity-70">
-            <Text className="text-xs font-semibold text-rally-600">{busy ? 'Sending…' : 'Resend invite'}</Text>
+            <Text className="text-xs font-semibold text-rally-600">{busy ? 'Sending…' : 'Email again'}</Text>
           </Pressable>
           <Pressable onPress={() => { setEmail(invite.email); setEditing(true); }} className="rounded-lg px-3 py-2 active:opacity-70">
             <Text className="text-xs font-semibold text-stone">Change email</Text>
