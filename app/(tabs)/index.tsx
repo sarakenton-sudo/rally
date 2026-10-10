@@ -1,3 +1,4 @@
+import ReferFriend from '@/components/ReferFriend';
 import { useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, RefreshControl, Pressable, Alert, Platform, ActionSheetIOS, Modal, Linking, TextInput } from 'react-native';
 import { router } from 'expo-router';
@@ -640,6 +641,9 @@ export default function HomeScreen() {
             </Pressable>
           )}
         </View>
+
+        {/* Tell other families */}
+        <ReferFriend />
       </ScrollView>
     </View>
   );
