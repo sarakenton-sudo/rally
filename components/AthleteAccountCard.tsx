@@ -21,6 +21,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  */
 export default function AthleteAccountCard({ athleteId, firstName, hasLogin }: { athleteId: string; firstName: string; hasLogin: boolean }) {
   const { refresh } = useDataRefresh();
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const { user } = useAuth();
   const [invite, setInvite] = useState<PendingInvite | null>(null);
   const [loading, setLoading] = useState(true);
@@ -80,7 +81,6 @@ export default function AthleteAccountCard({ athleteId, firstName, hasLogin }: {
 
   if (loading) return <ActivityIndicator color="#3B82B0" className="my-3" />;
 
-  const [confirmRemove, setConfirmRemove] = useState(false);
   // Text it instead of (or as well as) email: same invite, app link first.
   const copyText = async () => {
     if (!invite) return;
