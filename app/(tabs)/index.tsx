@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import { isOneWayOnly } from '@/lib/travel';
 import TournamentCard from '@/components/TournamentCard';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 import { useGuestStore } from '@/stores/useGuestStore';
@@ -583,6 +584,7 @@ export default function HomeScreen() {
                     tournament={item.t}
                     hotelCount={hotelBookings.filter((h) => h.tournament_id === item.t.id).length}
                     flightCount={flightBookings.filter((f) => f.tournament_id === item.t.id).length}
+                    flightOneWay={isOneWayOnly(flightBookings.filter((f) => f.tournament_id === item.t.id))}
                     backupHotelCount={hotelBookings.filter((h) => h.tournament_id === item.t.id && h.is_backup).length}
                     hasFlightConflict={hasFlightConflict(item.t.id)}
                     athlete={getAthleteForTournament(item.t)}

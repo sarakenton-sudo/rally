@@ -13,6 +13,8 @@ interface TournamentCardProps {
   flightCount?: number;
   backupHotelCount?: number;
   hasFlightConflict?: boolean;
+  /** Only a one-way flight so far (no return booked): partially booked. */
+  flightOneWay?: boolean;
   athlete?: Athlete | null;
   /** Families with more than one athlete: name the athlete on the card. */
   showAthleteName?: boolean;
@@ -37,13 +39,13 @@ function openDirections(address: string) {
   if (url) Linking.openURL(url);
 }
 
-export default function TournamentCard({ tournament, hotelCount = 0, flightCount = 0, backupHotelCount = 0, hasFlightConflict = false, athlete, showAthleteName = false, onPress }: TournamentCardProps) {
+export default function TournamentCard({ tournament, hotelCount = 0, flightCount = 0, backupHotelCount = 0, hasFlightConflict = false, flightOneWay = false, athlete, showAthleteName = false, onPress }: TournamentCardProps) {
   const hasHotel = hotelCount > 0;
   const hasFlight = flightCount > 0;
   const hasMultipleBookings = backupHotelCount > 0 || hotelCount > 1 || hasFlightConflict;
   // Compute display status based on actual booking state for upcoming tournaments
   const hotelResolved = tournament.hotel_not_needed || hasHotel;
-  const airResolved = tournament.air_not_needed || hasFlight;
+  const airResolved = tournament.air_not_needed || (hasFlight && !flightOneWay);
   const isPast = daysUntil(tournament.end_date) < 0;
   let displayStatus: keyof typeof STATUS_CONFIG;
   if (isPast) {
@@ -131,9 +133,9 @@ export default function TournamentCard({ tournament, hotelCount = 0, flightCount
               </Text>
             </View>
             <View className="flex-row items-center">
-              <Ionicons name="airplane-outline" size={14} color={tournament.air_not_needed ? '#16a34a' : hasFlight ? '#16a34a' : '#d97706'} />
-              <Text className={`text-xs font-semibold ml-1 ${tournament.air_not_needed || hasFlight ? 'text-green-700' : 'text-amber-600'}`}>
-                {tournament.air_not_needed ? 'Air Not Needed' : hasFlight ? 'Booked' : 'Needs Booking'}
+              <Ionicons name="airplane-outline" size={14} color={airResolved ? '#16a34a' : '#d97706'} />
+              <Text className={`text-xs font-semibold ml-1 ${airResolved ? 'text-green-700' : 'text-amber-600'}`}>
+                {tournament.air_not_needed ? 'Air Not Needed' : hasFlight ? (flightOneWay ? 'One-way · return needed' : 'Booked') : 'Needs Booking'}
               </Text>
             </View>
           </View>

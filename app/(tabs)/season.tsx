@@ -3,6 +3,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import { isOneWayOnly } from '@/lib/travel';
 import TournamentCard from '@/components/TournamentCard';
 import HubSectionHeader from '@/components/HubSectionHeader';
 import HubSettingsRow from '@/components/HubSettingsRow';
@@ -143,6 +144,7 @@ export default function SeasonScreen() {
         tournament={item.data}
         hotelCount={hotelBookings.filter((h) => h.tournament_id === item.data.id).length}
         flightCount={flightBookings.filter((f) => f.tournament_id === item.data.id).length}
+                    flightOneWay={isOneWayOnly(flightBookings.filter((f) => f.tournament_id === item.data.id))}
         backupHotelCount={hotelBookings.filter((h) => h.tournament_id === item.data.id && h.is_backup).length}
         hasFlightConflict={(() => {
           const tf = flightBookings.filter((f) => f.tournament_id === item.data.id);
