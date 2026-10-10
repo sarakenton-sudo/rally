@@ -2,9 +2,29 @@ import { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { StatCard } from '@/components/StatCard';
 import { useAdminData } from '@/hooks/useAdminData';
-import { fetchActivityReport } from '@/lib/queries';
+import { fetchActivityReport, fetchActivityDay } from '@/lib/queries';
 
 const RANGES = [7, 30, 90] as const;
+
+// Metrics you can trend (daily series from admin_activity_report).
+const METRICS: { key: string; label: string; color: string; group: 'People' | 'Families' | 'Coaching' }[] = [
+  { key: 'active_users', label: 'Active people', color: '#1E3A5F', group: 'People' },
+  { key: 'active_iphone', label: 'Active on iPhone', color: '#3B82B0', group: 'People' },
+  { key: 'active_web', label: 'Active on web', color: '#8FA8BF', group: 'People' },
+  { key: 'signups', label: 'All sign-ups', color: '#FF7A59', group: 'People' },
+  { key: 'parent_signups', label: 'Parent sign-ups', color: '#E85F3D', group: 'People' },
+  { key: 'fans_joined', label: 'Fans joined', color: '#DB2777', group: 'People' },
+  { key: 'tournaments', label: 'Tournaments added', color: '#6A9E8A', group: 'Families' },
+  { key: 'games', label: 'Games added', color: '#0f766e', group: 'Families' },
+  { key: 'travel', label: 'Hotels + flights', color: '#ca8a04', group: 'Families' },
+  { key: 'emails_forwarded', label: 'Emails forwarded', color: '#d97706', group: 'Families' },
+  { key: 'coach_signups', label: 'Coach sign-ups', color: '#7c3aed', group: 'Coaching' },
+  { key: 'open_times', label: 'Open times added', color: '#16a34a', group: 'Coaching' },
+  { key: 'lesson_requests', label: 'Lesson requests', color: '#be185d', group: 'Coaching' },
+  { key: 'lessons_booked', label: 'Lessons booked', color: '#4f46e5', group: 'Coaching' },
+  { key: 'lessons_paid', label: 'Lessons paid', color: '#15803d', group: 'Coaching' },
+];
+const DEFAULT_METRICS = ['active_users', 'signups', 'coach_signups', 'lessons_booked'];
 
 // Friendly names for tracked actions (anything new shows its raw name).
 const EVENT_LABELS: Record<string, string> = {
@@ -72,6 +92,17 @@ function Funnel({ steps }: { steps: [string, number][] }) {
 export function Activity() {
   const [days, setDays] = useState<number>(30);
   const { data: r, loading, error } = useAdminData(() => fetchActivityReport(days), [days]);
+  const [shown, setShown] = useState<string[]>(() => {
+    try { const v = JSON.parse(localStorage.getItem('rally.admin.metrics') ?? ''); if (Array.isArray(v) && v.length) return v; } catch { /* default */ }
+    return DEFAULT_METRICS;
+  });
+  const toggle = (k: string) => {
+    const next = shown.includes(k) ? shown.filter((x) => x !== k) : [...shown, k];
+    setShown(next);
+    try { localStorage.setItem('rally.admin.metrics', JSON.stringify(next)); } catch { /* fine */ }
+  };
+  const [day, setDay] = useState<string | null>(null);
+  const { data: dayData, loading: dayLoading } = useAdminData(() => (day ? fetchActivityDay(day) : Promise.resolve(null)), [day]);
 
   return (
     <div>
@@ -103,24 +134,101 @@ export function Activity() {
             ) : null}
           </Section>
 
-          <Section title="Day by day">
+          <Section title="Trends" note="Pick what to chart. Your picks are remembered on this computer.">
+            <div className="mb-3 space-y-2">
+              {(['People', 'Families', 'Coaching'] as const).map((grp) => (
+                <div key={grp} className="flex flex-wrap items-center gap-2">
+                  <span className="w-20 text-xs font-semibold uppercase tracking-wider text-stone">{grp}</span>
+                  {METRICS.filter((m) => m.group === grp).map((m) => {
+                    const on = shown.includes(m.key);
+                    return (
+                      <button key={m.key} onClick={() => toggle(m.key)} className="rounded-full border px-3 py-1 text-xs font-semibold" style={{ background: on ? m.color : '#fff', borderColor: on ? m.color : '#D8E2EC', color: on ? '#fff' : '#1E3A5F' }}>
+                        {m.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
             <div className="rounded-xl border border-frost bg-warm-white p-4">
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={r.daily}>
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={r.daily} onClick={(e: any) => { if (e?.activeLabel) setDay(e.activeLabel); }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#D8E2EC" />
                   <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#4A6E8A' }} />
                   <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#4A6E8A' }} />
                   <Tooltip />
                   <Legend />
-                  <Line type="monotone" dataKey="active_users" name="Active people" stroke="#1E3A5F" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="signups" name="Sign-ups" stroke="#FF7A59" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="tournaments" name="Tournaments" stroke="#6A9E8A" dot={false} />
-                  <Line type="monotone" dataKey="travel" name="Hotels + flights" stroke="#FFC94D" dot={false} />
-                  <Line type="monotone" dataKey="lessons" name="Lessons" stroke="#7c3aed" dot={false} />
+                  {METRICS.filter((m) => shown.includes(m.key)).map((m) => (
+                    <Line key={m.key} type="monotone" dataKey={m.key} name={m.label} stroke={m.color} strokeWidth={2} dot={false} />
+                  ))}
                 </LineChart>
               </ResponsiveContainer>
+              <p className="mt-1 text-xs text-stone">Click a day on the chart or in the table below to see who did what.</p>
             </div>
           </Section>
+
+          <Section title="Daily metrics" note="Newest first. Click a day for who.">
+            <div className="overflow-x-auto rounded-xl border border-frost bg-warm-white">
+              <table className="w-full text-sm">
+                <thead><tr className="border-b border-frost text-left text-stone">
+                  <th className="p-2.5 font-medium">Day</th>
+                  {METRICS.map((m) => <th key={m.key} className="whitespace-nowrap p-2.5 text-right font-medium">{m.label}</th>)}
+                </tr></thead>
+                <tbody>
+                  {[...r.daily].reverse().map((d) => (
+                    <tr key={d.day} onClick={() => setDay(d.day)} className={`cursor-pointer border-b border-frost last:border-0 hover:bg-cream ${day === d.day ? 'bg-cream' : ''}`}>
+                      <td className="whitespace-nowrap p-2.5 font-semibold text-bark">{new Date(`${d.day}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</td>
+                      {METRICS.map((m) => <td key={m.key} className={`p-2.5 text-right tabular-nums ${d[m.key] ? 'text-bark' : 'text-frost'}`}>{d[m.key] ?? 0}</td>)}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Section>
+
+          {day ? (
+            <Section title={`Who · ${new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}`} note="Tracked actions that day (admin 'log in as' sessions left out), sign-ups and what was added.">
+              <div className="rounded-xl border border-frost bg-warm-white p-4">
+                <div className="mb-3 flex justify-end"><button onClick={() => setDay(null)} className="text-xs font-semibold text-stone hover:text-bark">Close</button></div>
+                {dayLoading || !dayData ? <p className="text-sm text-stone">Loading…</p> : (
+                  <div className="space-y-5">
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {Object.entries(dayData.added).map(([k, v]) => <span key={k} className="rounded-full bg-cream px-3 py-1 text-bark">{k.replace(/_/g, ' ')}: <b>{v}</b></span>)}
+                    </div>
+                    {dayData.signups.length ? (
+                      <div><h3 className="mb-1 text-sm font-semibold text-bark">Signed up</h3>
+                        <ul className="text-sm text-stone">{dayData.signups.map((s) => <li key={s.email}>{s.email} · {s.type ?? '—'} · {new Date(s.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</li>)}</ul></div>
+                    ) : null}
+                    <div><h3 className="mb-1 text-sm font-semibold text-bark">People</h3>
+                      {dayData.people.length === 0 ? <p className="text-sm text-stone">No tracked actions that day.</p> : (
+                        <table className="w-full text-sm"><tbody>
+                          {dayData.people.map((p) => (
+                            <tr key={p.email} className="border-b border-frost last:border-0 align-top">
+                              <td className="py-2 pr-3 text-bark">{p.email}<div className="text-xs text-stone">{p.account_type ?? '—'} · {p.platforms.replace('ios', 'iPhone')}</div></td>
+                              <td className="py-2 pr-3 text-right tabular-nums">{p.actions}</td>
+                              <td className="py-2 text-xs text-stone">{p.did.split(', ').map((x) => EVENT_LABELS[x] ?? x).join(' · ')}</td>
+                            </tr>
+                          ))}
+                        </tbody></table>
+                      )}
+                    </div>
+                    <details><summary className="cursor-pointer text-sm font-semibold text-bark">Every action ({dayData.actions.length})</summary>
+                      <table className="mt-2 w-full text-xs"><tbody>
+                        {dayData.actions.map((a, i) => (
+                          <tr key={i} className="border-b border-frost last:border-0">
+                            <td className="py-1.5 pr-2 tabular-nums text-stone">{new Date(a.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</td>
+                            <td className="py-1.5 pr-2 text-bark">{a.email}</td>
+                            <td className="py-1.5 pr-2">{EVENT_LABELS[a.event_type] ?? a.event_type}</td>
+                            <td className="py-1.5 text-stone">{a.platform === 'ios' ? 'iPhone' : a.platform}</td>
+                          </tr>
+                        ))}
+                      </tbody></table>
+                    </details>
+                  </div>
+                )}
+              </div>
+            </Section>
+          ) : null}
 
           <div className="grid gap-6 lg:grid-cols-2">
             <Section title="Families added" note="Counted from the data, however it was added (app, web or email).">
@@ -158,12 +266,12 @@ export function Activity() {
             </Section>
           </div>
 
-          <Section title="Actions by platform" note="Tracked actions. Platform is recorded from this release on; older actions show as unknown.">
+          <Section title="Actions by platform" note="iPhone counts start with the next TestFlight build (earlier app versions don't record the platform, so they show as Unknown). Web is recorded now.">
             <div className="overflow-x-auto rounded-xl border border-frost bg-warm-white">
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-frost text-left text-stone">
                   <th className="p-3 font-medium">Action</th><th className="p-3 text-right font-medium">Total</th><th className="p-3 text-right font-medium">People</th>
-                  <th className="p-3 text-right font-medium">iPhone</th><th className="p-3 text-right font-medium">Web</th><th className="p-3 text-right font-medium">Unknown</th>
+                  <th className="p-3 text-right font-medium">iPhone app</th><th className="p-3 text-right font-medium">Web</th><th className="p-3 text-right font-medium">Unknown (older app)</th>
                 </tr></thead>
                 <tbody>
                   {r.events.length === 0 ? <tr><td colSpan={6} className="p-3 text-stone">No tracked actions in this period yet.</td></tr> : r.events.map((e) => (

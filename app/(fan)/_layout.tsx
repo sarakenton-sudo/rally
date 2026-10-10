@@ -19,6 +19,8 @@ export default function FanTabsLayout() {
     >
       <Tabs.Screen name="fan-home" options={{ title: 'Season', tabBarIcon: ({ color, size }) => <Ionicons name="calendar" size={size} color={color} /> }} />
       <Tabs.Screen name="fan-settings" options={{ title: 'Settings', tabBarIcon: ({ color, size }) => <Ionicons name="settings" size={size} color={color} /> }} />
+      {/* Tournament/game details (opened from a card; not a tab) */}
+      <Tabs.Screen name="fan-event" options={{ href: null }} />
     </Tabs>
   );
 }

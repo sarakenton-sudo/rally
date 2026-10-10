@@ -1,3 +1,5 @@
+import { useDataRefresh } from '@/providers/DataProvider';
+import { track } from '@/lib/track-event';
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +18,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * view-only access (same as Settings → Invite).
  */
 export default function AthleteAccountCard({ athleteId, firstName, hasLogin }: { athleteId: string; firstName: string; hasLogin: boolean }) {
+  const { refresh } = useDataRefresh();
   const { user } = useAuth();
   const [invite, setInvite] = useState<PendingInvite | null>(null);
   const [loading, setLoading] = useState(true);
@@ -75,6 +78,19 @@ export default function AthleteAccountCard({ athleteId, firstName, hasLogin }: {
 
   if (loading) return <ActivityIndicator color="#3B82B0" className="my-3" />;
 
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const removeLogin = async () => {
+    setBusy(true);
+    const { data, error: e } = await (supabase.rpc as any)('remove_athlete_login', { p_athlete_id: athleteId });
+    setBusy(false);
+    setConfirmRemove(false);
+    if (e) { setError(e.message); return; }
+    track('athlete_login_removed', { account_deleted: !!data?.account_deleted });
+    showToast(`${firstName}'s login was removed`);
+    setInvite(null);
+    refresh();
+  };
+
   const status = hasLogin
     ? { icon: 'checkmark-circle' as const, color: '#16a34a', title: `${firstName} has a RallyHUB login`, sub: 'They see their own schedule, team code and streaming links.' }
     : invite
@@ -118,6 +134,30 @@ export default function AthleteAccountCard({ athleteId, firstName, hasLogin }: {
         </View>
       )}
 
+      {/* Remove the athlete's own login (their profile and schedule stay) */}
+      {hasLogin && (
+        confirmRemove ? (
+          <View className="rounded-lg p-3 mt-3" style={{ backgroundColor: '#fee2e2' }}>
+            <Text className="text-xs text-red-800">
+              {firstName} won't be able to sign in anymore. Their profile, schedule and everything you've added stay. You can invite them again later.
+            </Text>
+            <View className="flex-row mt-2" style={{ gap: 8 }}>
+              <Pressable onPress={removeLogin} disabled={busy} className="rounded-lg px-3 py-2 active:opacity-80" style={{ backgroundColor: '#DC2626' }} accessibilityLabel="Confirm remove login">
+                <Text className="text-xs font-bold text-white">{busy ? 'Removing…' : 'Remove login'}</Text>
+              </Pressable>
+              <Pressable onPress={() => setConfirmRemove(false)} className="rounded-lg px-3 py-2 bg-white active:opacity-70">
+                <Text className="text-xs font-semibold text-bark">Keep it</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <Pressable onPress={() => setConfirmRemove(true)} className="self-start mt-3 py-1 active:opacity-70" accessibilityLabel={`Remove ${firstName}'s login`}>
+            <Text className="text-xs font-semibold text-red-600">Remove login</Text>
+          </Pressable>
+        )
+      )}
+      {error && hasLogin ? <Text className="text-xs text-red-600 mt-1">{error}</Text> : null}
+
       {!hasLogin && invite && !editing && (
         <View className="flex-row mt-3" style={{ gap: 8 }}>
           <Pressable onPress={resend} disabled={busy} className="rounded-lg px-3 py-2 bg-rally-50 dark:bg-rally-900/30 active:opacity-70">
@@ -125,6 +165,9 @@ export default function AthleteAccountCard({ athleteId, firstName, hasLogin }: {
           </Pressable>
           <Pressable onPress={() => { setEmail(invite.email); setEditing(true); }} className="rounded-lg px-3 py-2 active:opacity-70">
             <Text className="text-xs font-semibold text-stone">Change email</Text>
+          </Pressable>
+          <Pressable onPress={removeLogin} disabled={busy} className="rounded-lg px-3 py-2 active:opacity-70" accessibilityLabel="Cancel invite">
+            <Text className="text-xs font-semibold text-red-600">Cancel invite</Text>
           </Pressable>
         </View>
       )}

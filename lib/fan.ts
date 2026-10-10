@@ -33,6 +33,8 @@ export interface FanTournament {
   team_name: string; athlete_id: string; athlete_first_name: string;
   /** Latest update the parent sent guests (push), for anyone who missed it. */
   latest_update?: string | null; latest_update_at?: string | null;
+  /** 00100: team (for filters), team code (tickets), athlete photo/color. */
+  season_id?: string; team_code?: string | null; athlete_photo_url?: string | null; athlete_avatar_color?: string | null;
 }
 
 /** Group a fan's tournaments by month label ("November 2026"), in date order. */
@@ -95,15 +97,17 @@ export interface FanGame {
   id: string; name: string; date: string; time: string | null; venue_name: string; address: string;
   event_type: 'game' | 'event' | 'practice'; opponent: string | null; home_away: 'home' | 'away' | null;
   team_name: string; athlete_id: string; athlete_first_name: string;
+  season_id?: string; notes?: string | null; athlete_photo_url?: string | null; athlete_avatar_color?: string | null;
 }
 export async function fetchFanGames(): Promise<FanGame[]> {
   const { data } = await (supabase.rpc as any)('my_fan_games');
   return (data as FanGame[] | null) ?? [];
 }
 
-export async function fetchFollowedAthletes(): Promise<{ athlete_id: string; first_name: string }[]> {
+export interface FollowedAthlete { athlete_id: string; first_name: string; photo_url?: string | null; avatar_color?: string | null }
+export async function fetchFollowedAthletes(): Promise<FollowedAthlete[]> {
   const { data } = await (supabase.rpc as any)('my_followed_athletes');
-  return (data as { athlete_id: string; first_name: string }[] | null) ?? [];
+  return (data as FollowedAthlete[] | null) ?? [];
 }
 
 // The fan code survives sign-up (web reloads on Google sign-in) until accepted.

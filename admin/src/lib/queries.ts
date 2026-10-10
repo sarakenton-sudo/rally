@@ -405,7 +405,7 @@ export interface ActivityReport {
   people: Record<string, any>;
   content: Record<string, [number, number]>;
   coaching: Record<string, any>;
-  daily: { day: string; signups: number; active_users: number; tournaments: number; travel: number; lessons: number }[];
+  daily: Record<string, any>[];
   events: { event_type: string; total: number; users: number; ios: number; android: number; web: number; unknown: number }[];
   parent_funnel: Record<string, number>;
   coach_funnel: Record<string, number>;
@@ -416,4 +416,18 @@ export async function fetchActivityReport(days: number): Promise<ActivityReport>
   const { data, error } = await supabase.rpc('admin_activity_report', { p_days: days });
   if (error) throw error;
   return data as ActivityReport;
+}
+
+export interface ActivityDay {
+  day: string;
+  actions: { at: string; email: string; account_type: string | null; event_type: string; platform: string }[];
+  people: { email: string; account_type: string | null; actions: number; platforms: string; did: string }[];
+  signups: { email: string; type: string | null; at: string }[];
+  added: Record<string, number>;
+}
+
+export async function fetchActivityDay(day: string): Promise<ActivityDay> {
+  const { data, error } = await supabase.rpc('admin_activity_day', { p_day: day });
+  if (error) throw error;
+  return data as ActivityDay;
 }
