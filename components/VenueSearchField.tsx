@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import FormField from '@/components/FormField';
 import { supabase } from '@/lib/supabase';
@@ -55,9 +55,9 @@ export default function VenueSearchField({ name, onChangeName, address, onChange
         placeholder={placeholder}
         autoCorrect={false}
       />
-      {(open || loading) && (
+      {open && results.length > 0 && (
         <View className="-mt-3 mb-4 rounded-xl overflow-hidden border bg-white dark:bg-bark-light" style={{ borderColor: CORAL + '55' }}>
-          {loading && !results.length ? <ActivityIndicator color={CORAL} className="my-3" /> : results.map((p, i) => (
+          {results.map((p, i) => (
             <Pressable key={`${p.name}-${i}`} onPress={() => pick(p)} className="flex-row items-start px-4 py-3 active:opacity-70" style={i ? { borderTopWidth: 1, borderTopColor: '#EEF2F6' } : undefined} accessibilityLabel={`${p.name}, ${p.address}`}>
               <Ionicons name="location" size={16} color={CORAL} style={{ marginTop: 2 }} />
               <View className="flex-1 ml-2">
@@ -71,6 +71,7 @@ export default function VenueSearchField({ name, onChangeName, address, onChange
           </Pressable>
         </View>
       )}
+      {loading && !open ? <Text className="-mt-3 mb-3 text-xs text-stone">Looking up places…</Text> : null}
       <FormField label={addressLabel} value={address} onChangeText={(v) => { onChangeAddress(v); setPicked(false); }} placeholder="Full street address" />
       {picked && address ? (
         <View className="-mt-3 mb-4 flex-row items-center rounded-lg px-3 py-2" style={{ backgroundColor: CORAL_TINT }}>

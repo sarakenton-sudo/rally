@@ -62,6 +62,9 @@ export const supabase: SupabaseClient<Database> = isSupabaseConfigured
   ? createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
         storage: storage as any,
+        // Fixed name for the saved login: the default is derived from the server
+        // address, so moving to auth.rally-hub.com would sign everyone out.
+        storageKey: 'sb-dtoolzolnxfjlivwyblv-auth-token',
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: Platform.OS === 'web',

@@ -34,7 +34,11 @@ serve(async (req) => {
     },
     body: JSON.stringify({ textQuery: query, maxResultCount: 5, languageCode: 'en', regionCode: 'US' }),
   }).catch(() => null);
-  if (!r || !r.ok) return json({ results: [], error: r ? `places_${r.status}` : 'network' });
+  if (!r || !r.ok) {
+    const detail = r ? (await r.json().catch(() => ({})))?.error?.message ?? '' : '';
+    console.error('[places-search]', r?.status, detail);
+    return json({ results: [], error: r ? `places_${r.status}` : 'network', detail });
+  }
   const data = await r.json();
   const results = (data.places ?? []).map((p: any) => ({ name: p.displayName?.text ?? '', address: p.formattedAddress ?? '' }))
     .filter((p: any) => p.name);
