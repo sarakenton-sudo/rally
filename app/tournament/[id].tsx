@@ -20,6 +20,7 @@ import { formatDateRange, countdownText, daysUntil } from '@/lib/dates';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
 import { addAllDayEventToCalendar } from '@/lib/calendar';
+import { withAthlete } from '@/lib/calendarFormat';
 
 
 const STATUS_CONFIG = {
@@ -107,6 +108,7 @@ export default function TournamentDetailScreen() {
   const flightBookings = useSeasonStore((s) => s.flightBookings);
   const adminConfig = useSeasonStore((s) => s.adminConfig);
   const seasons = useSeasonStore((s) => s.seasons);
+  const athletes = useSeasonStore((s) => s.athletes);
   const activeSeasonId = useSeasonStore((s) => s.activeSeasonId);
   const activeSeason = seasons.find((s) => s.id === activeSeasonId);
 
@@ -1074,7 +1076,7 @@ export default function TournamentDetailScreen() {
           <Pressable
             className="bg-rally-50 dark:bg-rally-900/20 rounded-xl py-4 items-center mt-6 active:opacity-80 flex-row justify-center"
             onPress={() => addAllDayEventToCalendar({
-              title: tournament.name,
+              title: withAthlete(athletes.find((a) => a.id === seasons.find((x) => x.id === tournament.season_id)?.athlete_id)?.first_name, tournament.name),
               startDate: tournament.start_date,
               endDate: tournament.end_date,
               location: confirmedVenue?.address || tournament.location_city || '',

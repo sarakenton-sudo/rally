@@ -43,18 +43,18 @@ serve(async (req) => {
     'X-WR-CALNAME:RallyHUB', 'X-PUBLISHED-TTL:PT6H', 'REFRESH-INTERVAL;VALUE=DURATION:PT6H'];
   for (const t of (tours ?? []) as any[]) {
     const s = seasonOf.get(t.season_id) as any;
-    const who = multi && s ? ` (${nameOf.get(s.athlete_id)})` : '';
+    const who = s && nameOf.get(s.athlete_id) ? `${nameOf.get(s.athlete_id)}: ` : '';
     const venue = (t.venues ?? []).find((v: any) => v.is_confirmed) ?? (t.venues ?? [])[0];
     out.push('BEGIN:VEVENT', `UID:t-${t.id}@rally-hub.com`, `DTSTAMP:${stamp}`,
       `DTSTART;VALUE=DATE:${ymd(t.start_date)}`, `DTEND;VALUE=DATE:${ymd(nextDay(t.end_date))}`,
-      fold(`SUMMARY:${esc(`${t.name}${who}`)}`),
+      fold(`SUMMARY:${esc(`${who}${t.name}`)}`),
       fold(`LOCATION:${esc([venue?.label, venue?.address || t.location_city].filter(Boolean).join(', '))}`),
-      fold(`DESCRIPTION:${esc(`${s?.team_name ?? ''} · Details in RallyHUB: https://rally-hub.com/app`)}`),
+      fold(`DESCRIPTION:${esc(`${s?.team_name ?? ''} · Details in RallyHUB: https://rally-hub.com`)}`),
       'END:VEVENT');
   }
   for (const g of (games ?? []) as any[]) {
     const s = seasonOf.get(g.season_id) as any;
-    const who = multi && s ? ` (${nameOf.get(s.athlete_id)})` : '';
+    const who = s && nameOf.get(s.athlete_id) ? `${nameOf.get(s.athlete_id)}: ` : '';
     const title = g.event_type === 'game' && g.opponent ? `${g.home_away === 'away' ? '@' : 'vs'} ${g.opponent}` : g.name;
     out.push('BEGIN:VEVENT', `UID:g-${g.id}@rally-hub.com`, `DTSTAMP:${stamp}`);
     if (g.time) {
@@ -66,7 +66,7 @@ serve(async (req) => {
     } else {
       out.push(`DTSTART;VALUE=DATE:${ymd(g.date)}`, `DTEND;VALUE=DATE:${ymd(nextDay(g.date))}`);
     }
-    out.push(fold(`SUMMARY:${esc(`${title}${who}${s ? ` · ${s.team_name}` : ''}`)}`),
+    out.push(fold(`SUMMARY:${esc(`${who}${title}${s ? ` · ${s.team_name}` : ''}`)}`),
       fold(`LOCATION:${esc([g.venue_name, g.address].filter(Boolean).join(', '))}`), 'END:VEVENT');
   }
   out.push('END:VCALENDAR');

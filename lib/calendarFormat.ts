@@ -119,3 +119,8 @@ export function targetLabel(t: CalendarTarget, platform: string): string {
 export function targetsFor(platform: string): CalendarTarget[] {
   return platform === 'web' ? ['google', 'apple', 'ics'] : ['google', 'apple'];
 }
+
+/** Calendar titles start with the athlete: "Drue: Lone Star Classic". */
+export function withAthlete(athlete: string | null | undefined, title: string): string {
+  return athlete ? `${athlete}: ${title}` : title;
+}

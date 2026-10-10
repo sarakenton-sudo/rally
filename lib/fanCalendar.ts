@@ -13,11 +13,11 @@ export function fanTournamentEvent(t: FanTournament): CalEvent {
     stream ? `Watch live: ${stream}` : null,
     t.ticket_link ? `Tickets: ${t.ticket_link}` : null,
   ].filter(Boolean).join('\n');
-  return { allDay: true, title: `${t.name} (${t.athlete_first_name})`, startDate: t.start_date, endDate: t.end_date || t.start_date, location: venue?.address || venue?.label || t.location_city, notes };
+  return { allDay: true, title: `${t.athlete_first_name}: ${t.name}`, startDate: t.start_date, endDate: t.end_date || t.start_date, location: venue?.address || venue?.label || t.location_city, notes };
 }
 
 export function fanGameEvent(g: FanGame): CalEvent {
-  const title = `${gameTitle(g)} (${g.athlete_first_name})`;
+  const title = `${g.athlete_first_name}: ${gameTitle(g)}`;
   const notes = `${g.athlete_first_name} · ${g.team_name}`;
   const where = g.address || g.venue_name || null;
   if (!g.time) return { allDay: true, title, startDate: g.date, endDate: g.date, location: where, notes };

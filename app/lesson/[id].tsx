@@ -11,6 +11,7 @@ import {
   type ParentLesson, type SlotWithRefs,
 } from '@/lib/coach';
 import { addTimedEventToCalendar } from '@/lib/calendar';
+import { withAthlete } from '@/lib/calendarFormat';
 import { openDirections } from '@/lib/maps';
 import { useIconColors } from '@/lib/colors';
 import { notifySuccess, notifyError, tapLight } from '@/lib/haptics';
@@ -174,7 +175,7 @@ export default function LessonDetailScreen() {
           {!off ? (
             <Pressable
               onPress={() => addTimedEventToCalendar({
-                title: `${lesson.session_type ?? 'Lesson'}${lesson.athlete_first_name ? ` · ${lesson.athlete_first_name}` : ''} with ${lesson.coach_name}`,
+                title: withAthlete(lesson.athlete_first_name, `${lesson.session_type ?? 'Lesson'} with ${lesson.coach_name}`),
                 start: lesson.starts_at, end: lesson.ends_at, location: [lesson.facility, address].filter(Boolean).join(', ') || null,
               })}
               className="bg-warm-white dark:bg-bark-light rounded-2xl p-4 mt-3 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"

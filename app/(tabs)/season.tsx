@@ -15,6 +15,7 @@ import { showToast } from '@/components/Toast';
 import ReferFriend from '@/components/ReferFriend';
 import type { Tournament } from '@/types/database';
 import { addAllDayEventsToCalendar } from '@/lib/calendar';
+import { withAthlete } from '@/lib/calendarFormat';
 import LessonCard from '@/components/LessonCard';
 import { groupByMonth } from '@/lib/nextUp';
 import GameCard from '@/components/GameCard';
@@ -256,7 +257,7 @@ export default function SeasonScreen() {
                   const tourns = upcoming.length > 0 ? upcoming : seasonTournaments;
 
                   addAllDayEventsToCalendar(tourns.map((t) => ({
-                    title: t.name,
+                    title: withAthlete(athleteName(seasons.find((x) => x.id === t.season_id)?.athlete_id), t.name),
                     startDate: t.start_date,
                     endDate: t.end_date,
                     location: t.location_city,

@@ -1,3 +1,4 @@
+import GetAppBanner from '@/components/GetAppBanner';
 import { useCoachStore } from '@/stores/useCoachStore';
 import { fetchMyCoach } from '@/lib/coach';
 import "../global.css";
@@ -198,8 +199,15 @@ function RootLayoutNav() {
     );
   }
 
+  // Website, signed in (not on sign-in or public pages): push to the app.
+  const publicPage = !segments[0] || ['auth', 'book', 'fan', 'landing', 'auth-callback'].includes(segments[0] as string);
+  const appRole = (userProfile?.role as string) === 'fan' ? 'fan' : isCoach ? 'coach' : 'parent';
+  const showGetApp = Platform.OS === 'web' && !!session && !publicPage;
+
   return (
     <ThemeProvider value={theme}>
+      <View style={{ flex: 1 }}>
+      {showGetApp ? <GetAppBanner role={appRole} /> : null}
       {/* Every screen draws its own header + back button; the default stack header
           showed a second "< (tabs)" bar on screens not listed here (and on
           folders with their own _layout, like athlete/). */}
@@ -475,6 +483,7 @@ function RootLayoutNav() {
           options={{ presentation: 'modal', headerShown: false }}
         />
       </Stack>
+      </View>
       <ToastHost />
       <CalendarChooserHost />
     </ThemeProvider>
