@@ -1,3 +1,4 @@
+import VenueSearchField from '@/components/VenueSearchField';
 import { useState, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, Switch, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
@@ -147,8 +148,7 @@ export default function EditTournamentScreen() {
         <ScrollView className="flex-1 px-4 pt-4" keyboardShouldPersistTaps="handled">
           <FormField label="Tournament Name" value={name} onChangeText={setName} placeholder="e.g. Lonestar Classic" />
           <FormField label="City" value={locationCity} onChangeText={setLocationCity} placeholder="e.g. Dallas, TX" />
-          <FormField label="Venue Name" value={venueName} onChangeText={setVenueName} placeholder="e.g. Dallas Convention Center" />
-          <FormField label="Venue Address" value={venueAddress} onChangeText={setVenueAddress} placeholder="e.g. 650 S Griffin St, Dallas, TX" />
+          <VenueSearchField name={venueName} onChangeName={setVenueName} address={venueAddress} onChangeAddress={setVenueAddress} />
 
           <View className="flex-row gap-3">
             <View className="flex-1">

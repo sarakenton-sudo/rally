@@ -1,3 +1,4 @@
+import VenueSearchField from '@/components/VenueSearchField';
 import { useState, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
@@ -152,8 +153,7 @@ export default function AddTeamEventScreen() {
         <ScrollView className="flex-1 px-4 pt-4" keyboardShouldPersistTaps="handled">
           <FormField label="Event Name" value={name} onChangeText={setName} placeholder="e.g. Team Dinner" />
           <DropdownField label="Tournament (optional)" value={selectedTournamentName} options={tournamentOptions} onChange={handleTournamentChange} />
-          <FormField label="Location Name" value={venueName} onChangeText={setVenueName} placeholder="e.g. Pappadeaux Seafood Kitchen" />
-          <FormField label="Address" value={address} onChangeText={setAddress} placeholder="e.g. 6025 Westheimer Rd, Houston, TX" />
+          <VenueSearchField name={venueName} onChangeName={setVenueName} address={address} onChangeAddress={setAddress} nameLabel="Location Name" addressLabel="Address" placeholder="Start typing, e.g. Westlake High School" />
           <DatePickerField label="Date" value={eventDate} onChange={setEventDate} />
           <FormField label="Time" value={time} onChangeText={setTime} placeholder="e.g. 7:00 PM" />
           <FormField label="Notes" value={notes} onChangeText={setNotes} placeholder="Optional notes" />

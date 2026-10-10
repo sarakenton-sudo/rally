@@ -1,3 +1,4 @@
+import VenueSearchField from '@/components/VenueSearchField';
 import { useState, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from '@/components/SafeAreaView';
@@ -173,8 +174,7 @@ export default function AddTournamentScreen() {
           <TeamPicker dates={startYmd ? [startYmd] : []} choice={teamChoice} onChange={setTeamChoice} />
 
           <FormField label="City" value={locationCity} onChangeText={setLocationCity} placeholder="e.g. Austin, TX" />
-          <FormField label="Venue Name" value={venueName} onChangeText={setVenueName} placeholder="e.g. Austin Convention Center" />
-          <FormField label="Venue Address" value={venueAddress} onChangeText={setVenueAddress} placeholder="Full street address" />
+          <VenueSearchField name={venueName} onChangeName={setVenueName} address={venueAddress} onChangeAddress={setVenueAddress} />
 
           {/* Divider */}
           <View className="border-t border-parchment dark:border-rally-900 my-4" />
