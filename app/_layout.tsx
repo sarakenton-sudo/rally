@@ -443,6 +443,10 @@ function RootLayoutNav() {
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
+          name="game/edit"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
           name="coach/segments"
           options={{ headerShown: false }}
         />

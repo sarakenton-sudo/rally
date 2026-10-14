@@ -1,0 +1,18 @@
+import { toLabel, fromLabel, GAME_TIMES } from '@/lib/gameTime';
+
+describe('game times', () => {
+  it('round-trips between stored and shown times', () => {
+    expect(toLabel('18:30:00')).toBe('6:30 PM');
+    expect(toLabel('00:15')).toBe('12:15 AM');
+    expect(toLabel('12:00')).toBe('12:00 PM');
+    expect(fromLabel('6:30 PM')).toBe('18:30');
+    expect(fromLabel('12:00 AM')).toBe('00:00');
+    expect(fromLabel('12:45 PM')).toBe('12:45');
+    expect(fromLabel('No time')).toBeNull();
+  });
+  it('offers 15-minute choices through the evening', () => {
+    expect(GAME_TIMES[0]).toBe('6:00 AM');
+    expect(GAME_TIMES).toContain('6:30 PM');
+    expect(GAME_TIMES[GAME_TIMES.length - 1]).toBe('10:45 PM');
+  });
+});

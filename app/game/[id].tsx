@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, ImageBackground } from 'react-native';
 import { tournamentHero } from '@/lib/tournamentHero';
 import { SafeAreaView } from '@/components/SafeAreaView';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { showToast } from '@/components/Toast';
 import { openDirections } from '@/lib/maps';
@@ -22,7 +22,8 @@ export default function GameDetailScreen() {
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { fetchTeamEvent(String(id)).then((g) => { setGame(g); setLoading(false); }); }, [id]);
+  // Reload when coming back from Edit.
+  useFocusEffect(useCallback(() => { fetchTeamEvent(String(id)).then((g) => { setGame(g); setLoading(false); }); }, [id]));
 
   const remove = async () => {
     if (!game) return;
@@ -57,10 +58,16 @@ export default function GameDetailScreen() {
         {/* Hero: a painting (same set as tournaments), darkened so the text reads */}
         <ImageBackground source={tournamentHero(game.id)} resizeMode="cover" style={{ overflow: 'hidden' }} imageStyle={{ width: '100%', height: '100%' }} accessibilityIgnoresInvertColors>
           <View className="px-5 pt-4 pb-6" style={{ backgroundColor: 'rgba(22,32,52,0.45)' }}>
-            <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/season'))} className="flex-row items-center mb-3 self-start" accessibilityLabel="Back">
-              <Ionicons name="chevron-back" size={20} color="white" />
-              <Text className="text-white text-sm ml-0.5">Back</Text>
-            </Pressable>
+            <View className="flex-row items-center justify-between mb-3">
+              <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/season'))} className="flex-row items-center" accessibilityLabel="Back">
+                <Ionicons name="chevron-back" size={20} color="white" />
+                <Text className="text-white text-sm ml-0.5">Back</Text>
+              </Pressable>
+              <Pressable onPress={() => router.push({ pathname: '/game/edit' as any, params: { id: game.id } })} className="flex-row items-center rounded-full px-3 py-1.5 active:opacity-80" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }} accessibilityLabel="Edit">
+                <Ionicons name="create-outline" size={15} color="white" />
+                <Text className="text-white text-sm font-semibold ml-1">Edit</Text>
+              </Pressable>
+            </View>
             <Text className="text-xs font-bold uppercase tracking-wider text-white/90">
               {kind}{game.home_away ? ` · ${game.home_away === 'home' ? 'Home' : 'Away'}` : ''}
             </Text>
