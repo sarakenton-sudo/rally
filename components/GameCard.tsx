@@ -17,8 +17,8 @@ export default function GameCard({ game, athleteName, teamName, athlete }: { gam
   return (
     <Pressable
       onPress={() => router.push(`/game/${game.id}`)}
-      className="bg-warm-white dark:bg-bark-light rounded-2xl p-4 mb-3 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
-      style={{ borderLeftWidth: 4, borderLeftColor: GAME_COLOR, shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
+      className="bg-white dark:bg-bark-light rounded-2xl p-4 mb-3 flex-row items-center active:opacity-80"
+      style={{ borderLeftWidth: 5, borderLeftColor: GAME_COLOR, shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
       accessibilityLabel={`${gameTitle(game)}${athleteName ? `, ${athleteName}` : ''}, ${d.toDateString()}${time ? ` ${time}` : ''}`}
     >
       {athlete ? (

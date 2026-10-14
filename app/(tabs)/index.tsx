@@ -1,3 +1,4 @@
+import { CORAL_DARK } from '@/lib/colors';
 import ReferFriend from '@/components/ReferFriend';
 import { useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, RefreshControl, Pressable, Alert, Platform, ActionSheetIOS, Modal, Linking, TextInput } from 'react-native';
@@ -24,6 +25,8 @@ import AthleteCredentialCard from '@/components/AthleteCredentialCard';
 import { vaultRefFor } from '@/lib/credentials';
 import { getPref, setPref } from '@/lib/prefs';
 import NextUpCard from '@/components/home/NextUpCard';
+import SeasonHero from '@/components/SeasonHero';
+import AthleteChip from '@/components/AthleteChip';
 import SectionHeader from '@/components/SectionHeader';
 import LessonCard from '@/components/LessonCard';
 import GameCard from '@/components/GameCard';
@@ -424,6 +427,15 @@ export default function HomeScreen() {
 
   // ─── Next up ───
   const next = useMemo(() => pickNextUp(tournaments, lessons), [tournaments, lessons]);
+  const heroLine = (() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const in30 = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
+    const t = tournaments.filter((x) => x.end_date >= today && x.start_date <= in30).length;
+    const g = games.filter((x) => x.date >= today && x.date <= in30).length;
+    const l = lessons.filter((x) => x.status !== 'cancelled' && x.status !== 'declined' && x.starts_at.slice(0, 10) <= in30).length;
+    const parts = [t && `${t} tournament${t === 1 ? '' : 's'}`, g && `${g} game${g === 1 ? '' : 's'}`, l && `${l} lesson${l === 1 ? '' : 's'}`].filter(Boolean);
+    return parts.length ? `${parts.join(' · ')} in the next 30 days` : 'Nothing on the calendar in the next 30 days';
+  })();
   const nextTournament = next?.kind === 'tournament' ? tournaments.find((t) => t.id === next.id) : undefined;
   const nextLesson = next?.kind === 'lesson' ? lessons.find((l) => l.id === next.id) : undefined;
   const nextSeason = nextTournament ? seasons.find((s) => s.id === nextTournament.season_id) : undefined;
@@ -432,12 +444,24 @@ export default function HomeScreen() {
     : undefined;
 
   return (
-    <View className="flex-1 bg-warm-white dark:bg-bark">
+    <View className="flex-1 bg-cream dark:bg-bark">
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor="#3B82B0" />}
       >
+        {/* Season header: who, and what's coming */}
+        {athletes.length > 0 && (
+          <View className="px-4 pt-4">
+            <SeasonHero
+              athletes={athletes.map((a) => ({ id: a.id, first_name: a.first_name, photo_url: a.photo_url, avatar_color: a.avatar_color }))}
+              title={`${athletes.map((a) => a.first_name).join(' & ')}'s season`}
+              subtitle={heroLine}
+              action={{ label: 'Full schedule', icon: 'calendar', onPress: () => router.push('/season') }}
+            />
+          </View>
+        )}
+
         {/* 1. Next up — the one thing to look at */}
         <View className="px-4 pt-4 pb-2">
           <NextUpCard
@@ -530,34 +554,25 @@ export default function HomeScreen() {
           />
 
           {hasMultipleAthletes && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3" contentContainerStyle={{ gap: 8 }}>
-              <Pressable
-                className={`px-3 py-1.5 rounded-full border ${athleteFilter === 'all' ? 'bg-rally-600 border-rally-600' : 'bg-warm-white dark:bg-bark-light border-parchment dark:border-rally-900'}`}
-                onPress={() => setAthleteFilter('all')}
-              >
-                <Text className={`text-xs font-semibold ${athleteFilter === 'all' ? 'text-cream' : 'text-bark dark:text-parchment'}`}>All Athletes</Text>
-              </Pressable>
-              {filterAthletes.map((a) => {
-                const avatarColor = a.color;
-                const isSelected = athleteFilter === a.id;
-                return (
-                  <Pressable
-                    key={a.id}
-                    style={isSelected ? { backgroundColor: avatarColor, borderColor: avatarColor, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999 } : undefined}
-                    className={isSelected ? undefined : 'px-3 py-1.5 rounded-full border bg-warm-white border-parchment'}
-                    onPress={() => setAthleteFilter(a.id)}
-                  >
-                    <Text className={`text-xs font-semibold ${isSelected ? 'text-cream' : 'text-bark'}`}>{a.first_name}</Text>
-                  </Pressable>
-                );
-              })}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
+              <AthleteChip label="Everyone" on={athleteFilter === 'all'} color="#1E3A5F" onPress={() => setAthleteFilter('all')} />
+              {filterAthletes.map((a) => (
+                <AthleteChip
+                  key={a.id}
+                  label={a.first_name}
+                  color={a.color}
+                  on={athleteFilter === a.id}
+                  onPress={() => setAthleteFilter(a.id)}
+                  athlete={{ first_name: a.first_name, photo_url: athletes.find((x) => x.id === a.id)?.photo_url, avatar_color: a.color }}
+                />
+              ))}
             </ScrollView>
           )}
 
           {monthSections.length > 0 ? (
             monthSections.map((section) => (
               <View key={section.key}>
-                <Text className="text-xs font-bold uppercase tracking-wider text-stone mt-2 mb-2 ml-1" accessibilityRole="header">{section.label}</Text>
+                <Text className="text-xs font-extrabold uppercase tracking-wider mt-3 mb-2 ml-1" style={{ color: CORAL_DARK }} accessibilityRole="header">{section.label}</Text>
                 {section.items.map((item) => item.kind === 'lesson' ? (
                   item.l.status === 'cancelled' || item.l.status === 'declined' ? (
                     <SwipeToDelete key={`l-${item.l.id}`} onDelete={() => clearLesson(item.l.id)} accessibilityLabel="Remove cancelled lesson">

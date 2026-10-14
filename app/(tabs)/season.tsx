@@ -1,3 +1,4 @@
+import { CORAL_DARK } from '@/lib/colors';
 import { View, Text, FlatList, ActivityIndicator, Pressable, Alert, Platform, Linking, Share, ScrollView } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -133,7 +134,7 @@ export default function SeasonScreen() {
     if (item.type === 'divider') {
       return (
         <View className="py-3 mt-2">
-          <Text className="text-xs font-semibold text-stone uppercase tracking-wider">
+          <Text className="text-xs font-extrabold uppercase tracking-wider" style={{ color: CORAL_DARK }}>
             {item.label}
           </Text>
         </View>

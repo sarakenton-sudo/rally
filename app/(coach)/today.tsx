@@ -10,7 +10,7 @@ import { useSeasonStore } from '@/stores/useSeasonStore';
 import Avatar from '@/components/Avatar';
 import SetupChecklist from '@/components/coach/SetupChecklist';
 import SectionHeader from '@/components/SectionHeader';
-import { CORAL, CORAL_DARK } from '@/lib/colors';
+import { CORAL, CORAL_DARK, GOLD } from '@/lib/colors';
 import { showToast } from '@/components/Toast';
 import { claimPendingCoachInvite } from '@/lib/coachInvites';
 import {
@@ -197,42 +197,44 @@ export default function CoachTodayScreen() {
         contentContainerStyle={{ padding: 16, paddingBottom: 110 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} tintColor="#3B82B0" />}
       >
-        {/* Header */}
-        <View className="flex-row items-center mb-4">
-          <Avatar uri={coach.photo_url} name={coach.display_name} size={44} colorKey={coach.id} />
-          <View className="flex-1 ml-3">
-            <Text className="text-xs text-stone dark:text-parchment">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
-            <Text className="text-xl font-bold text-bark dark:text-cream">Hi, {first}</Text>
+        {/* Hero: greeting + this week (same navy header as the fan and parent apps) */}
+        <View className="rounded-3xl p-5 mb-4" style={{ backgroundColor: '#1E3A5F' }}>
+          <View className="flex-row items-center">
+            <View style={{ borderWidth: 3, borderColor: 'rgba(255,255,255,0.15)', borderRadius: 999 }}>
+              <Avatar uri={coach.photo_url} name={coach.display_name} size={48} colorKey={coach.id} />
+            </View>
+            <View className="flex-1 ml-3">
+              <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.65)' }}>{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
+              <Text className="text-2xl font-extrabold text-white font-nunito-extrabold">Hi, {first}</Text>
+            </View>
+            {hasFamily && (
+              <Pressable onPress={() => router.replace('/(tabs)')} className="flex-row items-center rounded-full px-3 py-1.5 active:opacity-70" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }} accessibilityLabel="Switch to Family">
+                <Ionicons name="swap-horizontal" size={14} color="#fff" />
+                <Text className="text-xs font-semibold text-white ml-1">Family</Text>
+              </Pressable>
+            )}
           </View>
-          {hasFamily && (
-            <Pressable onPress={() => router.replace('/(tabs)')} className="flex-row items-center rounded-full px-3 py-1.5 bg-warm-white dark:bg-bark-light border border-parchment dark:border-rally-900 active:opacity-70" accessibilityLabel="Switch to Family">
-              <Ionicons name="swap-horizontal" size={14} color="#3B82B0" />
-              <Text className="text-xs font-semibold text-rally-600 ml-1">Family</Text>
+          {money && (
+            <Pressable onPress={() => router.push('/coach-schedule')} className="mt-4 pt-4 active:opacity-90" style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' }} accessibilityLabel="This week's money">
+              <Text className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgba(255,255,255,0.55)' }}>This week · {money.lessons} lesson{money.lessons === 1 ? '' : 's'}</Text>
+              <View className="flex-row">
+                {[
+                  { l: 'Booked', v: money.booked, c: '#FEFEFE' },
+                  { l: 'Collected', v: money.collected, c: '#86EFAC' },
+                  { l: 'Unpaid', v: money.unpaid, c: money.unpaid ? GOLD : '#8FA8BF' },
+                ].map((t, i) => (
+                  <View key={t.l} className={`flex-1 ${i ? 'border-l pl-3' : ''}`} style={{ borderColor: 'rgba(255,255,255,0.12)' }}>
+                    <Text className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.55)' }}>{t.l}</Text>
+                    <Text className="text-xl font-bold mt-0.5" style={{ color: t.c }}>{fmtMoney(t.v)}</Text>
+                  </View>
+                ))}
+              </View>
+              {money.openSpots > 0 && (
+                <Text className="text-xs mt-2" style={{ color: '#7DBDD9' }}>{money.openSpots} open spot{money.openSpots === 1 ? '' : 's'} left this week</Text>
+              )}
             </Pressable>
           )}
         </View>
-
-        {/* Money strip — this week: booked, collected, unpaid (open capacity is spots, not $) */}
-        {money && (
-          <Pressable onPress={() => router.push('/coach-schedule')} className="rounded-2xl p-4 mb-4 active:opacity-90" style={{ backgroundColor: '#1E3A5F' }} accessibilityLabel="This week's money">
-            <Text className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgba(255,255,255,0.55)' }}>This week · {money.lessons} lesson{money.lessons === 1 ? '' : 's'}</Text>
-            <View className="flex-row">
-              {[
-                { l: 'Booked', v: money.booked, c: '#FEFEFE' },
-                { l: 'Collected', v: money.collected, c: '#86EFAC' },
-                { l: 'Unpaid', v: money.unpaid, c: money.unpaid ? '#FCD34D' : '#8FA8BF' },
-              ].map((t, i) => (
-                <View key={t.l} className={`flex-1 ${i ? 'border-l pl-3' : ''}`} style={{ borderColor: 'rgba(255,255,255,0.12)' }}>
-                  <Text className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.55)' }}>{t.l}</Text>
-                  <Text className="text-xl font-bold mt-0.5" style={{ color: t.c }}>{fmtMoney(t.v)}</Text>
-                </View>
-              ))}
-            </View>
-            {money.openSpots > 0 && (
-              <Text className="text-xs mt-2" style={{ color: '#7DBDD9' }}>{money.openSpots} open spot{money.openSpots === 1 ? '' : 's'} left this week</Text>
-            )}
-          </Pressable>
-        )}
 
         <SetupChecklist coach={coach} typeCount={typeCount} slotCount={slotCount} policies={policies} />
 
@@ -351,7 +353,7 @@ export default function CoachTodayScreen() {
           </Pressable>
         ) : months.map((m) => (
           <View key={m.key}>
-            <Text className="text-xs font-bold uppercase tracking-wider text-stone mt-2 mb-2 ml-1" accessibilityRole="header">{m.label}</Text>
+            <Text className="text-xs font-extrabold uppercase tracking-wider mt-3 mb-2 ml-1" style={{ color: CORAL_DARK }} accessibilityRole="header">{m.label}</Text>
             {m.items.map((i) => <LessonRow key={i.slot_id} item={i} />)}
           </View>
         ))}

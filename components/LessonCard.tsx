@@ -19,7 +19,7 @@ export default function LessonCard({ lesson, athleteName }: { lesson: ParentLess
     <Pressable
       onPress={() => router.push({ pathname: '/lesson/[id]', params: { id: lesson.id } })}
       accessibilityLabel={`${lesson.session_type ?? 'Lesson'} with ${lesson.coach_name}, ${start.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}`}
-      className="bg-warm-white dark:bg-bark-light rounded-2xl p-4 mb-3 border border-parchment dark:border-rally-900 flex-row items-center active:opacity-80"
+      className="bg-white dark:bg-bark-light rounded-2xl p-4 mb-3 flex-row items-center active:opacity-80"
       style={{ borderLeftWidth: 4, borderLeftColor: off ? '#dc2626' : st.color, opacity: off ? 0.85 : 1, shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
     >
       <View className="w-11 h-11 rounded-xl items-center justify-center mr-3" style={{ backgroundColor: st.color + '15' }}>

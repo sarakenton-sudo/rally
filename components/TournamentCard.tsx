@@ -67,7 +67,7 @@ export default function TournamentCard({ tournament, hotelCount = 0, flightCount
 
   return (
     <Pressable
-      className="bg-warm-white dark:bg-bark-light rounded-2xl mb-3 overflow-hidden border border-parchment dark:border-rally-900 active:opacity-90"
+      className="bg-white dark:bg-bark-light rounded-2xl mb-3 overflow-hidden active:opacity-90"
       // Sage edge = "tournament" (lesson cards use their lesson-type color here)
       style={{ borderLeftWidth: 4, borderLeftColor: TOURNAMENT_COLOR, shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
       onPress={onPress}
