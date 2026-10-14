@@ -3,7 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import AthleteAvatar from '@/components/AthleteAvatar';
 import type { Athlete } from '@/types/database';
-import { gameTitle, type ScheduleGame } from '@/lib/teamEvents';
+import { gameTitle, hasStreetAddress, type ScheduleGame } from '@/lib/teamEvents';
+import { openDirections } from '@/lib/maps';
 import { timeWithZone } from '@/lib/gameTime';
 
 const GAME_COLOR = '#0f766e'; // games/team events (tournaments are sage, lessons by kind)
@@ -40,7 +41,20 @@ export default function GameCard({ game, athleteName, teamName, athlete }: { gam
       <View className="px-2 py-1 rounded-md ml-2" style={{ backgroundColor: GAME_COLOR + '18' }}>
         <Text className="text-[10px] font-bold" style={{ color: GAME_COLOR }}>{isGame ? 'GAME' : game.event_type === 'practice' ? 'PRACTICE' : 'EVENT'}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={16} color="#8FA8BF" style={{ marginLeft: 6 }} />
+      {hasStreetAddress(game.address) ? (
+        <Pressable
+          onPress={(e) => { e.stopPropagation?.(); openDirections(game.address); }}
+          className="flex-row items-center rounded-lg px-2.5 py-1.5 ml-2 active:opacity-70"
+          style={{ backgroundColor: GAME_COLOR + '14' }}
+          accessibilityLabel={`Directions to ${game.venue_name || game.address}`}
+          hitSlop={6}
+        >
+          <Ionicons name="navigate" size={14} color={GAME_COLOR} />
+          <Text className="text-[11px] font-bold ml-1" style={{ color: GAME_COLOR }}>Go</Text>
+        </Pressable>
+      ) : (
+        <Ionicons name="chevron-forward" size={16} color="#8FA8BF" style={{ marginLeft: 6 }} />
+      )}
     </Pressable>
   );
 }

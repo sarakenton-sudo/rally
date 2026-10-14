@@ -37,6 +37,12 @@ serve(async (req) => {
     db.from('tournaments').select('id, name, start_date, end_date, location_city, venues, season_id').in('season_id', seasonIds).gte('end_date', since),
     db.from('team_events').select('*').in('season_id', seasonIds).gte('date', since),
   ]) : [{ data: [] }, { data: [] }];
+  // Lessons (requested or confirmed; cancelled ones drop off).
+  const { data: lessons } = athleteIds.length
+    ? await db.from('booking_requests')
+        .select('id, status, athlete_id, session_types(name), coaches(display_name), slots!inner(starts_at, ends_at, facilities(label, address)), bookings(status)')
+        .in('athlete_id', athleteIds).in('status', ['requested', 'accepted']).gte('slots.starts_at', `${since}T00:00:00Z`)
+    : { data: [] as any[] };
 
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   const out = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//RallyHUB//Family//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
@@ -70,6 +76,17 @@ serve(async (req) => {
     }
     out.push(fold(`SUMMARY:${esc(`${who}${title}${s ? ` · ${s.team_name}` : ''}`)}`),
       fold(`LOCATION:${esc([g.venue_name, g.address].filter(Boolean).join(', '))}`), 'END:VEVENT');
+  }
+  const utc = (iso: string) => new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  for (const l of (lessons ?? []) as any[]) {
+    if ((l.bookings ?? []).some((b: any) => b.status === 'cancelled')) continue;
+    const who = nameOf.get(l.athlete_id) ? `${nameOf.get(l.athlete_id)}: ` : '';
+    const what = `${l.session_types?.name ?? 'Lesson'} with ${l.coaches?.display_name ?? 'coach'}${l.status === 'requested' ? ' (requested)' : ''}`;
+    const fac = l.slots?.facilities;
+    out.push('BEGIN:VEVENT', `UID:l-${l.id}@rally-hub.com`, `DTSTAMP:${stamp}`,
+      `DTSTART:${utc(l.slots.starts_at)}`, `DTEND:${utc(l.slots.ends_at)}`,
+      fold(`SUMMARY:${esc(`${who}${what}`)}`),
+      fold(`LOCATION:${esc([fac?.label, fac?.address].filter(Boolean).join(', '))}`), 'END:VEVENT');
   }
   out.push('END:VCALENDAR');
   return new Response(out.join('\r\n') + '\r\n', {

@@ -16,13 +16,13 @@ import { daysUntil, formatDateRange } from '@/lib/dates';
 import { showToast } from '@/components/Toast';
 import ReferFriend from '@/components/ReferFriend';
 import type { Tournament } from '@/types/database';
-import { addAllDayEventsToCalendar } from '@/lib/calendar';
+import { addEventsToCalendar } from '@/lib/calendar';
 import { withAthlete } from '@/lib/calendarFormat';
 import LessonCard from '@/components/LessonCard';
 import { groupByMonth } from '@/lib/nextUp';
 import GameCard from '@/components/GameCard';
 import SwipeToDelete from '@/components/SwipeToDelete';
-import { fetchUpcomingGames, deleteTeamEvent, type ScheduleGame } from '@/lib/teamEvents';
+import { fetchUpcomingGames, deleteTeamEvent, gameTitle, type ScheduleGame } from '@/lib/teamEvents';
 import { fetchMyUpcomingLessons, isSupabaseConfigured as coachingConfigured, type ParentLesson } from '@/lib/coach';
 
 type ListItem =
@@ -259,12 +259,15 @@ export default function SeasonScreen() {
                     .sort((a, b) => a.start_date.localeCompare(b.start_date));
                   const tourns = upcoming.length > 0 ? upcoming : seasonTournaments;
 
-                  addAllDayEventsToCalendar(tourns.map((t) => ({
-                    title: withAthlete(athleteName(seasons.find((x) => x.id === t.season_id)?.athlete_id), t.name),
-                    startDate: t.start_date,
-                    endDate: t.end_date,
-                    location: t.location_city,
-                  })));
+                  // Tournaments + games, named "Drue: …". Many at once subscribes to the
+                  // live family calendar (which also has lessons) and stays up to date.
+                  const nameFor = (seasonId: string) => athleteName(seasons.find((x) => x.id === seasonId)?.athlete_id);
+                  addEventsToCalendar([
+                    ...tourns.map((t) => ({ allDay: true as const, title: withAthlete(nameFor(t.season_id), t.name), startDate: t.start_date, endDate: t.end_date, location: t.location_city })),
+                    ...games.map((g) => g.time
+                      ? { allDay: false as const, title: withAthlete(nameFor(g.season_id), gameTitle(g)), start: new Date(`${g.date}T${g.time.length === 5 ? `${g.time}:00` : g.time}`).toISOString(), end: new Date(new Date(`${g.date}T${g.time.length === 5 ? `${g.time}:00` : g.time}`).getTime() + 2 * 3600_000).toISOString(), location: g.address || g.venue_name || null }
+                      : { allDay: true as const, title: withAthlete(nameFor(g.season_id), gameTitle(g)), startDate: g.date, endDate: g.date, location: g.address || g.venue_name || null }),
+                  ], 'event');
                   tapLight();
                 }}
               >

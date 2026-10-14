@@ -47,14 +47,19 @@ export async function addEventsToCalendar(events: CalEvent[], noun = 'event'): P
   }
 }
 
-/** Google "add by URL" link for the family's live calendar feed (00092), or null. */
-async function familyFeedGoogleUrl(): Promise<string | null> {
+/** The family's live calendar feed (00092): webcal URL, or null. */
+async function familyFeedWebcal(): Promise<string | null> {
   try {
     const { data, error } = await (supabase.rpc as any)('get_my_family_calendar_token');
     if (error || !data) return null;
-    const https = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/family-calendar-feed?token=${data}`;
-    return `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(https.replace(/^https:/, 'webcal:'))}`;
+    return `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/family-calendar-feed?token=${data}`.replace(/^https:/, 'webcal:');
   } catch { return null; }
+}
+
+/** Google "add by URL" link for the family's live calendar feed, or null. */
+async function familyFeedGoogleUrl(): Promise<string | null> {
+  const webcal = await familyFeedWebcal();
+  return webcal ? `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcal)}` : null;
 }
 
 async function addTo(target: CalendarTarget, events: CalEvent[], noun: string) {
@@ -98,6 +103,20 @@ async function addTo(target: CalendarTarget, events: CalEvent[], noun: string) {
     const added = await insertInto(g.id, events);
     done(`${added} ${added === 1 ? noun : `${noun}s`} added to Google Calendar (${g.title}).`, events.length - added);
     return;
+  }
+
+  // Many → Apple Calendar subscribes to the live family calendar (stays up to
+  // date as RallyHUB changes), instead of copying events once.
+  if (many && target === 'apple') {
+    const webcal = await familyFeedWebcal();
+    if (webcal) {
+      await Linking.openURL(webcal);
+      showCalendarNotice({
+        title: 'Subscribing to your RallyHUB calendar',
+        body: 'Tap "Subscribe" in Calendar. Every tournament, game and lesson shows up and stays up to date as your schedule changes.',
+      });
+      return;
+    }
   }
 
   if (target === 'ics' || Platform.OS === 'web') {

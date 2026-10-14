@@ -15,8 +15,9 @@ import {
   parentReminderAction, coachHeadsUpDue, morningSummaryDue, eveningNudgeDue, needsUnpaidNudge, localParts,
   parentReminderText, coachHeadsUpText, morningSummaryText, unpaidNudgeText, fmtTime, dayWord,
   settingOn, athleteReminderAction, athleteDayBeforeText, weekAheadDue, tomorrowScheduleDue, tomorrowYmd,
-  tomorrowScheduleText, weekAheadText, scheduleLine, type SlotSummary,
+  tomorrowScheduleText, weekAheadText, scheduleLine, localWeekday, type SlotSummary,
 } from '../_shared/reminders.ts';
+import { nightBeforeDue, weekAheadDue as familyWeekDue, nightBeforeText, weekAheadText as familyWeekText, gameTimeLabel, type FamilyItem } from '../_shared/familyAlerts.ts';
 import { gameDayDue, gameDayText, streamDue, streamText, newTournamentsText, dayNumber } from '../_shared/fanAlerts.ts';
 import { renderNotification, emailHtml, sendEmail, type Fallback, type Vars } from '../_shared/templates.ts';
 
@@ -99,6 +100,72 @@ async function coachSettings(coachIds: string[]): Promise<Map<string, CoachSetti
   if (!coachIds.length) return new Map();
   const { data } = await db.from('coach_notification_settings').select('coach_id, self, clients').in('coach_id', coachIds);
   return new Map(((data ?? []) as any[]).map((r) => [r.coach_id, { self: r.self, clients: r.clients }]));
+}
+
+// ── Families: Sunday "week ahead" and night-before reminders (tournaments,
+// games, lessons), by kid. Parents and co-parents of each athlete. ──
+async function familyReminders(now: Date, pushes: Push[]) {
+  const out = { familyWeek: 0, familyNight: 0 };
+  const tz = DEFAULT_TZ;
+  const { ymd: today, hour } = localParts(now, tz);
+  const weekday = localWeekday(now, tz);
+  const doWeek = familyWeekDue(weekday, hour), doNight = nightBeforeDue(hour);
+  if (!doWeek && !doNight) return out;
+  const tomorrow = tomorrowYmd(now, tz);
+  const end = localParts(new Date(now.getTime() + 7 * 24 * H), tz).ymd;
+  const from = doWeek ? tomorrow : tomorrow, to = doWeek ? end : tomorrow;
+
+  const items: (FamilyItem & { athleteId: string })[] = [];
+  const { data: tours } = await db.from('tournaments')
+    .select('name, start_date, seasons!inner(athlete_id, archived_at, athletes(first_name))')
+    .gte('start_date', from).lte('start_date', to).limit(1000);
+  for (const t of (tours ?? []) as any[]) {
+    if (t.seasons?.archived_at) continue;
+    items.push({ kind: 'tournament', athleteId: t.seasons.athlete_id, athlete: t.seasons.athletes?.first_name ?? '', title: t.name, day: t.start_date });
+  }
+  const { data: games } = await db.from('team_events')
+    .select('*, seasons!inner(athlete_id, archived_at, athletes(first_name))')
+    .gte('date', from).lte('date', to).neq('event_type', 'practice').limit(2000);
+  for (const g of (games ?? []) as any[]) {
+    if (g.seasons?.archived_at) continue;
+    const title = g.event_type === 'game' && g.opponent ? `${g.home_away === 'away' ? '@' : 'vs'} ${g.opponent}` : g.name;
+    items.push({ kind: 'game', athleteId: g.seasons.athlete_id, athlete: g.seasons.athletes?.first_name ?? '', title, day: g.date, time: gameTimeLabel(g.time, g.timezone) });
+  }
+  if (doWeek) {
+    const { data: lessons } = await db.from('booking_requests')
+      .select('athlete_id, athletes(first_name), session_types(name), coaches(display_name), slots!inner(starts_at), bookings(status)')
+      .eq('status', 'accepted').gte('slots.starts_at', `${tomorrow}T00:00:00Z`).lte('slots.starts_at', `${end}T23:59:59Z`).limit(2000);
+    for (const l of (lessons ?? []) as any[]) {
+      if ((l.bookings ?? []).some((b: any) => b.status === 'cancelled')) continue;
+      const at = new Date(l.slots.starts_at);
+      items.push({ kind: 'lesson', athleteId: l.athlete_id, athlete: l.athletes?.first_name ?? '', title: `${l.session_types?.name ?? 'Lesson'} with ${l.coaches?.display_name ?? 'coach'}`, day: localParts(at, tz).ymd, time: fmtTime(at, tz) });
+    }
+  }
+  if (!items.length) return out;
+
+  // Who hears about each athlete: their parents and co-parents.
+  const athleteIds = [...new Set(items.map((i) => i.athleteId))];
+  const { data: links } = await db.from('admin_athletes').select('admin_id, athlete_id').in('athlete_id', athleteIds);
+  const byUser = new Map<string, typeof items>();
+  for (const l of (links ?? []) as any[]) {
+    for (const i of items.filter((x) => x.athleteId === l.athlete_id)) byUser.set(l.admin_id, [...(byUser.get(l.admin_id) ?? []), i]);
+  }
+  const { data: prefs } = await db.from('coaching_notification_prefs').select('user_id, push_enabled').in('user_id', [...byUser.keys()]);
+  const off = new Set(((prefs ?? []) as any[]).filter((p) => p.push_enabled === false).map((p) => p.user_id));
+
+  for (const [userId, list] of byUser) {
+    if (off.has(userId)) continue;
+    const kind = doWeek ? 'week_ahead' : 'night_before';
+    const mine = doWeek ? list : list.filter((i) => i.day === tomorrow);
+    if (!mine.length) continue;
+    // Claim first so overlapping runs never double-send.
+    const { error } = await db.from('family_reminders_sent').insert({ user_id: userId, kind, ref_day: doWeek ? today : tomorrow });
+    if (error) continue;
+    const fb = doWeek ? familyWeekText(mine) : nightBeforeText(mine);
+    pushes.push({ userId, title: fb.title, body: fb.body, data: { type: 'family_reminder' } });
+    if (doWeek) out.familyWeek++; else out.familyNight++;
+  }
+  return out;
 }
 
 // ── Guests on the app (fans): game day, live stream, new tournaments ──
@@ -375,6 +442,7 @@ serve(async (req: Request) => {
   }
 
   const fans = await fanAlerts(now, pushes);
+  const family = await familyReminders(now, pushes).catch((e) => { console.error('[family reminders]', e); return {}; });
   const delivered = await sendPushes(pushes);
-  return json({ ...counts, ...fans, pushes: pushes.length, delivered });
+  return json({ ...counts, ...fans, ...family, pushes: pushes.length, delivered });
 });
