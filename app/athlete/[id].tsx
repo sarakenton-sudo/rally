@@ -1,3 +1,4 @@
+import { subscribeToCalendar } from '@/lib/calendar';
 import { useState, useEffect } from 'react';
 import { View, Text, ScrollView, RefreshControl, Pressable, Alert, Platform } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -259,6 +260,17 @@ export default function AthleteProfileScreen() {
             ))}
           </View>
         )}
+
+        {/* Live calendar for this athlete: every team, tournaments, games, lessons */}
+        <Pressable
+          className="rounded-xl p-3 mb-2 flex-row items-center justify-center active:opacity-80"
+          style={{ backgroundColor: '#3B82B014' }}
+          onPress={() => subscribeToCalendar({ athleteId: athlete.id }, `${athlete.first_name}'s calendar`)}
+          accessibilityLabel={`Add ${athlete.first_name}'s calendar`}
+        >
+          <Ionicons name="calendar-outline" size={16} color="#3B82B0" />
+          <Text className="text-sm font-semibold text-rally-600 ml-1.5">Add {athlete.first_name}'s calendar (stays up to date)</Text>
+        </Pressable>
 
         {/* Add Season */}
         <Pressable

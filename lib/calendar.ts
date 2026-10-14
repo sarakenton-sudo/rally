@@ -212,3 +212,28 @@ function downloadIcs(events: CalEvent[]) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/**
+ * Subscribe to a live RallyHUB calendar: the whole family, one athlete, or one
+ * team (season). Tournaments, games and lessons; stays up to date as things
+ * change. Google → "add by URL"; Apple (and the website) → webcal subscribe.
+ */
+export async function subscribeToCalendar(scope: { athleteId?: string | null; seasonId?: string | null }, label: string): Promise<void> {
+  const target = await chooseCalendarTarget(2, 'event');
+  if (!target) return;
+  try {
+    const base = await familyFeedWebcal();
+    if (!base) { fail("Couldn't set up your calendar", 'Try again in a moment.'); return; }
+    const q = scope.seasonId ? `&season=${scope.seasonId}` : scope.athleteId ? `&athlete=${scope.athleteId}` : '';
+    const webcal = base + q;
+    if (target === 'google') {
+      await Linking.openURL(`https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcal)}`);
+      showCalendarNotice({ title: `Adding ${label} to Google Calendar`, body: 'Tap "Add" in Google Calendar. Tournaments, games and lessons show up and stay up to date. Google can take a few hours to show changes.' });
+    } else {
+      await Linking.openURL(webcal);
+      showCalendarNotice({ title: `Subscribing to ${label}`, body: 'Tap "Subscribe" in Calendar. Tournaments, games and lessons show up and stay up to date as your schedule changes.' });
+    }
+  } catch (err: any) {
+    fail("Couldn't set up your calendar", err?.message ?? 'Please try again.');
+  }
+}

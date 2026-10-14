@@ -16,7 +16,7 @@ import { daysUntil, formatDateRange } from '@/lib/dates';
 import { showToast } from '@/components/Toast';
 import ReferFriend from '@/components/ReferFriend';
 import type { Tournament } from '@/types/database';
-import { addEventsToCalendar } from '@/lib/calendar';
+import { subscribeToCalendar } from '@/lib/calendar';
 import { withAthlete } from '@/lib/calendarFormat';
 import LessonCard from '@/components/LessonCard';
 import { groupByMonth } from '@/lib/nextUp';
@@ -249,32 +249,25 @@ export default function SeasonScreen() {
             ) : null}
 
             {/* Add All to Calendar */}
-            {seasonTournaments.length > 0 && (
-              <Pressable
-                className="bg-warm-white border border-parchment rounded-xl p-3 mt-3 flex-row items-center justify-center active:opacity-80"
-                style={{ shadowColor: '#1E3A5F', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}
-                onPress={() => {
-                  const upcoming = seasonTournaments
-                    .filter((t) => daysUntil(t.end_date) >= 0)
-                    .sort((a, b) => a.start_date.localeCompare(b.start_date));
-                  const tourns = upcoming.length > 0 ? upcoming : seasonTournaments;
-
-                  // Tournaments + games, named "Drue: …". Many at once subscribes to the
-                  // live family calendar (which also has lessons) and stays up to date.
-                  const nameFor = (seasonId: string) => athleteName(seasons.find((x) => x.id === seasonId)?.athlete_id);
-                  addEventsToCalendar([
-                    ...tourns.map((t) => ({ allDay: true as const, title: withAthlete(nameFor(t.season_id), t.name), startDate: t.start_date, endDate: t.end_date, location: t.location_city })),
-                    ...games.map((g) => g.time
-                      ? { allDay: false as const, title: withAthlete(nameFor(g.season_id), gameTitle(g)), start: new Date(`${g.date}T${g.time.length === 5 ? `${g.time}:00` : g.time}`).toISOString(), end: new Date(new Date(`${g.date}T${g.time.length === 5 ? `${g.time}:00` : g.time}`).getTime() + 2 * 3600_000).toISOString(), location: g.address || g.venue_name || null }
-                      : { allDay: true as const, title: withAthlete(nameFor(g.season_id), gameTitle(g)), startDate: g.date, endDate: g.date, location: g.address || g.venue_name || null }),
-                  ], 'event');
-                  tapLight();
-                }}
-              >
-                <Ionicons name="calendar-outline" size={18} color="#3B82B0" />
-                <Text className="text-sm font-semibold text-rally-600 ml-2">Add All to Calendar</Text>
-              </Pressable>
-            )}
+            {/* Live calendar for what you're looking at: everyone, one athlete, or one team */}
+            <Pressable
+              className="bg-warm-white dark:bg-bark-light rounded-xl py-3 mt-3 flex-row items-center justify-center border border-parchment dark:border-rally-900 active:opacity-80"
+              onPress={() => {
+                tapLight();
+                const team = teamFilter !== 'all' ? seasons.find((x) => x.id === teamFilter) : null;
+                const who = athleteFilter !== 'all' ? athleteName(athleteFilter) : null;
+                subscribeToCalendar(
+                  team ? { seasonId: team.id } : athleteFilter !== 'all' ? { athleteId: athleteFilter } : {},
+                  team ? `${athleteName(team.athlete_id) ?? ''} ${team.team_name}`.trim() : who ? `${who}'s calendar` : 'your family calendar',
+                );
+              }}
+              accessibilityLabel="Add to my calendar"
+            >
+              <Ionicons name="calendar-outline" size={18} color="#3B82B0" />
+              <Text className="text-sm font-semibold text-rally-600 ml-2">
+                {teamFilter !== 'all' ? 'Add this team to my calendar' : athleteFilter !== 'all' ? `Add ${athleteName(athleteFilter)}'s calendar` : 'Add everyone to my calendar'}
+              </Text>
+            </Pressable>
 
           </View>
         }

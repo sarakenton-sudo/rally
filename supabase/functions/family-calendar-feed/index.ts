@@ -23,13 +23,21 @@ serve(async (req) => {
   if (!ownerId) return new Response('Not found', { status: 404 });
 
   const { data: links } = await db.from('admin_athletes').select('athlete_id, athletes(first_name)').eq('admin_id', ownerId);
-  const athleteIds = (links ?? []).map((l: any) => l.athlete_id);
+  // Optional scope: ?athlete=<id> (one athlete) or ?season=<id> (one team). Only the family's own.
+  const url = new URL(req.url);
+  const onlyAthlete = url.searchParams.get('athlete');
+  const onlySeason = url.searchParams.get('season');
+  let athleteIds = (links ?? []).map((l: any) => l.athlete_id);
+  if (onlyAthlete) athleteIds = athleteIds.filter((id: string) => id === onlyAthlete);
   const nameOf = new Map((links ?? []).map((l: any) => [l.athlete_id, l.athletes?.first_name ?? '']));
   const multi = athleteIds.length > 1;
   const { data: seasons } = athleteIds.length
     ? await db.from('seasons').select('id, team_name, athlete_id').in('athlete_id', athleteIds)
     : { data: [] as any[] };
-  const seasonIds = (seasons ?? []).map((s: any) => s.id);
+  const scoped = (seasons ?? []).filter((x: any) => !onlySeason || x.id === onlySeason);
+  const seasonIds = scoped.map((s: any) => s.id);
+  // A team-only calendar: that team's athlete (their lessons are included too).
+  if (onlySeason) athleteIds = athleteIds.filter((id: string) => scoped.some((x: any) => x.athlete_id === id));
   const seasonOf = new Map((seasons ?? []).map((s: any) => [s.id, s]));
   const since = new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10);   // keep ~2 months of history
 
@@ -46,7 +54,7 @@ serve(async (req) => {
 
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   const out = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//RallyHUB//Family//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
-    'X-WR-CALNAME:RallyHUB', 'X-PUBLISHED-TTL:PT6H', 'REFRESH-INTERVAL;VALUE=DURATION:PT6H'];
+    `X-WR-CALNAME:${esc(onlySeason && scoped[0] ? `RallyHUB · ${nameOf.get(scoped[0].athlete_id) ?? ''} ${scoped[0].team_name}`.trim() : onlyAthlete && nameOf.get(onlyAthlete) ? `RallyHUB · ${nameOf.get(onlyAthlete)}` : 'RallyHUB')}`, 'X-PUBLISHED-TTL:PT6H', 'REFRESH-INTERVAL;VALUE=DURATION:PT6H'];
   for (const t of (tours ?? []) as any[]) {
     const s = seasonOf.get(t.season_id) as any;
     const who = s && nameOf.get(s.athlete_id) ? `${nameOf.get(s.athlete_id)}: ` : '';
