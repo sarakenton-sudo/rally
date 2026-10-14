@@ -243,7 +243,7 @@ export default function PasteReviewScreen() {
         </Pressable>
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 40 }} automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
         {/* Error banner */}
         {errorMsg && (
           <View className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 mb-3 flex-row items-start">

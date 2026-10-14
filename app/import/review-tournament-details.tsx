@@ -183,7 +183,7 @@ export default function ReviewTournamentDetailsScreen() {
         </Pressable>
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 40 }} automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
         {/* Info banner */}
         <View className="bg-green-50 rounded-xl p-3 mb-4 flex-row items-start">
           <Ionicons name="checkmark-circle" size={18} color="#16a34a" />

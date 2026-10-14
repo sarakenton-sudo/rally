@@ -63,6 +63,7 @@ export default function TeamPicker({ dates, choice, onChange }: {
   choice: TeamChoice;
   onChange: (c: TeamChoice) => void;
 }) {
+  const inputs = useRef<(TextInput | null)[]>([]);
   const seasons = useSeasonStore((s) => s.seasons);
   const athletes = useSeasonStore((s) => s.athletes);
   const label = seasonLabelForDates(dates);
@@ -160,14 +161,20 @@ export default function TeamPicker({ dates, choice, onChange }: {
             ['Team name', 'teamName', 'e.g. AJV 15 Travel'],
             ['Club', 'clubName', 'e.g. Austin Juniors'],
             ['Season', 'seasonYear', 'e.g. YYYY-YYYY'],
-          ] as const).map(([lbl, key, ph]) => (
+          ] as const).map(([lbl, key, ph], i) => (
             <View key={key} className="mb-2">
               <Text className="text-xs text-stone mb-1">{lbl}</Text>
               <TextInput
+                ref={(r) => { inputs.current[i] = r; }}
                 value={choice[key]}
                 onChangeText={(v) => onChange({ ...choice, [key]: v })}
                 placeholder={ph}
                 placeholderTextColor="#8FA8BF"
+                autoCorrect={false}
+                returnKeyType={i < 2 ? 'next' : 'done'}
+                blurOnSubmit={i === 2}
+                onSubmitEditing={() => inputs.current[i + 1]?.focus()}
+                accessibilityLabel={lbl}
                 className="bg-cream dark:bg-bark rounded-lg px-3 py-2 text-sm text-bark dark:text-cream border border-parchment dark:border-rally-900"
               />
             </View>
