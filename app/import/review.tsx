@@ -14,7 +14,7 @@ import type { Tournament } from '@/types/database';
 import { trackEvent } from '@/lib/track-event';
 import VenueSearchField from '@/components/VenueSearchField';
 import DropdownField from '@/components/DropdownField';
-import { GAME_TIMES, toLabel, fromLabel } from '@/lib/gameTime';
+import { GAME_TIMES, toLabel, fromLabel, zoneFromPlace } from '@/lib/gameTime';
 import { fetchHomeVenue } from '@/lib/teamEvents';
 import TeamPicker, { useTeamChoice, resolveTeamChoice } from '@/components/TeamPicker';
 import { useDataRefresh } from '@/providers/DataProvider';
@@ -187,6 +187,7 @@ export default function PasteReviewScreen() {
           time: g.start_time || null,
           venue_name: g.location || '',
           address: (g as any).address ?? '',
+          timezone: g.start_time ? (zoneFromPlace((g as any).address) ?? zoneFromPlace(g.location) ?? null) : null,
           reservation_name: null,
           reservation_number: null,
           party_size: null,
@@ -198,7 +199,12 @@ export default function PasteReviewScreen() {
           home_away: g.home_away || null,
         };
         if (isSupabaseConfigured && user) {
-          const { error } = await insertTeamEvent(event as any);
+          let { error } = await insertTeamEvent(event as any);
+          // Before the time-zone column exists (00104), save without it.
+          if (error && /timezone/.test(error.message)) {
+            const { timezone: _tz, ...rest } = event;
+            ({ error } = await insertTeamEvent(rest as any));
+          }
           if (error) {
             showError(`Failed to save the game on ${fmtGameDate(g.date)}: ${error.message}`);
             setIsSaving(false);

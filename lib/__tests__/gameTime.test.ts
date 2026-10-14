@@ -29,3 +29,15 @@ describe('game time zones', () => {
     expect(zoneLabel('America/New_York')).toBe('Eastern (ET)');
   });
 });
+
+import { zoneFromPlace } from '@/lib/gameTime';
+describe('time zone from a place', () => {
+  it('reads the state from an address or city', () => {
+    expect(zoneFromPlace('650 S Griffin St, Dallas, TX 75202, USA')).toBe('America/Chicago');
+    expect(zoneFromPlace('Orlando, FL')).toBe('America/New_York');
+    expect(zoneFromPlace('1401 Toro Grande Blvd, Cedar Park, TX 78613')).toBe('America/Chicago');
+    expect(zoneFromPlace('Las Vegas, NV 89109')).toBe('America/Los_Angeles');
+    expect(zoneFromPlace('Phoenix, AZ')).toBe('America/Phoenix');
+    expect(zoneFromPlace('Main Gym')).toBeNull();
+  });
+});

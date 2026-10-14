@@ -13,7 +13,7 @@ import { notifySuccess } from '@/lib/haptics';
 import { track } from '@/lib/track-event';
 import { fetchTeamEvent, fetchHomeVenue } from '@/lib/teamEvents';
 import { updateTeamEvent, insertTeamEvent } from '@/hooks/useSupabaseData';
-import { GAME_TIMES, GAME_ZONES, toLabel, fromLabel, deviceZone, zoneLabel, zoneFromLabel } from '@/lib/gameTime';
+import { GAME_TIMES, GAME_ZONES, toLabel, fromLabel, deviceZone, zoneLabel, zoneFromLabel, zoneFromPlace } from '@/lib/gameTime';
 import { getPref, setPref } from '@/lib/prefs';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 
@@ -42,6 +42,7 @@ export default function EditGameScreen() {
   };
   const [seasonId, setSeasonId] = useState<string>(activeSeasonId ?? seasons[0]?.id ?? '');
   const [zone, setZone] = useState<string>(deviceZone());
+  const [zoneTouched, setZoneTouched] = useState(false);
   // Teams load after the screen on a fresh open: pick the active team then.
   useEffect(() => { if (isNew && !seasonId && (activeSeasonId || seasons[0])) setSeasonId(activeSeasonId ?? seasons[0].id); }, [activeSeasonId, seasons.length]);
   const ic = useIconColors();
@@ -66,7 +67,7 @@ export default function EditGameScreen() {
     fetchTeamEvent(String(id)).then((g) => {
       if (g) {
         setEditSeasonId(g.season_id);
-        if ((g as any).timezone) setZone((g as any).timezone); else getPref(TZ_PREF).then((tz) => tz && setZone(tz));
+        if ((g as any).timezone) { setZone((g as any).timezone); setZoneTouched(true); } else getPref(TZ_PREF).then((tz) => tz && setZone(tz));
         setKind(g.event_type === 'practice' ? 'Practice' : g.event_type === 'event' ? 'Team event' : 'Game');
         setOpponent(g.opponent ?? '');
         setSide(g.home_away === 'home' ? 'Home' : g.home_away === 'away' ? 'Away' : 'Not set');
@@ -92,6 +93,13 @@ export default function EditGameScreen() {
       if (v && !venueName.trim()) { setVenueName(v.venue_name); setAddress(v.address); setHomeFilled(true); }
     });
   }, [side, seasonId, loading]);
+
+  // Time zone follows the venue's state ("…, TX 78704" → Central) unless picked by hand.
+  useEffect(() => {
+    if (zoneTouched) return;
+    const z = zoneFromPlace(address) ?? zoneFromPlace(venueName);
+    if (z) setZone(z);
+  }, [address, venueName, zoneTouched]);
 
   const isGame = kind === 'Game';
   const save = async () => {
@@ -162,7 +170,7 @@ export default function EditGameScreen() {
             <DatePickerField label="Date" value={date} onChange={setDate} />
             <DropdownField label="Start time" value={time} options={[NO_TIME, ...GAME_TIMES]} onChange={setTime} />
             {time !== NO_TIME ? (
-              <DropdownField label="Time zone" value={zoneLabel(zone)} options={GAME_ZONES.map((z) => z.label)} onChange={(v) => { const tz = zoneFromLabel(v); if (tz) setZone(tz); }} />
+              <DropdownField label="Time zone" value={zoneLabel(zone)} options={GAME_ZONES.map((z) => z.label)} onChange={(v) => { const tz = zoneFromLabel(v); if (tz) { setZone(tz); setZoneTouched(true); } }} />
             ) : null}
             {homeFilled ? (
               <Text className="text-xs mb-2" style={{ color: CORAL }}>Filled in from this team's last home game. Change it if it's somewhere else.</Text>
