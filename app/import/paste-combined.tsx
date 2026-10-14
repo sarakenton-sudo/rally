@@ -79,15 +79,8 @@ export default function PasteCombinedScreen() {
     setErrorMsg(null);
 
     try {
-      // Detect PlayMetrics-like content (day abbreviations + team names) even if no games found.
-      // If it looks like a PlayMetrics schedule with no games, show a helpful message instead
-      // of falling through to AI which will extract junk from embedded flyers/rules.
-      const dayAbbrevCount = (trimmed.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/gim) || []).length;
-      if (dayAbbrevCount >= 3) {
-        setErrorMsg('This looks like a PlayMetrics schedule, but no game days were found. Only events with "vs" (e.g., "Home vs TBA") are imported as tournaments.');
-        setIsExtracting(false);
-        return;
-      }
+      // PlayMetrics and other team calendars go to the AI like everything else
+      // (an earlier shortcut stopped any paste with day names unless lines said "vs").
 
       // Try unified AI extraction
       if (SUPABASE_URL && SUPABASE_ANON_KEY) {

@@ -38,6 +38,7 @@ School and club schedules mix one-day GAMES (a match against one opponent) with 
 - start_time: the EARLIEST time as 24-hour "HH:MM". School games at 1:00–7:59 are PM (5:15 → "17:15"); 8:00–11:59 are AM; 12 is noon.
 - notes: anything else on the row, else ""
 - needs_review: true when several times are listed or there's no opponent
+Team-app calendars (PlayMetrics, TeamSnap, SportsEngine, GameChanger) list each day as a day name and number on their own lines ("Sat" / "14") followed by that day's events. Read those as dates in the season. A game there may say "vs X", "@ X", "at X", "Game", "Match" or "Scrimmage" — all are games; "@"/"at" means away. Skip practices, team meetings, photos, fundraisers and other non-games.
 Skip rows that are only dashes ("1/8 Fri. ----- ---- ----") — there's no game that day.
 Example row "11/13 Fri. Stony Point Stony Point 5:00 b 5:30 7:00" → {"date":"<year>-11-13","opponent":"Stony Point","location":"Stony Point","home_away":"away","times":"5:00 b 5:30 7:00","start_time":"17:00","notes":"","needs_review":true}
 Example row "11/19-11/21 Thu.-Sat. Marble Falls Tourn ---- ----" → a TOURNAMENT named "Marble Falls Tournament".
