@@ -247,7 +247,7 @@ export default function ReviewTravelScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-warm-white" edges={['bottom']}>
+    <SafeAreaView className="flex-1 bg-warm-white" edges={['top', 'bottom']}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-3 bg-warm-white border-b border-parchment">
         <Pressable onPress={() => router.back()} className="p-1">
