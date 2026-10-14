@@ -11,7 +11,7 @@ import { showToast } from '@/components/Toast';
 import { useIconColors, CORAL } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 import { track } from '@/lib/track-event';
-import { fetchTeamEvent } from '@/lib/teamEvents';
+import { fetchTeamEvent, fetchHomeVenue } from '@/lib/teamEvents';
 import { updateTeamEvent, insertTeamEvent } from '@/hooks/useSupabaseData';
 import { GAME_TIMES, GAME_ZONES, toLabel, fromLabel, deviceZone, zoneLabel, zoneFromLabel } from '@/lib/gameTime';
 import { getPref, setPref } from '@/lib/prefs';
@@ -42,6 +42,8 @@ export default function EditGameScreen() {
   };
   const [seasonId, setSeasonId] = useState<string>(activeSeasonId ?? seasons[0]?.id ?? '');
   const [zone, setZone] = useState<string>(deviceZone());
+  // Teams load after the screen on a fresh open: pick the active team then.
+  useEffect(() => { if (isNew && !seasonId && (activeSeasonId || seasons[0])) setSeasonId(activeSeasonId ?? seasons[0].id); }, [activeSeasonId, seasons.length]);
   const ic = useIconColors();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -55,6 +57,7 @@ export default function EditGameScreen() {
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [editSeasonId, setEditSeasonId] = useState<string | null>(null);
 
   useEffect(() => {
     // Last zone you picked (remembered on this device).
@@ -62,6 +65,7 @@ export default function EditGameScreen() {
     if (isNew) { setLoading(false); return; }
     fetchTeamEvent(String(id)).then((g) => {
       if (g) {
+        setEditSeasonId(g.season_id);
         if ((g as any).timezone) setZone((g as any).timezone); else getPref(TZ_PREF).then((tz) => tz && setZone(tz));
         setKind(g.event_type === 'practice' ? 'Practice' : g.event_type === 'event' ? 'Team event' : 'Game');
         setOpponent(g.opponent ?? '');
@@ -76,6 +80,18 @@ export default function EditGameScreen() {
       setLoading(false);
     });
   }, [id]);
+
+  // Home game with no location yet: use this team's usual home venue.
+  const [homeFilled, setHomeFilled] = useState(false);
+  const teamId = isNew ? seasonId : null;
+  useEffect(() => {
+    if (side !== 'Home' || venueName.trim() || loading) return;
+    const sid = teamId ?? editSeasonId;
+    if (!sid) return;
+    fetchHomeVenue(sid).then((v) => {
+      if (v && !venueName.trim()) { setVenueName(v.venue_name); setAddress(v.address); setHomeFilled(true); }
+    });
+  }, [side, seasonId, loading]);
 
   const isGame = kind === 'Game';
   const save = async () => {
@@ -147,6 +163,9 @@ export default function EditGameScreen() {
             <DropdownField label="Start time" value={time} options={[NO_TIME, ...GAME_TIMES]} onChange={setTime} />
             {time !== NO_TIME ? (
               <DropdownField label="Time zone" value={zoneLabel(zone)} options={GAME_ZONES.map((z) => z.label)} onChange={(v) => { const tz = zoneFromLabel(v); if (tz) setZone(tz); }} />
+            ) : null}
+            {homeFilled ? (
+              <Text className="text-xs mb-2" style={{ color: CORAL }}>Filled in from this team's last home game. Change it if it's somewhere else.</Text>
             ) : null}
             <VenueSearchField name={venueName} onChangeName={setVenueName} address={address} onChangeAddress={setAddress} nameLabel="Location" addressLabel="Address" placeholder="Start typing, e.g. Westlake High School" />
             <FormField label="Notes" value={notes} onChangeText={setNotes} placeholder="e.g. Wear white jerseys" multiline />

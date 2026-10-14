@@ -68,3 +68,13 @@ export async function fetchTeamEvent(id: string): Promise<(ScheduleGame & { team
 
 /** A real street address (not just a gym name or city), worth opening in Maps. */
 export const hasStreetAddress = (a?: string | null) => !!a && /\d/.test(a) && a.trim().length > 6;
+
+/** A team's usual home venue: the most recent home game with a location. */
+export async function fetchHomeVenue(seasonId: string): Promise<{ venue_name: string; address: string } | null> {
+  const { data } = await (supabase.from('team_events') as any)
+    .select('venue_name, address')
+    .eq('season_id', seasonId).eq('home_away', 'home').neq('venue_name', '')
+    .order('date', { ascending: false }).limit(1);
+  const row = (data as { venue_name: string; address: string }[] | null)?.[0];
+  return row ? { venue_name: row.venue_name, address: row.address ?? '' } : null;
+}

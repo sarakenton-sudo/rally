@@ -15,6 +15,7 @@ import { trackEvent } from '@/lib/track-event';
 import VenueSearchField from '@/components/VenueSearchField';
 import DropdownField from '@/components/DropdownField';
 import { GAME_TIMES, toLabel, fromLabel } from '@/lib/gameTime';
+import { fetchHomeVenue } from '@/lib/teamEvents';
 import TeamPicker, { useTeamChoice, resolveTeamChoice } from '@/components/TeamPicker';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { updateAdminConfig } from '@/hooks/useSupabaseData';
@@ -171,8 +172,14 @@ export default function PasteReviewScreen() {
         }
       }
 
-      // Games → team events of type 'game' (00084).
+      // Games → team events of type 'game' (00084). Home games with no
+      // location get the team's usual home venue.
+      const homeVenue = games.some((g) => g.home_away === 'home' && !g.location?.trim()) && seasonId ? await fetchHomeVenue(seasonId) : null;
       for (const g of games) {
+        if (homeVenue && g.home_away === 'home' && !g.location?.trim()) {
+          (g as any).location = homeVenue.venue_name;
+          (g as any).address = homeVenue.address;
+        }
         const event = {
           tournament_id: null,
           name: gameTitle(g),
