@@ -35,7 +35,7 @@ serve(async (req) => {
 
   const [{ data: tours }, { data: games }] = seasonIds.length ? await Promise.all([
     db.from('tournaments').select('id, name, start_date, end_date, location_city, venues, season_id').in('season_id', seasonIds).gte('end_date', since),
-    db.from('team_events').select('id, name, date, time, venue_name, address, opponent, home_away, event_type, season_id').in('season_id', seasonIds).gte('date', since),
+    db.from('team_events').select('*').in('season_id', seasonIds).gte('date', since),
   ]) : [{ data: [] }, { data: [] }];
 
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
@@ -62,7 +62,9 @@ serve(async (req) => {
       const [h, m] = String(g.time).split(':');
       const start = `${ymd(g.date)}T${h.padStart(2, '0')}${(m ?? '00').padStart(2, '0')}00`;
       const endH = String(Math.min(23, Number(h) + 2)).padStart(2, '0');
-      out.push(`DTSTART:${start}`, `DTEND:${ymd(g.date)}T${endH}${(m ?? '00').padStart(2, '0')}00`);
+      // With a time zone (00104), pin it there; without, floating local time.
+      const tz = g.timezone ? `;TZID=${g.timezone}` : '';
+      out.push(`DTSTART${tz}:${start}`, `DTEND${tz}:${ymd(g.date)}T${endH}${(m ?? '00').padStart(2, '0')}00`);
     } else {
       out.push(`DTSTART;VALUE=DATE:${ymd(g.date)}`, `DTEND;VALUE=DATE:${ymd(nextDay(g.date))}`);
     }

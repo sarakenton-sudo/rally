@@ -12,6 +12,9 @@ import { notifySuccess } from '@/lib/haptics';
 import DatePickerField from '@/components/DatePickerField';
 import type { Tournament } from '@/types/database';
 import { trackEvent } from '@/lib/track-event';
+import VenueSearchField from '@/components/VenueSearchField';
+import DropdownField from '@/components/DropdownField';
+import { GAME_TIMES, toLabel, fromLabel } from '@/lib/gameTime';
 import TeamPicker, { useTeamChoice, resolveTeamChoice } from '@/components/TeamPicker';
 import { useDataRefresh } from '@/providers/DataProvider';
 import { updateAdminConfig } from '@/hooks/useSupabaseData';
@@ -176,7 +179,7 @@ export default function PasteReviewScreen() {
           date: g.date,
           time: g.start_time || null,
           venue_name: g.location || '',
-          address: '',
+          address: (g as any).address ?? '',
           reservation_name: null,
           reservation_number: null,
           party_size: null,
@@ -290,8 +293,21 @@ export default function PasteReviewScreen() {
                     {editingGame === index ? (
                       <View className="gap-2">
                         <EditRow label="Opponent" value={g.opponent} onChange={(v) => updateGame(index, { opponent: v })} placeholder="e.g. Stony Point" />
-                        <EditRow label="Location" value={g.location} onChange={(v) => updateGame(index, { location: v })} placeholder="School or gym" />
-                        <EditRow label="Start time (24h)" value={g.start_time} onChange={(v) => updateGame(index, { start_time: v })} placeholder="17:00" />
+                        <VenueSearchField
+                          name={g.location}
+                          onChangeName={(v) => updateGame(index, { location: v })}
+                          address={(g as any).address ?? ''}
+                          onChangeAddress={(v) => updateGame(index, { address: v } as any)}
+                          nameLabel="Location"
+                          addressLabel="Address"
+                          placeholder="School or gym, e.g. Westlake High School"
+                        />
+                        <DropdownField
+                          label="Start time"
+                          value={toLabel(g.start_time) || 'No time yet'}
+                          options={['No time yet', ...GAME_TIMES]}
+                          onChange={(v) => updateGame(index, { start_time: fromLabel(v) ?? '' })}
+                        />
                       </View>
                     ) : (
                       <>

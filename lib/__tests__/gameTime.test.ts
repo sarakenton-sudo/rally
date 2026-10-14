@@ -16,3 +16,16 @@ describe('game times', () => {
     expect(GAME_TIMES[GAME_TIMES.length - 1]).toBe('10:45 PM');
   });
 });
+
+import { timeWithZone, zoneFromLabel, zoneLabel } from '@/lib/gameTime';
+describe('game time zones', () => {
+  it('shows the zone after the time when set', () => {
+    expect(timeWithZone('18:30:00', 'America/Chicago')).toBe('6:30 PM CT');
+    expect(timeWithZone('18:30:00', null)).toBe('6:30 PM');
+    expect(timeWithZone(null, 'America/Chicago')).toBe('');
+  });
+  it('maps labels and zones both ways', () => {
+    expect(zoneFromLabel('Pacific (PT)')).toBe('America/Los_Angeles');
+    expect(zoneLabel('America/New_York')).toBe('Eastern (ET)');
+  });
+});

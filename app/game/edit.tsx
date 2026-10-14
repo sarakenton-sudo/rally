@@ -12,17 +12,36 @@ import { useIconColors, CORAL } from '@/lib/colors';
 import { notifySuccess } from '@/lib/haptics';
 import { track } from '@/lib/track-event';
 import { fetchTeamEvent } from '@/lib/teamEvents';
-import { updateTeamEvent } from '@/hooks/useSupabaseData';
-import { GAME_TIMES, toLabel, fromLabel } from '@/lib/gameTime';
+import { updateTeamEvent, insertTeamEvent } from '@/hooks/useSupabaseData';
+import { GAME_TIMES, GAME_ZONES, toLabel, fromLabel, deviceZone, zoneLabel, zoneFromLabel } from '@/lib/gameTime';
+import { getPref, setPref } from '@/lib/prefs';
+import { useSeasonStore } from '@/stores/useSeasonStore';
 
 const KINDS = ['Game', 'Team event', 'Practice'] as const;
 const KIND_VALUE = { Game: 'game', 'Team event': 'event', Practice: 'practice' } as const;
 const SIDES = ['Not set', 'Home', 'Away'] as const;
 const NO_TIME = 'No time yet';
 
-/** Edit a game or team event: what, who, when, where, notes. Team stays the same. */
+const TZ_PREF = 'rally.gameTimezone';
+
+/**
+ * Add or edit a game / team event: team (when adding), type, opponent, home or
+ * away, date, start time + time zone (remembered), venue search, notes.
+ * Editing never moves a game to another team.
+ */
 export default function EditGameScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const isNew = !id;
+  const seasons = useSeasonStore((st) => st.seasons);
+  const athletes = useSeasonStore((st) => st.athletes);
+  const activeSeasonId = useSeasonStore((st) => st.activeSeasonId);
+  const teamLabel = (sid: string) => {
+    const se = seasons.find((x) => x.id === sid);
+    const a = athletes.find((x) => x.id === se?.athlete_id);
+    return se ? `${a ? `${a.first_name} · ` : ''}${se.team_name}` : '';
+  };
+  const [seasonId, setSeasonId] = useState<string>(activeSeasonId ?? seasons[0]?.id ?? '');
+  const [zone, setZone] = useState<string>(deviceZone());
   const ic = useIconColors();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -38,8 +57,12 @@ export default function EditGameScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Last zone you picked (remembered on this device).
+    getPref(TZ_PREF).then((tz) => { if (tz && isNew) setZone(tz); });
+    if (isNew) { setLoading(false); return; }
     fetchTeamEvent(String(id)).then((g) => {
       if (g) {
+        if ((g as any).timezone) setZone((g as any).timezone); else getPref(TZ_PREF).then((tz) => tz && setZone(tz));
         setKind(g.event_type === 'practice' ? 'Practice' : g.event_type === 'event' ? 'Team event' : 'Game');
         setOpponent(g.opponent ?? '');
         setSide(g.home_away === 'home' ? 'Home' : g.home_away === 'away' ? 'Away' : 'Not set');
@@ -60,24 +83,37 @@ export default function EditGameScreen() {
     if (isGame && !opponent.trim() && !name.trim()) { setError('Add the opponent (or a name).'); return; }
     if (!isGame && !name.trim()) { setError('Add a name.'); return; }
     if (!date) { setError('Pick a date.'); return; }
+    if (isNew && !seasonId) { setError('Pick the team.'); return; }
     setSaving(true);
+    setPref(TZ_PREF, zone);
     const ymd = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    const { error: e } = await updateTeamEvent(String(id), {
+    const fields = {
       event_type: KIND_VALUE[kind],
       opponent: isGame ? opponent.trim() || null : null,
       home_away: isGame && side !== 'Not set' ? side.toLowerCase() : null,
       name: name.trim() || (isGame ? `vs ${opponent.trim()}` : ''),
       date: ymd,
       time: time === NO_TIME ? null : fromLabel(time),
+      timezone: time === NO_TIME ? null : zone,
       venue_name: venueName.trim(),
       address: address.trim(),
       notes: notes.trim() || null,
-    } as any);
+    };
+    let { error: e } = isNew
+      ? await insertTeamEvent({ ...fields, season_id: seasonId, tournament_id: null, reservation_name: null, reservation_number: null, party_size: null, family_welcome: true } as any)
+      : await updateTeamEvent(String(id), fields as any);
+    // Before the time-zone column exists (00104), save without it.
+    if (e && /timezone/.test(e.message)) {
+      const { timezone: _tz, ...rest } = fields;
+      ({ error: e } = isNew
+        ? await insertTeamEvent({ ...rest, season_id: seasonId, tournament_id: null, reservation_name: null, reservation_number: null, party_size: null, family_welcome: true } as any)
+        : await updateTeamEvent(String(id), rest as any));
+    }
     setSaving(false);
     if (e) { setError(e.message); return; }
     notifySuccess();
-    track('team_event_edited', { event_type: KIND_VALUE[kind] });
-    showToast('Saved');
+    if (!isNew) track('team_event_edited', { event_type: KIND_VALUE[kind] });
+    showToast(isNew ? `${kind} added` : 'Saved');
     router.back();
   };
 
@@ -89,13 +125,16 @@ export default function EditGameScreen() {
           <Pressable onPress={() => router.back()} className="p-1" accessibilityLabel="Cancel">
             <Ionicons name="close" size={24} color={ic.muted} />
           </Pressable>
-          <Text className="text-lg font-bold text-bark dark:text-cream">Edit {kind === 'Game' ? 'game' : kind === 'Practice' ? 'practice' : 'event'}</Text>
+          <Text className="text-lg font-bold text-bark dark:text-cream">{isNew ? 'Add' : 'Edit'} {kind === 'Game' ? 'game' : kind === 'Practice' ? 'practice' : 'event'}</Text>
           <Pressable onPress={save} disabled={saving || loading} className="rounded-lg px-4 py-1.5 active:opacity-80" style={{ backgroundColor: CORAL }} accessibilityLabel="Save">
             <Text className="text-sm font-bold text-white">{saving ? 'Saving…' : 'Save'}</Text>
           </Pressable>
         </View>
         {loading ? <ActivityIndicator color={CORAL} className="mt-10" /> : (
           <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
+            {isNew && seasons.length > 0 ? (
+              <DropdownField label="Team" value={teamLabel(seasonId)} options={seasons.map((x) => teamLabel(x.id))} onChange={(v) => { const se = seasons.find((x) => teamLabel(x.id) === v); if (se) setSeasonId(se.id); }} />
+            ) : null}
             <DropdownField label="Type" value={kind} options={[...KINDS]} onChange={(v) => setKind(v as any)} />
             {isGame ? (
               <>
@@ -106,6 +145,9 @@ export default function EditGameScreen() {
             <FormField label={isGame ? 'Name (optional)' : 'Name'} value={name} onChangeText={setName} placeholder={isGame ? 'e.g. District opener' : 'e.g. Team dinner'} />
             <DatePickerField label="Date" value={date} onChange={setDate} />
             <DropdownField label="Start time" value={time} options={[NO_TIME, ...GAME_TIMES]} onChange={setTime} />
+            {time !== NO_TIME ? (
+              <DropdownField label="Time zone" value={zoneLabel(zone)} options={GAME_ZONES.map((z) => z.label)} onChange={(v) => { const tz = zoneFromLabel(v); if (tz) setZone(tz); }} />
+            ) : null}
             <VenueSearchField name={venueName} onChangeName={setVenueName} address={address} onChangeAddress={setAddress} nameLabel="Location" addressLabel="Address" placeholder="Start typing, e.g. Westlake High School" />
             <FormField label="Notes" value={notes} onChangeText={setNotes} placeholder="e.g. Wear white jerseys" multiline />
             {error ? <Text className="text-sm text-red-600 mb-3">{error}</Text> : null}

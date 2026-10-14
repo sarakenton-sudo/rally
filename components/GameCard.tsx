@@ -3,14 +3,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import AthleteAvatar from '@/components/AthleteAvatar';
 import type { Athlete } from '@/types/database';
-import { gameTitle, formatGameTime, type ScheduleGame } from '@/lib/teamEvents';
+import { gameTitle, type ScheduleGame } from '@/lib/teamEvents';
+import { timeWithZone } from '@/lib/gameTime';
 
 const GAME_COLOR = '#0f766e'; // games/team events (tournaments are sage, lessons by kind)
 
 /** A school/club game or team event in a schedule timeline. Tap → game detail. */
 export default function GameCard({ game, athleteName, teamName, athlete }: { game: ScheduleGame; athleteName?: string; teamName?: string; athlete?: Athlete | null }) {
   const d = new Date(`${game.date}T12:00:00`);
-  const time = formatGameTime(game.time);
+  const time = timeWithZone(game.time, game.timezone);
   const where = game.venue_name || game.address;
   const isGame = game.event_type === 'game';
   return (

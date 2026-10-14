@@ -23,3 +23,35 @@ export function fromLabel(label: string): string | null {
   if (m[3].toUpperCase() === 'PM') h += 12;
   return `${String(h).padStart(2, '0')}:${m[2]}`;
 }
+
+// ---- Time zones (US) ----
+export const GAME_ZONES: { tz: string; label: string; short: string }[] = [
+  { tz: 'America/New_York', label: 'Eastern (ET)', short: 'ET' },
+  { tz: 'America/Chicago', label: 'Central (CT)', short: 'CT' },
+  { tz: 'America/Denver', label: 'Mountain (MT)', short: 'MT' },
+  { tz: 'America/Phoenix', label: 'Arizona (MST)', short: 'AZ' },
+  { tz: 'America/Los_Angeles', label: 'Pacific (PT)', short: 'PT' },
+  { tz: 'America/Anchorage', label: 'Alaska (AKT)', short: 'AKT' },
+  { tz: 'Pacific/Honolulu', label: 'Hawaii (HT)', short: 'HT' },
+];
+
+/** The phone's zone if it's one of ours, else Central. */
+export function deviceZone(): string {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (GAME_ZONES.some((z) => z.tz === tz)) return tz;
+  } catch { /* fall through */ }
+  return 'America/Chicago';
+}
+
+export const zoneLabel = (tz: string | null | undefined) => GAME_ZONES.find((z) => z.tz === tz)?.label ?? '';
+export const zoneShort = (tz: string | null | undefined) => GAME_ZONES.find((z) => z.tz === tz)?.short ?? '';
+export const zoneFromLabel = (label: string) => GAME_ZONES.find((z) => z.label === label)?.tz ?? null;
+
+/** "6:30 PM CT" (zone only when set). */
+export function timeWithZone(t: string | null | undefined, tz?: string | null): string {
+  const l = toLabel(t);
+  if (!l) return '';
+  const z = zoneShort(tz);
+  return z ? `${l} ${z}` : l;
+}

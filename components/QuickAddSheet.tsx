@@ -298,6 +298,11 @@ export default function QuickAddSheet({ visible, onClose }: { visible: boolean; 
                 <Pressable onPress={() => go('/import/paste-combined')} className="py-2"><Text className="text-sm font-semibold text-rally-600">Paste a season schedule</Text></Pressable>
               </View>
             )}
+            <Pressable onPress={() => { tapItem('game', 5); go('/game/edit'); }} className="flex-row items-center py-2.5 active:opacity-70" accessibilityLabel="Add a game">
+              <Ionicons name="trophy-outline" size={18} color="#0f766e" />
+              <Text className="text-sm font-semibold text-stone dark:text-parchment ml-2.5 flex-1">Add a game</Text>
+              <Ionicons name="chevron-forward" size={14} color="#8FA8BF" />
+            </Pressable>
             <Pressable onPress={() => { tapItem('team_event', 5); go('/booking/add-team-event'); }} className="flex-row items-center py-2.5 active:opacity-70" accessibilityLabel="Add a team event">
               <Ionicons name="restaurant-outline" size={18} color="#6A9E8A" />
               <Text className="text-sm font-semibold text-stone dark:text-parchment ml-2.5 flex-1">Add a team event</Text>

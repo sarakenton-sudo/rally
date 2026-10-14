@@ -15,6 +15,8 @@ export interface ScheduleGame {
   opponent: string | null;
   home_away: 'home' | 'away' | null;
   notes: string | null;
+  /** IANA zone for the start time (00104), e.g. America/Chicago. */
+  timezone?: string | null;
 }
 
 /** Upcoming games and team events (today onward), oldest first. RLS limits to the family's teams. */
@@ -22,7 +24,7 @@ export async function fetchUpcomingGames(): Promise<ScheduleGame[]> {
   const today = new Date();
   const ymd = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const { data } = await (supabase.from('team_events') as any)
-    .select('id, season_id, name, date, time, venue_name, address, event_type, opponent, home_away, notes')
+    .select('*')
     .gte('date', ymd)
     .order('date')
     .order('time', { nullsFirst: false });
@@ -57,7 +59,7 @@ export async function deleteTeamEvent(id: string): Promise<{ error: Error | null
 /** One game/team event with its team, for the game detail screen. */
 export async function fetchTeamEvent(id: string): Promise<(ScheduleGame & { team_name: string | null; athlete_first_name: string | null }) | null> {
   const { data } = await (supabase.from('team_events') as any)
-    .select('id, season_id, name, date, time, venue_name, address, event_type, opponent, home_away, notes, seasons(team_name, athletes(first_name))')
+    .select('*, seasons(team_name, athletes(first_name))')
     .eq('id', id).maybeSingle();
   if (!data) return null;
   const { seasons, ...g } = data;

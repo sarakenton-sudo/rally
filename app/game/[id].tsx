@@ -8,7 +8,8 @@ import { showToast } from '@/components/Toast';
 import { openDirections } from '@/lib/maps';
 import { useIconColors } from '@/lib/colors';
 import { tapLight } from '@/lib/haptics';
-import { fetchTeamEvent, deleteTeamEvent, gameTitle, formatGameTime, hasStreetAddress } from '@/lib/teamEvents';
+import { fetchTeamEvent, deleteTeamEvent, gameTitle, hasStreetAddress } from '@/lib/teamEvents';
+import { timeWithZone } from '@/lib/gameTime';
 
 const GAME_COLOR = '#0f766e';
 type Game = NonNullable<Awaited<ReturnType<typeof fetchTeamEvent>>>;
@@ -47,7 +48,7 @@ export default function GameDetailScreen() {
   }
 
   const d = new Date(`${game.date}T12:00:00`);
-  const time = formatGameTime(game.time);
+  const time = timeWithZone(game.time, game.timezone);
   const kind = game.event_type === 'game' ? 'Game' : game.event_type === 'practice' ? 'Practice' : 'Team event';
   const canMap = hasStreetAddress(game.address);
 
