@@ -17,8 +17,8 @@ import { GAME_TIMES, GAME_ZONES, toLabel, fromLabel, deviceZone, zoneLabel, zone
 import { getPref, setPref } from '@/lib/prefs';
 import { useSeasonStore } from '@/stores/useSeasonStore';
 
-const KINDS = ['Game', 'Team event', 'Practice'] as const;
-const KIND_VALUE = { Game: 'game', 'Team event': 'event', Practice: 'practice' } as const;
+const KINDS = ['Game', 'Team event'] as const;
+const KIND_VALUE = { Game: 'game', 'Team event': 'event' } as const;
 const SIDES = ['Not set', 'Home', 'Away'] as const;
 const NO_TIME = 'No time yet';
 
@@ -68,7 +68,7 @@ export default function EditGameScreen() {
       if (g) {
         setEditSeasonId(g.season_id);
         if ((g as any).timezone) { setZone((g as any).timezone); setZoneTouched(true); } else getPref(TZ_PREF).then((tz) => tz && setZone(tz));
-        setKind(g.event_type === 'practice' ? 'Practice' : g.event_type === 'event' ? 'Team event' : 'Game');
+        setKind(g.event_type === 'game' ? 'Game' : 'Team event');
         setOpponent(g.opponent ?? '');
         setSide(g.home_away === 'home' ? 'Home' : g.home_away === 'away' ? 'Away' : 'Not set');
         setName(g.name ?? '');
@@ -149,7 +149,7 @@ export default function EditGameScreen() {
           <Pressable onPress={() => router.back()} className="p-1" accessibilityLabel="Cancel">
             <Ionicons name="close" size={24} color={ic.muted} />
           </Pressable>
-          <Text className="text-lg font-bold text-bark dark:text-cream">{isNew ? 'Add' : 'Edit'} {kind === 'Game' ? 'game' : kind === 'Practice' ? 'practice' : 'event'}</Text>
+          <Text className="text-lg font-bold text-bark dark:text-cream">{isNew ? 'Add' : 'Edit'} {kind === 'Game' ? 'game' : 'event'}</Text>
           <Pressable onPress={save} disabled={saving || loading} className="rounded-lg px-4 py-1.5 active:opacity-80" style={{ backgroundColor: CORAL }} accessibilityLabel="Save">
             <Text className="text-sm font-bold text-white">{saving ? 'Saving…' : 'Save'}</Text>
           </Pressable>
