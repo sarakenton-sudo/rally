@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { View, Text, Pressable, Platform } from 'react-native';
+import { View, Text, Pressable, Platform, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useColorScheme } from './useColorScheme';
 
 // Only import native date picker on non-web platforms
 let DateTimePicker: any = null;
@@ -28,9 +29,16 @@ function toISODate(date: Date | null): string {
 
 export default function DatePickerField({ label, value, onChange, error, highlightDanger }: DatePickerFieldProps) {
   const [show, setShow] = useState(false);
+  const [draft, setDraft] = useState<Date>(value ?? new Date());
+  const scheme = useColorScheme();
+
+  const open = () => {
+    setDraft(value && !isNaN(value.getTime()) ? value : new Date());
+    setShow(true);
+  };
 
   const handleNativeChange = (_event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') setShow(false);
+    setShow(false);
     if (selectedDate) onChange(selectedDate);
   };
 
@@ -82,7 +90,7 @@ export default function DatePickerField({ label, value, onChange, error, highlig
       </Text>
       <Pressable
         className={`bg-cream dark:bg-bark-light border rounded-xl px-4 py-3 flex-row items-center justify-between ${borderClass}`}
-        onPress={() => setShow(true)}
+        onPress={open}
       >
         <Text
           className={`text-base ${
@@ -98,13 +106,34 @@ export default function DatePickerField({ label, value, onChange, error, highlig
         <Ionicons name="calendar-outline" size={20} color={highlightDanger ? '#dc2626' : '#8FA8BF'} />
       </Pressable>
       {error && <Text className="text-xs text-red-500 mt-1">{error}</Text>}
-      {show && DateTimePicker && (
-        <DateTimePicker
-          value={value ?? new Date()}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleNativeChange}
-        />
+      {show && DateTimePicker && Platform.OS === 'android' && (
+        <DateTimePicker value={value ?? new Date()} mode="date" display="default" onChange={handleNativeChange} />
+      )}
+      {/* iOS: calendar in a bottom sheet. An inline spinner never closed, and two
+          side-by-side fields (check-in/out) overlapped each other. */}
+      {DateTimePicker && Platform.OS === 'ios' && (
+        <Modal visible={show} transparent animationType="fade" onRequestClose={() => setShow(false)}>
+          <Pressable onPress={() => setShow(false)} style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.45)', justifyContent: 'flex-end' }}>
+            <Pressable onPress={() => {}} className="bg-warm-white dark:bg-bark-light rounded-t-3xl px-5 pt-4 pb-10" style={{ maxWidth: 560, width: '100%', alignSelf: 'center' }}>
+              <View className="flex-row items-center justify-between mb-2">
+                <Pressable onPress={() => setShow(false)} className="py-2 pr-4">
+                  <Text className="text-base font-semibold text-stone">Cancel</Text>
+                </Pressable>
+                <Text className="text-base font-bold text-bark dark:text-cream">{label}</Text>
+                <Pressable onPress={() => { onChange(draft); setShow(false); }} className="py-2 pl-4">
+                  <Text className="text-base font-bold text-rally-600">Done</Text>
+                </Pressable>
+              </View>
+              <DateTimePicker
+                value={draft}
+                mode="date"
+                display="inline"
+                themeVariant={scheme === 'dark' ? 'dark' : 'light'}
+                onChange={(_e: any, d?: Date) => { if (d) setDraft(d); }}
+              />
+            </Pressable>
+          </Pressable>
+        </Modal>
       )}
     </View>
   );
