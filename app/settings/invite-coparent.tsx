@@ -227,7 +227,7 @@ export default function InviteCoParentScreen() {
               {inviteType === 'athlete' && (
                 <View className="bg-rally-50 dark:bg-rally-900/20 rounded-xl p-3 mb-4 border border-rally-200 dark:border-rally-800">
                   <Text className="text-xs text-rally-600 dark:text-rally-300">
-                    The athlete will get their own login to view their schedule and team info.
+                    The athlete will get their own login to view their schedule and team info. Athlete logins are for ages 13 and up (8th grade and older).
                   </Text>
                 </View>
               )}
